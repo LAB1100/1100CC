@@ -1,5 +1,5 @@
 # 1100CC
-![nodegoat](https://lab1100.com/css/image.png =100x100)
+![](https://lab1100.com/css/image.png =100x100)
 
 1100CC is an open-source web application framework developed by [LAB1100](https://lab1100.com). 1100CC provides a front-end web and communication interface with a back-end management system that manages 1100CC's core functionalities and content. 1100CC is able to host and serve multiple websites and web-applications from one installation.
 
