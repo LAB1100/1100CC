@@ -1,0 +1,228 @@
+/* GERERAL */
+
+html {
+	font-size: 62.5%;
+ }
+/* Ensure body will stretch along with its content */
+body {
+	display: flex; flex-flow: column nowrap; align-content: stretch; align-items: stretch; justify-content: flex-start;
+	position: relative; 
+	font-family: var(--font-site);
+	color: #000000;
+	background: #ffffff;
+	line-height: 1.26;
+	font-size: 12px; font-size: 1.2rem;
+}
+p { margin: 8px 0px; }
+figure { text-align: center; }
+figurecaption { display: block; margin: 6px 0px 0px 0px; text-align: left; }
+pre { margin: 12px 0px; } 
+blockquote {
+	margin: 8px 0px;
+	padding: 6px;
+	quotes:"\00AB""\00BB""\2018""\2019";
+	/*quotes:"\201C""\201E""\2018""\2019";*/
+	background: #f2f2f2;
+}
+blockquote::before {
+	content:open-quote;
+	font-size: 16px;
+	font-weight: bold;
+	margin-right: 2px;
+	line-height: 12px;
+}
+blockquote::after {
+	content:close-quote;
+	font-size: 16px;
+	font-weight: bold;
+	margin-left: 2px;
+	line-height: 12px;
+}
+h1 {
+	font-size: 20px;
+	font-weight:bold;
+	margin: 8px 0px;
+}
+h2 {
+	font-size: 16px;
+	font-weight:bold;
+	margin: 8px 0px;
+}
+h3 {
+	font-size: 14px;
+	font-weight:bold;
+	margin: 4px 0px;
+}
+h4 {
+	font-size: 12px;
+	font-weight:bold;
+	margin: 4px 0px;
+}
+legend {
+	font-size: 14px;
+	font-weight:bold;
+	margin: 2px 0px;
+}
+
+a, a:link, a:visited, a:active, a:hover, .a { cursor: pointer; color: inherit; text-decoration: none; }
+a:hover, .a:hover { color: #009cff; text-decoration: underline; }
+
+::selection { color: #ffffff; background-color: #009cff; text-fill-color: currentColor; -webkit-text-fill-color: currentColor; }
+::-moz-selection { color: #ffffff; background-color: #009cff; text-fill-color: currentColor; -webkit-text-fill-color: currentColor; }
+
+hr { margin: 8px 0px; border: 0px; border-bottom: 4px solid #000000; }
+
+.mod > *:first-child,
+.mod > *:first-child:not(.toolbox) > *:first-child,
+.mod > *:first-child:not(.toolbox) > *:first-child > *:first-child,
+.mod > *:first-child:empty + *,
+.mod > *:first-child:empty + * > *:first-child,
+.mod > .toolbox + *,
+.mod > .toolbox + *:empty + *,
+.mod > .toolbox + *:empty + * > *:first-child,
+.mod > .toolbox + * > *:first-child,
+.mod > .toolbox + * > *:first-child > *:first-child { margin-top: 0px; }
+.mod > *:last-child,
+.mod > *:last-child > *:last-child,
+.mod > *:last-child > *:last-child > *:last-child { margin-bottom: 0px; }
+
+/* Hide any additional html elements added at the end of the document, except named (class) elements */
+.container ~ *:not([class]) { position: absolute; height: 0px; width: 0px; font-size: 0px; overflow: hidden; }
+
+/* TEMPLATE */
+
+.container { position: relative; }
+.container,
+.site { -ms-box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; }
+.container:after,
+.site:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; font-size: 0px; }
+
+/* Basic modular positioning */
+.back,
+.con,
+.mod { float: left; box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; -ms-box-sizing: border-box; }
+
+.overlay .mod { float: none; }
+
+/* Helps absolute positionsing inside modules, otherwise set position to static on specific modules for parent positioning */
+.mod { position: relative; }
+
+/* Clear height presence of empty mods and backs, but preserve closing margin of a closing div, to preserve width template needs a min-height */
+.back:empty,
+.mod:empty { margin-top: 0px !important; height: 0px !important; }
+
+.back { background: #ffffff; }
+
+/* MOD ADAPTATION */
+
+
+/* INTERFACE */
+
+textarea { width: 200px; }
+.body-content { width: 700px; height: 450px; }
+
+fieldset > ul > li > label + *[type=submit],
+fieldset > ul > li > label + *[type=button],
+fieldset > ul > li > label + div > input.invalid + *[type=submit],
+fieldset > ul > li > label + div > input.invalid + *[type=button] { margin: 0px; width: 100%; }
+fieldset > ul > li > label:first-child + * input[type=text],
+fieldset > ul > li > label:first-child + * input[type=password],
+fieldset > ul > li > label:first-child + * textarea { width: 100%; }
+fieldset > ul > li > label:first-child + * > input[type],
+fieldset > ul > li > label:first-child + * > *[type=button],
+fieldset > ul > li > label:first-child + * > textarea,
+fieldset > ul > li > label:first-child + * > select,
+fieldset > ul > li > label:first-child + * > .input { display: inline-block; margin-top: 0px; margin-bottom: 0px; }
+fieldset > ul > li > label:first-child + * > .options { margin: 0px; }
+.options fieldset > ul > li > label:first-child + input[type=text],
+.options fieldset > ul > li > label:first-child + input[type=password],
+.options fieldset > ul > li > label:first-child + * input[type=text],
+.options fieldset > ul > li > label:first-child + * input[type=password] { width: 200px; }
+.options fieldset > ul > li > label:first-child + input.date,
+.options fieldset > ul > li > label:first-child + input.datepicker,
+.options fieldset > ul > li > label:first-child + * input.date,
+.options fieldset > ul > li > label:first-child + * input.datepicker { width: 9.4em; }
+.options fieldset > ul > li > label:first-child + input.date-time,
+.options fieldset > ul > li > label:first-child + * input.date-time { width: 4em; }
+.options fieldset > ul > li > label:first-child + textarea,
+.options fieldset > ul > li > label:first-child + * textarea { width: 200px; }
+ul.sorter > li > div > input.date,
+ul.sorter > li > div > input.datepicker,
+ul.sorter > li > ul > li > input.date,
+ul.sorter > li > ul > li > input.datepicker { width: 9.4em; }
+ul.sorter > li > div > input.date-time,
+ul.sorter > li > ul > li > input.date-time { width: 4em; }
+
+.network { text-align: center; overflow-x: auto; overflow-y: hidden; }
+.network .node { display: block; }
+.network > .node { display: inline-block; }
+.network .node > h4 { margin: 0px; }
+.network .node > fieldset { display: block; }
+.network .node > fieldset > * { text-align: left; }
+.network .node > div { display: inline-block; white-space: nowrap; }
+.network .node > div > div { display: inline-block; white-space: nowrap; vertical-align: top; }
+.network .node > div > div + div { margin-left: 10px; }
+
+/* TABLE */
+
+table.display td,
+table.list td,
+table.display th,
+table.list th { max-width: 300px; }
+
+table.display { width: 100%;}
+
+td.max, th.max { width: 100%; }
+td.limit, th.limit { max-width: 300px; }
+
+table.list th,
+table.list td { padding-right: 20px; }
+table.list tbody tr:hover { background: #eeeeee; }
+
+/* OTHER */
+
+fieldset > legend { margin-top: 0px; margin-bottom: 4px; }
+fieldset > legend > * { display: inline-block; vertical-align: middle; }
+fieldset > ul { margin: -4px 0px !important; display: table; vertical-align: middle; border-collapse: separate; border-spacing: 0px 4px; }
+fieldset > ul > li { display: table-row; height: 100%; }
+fieldset > ul > li > label:first-child { display: table-cell; vertical-align: top; padding: 0px 15px 2px 0px; text-align: right; width: 1%; white-space: nowrap; height: 100%; }
+fieldset > ul > li > label:first-child::before { content: '';  display: block; height: calc(50% - (1em / 2)); min-height: 2px; max-height: 6px; }
+fieldset > ul > li > label:first-child + * { display: table-cell; width: 100%; vertical-align: middle; margin-left: 0px; border-spacing: 0px; }
+fieldset > ul > li > label:first-child:empty { padding: 0px; width: 0%; }
+
+.options fieldset { margin: 8px 0px; vertical-align: top; }
+.options fieldset fieldset { margin: 0px; margin-left: 30px; }
+.options fieldset fieldset > *:first-child { margin-top: 0px; }
+.options fieldset fieldset > *:last-child { margin-bottom: 0px; }
+.options fieldset > ul { position:relative; display: inline-block; margin-left: 4px; }
+.options fieldset > ul:first-child,
+.options fieldset > legend + ul { margin-left: 0px; }
+.options fieldset > ul > li > label:first-child { text-align: left; width: auto; }
+.options fieldset > ul > li > label:first-child + * { display: inline-block; width: auto; }
+.options fieldset > ul > li > label:first-child + span,
+.options fieldset > ul > li > label:first-child + div { display: table-cell; }
+
+time.date, time.time { font-family: Georgia, serif; color: #999999; line-height: 1; }
+time.date span { display: block; text-align: justify; }
+time.date span:first-child { font-size: 1.3em; }
+time.date span + span { font-size: 2.6em; }
+time.date span + span + span { font-size: 1.3em; }
+time.time span { display: inline-block; margin-left: 2px; line-height: 1; }
+time.time span:first-child { font-size: 1.7em; margin-left: 0px; }
+time.time span + span  { font-size: 1.3em; }
+
+/* BBCODE */
+					
+.tab {margin-left: 2.5em;}
+
+img.resized {width: 450px;}
+	
+span.center { display: block; text-align: center; }
+span.center img { margin: 0px auto; }
+
+/* ICONS */
+
+
+/* ERROR */
+
+body > .result { top: 20px; left: 20px; right: 20px;  }

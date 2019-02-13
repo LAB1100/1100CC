@@ -1,0 +1,8 @@
+@import url('https://fonts.googleapis.com/css?family=Arimo:400,400i,700,700i&amp;subset=cyrillic,cyrillic-ext,greek,greek-ext,hebrew,latin-ext,vietnamese');
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono:400,400i,700,700i|Roboto:400,400i,700,700i&subset=cyrillic,cyrillic-ext,greek,greek-ext,latin-ext,vietnamese');
+
+:root {
+	--font-site: 'Arimo', Helvetica,Arial,sans-serif;
+	--font-mono: 'Roboto Mono', Consolas,Menlo,Monaco,'Lucida Console','Liberation Mono','DejaVu Sans Mono','Bitstream Vera Sans Mono','Courier New',monospace,sans-serif;
+	--font-cms: 'Arimo', Helvetica,Arial,sans-serif;
+}

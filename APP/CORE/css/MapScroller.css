@@ -1,0 +1,25 @@
+.mapscroller { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+.mapscroller > .draw { position: relative; width: 100%; height:100%; overflow: hidden; }
+.mapscroller > .draw > .background { position: absolute; width: 100%; height: 100%; background-color: #f8f8f9; }
+.mapscroller > .draw > .background > img { position: absolute; width: 100%; height: 100%; }
+.mapscroller > .draw > .map { position: absolute; width: 100%; height: 100%; }
+.mapscroller > .draw > .map img { position: absolute; max-width: none !important; max-height: none !important; }
+.mapscroller > .draw > .map div { position: absolute; width: 100%; height: 100%; top: 0px; left: 0px; }
+.mapscroller > .draw > .paint { position: absolute; left: 0px; top: 0px; }
+.mapscroller > .draw > .paint > svg,
+.mapscroller > .draw > .paint > .canvas { width: 100%; height: 100%; position: absolute; }
+.mapscroller > .draw { cursor: grab; cursor: -webkit-grab; cursor: -moz-grab; }
+.mapscroller.moving > .draw { cursor: grabbing; cursor: -webkit-grabbing; cursor: -moz-grabbing; }
+
+.mapscroller > .controls {  }
+
+.mapscroller > .controls > .attribution { position: absolute; bottom: 0px; right: 0px; padding: 5px 8px; line-height: 1; background: rgba(245, 245, 245, 0.75); color: #000000; font-size: 10px; white-space: nowrap; }
+
+.mapscroller > .controls .zoomer { position: absolute; top: 40px; left: 40px; padding: 6px; background: rgba(128, 128, 128, 0.35); }
+.mapscroller > .controls .zoomer span { display: block; width: 24px; height: 5px; background-color: #e7e7e7; background-repeat: no-repeat; background-position: center center; cursor: pointer; }
+.mapscroller > .controls .zoomer span + span { margin-top: 6px; }
+.mapscroller > .controls .zoomer span.plus { background-image: url(/css/images/zoom-in.png); height: 18px; }
+.mapscroller > .controls .zoomer span.min { background-image: url(/css/images/zoom-out.png); height: 18px; }
+.mapscroller > .controls .zoomer span:hover,
+.mapscroller > .controls .zoomer span.active { background-color: #ffffff; }

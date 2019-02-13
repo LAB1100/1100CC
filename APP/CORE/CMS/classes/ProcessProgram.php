@@ -1,0 +1,263 @@
+<?php
+
+/**
+ * 1100CC - web application framework.
+ * Copyright (C) 2019 LAB1100.
+ *
+ * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
+ */
+
+class ProcessProgram {
+	
+	protected $process;
+	protected $command;
+	protected $pid;
+	protected $exitcode;
+	
+	protected $stdin;
+	protected $stdout;
+	protected $stderr;
+	
+	protected $str_stdout;
+	protected $str_stdout_buffer;
+	protected $str_stderr;
+	protected $str_stderr_buffer;
+	
+	protected $eol = PHP_EOL;
+	
+	const SIZE_BUFFER_MAX = 8092;
+
+	public function __construct($cl = false) {
+		
+        if ($cl == false) {
+			return;
+		}
+			
+		$this->command = $cl;
+
+		$this->open();
+    }
+    
+	private function open() {
+
+		$arr_descriptors = [
+			0 => ['pipe', 'r'], // stdin
+			1 => ['pipe', 'w'], // stdout
+			2 => ['pipe', 'w'] // stderr
+		];
+
+		$arr_env = [];
+
+		$this->process = proc_open('exec '.$this->command, $arr_descriptors, $arr_pipes, Settings::get('path_temporary'), $arr_env); // Put exec before the command to have more control over process termination
+		
+		if (!$this->process) {
+			return false;
+		}
+			
+		$this->stdin = $arr_pipes[0];
+		$this->stdout = $arr_pipes[1];
+		stream_set_blocking($this->stdout, false); 
+		$this->stderr = $arr_pipes[2];
+		stream_set_blocking($this->stderr, false);
+
+		$arr_status = proc_get_status($this->process);
+		$this->pid = $arr_status['pid'];
+		
+		$this->str_stdout_buffer = '';
+		$this->str_stderr_buffer = '';
+			
+		return true;
+    }
+    
+	public function writeInput($str, $add_return = false) {
+		
+		if ($add_return && substr($str, -1) != $this->eol) { // Make sure the input presents a newline return
+			$str .= $this->eol;
+		}
+		
+		fwrite($this->stdin, $str);
+	}
+	
+	public function closeInput() {
+
+		fclose($this->stdin);
+		$this->stdin = false;
+	}
+    
+    public function checkOutput($end = false, $load = false) {
+
+		$this->str_stdout = '';
+		$this->str_stderr = '';
+
+		$wait = (0.05 * 1000000); // Seconds to microseconds. Give the ouput a little time to become available
+		
+		while (true) {
+			
+			$arr_read = [$this->stdout, $this->stderr];
+			$arr_write = null;
+			$except = null;
+
+			try {
+				$nr_streams = stream_select($arr_read, $arr_write, $except, 0, $wait);
+			} catch (Exception $e) {
+				return false; // Encountered an error in our own process
+			}
+			
+			if ($nr_streams) {
+				
+				foreach ($arr_read as $read) {
+				
+					$str = '';
+					
+					do {
+						
+						try {
+							$buffer = fread($read, static::SIZE_BUFFER_MAX);
+						} catch (Exception $e) {
+							unset($e);
+						}
+						
+						$nr_bytes = strlen($buffer);
+						
+						$str .= $buffer;
+					} while ($nr_bytes > 0);
+					
+					if ($read === $this->stdout) {
+						$this->str_stdout_buffer .= $str;
+					}
+					
+					if ($read === $this->stderr) {
+						$this->str_stderr_buffer .= $str;
+					}
+				}
+			}
+			
+			// Check all: output, error, program
+			
+			$has_output = false;
+			
+			if ($this->str_stdout_buffer !== '') {
+				
+				$this->str_stdout .= $this->str_stdout_buffer;
+				$this->str_stdout_buffer = '';
+				
+				$has_output = true;
+			}
+			
+			$has_error = false;
+			
+			if ($this->str_stderr_buffer !== '') {
+				
+				$this->str_stderr .= $this->str_stderr_buffer;
+				$this->str_stderr_buffer = '';
+				
+				$has_error = true;
+			}
+
+			if ($this->exitcode === null) {
+					
+				$arr_status = proc_get_status($this->process);
+
+				if (!$arr_status['running']) {
+
+					$this->exitcode = $arr_status['exitcode']; // proc_get_status will only pull a valid exitcode one time after process has ended
+				}
+			}
+			
+			// Return on its state
+			
+			if ($has_error) { // Found an error; stop
+				return false;
+			}
+
+			if ($has_output && $end) { // Looking for an end in the output
+				
+				if ($end === true) {
+					$str_end = $this->eol;
+				} else {
+					$str_end = $end;
+				}
+				
+				$nr_end = strrpos($this->str_stdout, $str_end);
+				
+				if ($nr_end !== false) {
+					
+					$nr_end = $nr_end + strlen($str_end);
+					
+					$this->str_stdout_buffer = substr($this->str_stdout, $nr_end);
+					$this->str_stdout = substr($this->str_stdout, 0, $nr_end);
+					
+					return true; // Found something needed; stop
+				}
+			}
+			
+			if ($this->exitcode !== null) { // Program is not running anymore; stop
+				return true;
+			}
+			
+			// Keep checking and loading data
+
+			if ($load) {
+				
+				if ($load === true) {
+					continue;
+				} else {
+					
+					$abort = $load(); // Run a custom callback function
+					
+					if ($abort) {
+						return false;
+					}
+				}
+			} else {
+				
+				return false;
+			}
+		}
+	}
+	
+	public function isRunning($get_code) {
+		
+		return ($this->exitcode !== null ? ($get_code ? $this->exitcode : false) : true);
+	}
+	
+	public function getOutput() {
+		
+		return $this->str_stdout;
+	}
+	
+	public function getError() {
+		 
+		return $this->str_stderr;
+	}
+	
+	public function setEOL($eol) {
+		
+		$this->eol = $eol;
+	}
+	
+	public function getEOL() {
+		
+		return $this->eol;
+	}
+
+	public function status() {
+
+	}
+
+	public function close($terminate = false) {
+		
+		if ($terminate) {
+			
+			proc_terminate($this->process);
+		}
+		
+		if ($this->stdin) {
+			fclose($this->stdin);
+		}
+		fclose($this->stdout);
+		fclose($this->stderr);
+			
+		return proc_close($this->process);
+	}
+}

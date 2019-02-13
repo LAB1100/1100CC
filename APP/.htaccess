@@ -1,0 +1,123 @@
+
+###
+ # 1100CC - web application framework.
+ # Copyright (C) 2019 LAB1100.
+ #
+ # See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
+ ##
+
+# Do not interfere with out own location formatting
+DirectorySlash Off
+# Turn on the location formatting
+RewriteEngine On
+
+# Set server state to development or production (default)
+#SetEnv STATE development
+#SetEnv MESSAGE '[L][msg_site_maintenance] [L][msg_site_read_only]'
+
+################################################
+
+# Redirect www to clean URL, include http or http(s)
+	RewriteBase /
+	RewriteCond %{SERVER_PORT}s%{HTTP_HOST} ^(?:443(s)|[0-9]+s)www\.(.*)$ [NC]
+RewriteRule ^(.*)$ http%1://%2/$1 [R=301,L]
+
+# Split the requested host in sections
+	RewriteCond %{HTTP_HOST} (.*?\.?)((?<=^|\.)[be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond ${alias:%3%4} !=""
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%2,E=SERVER_NAME_1100CC:%2%3%4,E=SERVER_NAME_SITE_NAME:%3%4]
+
+# Split the requested host in sections
+	RewriteCond %{HTTP_HOST} (.*?\.?)((?<=^|\.)[be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond ${alias:%3%5%6} !=""
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%2%4,E=SERVER_NAME_1100CC:%2%3%4%5%6,E=SERVER_NAME_SITE_NAME:%3%5%6]
+
+# Split the requested host in sections
+	RewriteCond %{HTTP_HOST} (.*?\.?)([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond ${alias:%2%4%6%7} !=""
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%3%5,E=SERVER_NAME_1100CC:%2%3%4%5%6%7,E=SERVER_NAME_SITE_NAME:%2%4%6%7]
+
+# Split the requested host in sections
+	RewriteCond %{HTTP_HOST} (.*?\.?)([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond ${alias:%2%4%6%8%9} !=""
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%3%5,E=SERVER_NAME_1100CC:%2%3%4%5%6%7%8%9,E=SERVER_NAME_SITE_NAME:%2%4%6%8%9]
+
+RewriteRule ^(.*)$ - [E=SITE_NAME:${alias:%{ENV:SERVER_NAME_SITE_NAME}}]
+
+# Continue if SITE_NAME is set
+	RewriteCond %{ENV:SITE_NAME} =""
+RewriteRule ^(.*)$ - [PT,R=403]
+
+# Determine custom section
+	RewriteCond %{ENV:SERVER_NAME_SUB} ((?:cms|s[0-9])\.)?((?:[^\.]+\.)*)$
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1%2,E=SERVER_NAME_CUSTOM:%3]
+
+# Redirect if SITE_NAME is not a directory
+	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME} !-d
+	# Http or http(s)
+	RewriteCond %{SERVER_PORT}s ^(?:443(s)|[0-9]+s)$
+RewriteRule ^(.*)$ http%1://%{ENV:SERVER_NAME_SUB}%{ENV:SERVER_NAME_CUSTOM}%{ENV:SITE_NAME}%{REQUEST_URI} [L,R]
+
+################################################
+
+# Set CMS location when the host name requests the CMS
+RewriteRule ^(.*)$ - [E=IF_CMS_PATH:,E=PATH:%{REQUEST_URI}]
+	RewriteCond %{HTTP_HOST} ^cms\.
+	RewriteCond %{REQUEST_URI} ^/(?i:CMS/)?(.*)$
+RewriteRule ^(.*)$ - [E=IF_CMS_PATH:/CMS,E=PATH:/%1]
+
+# Only allow access to code when it's the index
+	RewriteCond %{REQUEST_FILENAME} \.php$
+	RewriteCond %{REQUEST_FILENAME} !/CORE/index\.php$
+	RewriteCond %{REQUEST_FILENAME} !/CORE/CMS/index\.php$
+RewriteRule ^(.*)$ - [F,NC]
+
+# Disallow access to SETTINGS or something PRIVATE
+	RewriteCond %{REQUEST_FILENAME} /SETTINGS/ [OR]
+	RewriteCond %{REQUEST_FILENAME} /PRIVATE/
+RewriteRule ^(.*)$ - [F,NC]
+
+# If the file or symbolic link truly exists in the relevant directories, show it!
+	RewriteCond %{DOCUMENT_ROOT}##%{ENV:SITE_NAME}##%{REQUEST_FILENAME} ^(.+)##(.+)##(\1/\2|\1/CORE|\1/STORAGE/\2)/.+$
+# Continue if REQUEST_FILENAME is not a file
+	RewriteCond %{REQUEST_FILENAME} -f [OR]
+# Continue if REQUEST_FILENAME is not a symbolic link
+	RewriteCond %{REQUEST_FILENAME} -l
+RewriteRule ^(.+)$ - [PT,L]
+
+# If the file exists in the SITE directory, create path
+# Continue if the path is not a file
+	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -f [OR]
+# Continue if the path is not a symbolic link
+	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -l
+RewriteRule ^(.+)$ /%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} [PT,L]
+
+# If the file exists in the CORE directory, create path
+# Continue if the path is not a file
+	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:IF_CMS_PATH}%{ENV:PATH} -f [OR]
+# Continue if the path is not a symbolic link
+	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:IF_CMS_PATH}%{ENV:PATH} -l
+RewriteRule ^(.+)$ /CORE%{ENV:IF_CMS_PATH}%{ENV:PATH} [PT,L]
+
+# If the file exists in the SITE STORAGE directory, create path
+# Continue if the path is not a file
+	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -f [OR]
+# Continue if the path is not a symbolic link
+	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -l
+RewriteRule ^(.+)$ /STORAGE/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} [PT,L]
+
+# All other queries get sent to the CORE index as index.php/whatever
+RewriteRule ^(.*)$ /CORE%{ENV:IF_CMS_PATH}/index.php%{ENV:PATH} [L]
+
+################################################
+
+# Pass authorization headers
+CGIPassAuth on
+
+# Allow compression
+AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml application/javascript application/json
+
+php_value max_input_vars 3000
+php_value post_max_size 50M
+php_value upload_max_filesize 50M
