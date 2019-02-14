@@ -69,6 +69,7 @@ When your Linux distrubiton applies SELinux:
  - pgsql
  - curl
  - zip
+ - xmlrpc
  - libapache2-mod
 
 ### Database
@@ -117,11 +118,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON *SITE*_cms.* TO
 GRANT SELECT ON *SITE*_cms.* TO 1100CC_home@localhost;
 ```
 
-Import the SQL from [1100CC.sql](setup/1100CC.sql) to the 1100CC CORE database.
-Import the SQL from [1100CC.core_language.sql](setup/1100CC.core_language.sql) to the 1100CC CORE database.
-Import the SQL from [1100CC.core_labels.en.sql](setup/1100CC.core_labels.en.sql) to the 1100CC CORE database, and also other languages by their code ('nl'/'de') if needed.
-Import the SQL from [SITE_cms.sql](setup/SITE_cms.sql) to the SITE CMS database.
-Import the SQL from [SITE_home.sql](setup/SITE_home.sql) to the SITE HOME database.
+Import the following SQL to their respective databases:
+ - [1100CC.sql](setup/1100CC.sql) to the 1100CC CORE database.
+ - [1100CC.core_language.sql](setup/1100CC.core_language.sql) to the 1100CC CORE database.
+ - [1100CC.core_labels.en.sql](setup/1100CC.core_labels.en.sql) to the 1100CC CORE database, and also other languages by their code ('nl'/'de') if needed.
+ - [SITE_cms.sql](setup/SITE_cms.sql) to the SITE CMS database.
+ - [SITE_home.sql](setup/SITE_home.sql) to the SITE HOME database.
 
 #### PostgreSQL
 
