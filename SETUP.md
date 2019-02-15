@@ -2,9 +2,9 @@
 
 Make sure to have a server running with the software requirements as outlined in the [README](README.md#requirements). The following parts outline how to configure 1100CC:
 
- - [1100CC](SETUP.md#1100cc): install and configure 1100CC.
- - [Server](SETUP.md#server): configure the LAMP software packages for the server.
- - [Programs](SETUP.md#programs): create and compile 1100CC programs, optional.
+* [1100CC](SETUP.md#1100cc): install and configure 1100CC.
+* [Server](SETUP.md#server): configure the LAMP software packages for the server.
+* [Programs](SETUP.md#programs): create and compile 1100CC programs, optional.
 
 ## 1100CC
 
@@ -13,20 +13,20 @@ Create a directory on your server where you put all files from the 1100CC folder
 Next, configure the LAMP software packages for the [server](SETUP.md#server).
 
 To create a new site/application in the 1100CC installation, do the following:
- 1. The directory `./APP/SITE` contains the default files and directories for a new site/application, copy and rename this folder to the name of your site/application.
- 1. Copy and rename the directory `./APP/SETTINGS/SITE` to your new site/application name.
- 1. Copy and rename the directory `./APP/STORAGE/SITE` to your new site/application name.
- 1. From now on \*SITE\* refers to your site/application's name.
- 1. Add an alias (or multiple aliases) to `./APP/alias` that links a domain to your site/application: e.g. `yourdomain.com \*SITE\*` and/or `sub.domain.yourdomain.com \*SITE\*`
- 1. Add the appropriate databases for both the HOME and CMS of your new \*SITE\*, see [database SITE](SETUP.md#database-site).
- 1. Edit the `./APP/SETTINGS/*SITE*/settings.php` to configure the database passwords, and to override any default settings if required.
- 1. Go to the CMS by adding cms. to your SITE's domain e.g. `cms.yourdomain.com`, and start building! See the [1100CC Guides](https://lab1100.com/1100cc/guides) on how to get started.
+1. The directory `./APP/SITE` contains the default files and directories for a new site/application, copy and rename this folder to the name of your site/application.
+1. Copy and rename the directory `./APP/SETTINGS/SITE` to your new site/application name.
+1. Copy and rename the directory `./APP/STORAGE/SITE` to your new site/application name.
+1. From now on ?SITE? refers to your site/application's name.
+1. Add an alias (or multiple aliases) to `./APP/alias` that links a host to your site/application: e.g. `yourhost.com ?SITE?` and/or `sub.yourhost.com ?SITE?`
+1. Add the appropriate databases for both the HOME and CMS of your new ?SITE?, see [database SITE](SETUP.md#database-site).
+1. Edit the `./APP/SETTINGS/?SITE?/settings.php` to configure the database passwords, and to override any default settings if required.
+1. Go to the CMS by adding cms. to your SITE's host e.g. `cms.yourhost.com`, and start building! See the [1100CC Guides](https://lab1100.com/1100cc/guides) on how to get started.
  
 ## Server
 
 ### Apache webserver
 
-Include and adjust the following VirtualHost configuration to your Apache config to direct all relevant traffic (domain and HTTP/80 and or HTTPS/443) to the 1100CC `./APP` root directory:
+Include and adjust the following VirtualHost configuration to your Apache config to direct all relevant traffic (hosts and HTTP/80 and or HTTPS/443) to the 1100CC `./APP` root directory:
 
 ```apache
 <VirtualHost *:80>
@@ -62,19 +62,19 @@ When your Linux distrubiton applies SELinux:
 ### PHP
 
 1100CC uses the following modules, check your distribution (e.g. Debian- or Red Hat-based distributions) to see which ones are installed by default or your need to add them:
- - xml
- - gd
- - mbstring
- - mysql
- - pgsql
- - curl
- - zip
- - xmlrpc
- - libapache2-mod
+* xml
+* gd
+* mbstring
+* mysql
+* pgsql
+* curl
+* zip
+* xmlrpc
+* libapache2-mod
 
 ### Database
 
-Indicate which database to use by creating a file `./APP/SETTINGS/*SITE*/database` with either 'mysql' / 'mariadb' / 'postgresql' as its contents. 
+Indicate which database to use by creating a file `./APP/SETTINGS/?SITE?/database` with either 'mysql' / 'mariadb' / 'postgresql' as its contents. 
 
 #### MySQL
 
@@ -83,8 +83,8 @@ Indicate which database to use by creating a file `./APP/SETTINGS/*SITE*/databas
 Create 2 MySQL users with a password of your choice:
 
 ```sql
-CREATE USER 1100CC_cms@localhost IDENTIFIED BY '*PASSWORD*';
-CREATE USER 1100CC_home@localhost IDENTIFIED BY '*PASSWORD*';
+CREATE USER 1100CC_cms@localhost IDENTIFIED BY '?PASSWORD?';
+CREATE USER 1100CC_home@localhost IDENTIFIED BY '?PASSWORD?';
 ```
 
 Create the 1100CC CORE database:
@@ -101,29 +101,29 @@ GRANT SELECT ON 1100CC.* TO 1100CC_home@localhost;
 
 ##### Database SITE
 
-Create a HOME and a CMS database for each SITE (replace \*SITE\* with your site/application's name) you want hosted by 1100CC:
+Create a HOME and a CMS database for each SITE (replace ?SITE? with your site/application's name) you want hosted by 1100CC:
 
 ```sql
-CREATE DATABASE *SITE*_cms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE DATABASE *SITE*_home CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE ?SITE?_cms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE ?SITE?_home CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 Grant the MySQL users their HOME and a CMS privileges:
 
 ```sql
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON *SITE*_home.* TO 1100CC_cms@localhost;
-GRANT SELECT, INSERT, UPDATE, DELETE ON *SITE*_home.* TO 1100CC_home@localhost;
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON ?SITE?_home.* TO 1100CC_cms@localhost;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ?SITE?_home.* TO 1100CC_home@localhost;
 
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON *SITE*_cms.* TO 1100CC_cms@localhost;
-GRANT SELECT ON *SITE*_cms.* TO 1100CC_home@localhost;
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON ?SITE?_cms.* TO 1100CC_cms@localhost;
+GRANT SELECT ON ?SITE?_cms.* TO 1100CC_home@localhost;
 ```
 
 Import the following SQL to their respective databases:
- - [1100CC.sql](setup/1100CC.sql) to the 1100CC CORE database.
- - [1100CC.core_language.sql](setup/1100CC.core_language.sql) to the 1100CC CORE database.
- - [1100CC.core_labels.en.sql](setup/1100CC.core_labels.en.sql) to the 1100CC CORE database, and also other languages by their code ('nl'/'de') if needed.
- - [SITE_cms.sql](setup/SITE_cms.sql) to the SITE CMS database.
- - [SITE_home.sql](setup/SITE_home.sql) to the SITE HOME database.
+* [1100CC.sql](setup/1100CC.sql) to the 1100CC CORE database.
+* [1100CC.core_language.sql](setup/1100CC.core_language.sql) to the 1100CC CORE database.
+* [1100CC.core_labels.en.sql](setup/1100CC.core_labels.en.sql) to the 1100CC CORE database, and also other languages by their code ('nl'/'de') if needed.
+* [SITE_cms.sql](setup/SITE_cms.sql) to the SITE CMS database.
+* [SITE_home.sql](setup/SITE_home.sql) to the SITE HOME database.
 
 #### PostgreSQL
 
@@ -131,28 +131,28 @@ Currently MySQL works as a master for development, you can use [PGLoader](https:
 
 ```sql
 LOAD DATABASE
-	FROM mysql://root:*PASSWORD*@127.0.0.1/1100CC
-	INTO postgresql://postgres:*PASSWORD*@127.0.0.1/CC1100
+	FROM mysql://root:?PASSWORD?@127.0.0.1/1100CC
+	INTO postgresql://postgres:?PASSWORD?@127.0.0.1/CC1100
 ;
 ```
 
 ```sql
 LOAD DATABASE
-	FROM mysql://root:*PASSWORD*@127.0.0.1/*SITE*_home
-	INTO postgresql://postgres:*PASSWORD*@127.0.0.1/CC1100
+	FROM mysql://root:?PASSWORD?@127.0.0.1/?SITE?_home
+	INTO postgresql://postgres:?PASSWORD?@127.0.0.1/CC1100
 ;
 
 LOAD DATABASE
-	FROM mysql://root:*PASSWORD*@127.0.0.1/*SITE*_cms
-	INTO postgresql://postgres:*PASSWORD*@127.0.0.1/CC1100
+	FROM mysql://root:?PASSWORD?@127.0.0.1/?SITE?_cms
+	INTO postgresql://postgres:?PASSWORD?@127.0.0.1/CC1100
 
 	AFTER LOAD DO
 
-		$$ CREATE VIEW *SITE*_cms.view_user_parent AS SELECT u.id AS id, u.name AS parent_name, u.group_id AS parent_group_id FROM *SITE*_cms.users AS u; $$
+		$$ CREATE VIEW ?SITE?_cms.view_user_parent AS SELECT u.id AS id, u.name AS parent_name, u.group_id AS parent_group_id FROM ?SITE?_cms.users AS u; $$
 ;
 ```
 
-Add a file called 'database' with the contents 'postgresql' in the SITE's `./APP/SETTINGS/*SITE*` directory.
+Add a file called 'database' with the contents 'postgresql' in the SITE's `./APP/SETTINGS/?SITE?` directory.
 
 ## Programs
 
@@ -161,11 +161,11 @@ The `./PROGRAMS` directory provides an environment to create and build services 
 ### Libraries
 
 Libraries needed for inclusion:
- - RapidJSON ([download](https://github.com/Tencent/rapidjson))
+* RapidJSON ([download](https://github.com/Tencent/rapidjson))
 
 Libraries that need to be compiled:
- - CMake 3.12+ ([download](https://cmake.org/download/))
- - Boost 1.67+ ([download](https://www.boost.org/users/download/))
+* CMake 3.12+ ([download](https://cmake.org/download/))
+* Boost 1.67+ ([download](https://www.boost.org/users/download/))
  
 Libraries that first need to be complied can be stored in the `./PROGRAMS/LIBRARIES/BUILD` directory (e.g. `./PROGRAMS/LIBRARIES/BUILD/boost`). Libraries that only need inclusion can directly be stored in the `./PROGRAMS/LIBRARIES` directory (e.g. `./PROGRAMS/LIBRARIES/rapidjson`).
  
