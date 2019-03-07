@@ -11,8 +11,6 @@ DB::setTable('TABLE_CORE_LANGUAGE', DB::$database_core.'.core_language');
 DB::setTable('TABLE_CMS_LANGUAGE', DB::$database_cms.'.cms_language');
 DB::setTable('TABLE_CMS_LANGUAGE_HOSTS', DB::$database_cms.'.cms_language_hosts');
 
-define('DIR_FLAGS', 'css/images/flags/');
-
 class cms_language extends base_module {
 
 	public static function moduleProperties() {

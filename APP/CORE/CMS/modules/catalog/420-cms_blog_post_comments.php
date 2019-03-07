@@ -17,9 +17,14 @@ class cms_blog_post_comments extends base_module {
 	}
 	
 	public static function widgetProperties() {
-		
 		return [
 			'widgetBlogPostComments' => ['label' => getLabel('lbl_blog_comments')]
+		];
+	}
+	
+	public static function logUserLocations() {
+		return [
+			'TABLE_BLOG_POST_COMMENTS' => 'log_user_id'
 		];
 	}
 	

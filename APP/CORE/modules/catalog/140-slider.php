@@ -14,7 +14,7 @@ class slider extends base_module {
 		static::$parent_label = getLabel('ttl_site');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select>';
 		$return .= cms_general::createDropdown(cms_sliders::getSliders());
@@ -25,7 +25,7 @@ class slider extends base_module {
 	
 	public function contents() {
 		
-		$arr_slider = cms_sliders::getSliderSet($this->mod_var);
+		$arr_slider = cms_sliders::getSliderSet($this->arr_variables);
 
 		$return .= '<span class="icon prev" data-category="full">'.getIcon('prev').'</span>
 			<div class="slideshow" data-speed="'.$arr_slider['slider']['speed'].'" data-timeout="'.$arr_slider['slider']['timeout'].'" data-effect="'.$arr_slider['slider']['effect'].'">';

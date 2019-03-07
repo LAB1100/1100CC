@@ -130,7 +130,7 @@ function MapScroller(element, options) {
 			
 			e.preventDefault(); // Prevent document drag, and on touchstart do not trigger mousedown and zoom
 			
-			elm[0].closest('[tabindex]').focus();
+			SCRIPTER.triggerEvent(elm[0].closest('[tabindex]'), 'focus');
 		
 			var elm_target = $(e.target);
 			var pos_mouse = POSITION.getMouseXY(e.originalEvent);
@@ -140,9 +140,7 @@ function MapScroller(element, options) {
 			doMove(true);
 
 			$(document).on('mousemove.scroller touchmove.scroller', function(e2) {
-				
-				e2.preventDefault(); // Prevent document drag, and on touchstart do not trigger mousemove and zoom
-				
+								
 				if (pinch !== false) {
 					
 					var pinch2 = POSITION.getPinch(e2.originalEvent);
@@ -199,7 +197,9 @@ function MapScroller(element, options) {
 				e.stopPropagation();
 			}
 		})
-		.on('mousewheel', function(e, d) {
+		.on('wheel', function(e) {
+			
+			var delta = e.originalEvent.deltaY;
 			
 			if (settings.center_pointer) {
 
@@ -208,8 +208,8 @@ function MapScroller(element, options) {
 				
 				var pos_xy = false;
 			}
-			
-			if (d > 0) {
+
+			if (delta < 0) {
 				obj.setZoom(cur_zoom+1, pos_xy);
 			} else {
 				obj.setZoom(cur_zoom-1, pos_xy);
@@ -218,7 +218,7 @@ function MapScroller(element, options) {
 			e.stopPropagation();
 			e.preventDefault();
 			
-			elm[0].closest('[tabindex]').focus();
+			SCRIPTER.triggerEvent(elm[0].closest('[tabindex]'), 'focus');
 		})
 		.on('dblclick', function(e) {
 			
@@ -875,5 +875,4 @@ function MapScroller(element, options) {
 	this.getPaint = function() {
 		return elm_paint;
 	};
-	
 }

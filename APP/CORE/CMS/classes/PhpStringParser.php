@@ -38,7 +38,9 @@ class PhpStringParser {
 	}
 	
 	protected function evalBlock($matches) {
+		
 		if (is_array($this->variables)) {
+			
 			foreach($this->variables as $var_name => $var_value) {
 				$$var_name = $var_value;
 			}

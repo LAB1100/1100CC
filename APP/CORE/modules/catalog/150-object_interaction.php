@@ -16,7 +16,7 @@ class object_interaction {
 		self::$parent_label = getLabel('ttl_object_interaction');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		$return .= '<select>';
 		$return .= cms_general::createDropdown(cms_object_interaction::getStages());
 		$return .= '</select>';
@@ -36,7 +36,7 @@ class object_interaction {
 			die;
 		}
 		
-		$this->arr = cms_object_interaction::getStageSet($this->mod_var);
+		$this->arr = cms_object_interaction::getStageSet($this->arr_variables);
 				
 		$info = getimagesize(DIR_ROOT_STORAGE.SITE_NAME.$this->arr['stage']['img']);
 		$this->stage_width = $info[0];

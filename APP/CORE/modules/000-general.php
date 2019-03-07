@@ -47,7 +47,7 @@ class general extends base_module {
 						foreach($arr_language as $lang_code => $arr_row) {
 							
 							$return .= '<li>
-								<label><img src="/'.DIR_CMS.DIR_FLAGS.$arr_row['flag'].'" title="'.htmlspecialchars($arr_row['label']).'" /></label>
+								<label><span>'.$arr_row['label'].'</span></label>
 								<div><textarea name="lang_code['.$lang_code.']">'.htmlspecialchars($arr_label[$lang_code]).'</textarea></div>
 							</li>';
 						}

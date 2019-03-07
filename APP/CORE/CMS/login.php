@@ -43,8 +43,26 @@ class CMSLogin {
 		$arr_user = cms_users::getCMSUsers($_SESSION['USER_ID'], $_SESSION['CORE']);
 		
 		if ($arr_user) {
+			
 			$_SESSION['CUR_USER'] = $arr_user;
+			
+			if (strtotime($_SESSION['CUR_USER']['last_login']) < strtotime('-1 day')) {
+					
+				$arr_ip = Log::getIP();
+				
+				DB::setConnection(DB::CONNECT_CMS);
+
+				$res = DB::query("UPDATE ".DB::getTable(($_SESSION['CORE'] ? 'TABLE_CORE_USERS' : 'TABLE_CMS_USERS'))." SET 
+						last_login = NOW(),
+						ip = ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").",
+						ip_proxy = ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''")."
+					WHERE id = ".(int)$_SESSION['USER_ID']
+				);
+				
+				DB::setConnection();
+			}
 		} else {
+			
 			self::toLogin();
 		}
 	}

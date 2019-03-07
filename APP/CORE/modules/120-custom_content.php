@@ -14,7 +14,7 @@ class custom_content extends base_module {
 		static::$parent_label = getLabel('ttl_site');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		$return .= '<select>';
 		$return .= cms_general::createDropdown(cms_custom_content::getCustomContent(), 0, true);
 		$return .= '</select>';
@@ -43,11 +43,11 @@ class custom_content extends base_module {
 	
 	public function contents() {
 	
-		if (!$this->mod_var) {
+		if (!$this->arr_variables) {
 			return false;
 		}
 					
-		$arr = cms_custom_content::getCustomContent((int)$this->mod_var);
+		$arr = cms_custom_content::getCustomContent((int)$this->arr_variables);
 		
 		if ($arr['script']) {
 			

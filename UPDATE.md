@@ -8,6 +8,32 @@ Follow each section subsequently that comes after your current version:
 
 Initial release.
 
-## VERSION x.x
+## VERSION 10.2
 
-Nothing yet.
+Run SQL queries in database ?SITE?_cms:
+
+```sql
+ALTER TABLE `site_log_users` ADD `user_class` TINYINT NOT NULL AFTER `user_id`;
+
+UPDATE site_log_users SET user_class = 3 WHERE user_id != 0;
+UPDATE site_log_users SET user_class = 1, user_id = cms_user_id WHERE user_id = 0 AND cms_user_id >= 1000;
+UPDATE site_log_users SET user_class = 2, user_id = cms_user_id WHERE user_id = 0 AND cms_user_id > 0 AND cms_user_id < 1000;
+
+ALTER TABLE `site_log_users` DROP `cms_user_id`;
+
+ALTER TABLE `site_log_users` DROP INDEX `user_id`, ADD INDEX `user_id` (`user_id`, `user_class`) USING BTREE;
+```
+
+---
+
+Run SQL queries in database ?SITE?_cms:
+
+```sql
+ALTER TABLE `cms_language` DROP `flag`;
+```
+
+Run SQL queries in database 1100CC:
+
+```sql
+ALTER TABLE `core_language` DROP `flag`;
+```

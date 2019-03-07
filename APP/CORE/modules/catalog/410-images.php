@@ -14,7 +14,7 @@ class images extends base_module {
 		static::$parent_label = getLabel('lbl_modules');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="tag_id">';
 		$return .= cms_general::createDropdown(cms_media::getMediaTags());
@@ -30,7 +30,7 @@ class images extends base_module {
 	
 	public function contents() {
 		
-		$arr_media = cms_media::getMedia(false, $this->mod_var->tag_id);
+		$arr_media = cms_media::getMedia(false, $this->arr_variables['tag_id']);
 		
 		$return .= '<div class="album" data-lazyload="1"><table>';
 			
@@ -38,7 +38,7 @@ class images extends base_module {
 			
 			foreach ($arr_media as $arr_element) {
 				
-				if (!($count % $this->mod_var->columns)) {
+				if (!($count % $this->arr_variables['columns'])) {
 					$return .= '<tr>';
 				}
 				
@@ -49,13 +49,13 @@ class images extends base_module {
 
 				$count++;
 				
-				if (!($count % $this->mod_var->columns)) {
+				if (!($count % $this->arr_variables['columns'])) {
 					
 					$return .= '</tr>';
 				}
 			}
 			
-			if (($count % $this->mod_var->columns)) {
+			if (($count % $this->arr_variables['columns'])) {
 				$return .= '</tr>';
 			}
 			

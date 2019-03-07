@@ -14,7 +14,7 @@ class blog extends base_module {
 		static::$parent_label = getLabel('lbl_communication');
 	}
 		
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="id">';
 		$return .= cms_general::createDropdown(cms_blogs::getBlogs());
@@ -65,7 +65,7 @@ class blog extends base_module {
 		}		
 		if ($this->arr_query[0] == 'rss') {
 			
-			$rss = $this->generateRSS(cms_blog_posts::getBlogPosts($this->mod_var->id, 10));
+			$rss = $this->generateRSS(cms_blog_posts::getBlogPosts($this->arr_variables['id'], 10));
 			echo Labels::printLabels($rss);
 			die;
 		}
@@ -110,7 +110,7 @@ class blog extends base_module {
 
 		if (!$arr_comments_link || !$blog_post_id) {
 		
-			$arr_blog_options = cms_blogs::getBlogs($this->mod_var->id);
+			$arr_blog_options = cms_blogs::getBlogs($this->arr_variables['id']);
 				
 			$str_tag = ($this->arr_query[0] == 'tag' ? $this->arr_query[1] : false);
 			
@@ -126,12 +126,12 @@ class blog extends base_module {
 			
 			$start = array_search('go', $this->arr_query);
 			$start = ($start !== false && (int)$this->arr_query[$start+1] ? (int)$this->arr_query[$start+1] : 0);
-			$end = $start + $this->mod_var->limit;
-			$next = $start - $this->mod_var->limit;
+			$end = $start + $this->arr_variables['limit'];
+			$next = $start - $this->arr_variables['limit'];
 			$next = ($next < 0 ? 0 : $next);
 			$total = cms_blog_posts::getBlogPostsCount($arr_blog_options['id'], $str_tag);
 		
-			$arr_posts = cms_blog_posts::getBlogPosts($arr_blog_options['id'], ($blog_post_id ? 3 : $this->mod_var->limit), $str_tag, $start);
+			$arr_posts = cms_blog_posts::getBlogPosts($arr_blog_options['id'], ($blog_post_id ? 3 : $this->arr_variables['limit']), $str_tag, $start);
 			
 			if ($blog_post_id) {
 				unset($arr_posts[$blog_post_id]); // Remove blog post from preview list if showing
@@ -162,7 +162,7 @@ class blog extends base_module {
 							.'<span>'.getLabel('lbl_previous').'</span>'
 						.'</a>';
 					}
-					if (($end - $this->mod_var->limit) > 0) {
+					if (($end - $this->arr_variables['limit']) > 0) {
 						
 						$next_prev .= '<a class="next" href="'.SiteStartVars::getModUrl($this->mod_id).($str_tag ? 'tag/'.$str_tag.'/' : '').'go/'.$next.'">'
 							.'<span>'.getLabel('lbl_next').'</span>'

@@ -388,7 +388,7 @@ class cms_general extends base_module {
 				}
 			}
 			if (!$new_sub) {
-				$module_var = (method_exists($key, 'moduleVar') ? $key::moduleVar() : '');
+				$module_var = (method_exists($key, 'moduleVariables') ? $key::moduleVariables() : '');
 				$return .= '<li>'.($link ? '<a href="/'.$key.'/">'.$label.'</a>' : '<span id="mod-'.$key.'">'.$label.'</span>').$module_var.'</li>';
 			}
 			

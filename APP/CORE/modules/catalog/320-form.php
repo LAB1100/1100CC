@@ -14,7 +14,7 @@ class form extends base_module {
 		static::$parent_label = getLabel('ttl_input');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select>';
 		$return .= cms_general::createDropdown(cms_forms::getForms());
@@ -25,7 +25,7 @@ class form extends base_module {
 	
 	public function contents() {
 	
-		$arr_form_set = cms_forms::getFormSet($this->mod_var);
+		$arr_form_set = cms_forms::getFormSet($this->arr_variables);
 		
 		if (!$arr_form_set) {
 			return;
@@ -70,12 +70,12 @@ class form extends base_module {
 		// QUERY
 		if ($method == "post") {
 
-			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORM_SUBMISSIONS')." (form_id, date, log_user_id) VALUES (".$this->mod_var.", NOW(), ".Log::addToUserDB().")");
+			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORM_SUBMISSIONS')." (form_id, date, log_user_id) VALUES (".$this->arr_variables.", NOW(), ".Log::addToUserDB().")");
 			$submission_id = DB::lastInsertID();
 			
 			cms_form_submissions::handleFormSubmission($submission_id, $_POST['field']);
 			
-			$arr_form = cms_forms::getForms($this->mod_var);
+			$arr_form = cms_forms::getForms($this->arr_variables);
 			
 			if ($arr_form['send_email']) {
 				
@@ -103,7 +103,7 @@ class form extends base_module {
 	
 	public function createForm() {
 	
-		$arr_form_set = cms_forms::getFormSet($this->mod_var);
+		$arr_form_set = cms_forms::getFormSet($this->arr_variables);
 		
 		$this->validate = [];
 				

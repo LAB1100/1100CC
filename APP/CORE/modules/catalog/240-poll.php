@@ -14,7 +14,7 @@ class poll extends base_module {
 		static::$parent_label = getLabel('lbl_communication');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select>';
 		$return .= cms_general::createDropdown(cms_polls::getPolls());
@@ -25,7 +25,7 @@ class poll extends base_module {
 	
 	public function contents() {
 	
-		$arr_poll_sets = cms_poll_sets::getPollSets($this->mod_var);
+		$arr_poll_sets = cms_poll_sets::getPollSets($this->arr_variables);
 		
 		if ($arr_poll_sets) {
 

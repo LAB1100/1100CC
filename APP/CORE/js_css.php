@@ -12,7 +12,6 @@
 	$arr['js'] = [
 		DIR_CMS.DIR_JS.'jquery.min.js',
 		DIR_CMS.DIR_JS.'jquery.validate.min.js',
-		DIR_CMS.DIR_JS.'jquery.easing.js',
 		DIR_CMS.DIR_JS.'ResizeSensor.js',
 		DIR_CMS.DIR_JS.'Tween.js',
 		DIR_CMS.DIR_JS.'PrismJS.js',

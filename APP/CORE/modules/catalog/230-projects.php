@@ -14,7 +14,7 @@ class projects extends base_module {
 		static::$parent_label = getLabel('lbl_communication');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select>';
 		for ($i = 0; $i <= 20; $i++) {
@@ -27,7 +27,7 @@ class projects extends base_module {
 	
 	public function contents() {
 	
-		$arr_projects = cms_projects::getProjects(0, $this->mod_var);
+		$arr_projects = cms_projects::getProjects(0, $this->arr_variables);
 		
 		if ($arr_projects) {
 			$return .= '<h1>Related</h1>';

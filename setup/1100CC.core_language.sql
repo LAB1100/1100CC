@@ -1,4 +1,4 @@
-INSERT INTO `core_language` (`lang_code`, `flag`, `label`) VALUES
-('de', 'de.gif', 'Deutsch'),
-('en', 'uk.gif', 'English'),
-('nl', 'nl.gif', 'Nederlands');
+INSERT INTO `core_language` (`lang_code`, `label`) VALUES
+('de', 'Deutsch'),
+('en', 'English'),
+('nl', 'Nederlands');

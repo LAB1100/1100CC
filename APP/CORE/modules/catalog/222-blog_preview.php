@@ -14,7 +14,7 @@ class blog_preview extends base_module {
 		static::$parent_label = getLabel('lbl_communication');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="type">'
 			.'<option value="preview">Preview Posts</option>'
@@ -37,50 +37,50 @@ class blog_preview extends base_module {
 	
 	public function contents() {
 
-		$return .= '<div class="blog '.$this->mod_var->type.'">';
+		$return .= '<div class="blog '.$this->arr_variables['type'].'">';
 		
-		$blog_id = ($this->mod_var->id ?: 0);
+		$blog_id = ($this->arr_variables['id'] ?: 0);
 		
 		$arr_link = blog::findMainBlog($blog_id);
 		$arr_link_mod_var = json_decode($arr_link['var'], true);
 		
 		$arr_blog_options = cms_blogs::getBlogs($arr_link_mod_var['id']);
 					
-		if ($this->mod_var->type == 'preview') {
+		if ($this->arr_variables['type'] == 'preview') {
 		
 			$arr_comments_link = blog_post_comments::findBlogPostComments();
 		
-			foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], $this->mod_var->limit) as $row) {
+			foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], $this->arr_variables['limit']) as $row) {
 				
 				$return .= blog::createBlogPostPreview($row, $arr_link, $arr_comments_link, $arr_comments_link);
 			}
 			
 			$total = cms_blog_posts::getBlogPostsCount($arr_blog_options['id']);
 			
-			if ($total > $this->mod_var->limit) {
+			if ($total > $this->arr_variables['limit']) {
 				
-				$next_prev .= '<a class="prev" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'go/'.$this->mod_var->limit.'"><span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span><span>'.getLabel('lbl_previous').'</span></a>';
+				$next_prev .= '<a class="prev" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'go/'.$this->arr_variables['limit'].'"><span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span><span>'.getLabel('lbl_previous').'</span></a>';
 				
 				$return .= '<div class="nextprev">'.$next_prev.'</div>';
 			}
-		} else if ($this->mod_var->type == 'titles') {
+		} else if ($this->arr_variables['type'] == 'titles') {
 		
-			$return .= '<h1>'.($this->mod_var->id ? htmlspecialchars(Labels::parseTextVariables($arr_blog_options['name'])) : getLabel('ttl_posts')).'</h1>'
+			$return .= '<h1>'.($this->arr_variables['id'] ? htmlspecialchars(Labels::parseTextVariables($arr_blog_options['name'])) : getLabel('ttl_posts')).'</h1>'
 			.'<ul>';
 			
-				foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], $this->mod_var->limit, false, 0) as $row) {
+				foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], $this->arr_variables['limit'], false, 0) as $row) {
 					
 					$title = Labels::parseTextVariables($row['title']);
 					$return .= '<li><a title="'.htmlspecialchars($title).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['id'].'/'.str2URL($title).'"><span></span><span>'.htmlspecialchars($title).'</span></a></li>';
 				}
 				
 			$return .= '</ul>';
-		} else if ($this->mod_var->type == 'comments') {
+		} else if ($this->arr_variables['type'] == 'comments') {
 		
-			$return .= '<h1>'.($this->mod_var->id ? htmlspecialchars(Labels::parseTextVariables($arr_blog_options['name'])).' ' : '').getLabel('ttl_comments').'</h1>'
+			$return .= '<h1>'.($this->arr_variables['id'] ? htmlspecialchars(Labels::parseTextVariables($arr_blog_options['name'])).' ' : '').getLabel('ttl_comments').'</h1>'
 			.'<ul>';
 			
-				foreach (cms_blog_post_comments::getBlogComments($arr_blog_options['id'], $this->mod_var->limit) as $row) {
+				foreach (cms_blog_post_comments::getBlogComments($arr_blog_options['id'], $this->arr_variables['limit']) as $row) {
 					
 					$return .= '<li><a title="'.htmlspecialchars($row['name']).' on '.date('d-m-y H:i', strtotime($row['added'])).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['blog_post_id'].'/'.str2URL(Labels::parseTextVariables($row['blog_post_title'])).'#'.$row['id'].'">
 						<span></span>

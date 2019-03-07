@@ -222,11 +222,14 @@ class Log {
 	public static function addToUserDB() {
 		
 		if (!self::$log_user_id) {
+			
+			$sql_user_id = 0;
+			$sql_user_class = 0;
 		
 			if ($_SESSION['USER_ID']) {
 				
-				$sql_column_user = ($_SESSION['USER_GROUP'] ? 'user_id' : 'cms_user_id');
-				$sql_user = $_SESSION['USER_ID'];
+				$sql_user_id = $_SESSION['USER_ID'];
+				$sql_user_class = ($_SESSION['USER_GROUP'] ? 3 : ($_SESSION['CORE'] ? 1 : 2));
 			}
 			
 			if (SiteStartVars::isProcess()) {
@@ -244,9 +247,9 @@ class Log {
 			DB::setConnection(DB::CONNECT_CMS);
 			
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_LOG_USERS')."
-				(".($sql_column_user ? $sql_column_user.", " : "")."ip, ip_proxy, url, referral_url)
+				(user_id, user_class, ip, ip_proxy, url, referral_url)
 					VALUES
-				(".($sql_user ? $sql_user.", " : "")."".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").", ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''").", '".DBFunctions::strEscape($url)."', '".DBFunctions::strEscape($referral_url)."')
+				(".(int)$sql_user_id.", ".(int)$sql_user_class.", ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").", ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''").", '".DBFunctions::strEscape($url)."', '".DBFunctions::strEscape($referral_url)."')
 			");
 			
 			self::$log_user_id = DB::lastInsertID();
@@ -261,7 +264,7 @@ class Log {
 	
 		if ($_SESSION['USER_ID']) {
 			
-			$where = "user_id = ".($_SESSION['USER_GROUP'] ? 'user_id' : 'cms_user_id');
+			$where = "user_class = ".($_SESSION['USER_GROUP'] ? 3 : ($_SESSION['CORE'] ? 1 : 2));
 		} else {
 			
 			$arr_ip = self::getIP();

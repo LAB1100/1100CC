@@ -24,6 +24,7 @@ class FormatExcerpt {
 			preg_match_all('/<a[^>]*href=["]([^"]*)["][^>]*>(.*?)<\/a>/si', $html, $matches);
 			
 			$num_matches = count($matches[0]);
+			
 			for ($i = 0; $i < $num_matches; $i++) {
 				if (rawurldecode($matches[1][$i]) == rawurldecode($string)) {
 					$string = $matches[0][$i];

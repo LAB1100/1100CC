@@ -14,7 +14,7 @@ class navigation extends base_module {
 		static::$parent_label = getLabel('ttl_site');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="directory_id" title="Directory">';
 		$return .= directories::createDirectoriesDropdown(directories::getDirectories(), false, true);
@@ -30,7 +30,7 @@ class navigation extends base_module {
 			$return .= '<ul><li class="active"><a href="'.SiteStartVars::getBasePath().SiteStartVars::$page_name.'">'.htmlspecialchars(Labels::parseTextVariables(SiteStartVars::$page['title'])).'</a></li></ul>';
 		} else {
 			
-			$directory_id = ($this->mod_var->directory_id ?: SiteStartVars::$dir['id']);
+			$directory_id = ($this->arr_variables['directory_id'] ?: SiteStartVars::$dir['id']);
 			
 			$root_directory_id = directories::getClosestRootedDirectory($directory_id);
 			$arr_root_directory = directories::getDirectories($directory_id);

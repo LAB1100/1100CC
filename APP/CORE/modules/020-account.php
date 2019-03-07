@@ -14,7 +14,7 @@ class account extends base_module {
 		static::$parent_label = getLabel('lbl_users');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<input type="checkbox" name="allow_name" value="1" title="'.getLabel('lbl_allow').' '.getLabel('lbl_name').'" />';
 		$return .= '<input type="checkbox" name="allow_uname" value="1" title="'.getLabel('lbl_allow').' '.getLabel('lbl_uname').'" />';
@@ -57,8 +57,8 @@ class account extends base_module {
 			$return .= '<h1>Account Setup</h1>
 				<form id="f:account:account_update-0">
 					<fieldset><ul>
-						<li><label>'.getLabel('lbl_name_display').'</label>'.($this->mod_var->allow_name ? '<input name="name" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'</span>').'</li>
-						<li><label>'.getLabel('lbl_username').'</label>'.($this->mod_var->allow_uname ? '<input name="uname" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'</span>').'</li>
+						<li><label>'.getLabel('lbl_name_display').'</label>'.($this->arr_variables['allow_name'] ? '<input name="name" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'</span>').'</li>
+						<li><label>'.getLabel('lbl_username').'</label>'.($this->arr_variables['allow_uname'] ? '<input name="uname" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'</span>').'</li>
 						<li><label>'.getLabel('lbl_email').'</label><input name="email" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['email'].'" /></li>
 						'.($arr_languages ? '<li><label>'.getLabel('lbl_language').'</label>'.self::createLanguageMenu($arr_languages, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code']).'</li>' : '').'
 						<li><label>'.getLabel('lbl_password').'</label><input name="password" id="password" type="password" autocomplete="off" /></li>
@@ -107,10 +107,10 @@ class account extends base_module {
 			}
 						
 			$arr_update = ['email' => $_POST['email']];
-			if ($this->mod_var->allow_name) {
+			if ($this->arr_variables['allow_name']) {
 				$arr_update['name'] = $_POST['name'];
 			}
-			if ($this->mod_var->allow_uname) {
+			if ($this->arr_variables['allow_uname']) {
 				$arr_update['uname'] = $_POST['uname'];
 			}
 			
@@ -142,7 +142,7 @@ class account extends base_module {
 		
 			foreach($arr_languages as $lang_code => $arr_language) {	
 					
-				$return .= '<li><label><input type="radio" name="lang_code" value="'.$arr_language['lang_code'].'"'.($lang_code == $selected ? ' checked="checked"' : '').' /><span><img src="/'.DIR_CMS.DIR_FLAGS.$arr_language['flag'].'" />'.$arr_language['label'].'</span></label></li>';
+				$return .= '<li><label><input type="radio" name="lang_code" value="'.$arr_language['lang_code'].'"'.($lang_code == $selected ? ' checked="checked"' : '').' /><span>'.$arr_language['label'].'</span></label></li>';
 			}
 			
 		$return .= '</ul>';

@@ -234,7 +234,11 @@ class cms_forms extends base_module {
 				error('Missing information');
 			}
 			
-			$res = DB::query("INSERT INTO ".DB::getTable("TABLE_FORMS")." (name, text, script, label_button, response, send_email, email, redirect_page_id) VALUES ('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['text'])."', '".DBFunctions::strEscape($_POST['script'])."', '".DBFunctions::strEscape($_POST['label_button'])."', '".DBFunctions::strEscape($_POST['response'])."', ".DBFunctions::escapeAs($_POST['send_email'], DBFunctions::TYPE_BOOLEAN).", '".DBFunctions::strEscape($_POST['email'])."', ".(int)$_POST['redirect_page_id'].")");
+			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORMS')."
+				(name, text, script, label_button, response, send_email, email, redirect_page_id)
+					VALUES
+				('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['text'])."', '".DBFunctions::strEscape($_POST['script'])."', '".DBFunctions::strEscape($_POST['label_button'])."', '".DBFunctions::strEscape($_POST['response'])."', ".DBFunctions::escapeAs($_POST['send_email'], DBFunctions::TYPE_BOOLEAN).", '".DBFunctions::strEscape($_POST['email'])."', ".(int)$_POST['redirect_page_id'].")
+			");
 			
 			$new_id = DB::lastInsertID();
 			
@@ -246,7 +250,17 @@ class cms_forms extends base_module {
 		
 		if ($method == "update" && (int)$id) {
 					
-			$res = DB::query("UPDATE ".DB::getTable('TABLE_FORMS')." SET name = '".DBFunctions::strEscape($_POST['name'])."', text = '".DBFunctions::strEscape($_POST['text'])."', script = '".DBFunctions::strEscape($_POST['script'])."', label_button = '".DBFunctions::strEscape($_POST['label_button'])."', response = '".DBFunctions::strEscape($_POST['response'])."', send_email = ".DBFunctions::escapeAs($_POST['send_email'], DBFunctions::TYPE_BOOLEAN).", email = '".DBFunctions::strEscape($_POST['email'])."', redirect_page_id = ".(int)$_POST['redirect_page_id']." WHERE id = ".(int)$id."");
+			$res = DB::query("UPDATE ".DB::getTable('TABLE_FORMS')." SET
+					name = '".DBFunctions::strEscape($_POST['name'])."',
+					text = '".DBFunctions::strEscape($_POST['text'])."',
+					script = '".DBFunctions::strEscape($_POST['script'])."',
+					label_button = '".DBFunctions::strEscape($_POST['label_button'])."',
+					response = '".DBFunctions::strEscape($_POST['response'])."',
+					send_email = ".DBFunctions::escapeAs($_POST['send_email'], DBFunctions::TYPE_BOOLEAN).",
+					email = '".DBFunctions::strEscape($_POST['email'])."',
+					redirect_page_id = ".(int)$_POST['redirect_page_id']."
+				WHERE id = ".(int)$id."
+			");
 			
 			self::updateForm($id, $_POST['field']);
 			
@@ -261,7 +275,7 @@ class cms_forms extends base_module {
 					WHERE EXISTS (SELECT TRUE
 							FROM ".DB::getTable('TABLE_FORM_FIELDS')." fld
 						WHERE fld.form_id = ".(int)$id."
-							AND field_id = fld.id
+							AND ".DB::getTable('TABLE_FORM_FIELD_SUB').".field_id = fld.id
 					)
 				;
 				
@@ -382,19 +396,20 @@ class cms_forms extends base_module {
 			
 			if ($key[0] == 'temp') {
 				
-				$res = DB::query("INSERT INTO ".DB::getTable("TABLE_FORM_FIELDS")."
+				$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORM_FIELDS')."
 										(form_id, label, type, field_sub_table, required, sort) 
 											VALUES
-										(".$id.", '".DBFunctions::strEscape($value['label'])."', '".DBFunctions::strEscape($value['type'])."', '".DBFunctions::strEscape($value['field_sub_table'])."', ".(int)$value['required'].", ".$sort.")");
+										(".(int)$id.", '".DBFunctions::strEscape($value['label'])."', '".DBFunctions::strEscape($value['type'])."', '".DBFunctions::strEscape($value['field_sub_table'])."', ".DBFunctions::escapeAs($value['required'], DBFunctions::TYPE_BOOLEAN).", ".$sort.")");
 				
 				$cur_field_id = DB::lastInsertID();
 			} else {
 				
-				$res = DB::query("UPDATE ".DB::getTable("TABLE_FORM_FIELDS")."
-										SET label = '".DBFunctions::strEscape($value['label'])."', type = '".DBFunctions::strEscape($value['type'])."', field_sub_table = '".DBFunctions::strEscape($value['field_sub_table'])."', required = ".(int)$value['required'].", sort = ".$sort."
-										WHERE id = ".(int)$key[0]."");
+				$res = DB::query("UPDATE ".DB::getTable('TABLE_FORM_FIELDS')." SET 
+						label = '".DBFunctions::strEscape($value['label'])."', type = '".DBFunctions::strEscape($value['type'])."', field_sub_table = '".DBFunctions::strEscape($value['field_sub_table'])."', required = ".DBFunctions::escapeAs($value['required'], DBFunctions::TYPE_BOOLEAN).", sort = ".$sort."
+					WHERE id = ".(int)$key[0]."
+				");
 				
-				$cur_field_id = $key[0];
+				$cur_field_id = (int)$key[0];
 			}
 			
 			$arr_field_id[] = $cur_field_id;
@@ -413,29 +428,47 @@ class cms_forms extends base_module {
 					$sub_key = explode('_', $sub_key);
 					
 					if ($sub_key[0] == 'temp') {
+						
 						$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORM_FIELD_SUB')."
 												(field_id, label, sort)
 													VALUES
-												(".$cur_field_id.", '".DBFunctions::strEscape($value_sub['label'])."', ".$sort.")");
+												(".$cur_field_id.", '".DBFunctions::strEscape($value_sub['label'])."', ".$sort.")
+						");
+						
 						$cur_subfield_id = DB::lastInsertID();
 					} else {
-						$res = DB::query("UPDATE ".DB::getTable('TABLE_FORM_FIELD_SUB')."
-												SET label = '".DBFunctions::strEscape($value_sub['label'])."', sort = ".$sort."
-												WHERE id = ".$sub_key[0]."");
-						$cur_subfield_id = $sub_key[0];
+						
+						$res = DB::query("UPDATE ".DB::getTable('TABLE_FORM_FIELD_SUB')." SET
+								label = '".DBFunctions::strEscape($value_sub['label'])."', sort = ".$sort."
+							WHERE id = ".(int)$sub_key[0]."
+						");
+						
+						$cur_subfield_id = (int)$sub_key[0];
 					}
+					
 					$arr_subfield_id[] = $cur_subfield_id;
 					$sort++;
 				}
 				
 				$res = DB::query("DELETE FROM ".DB::getTable('TABLE_FORM_FIELD_SUB')."
-										WHERE field_id = ".$cur_field_id." AND id NOT IN (".(implode(",", $arr_subfield_id) ?: "''").")");
+						WHERE field_id = ".$cur_field_id." AND id NOT IN (".(implode(',', $arr_subfield_id) ?: "''").")
+				");
 			}
 		}
 		
-		$res = DB::query("DELETE fld, sub FROM ".DB::getTable('TABLE_FORM_FIELDS')." fld
-								LEFT JOIN ".DB::getTable("TABLE_FORM_FIELD_SUB")." sub ON (sub.field_id = fld.id)
-								WHERE fld.form_id = ".$id." AND fld.id NOT IN (".(implode(",", $arr_field_id) ?: "''").")");
+		$res = DB::queryMulti("
+			".DBFunctions::deleteWith(
+				DB::getTable('TABLE_FORM_FIELD_SUB'), 'sub', 'field_id',
+				"JOIN ".DB::getTable('TABLE_FORM_FIELDS')." fld ON (fld.id = sub.field_id
+					AND fld.form_id = ".(int)$id."
+					AND fld.id NOT IN (".(implode(',', $arr_field_id) ?: "''").")
+				)"
+			)."
+			;
+			DELETE FROM ".DB::getTable('TABLE_FORM_FIELDS')."
+				WHERE form_id = ".(int)$id." AND id NOT IN (".(implode(",", $arr_field_id) ?: "''").")
+			;
+		");
 	}
 	
 	public static function getForms($form_id = 0) {

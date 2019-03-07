@@ -95,6 +95,25 @@ class HomeLogin {
 			
 			$_SESSION['USER_ID'] = $_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID'];
 			$_SESSION['USER_GROUP'] = SiteStartVars::$user_group;
+			
+			if (strtotime($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['last_login']) < strtotime('-1 day')) {
+				
+				$arr_ip = Log::getIP();
+				
+				DB::setConnection(DB::CONNECT_CMS);
+				
+				$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')."
+				SET 
+					last_login = NOW(),
+						ip = ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").",
+						ip_proxy = ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''")."
+					WHERE id = ".(int)$_SESSION['USER_ID']
+				);
+				
+				DB::setConnection();
+				
+				msg(user_management::getUserTag($_SESSION['USER_ID']), 'LOGIN+', LOG_SYSTEM);
+			}
 		} else {
 			
 			self::toLogin();
@@ -142,12 +161,12 @@ class HomeLogin {
 					ip = ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").",
 					ip_proxy = ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''")."
 					".($passhash !== $arr_user['passhash'] ? ", passhash = '".DBFunctions::strEscape($passhash)."'" : "")."
-				WHERE id = ".$_SESSION['USER_ID']
+				WHERE id = ".(int)$_SESSION['USER_ID']
 			);
 			
 			DB::setConnection();
 			
-			msg(user_management::getUserTag($arr_user['id']), 'LOGIN', LOG_SYSTEM);
+			msg(user_management::getUserTag($_SESSION['USER_ID']), 'LOGIN', LOG_SYSTEM);
 			
 			if ($_SESSION['RETURN_TO']) {
 				

@@ -470,7 +470,7 @@ abstract class DBFunctionsBase {
 	
 	public static function withKeys($table, $alias, $column) {
 		
-		$arr = ['where' => [], 'where' => []];
+		$arr = ['select' => [], 'where' => []];
 		
 		if (is_array($column)) {
 			

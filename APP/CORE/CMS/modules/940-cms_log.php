@@ -35,6 +35,12 @@ class cms_log extends base_module {
 		];
 	}
 	
+	public static function logUserLocations() {
+		return [
+			'TABLE_LOG' => 'log_user_id'
+		];
+	}
+	
 	public static function widgetLog() {
 		
 		$arr_log = self::getLogSet(10);
@@ -88,7 +94,7 @@ class cms_log extends base_module {
 			
 		return $return;
 	}
-	
+
 	public function contents() {
 
 		$return .= '<div class="section"><h1>'.self::$label.'</h1>
@@ -196,16 +202,16 @@ class cms_log extends base_module {
 					
 		if ($method == "log_data") {
 			
-			$arr_sql_columns = ['l.label', 'l.msg', 'l.date', 'CASE WHEN lu.user_id != 0 THEN u.name WHEN lu.cms_user_id != 0 THEN \'CMS\' ELSE lu.ip END'];
-			$arr_sql_columns_search = ['l.label', 'l.msg', DBFunctions::castAs('l.date', DBFunctions::CAST_TYPE_STRING), 'CASE WHEN lu.user_id > 0 THEN u.name WHEN lu.cms_user_id != 0 THEN \'CMS\' ELSE \'\' END'];
-			$arr_sql_columns_as = ['l.label', 'l.msg', 'l.date', 'CASE WHEN lu.user_id != 0 THEN ug.name WHEN lu.cms_user_id != 0 THEN \'CMS\' ELSE \'\' END AS user', 'lu.ip', 'l.type', 'l.id'];
+			$arr_sql_columns = ['l.label', 'l.msg', 'l.date', 'CASE WHEN lu.user_class = 3 THEN u.name WHEN lu.user_class = 1 OR lu.user_class = 2 THEN \'CMS\' ELSE lu.ip END'];
+			$arr_sql_columns_search = ['l.label', 'l.msg', DBFunctions::castAs('l.date', DBFunctions::CAST_TYPE_STRING), 'CASE WHEN lu.user_class = 3 THEN u.name WHEN lu.user_class = 1 OR lu.user_class = 2 THEN \'CMS\' ELSE \'\' END'];
+			$arr_sql_columns_as = ['l.label', 'l.msg', 'l.date', 'CASE WHEN lu.user_class = 3 THEN ug.name WHEN lu.user_class = 1 OR lu.user_class = 2 THEN \'CMS\' ELSE \'\' END AS user', 'lu.ip', 'l.type', 'l.id'];
 
 			$sql_index = 'l.id';
 			$sql_index_body = 'l.id, lu.id, u.id, ug.id';
 			
 			$sql_table = DB::getTable('TABLE_LOG')." l
 				LEFT JOIN ".DB::getTable('TABLE_LOG_USERS')." lu ON (lu.id = l.log_user_id)
-				LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = lu.user_id)
+				LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = lu.user_id AND lu.user_class = 3)
 				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
 			";
 			
@@ -248,15 +254,11 @@ class cms_log extends base_module {
 		
 		if ($method == "empty") {
 					
-			$res = DB::queryMulti("
-				".DBFunctions::deleteWith(
-					DB::getTable('TABLE_LOG_USERS'), 'lu', 'id',
-					"JOIN ".DB::getTable('TABLE_LOG')." l ON (l.log_user_id = lu.id)"
-				)."
-				;
-				DELETE FROM ".DB::getTable('TABLE_LOG')."
-				;
+			$res = DB::query("
+				DELETE FROM ".DB::getTable('TABLE_LOG').";
 			");
+			
+			self::cleanLogUsers();
 			
 			$this->refresh_table = true;
 			$this->msg = true;
@@ -266,16 +268,13 @@ class cms_log extends base_module {
 			
 			$id = arrParseRecursive($id, 'int');
 					
-			$res = DB::queryMulti("
-				".DBFunctions::deleteWith(
-					DB::getTable('TABLE_LOG_USERS'), 'lu', 'id',
-					"JOIN ".DB::getTable('TABLE_LOG')." l ON (l.log_user_id = lu.id AND l.id IN (".(is_array($id) ? implode(',', $id) : $id)."))"
-				)."
-				;
+			$res = DB::query("
 				DELETE FROM ".DB::getTable('TABLE_LOG')."
 					WHERE id IN (".(is_array($id) ? implode(',', $id) : $id).")
 				;
 			");
+			
+			self::cleanLogUsers();
 			
 			$this->refresh_table = true;
 			$this->msg = true;
@@ -288,14 +287,14 @@ class cms_log extends base_module {
 
 		$res = DB::query("SELECT l.*,
 					CASE
-						WHEN lu.user_id != 0 THEN ug.name
-						WHEN lu.cms_user_id != 0 THEN 'CMS'
+						WHEN lu.user_class = 3 THEN ug.name
+						WHEN lu.user_class = 1 OR lu.user_class = 2 THEN 'CMS'
 						ELSE ''
 					END AS user,
 					lu.ip
 				FROM ".DB::getTable('TABLE_LOG')." l
 				LEFT JOIN ".DB::getTable('TABLE_LOG_USERS')." lu ON (lu.id = l.log_user_id)
-				LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = lu.user_id)
+				LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = lu.user_id AND lu.user_class = 3)
 				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
 			ORDER BY l.date DESC
 			LIMIT ".(int)$limit." OFFSET 0
@@ -314,17 +313,17 @@ class cms_log extends base_module {
 		$res = DB::query("SELECT
 			lu.*, u.uname, u.name, ug.name AS group_name, cu.uname AS cms_uname, cu.name AS cms_name
 				FROM ".DB::getTable('TABLE_LOG_USERS')." lu
-				LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = lu.user_id)
+				LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = lu.user_id AND lu.user_class = 3)
 				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
-				LEFT JOIN ".DB::getTable('TABLE_CMS_USERS')." cu ON (cu.id = lu.cms_user_id)
+				LEFT JOIN ".DB::getTable('TABLE_CMS_USERS')." cu ON (cu.id = lu.user_id AND lu.user_class = 2)
 			WHERE lu.id = ".(int)$id
 		);
 		
 		$arr_row = $res->fetchAssoc();
 		
-		if (!$arr_row['cms_name']) {
+		if ($arr_row['user_class'] == 1) {
 			
-			$arr_cms_user = cms_users::getCMSUsers($arr_row['cms_user_id'], true);
+			$arr_cms_user = cms_users::getCMSUsers($arr_row['user_id'], true);
 		
 			$arr_row['cms_name'] = $arr_cms_user['name'];
 			$arr_row['cms_uname'] = $arr_cms_user['uname'];
@@ -339,7 +338,27 @@ class cms_log extends base_module {
 			$str_ip = ($bin_ip ? inet_ntop($bin_ip) : getLabel('lbl_not_available_abbr'));
 		}
 		
-		return ($arr_row['user_id'] ? $arr_row['name'].' - '.$arr_row['uname'].' ('.$arr_row['group_name'].') - '.$str_ip : ($arr_row['cms_user_id'] ? $arr_row['cms_name'].' - '.$arr_row['cms_uname'].' (CMS)' : ($str_ip ? $str_ip : 'System')));
+		return ($arr_row['user_class'] == 3 ? $arr_row['name'].' - '.$arr_row['uname'].' ('.$arr_row['group_name'].') - '.$str_ip : (($arr_row['user_class'] == 1 || $arr_row['user_class'] == 2) ? $arr_row['cms_name'].' - '.$arr_row['cms_uname'].' (CMS)' : ($str_ip ? $str_ip : 'System')));
+	}
+	
+	private static function cleanLogUsers() {
+		
+		$arr_module_log_user_locations = getModuleConfiguration('logUserLocations');
+		
+		$arr_sql_where = [];
+		
+		foreach ($arr_module_log_user_locations as $module => $arr_log_user_locations) {
+		
+			foreach ($arr_log_user_locations as $sql_table => $sql_field) {
+				
+				$arr_sql_where[] = "NOT EXISTS (SELECT TRUE FROM ".DB::getTable($sql_table)." AS test WHERE test.".$sql_field." = ".DB::getTable('TABLE_LOG_USERS').".id)";
+			}
+		}
+	
+		DB::query("
+			DELETE FROM ".DB::getTable('TABLE_LOG_USERS')."
+				WHERE ".implode(' AND ', $arr_sql_where)."
+		");
 	}
 	
 	public static function cleanRequests($arr_options) {
@@ -348,8 +367,9 @@ class cms_log extends base_module {
 			return;
 		}
 
-		$res = DB::query("DELETE FROM ".DB::getTable('TABLE_LOG_REQUESTS')."
-			WHERE type != '' AND date < (NOW() - ".DBFunctions::interval(((int)$arr_options['age_amount'] * (int)$arr_options['age_unit']), 'MINUTE').")
+		$res = DB::query("
+			DELETE FROM ".DB::getTable('TABLE_LOG_REQUESTS')."
+				WHERE type != '' AND date < (NOW() - ".DBFunctions::interval(((int)$arr_options['age_amount'] * (int)$arr_options['age_unit']), 'MINUTE').")
 		");
 	}
 }

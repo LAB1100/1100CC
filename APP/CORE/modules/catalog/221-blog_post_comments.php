@@ -38,7 +38,7 @@ class blog_post_comments extends base_module {
 	public function contents() {
 
 		$arr_link = blog::findMainBlog();
-		$arr_query = SiteStartVars::getModuleVars($arr_link['id']);
+		$arr_query = SiteStartVars::getModVariables($arr_link['id']);
 
 		if ($arr_query && (int)$arr_query[0]) {
 				
@@ -121,7 +121,7 @@ class blog_post_comments extends base_module {
 			}
 			
 			$arr_link = blog::findMainBlog();
-			$arr_query = SiteStartVars::getModuleVars($arr_link['id']);
+			$arr_query = SiteStartVars::getModVariables($arr_link['id']);
 			
 			if (!$arr_query[0]) {
 				error(getLabel('msg_missing_information'));

@@ -56,10 +56,9 @@
 		$arr = $res->fetchAssoc();
 
 		$mod = new $arr['module'];
-		$mod->arr_mod = $arr;
-		$mod->arr_query = SiteStartVars::getModuleVars($arr['module_id']);
-		$mod->mod_var = (substr($arr['var'], 0, 1) == '{' ? json_decode($arr['var']) : $arr['var']);
-		$mod->mod_id = $arr['module_id'];
+		$mod->setMod($arr, $arr['module_id']);
+		$mod->setModVariables($arr['var']);
+		$mod->setModQuery(SiteStartVars::getModVariables($arr['module_id']));
 
 		if ($module != 'this' && $module != $arr['module']) { // Targetting module other than source module
 			
@@ -100,8 +99,8 @@
 			} else if ($module != 'this' && $module != $arr['module']) {
 				
 				$mod_target = new $module;
-				$mod_target->arr_query = $arr_mod_target['arr_query'];
-				$mod_target->mod_var = $arr_mod_target['mod_var'];
+				$mod_target->setModVariables($arr_mod_target['mod_var']);
+				$mod_target->setModQuery($arr_mod_target['arr_query']);
 				$mod = $mod_target;
 			}
 		}

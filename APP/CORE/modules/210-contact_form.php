@@ -14,7 +14,7 @@ class contact_form extends base_module {
 		static::$parent_label = getLabel('lbl_communication');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		$return .= '<input type="checkbox" name="show_text" title="Show form text" value="1" />';
 		
 		return $return;
@@ -24,7 +24,7 @@ class contact_form extends base_module {
 
 		$return = '<form id="f:contact_form:form-0">
 			<fieldset><ul>
-				'.($this->mod_var->show_text ? '<li><label></label><span>'.getLabel('txt_contact_form_info').'</span></li>' : '').'
+				'.($this->arr_variables['show_text'] ? '<li><label></label><span>'.getLabel('txt_contact_form_info').'</span></li>' : '').'
 				<li><label>'.getLabel('lbl_name').'</label><input name="name" type="text" value="" placeholder="'.getLabel('lbl_name').'" /></li>
 				<li><label>'.getLabel('lbl_email').'</label><input name="email" type="text" value="" placeholder="'.getLabel('lbl_email').'" /></li>
 				<li><label>'.getLabel('lbl_message').'</label><textarea name="body" placeholder="'.getLabel('lbl_message').'"></textarea></li>

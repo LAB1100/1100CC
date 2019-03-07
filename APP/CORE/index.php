@@ -82,7 +82,7 @@
 		
 		SiteStartVars::$uri_translator = $arr_uri_translator;
 		
-		SiteStartVars::setRequestVars(array_slice($arr_path_info, 1));
+		SiteStartVars::setRequestVariables(array_slice($arr_path_info, 1));
 		
 		// Request
 		require('uri.php');
@@ -126,7 +126,7 @@
 		
 		Log::logRequest('api_home_'.$arr_api['id']);
 
-		SiteStartVars::setRequestVars(($arr_path_info[1] ? array_slice($arr_path_info, 1) : []));
+		SiteStartVars::setRequestVariables(($arr_path_info[1] ? array_slice($arr_path_info, 1) : []));
 		
 		// Authorization
 		if ($arr_path_info[1] == 'authorization') {
@@ -219,7 +219,7 @@
 		// Directory
 		$arr_directory = ($page_raw ? array_slice($arr_path_info, 0, $page_key) : $arr_path_info);
 		SiteStartVars::$arr_dir = array_slice($arr_directory, 1);
-		SiteStartVars::setPageVars(($page_raw ? array_slice($arr_path_info, $page_key+1) : []));
+		SiteStartVars::setPageVariables(($page_raw ? array_slice($arr_path_info, $page_key+1) : []));
 		SiteStartVars::$dir = directories::traceDirectoryPath($arr_directory);
 		
 		if (!SiteStartVars::$dir) { // No directory
@@ -345,11 +345,10 @@
 				foreach ($arr_modules as $arr_module) {
 						
 					$mod = new $arr_module['module'];
-					$mod->arr_mod = $arr_module;
-					$mod->arr_query = SiteStartVars::getModuleVars($arr_module['id']);
-					$mod->mod_var = (substr($arr_module['var'], 0, 1) == '{' ? json_decode($arr_module['var']) : $arr_module['var']);
-					$mod->mod_id = $arr_module['id'];
-						
+					$mod->setMod($arr_module, $arr_module['id']);
+					$mod->setModVariables($arr_module['var']);
+					$mod->setModQuery(SiteStartVars::getModVariables($arr_module['id']));
+
 					$mod->contents();
 				}
 				
@@ -410,7 +409,7 @@
 		
 			if (SiteStartVars::$page['url']) {
 				if (SiteStartVars::$arr_request_vars) {
-					Response::location(rtrim(SiteStartVars::$page['url'], '/').'/'.implode('/', SiteEndVars::getLocationVars()));
+					Response::location(rtrim(SiteStartVars::$page['url'], '/').'/'.implode('/', SiteEndVars::getLocationVariables()));
 				} else {
 					Response::location(SiteStartVars::$page['url']);
 				}
@@ -439,11 +438,10 @@
 				if ($doc_select->length) {
 					
 					$mod = new $arr_module['module'];
-					$mod->arr_mod = $arr_module;
-					$mod->arr_query = SiteStartVars::getModuleVars($arr_module['id']);
-					$mod->mod_var = (substr($arr_module['var'], 0, 1) == '{' ? json_decode($arr_module['var']) : $arr_module['var']);
-					$mod->mod_id = $arr_module['id'];
-					
+					$mod->setMod($arr_module, $arr_module['id']);
+					$mod->setModVariables($arr_module['var']);
+					$mod->setModQuery(SiteStartVars::getModVariables($arr_module['id']));
+
 					$content = $mod->contents();
 					
 					$doc_select->item(0)->setAttribute('class', $doc_select->item(0)->getAttribute('class').' '.$arr_module['module'].($mod->style ? ' '.$mod->style : ''));					

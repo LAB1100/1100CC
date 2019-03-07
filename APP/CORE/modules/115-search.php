@@ -19,9 +19,9 @@ class search extends base_module {
 		if ($this->arr_query[0] == 'jump') {
 			
 			if ($this->arr_query[2]) { // If a module query follows
-				$location = pages::getModUrl(pages::getModules((int)$this->arr_query[1])).implode('/', array_slice($this->arr_query, 2));
+				$location = pages::getModUrl(pages::getMods((int)$this->arr_query[1])).implode('/', array_slice($this->arr_query, 2));
 			} else {
-				$location = pages::getPageUrl(pages::getModules((int)$this->arr_query[1]));
+				$location = pages::getPageUrl(pages::getMods((int)$this->arr_query[1]));
 			}
 			Response::location($location);
 			die;
@@ -96,7 +96,7 @@ class search extends base_module {
 	
 		$arr_search_properties = getModuleConfiguration('searchProperties');
 		
-		$arr_modules = pages::getModules(array_keys($arr_search_properties));
+		$arr_modules = pages::getMods(array_keys($arr_search_properties));
 		$arr_modules = pages::filterClearance($arr_modules, $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]);
 
 		$arr_search_vars = [];

@@ -36,12 +36,12 @@ class SiteStartVars {
 	public static $session = false;
 	public static $session_open = 0;
 	
-	public static function setPageVars($arr_vars) {
+	public static function setPageVariables($arr_variables) {
 	
 		$cur_mod = 0;
 		$cur_var_name = false;
 
-		foreach ($arr_vars as $var) {
+		foreach ($arr_variables as $var) {
 			
 			$var = str_replace(['<', '>', '\'', '"', ' ', "\n", "\r"], '', $var); // Cleanup
 			preg_match('%^(\d+)\.m$%', $var, $match);
@@ -65,14 +65,14 @@ class SiteStartVars {
 		SiteEndVars::$arr_request_vars = self::$arr_request_vars;
 	}
 	
-	public static function setRequestVars($arr_vars) {
+	public static function setRequestVariables($arr_variables) {
 	
-		self::$arr_request_vars[0] = $arr_vars;
+		self::$arr_request_vars[0] = $arr_variables;
 	}
 	
-	public static function getModuleVars($module_id) {
+	public static function getModVariables($mod_id) {
 	
-		return (self::$arr_request_vars[$module_id] ?: []);
+		return (self::$arr_request_vars[$mod_id] ?: []);
 	}
 	
 	public static function setFeedback($data) {
@@ -113,13 +113,13 @@ class SiteStartVars {
 		self::$https_requested = true;
 	}
 	
-	public static function useHTTPS($requested = true) {
+	public static function useHTTPS($use_requested = true) {
 		
 		if (self::$https === null) {
 			self::$https = (bool)getLabel('https', 'D', true);
 		}
 		
-		return (self::$https && (!$requested || self::$https_requested));
+		return (self::$https && (!$use_requested || (!SERVER_NAME_CUSTOM || self::$https_requested))); // Use https when explicitly requested or when no variable sub-domains are part of the request
 	}
 	
 	public static function startSession() {

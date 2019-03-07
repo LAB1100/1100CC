@@ -25,6 +25,12 @@ class cms_form_submissions extends base_module {
 		];
 	}
 	
+	public static function logUserLocations() {
+		return [
+			'TABLE_FORM_SUBMISSIONS' => 'log_user_id'
+		];
+	}
+	
 	private static $nr_summary_fields = 4;
 	
 	public static function widgetFormSubmissions() {
@@ -411,15 +417,19 @@ class cms_form_submissions extends base_module {
 		// QUERY
 			
 		if ($method == "update" && (int)$id) {
-		
-			$res = DB::query("DELETE fldi, subi FROM ".DB::getTable('TABLE_FORM_SUBMISSIONS')." fs
-					LEFT JOIN ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_INPUT')." fldi ON (fldi.form_submission_id = fs.id)
-					LEFT JOIN ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_SUB_INPUT')." subi ON (subi.form_submission_id = fs.id)
-				WHERE fs.id = ".(int)$id."");
+			
+			$res = DB::queryMulti("
+				DELETE FROM ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_SUB_INPUT')."
+					WHERE form_submission_id = ".(int)$id."
+				;
+				DELETE FROM ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_INPUT')."
+					WHERE form_submission_id = ".(int)$id."
+				;
+			");
 		
 			self::handleFormSubmission($id, $_POST['field']);
 						
-			$this->refresh = true;
+			$this->refresh_table = true;
 			$this->msg = true;
 		}
 		
@@ -432,16 +442,22 @@ class cms_form_submissions extends base_module {
 								
 			cms_general::handleTags(DB::getTable('TABLE_FORM_SUBMISSION_INTERNAL_TAGS'), 'form_submission_id', $id, $_POST['tags'], true);
 		
-			$this->refresh = true;
+			$this->refresh_table = true;
 			$this->msg = true;
 		}
 
 		if ($method == "del" && (int)$id) {
-		
-			$res = DB::query("DELETE fs, fldi, subi FROM ".DB::getTable('TABLE_FORM_SUBMISSIONS')." fs
-								LEFT JOIN ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_INPUT')." fldi ON (fldi.form_submission_id = fs.id)
-								LEFT JOIN ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_SUB_INPUT')." subi ON (subi.form_submission_id = fs.id)
-								WHERE fs.id = ".(int)$id."
+			
+			$res = DB::queryMulti("
+				DELETE FROM ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_SUB_INPUT')."
+					WHERE form_submission_id = ".(int)$id."
+				;
+				DELETE FROM ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_INPUT')."
+					WHERE form_submission_id = ".(int)$id."
+				;
+				DELETE FROM ".DB::getTable('TABLE_FORM_SUBMISSIONS')."
+					WHERE id = ".(int)$id."
+				;
 			");
 			
 			$this->msg = true;

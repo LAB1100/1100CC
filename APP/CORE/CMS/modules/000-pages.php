@@ -151,7 +151,7 @@ class pages extends base_module {
 		return $arr;
 	}
 	
-	public static function getModulesLimited($root = 0, $directory_id = 0, $module = 0, $var = false, $var_name = false) {
+	public static function getModsLimited($root = 0, $directory_id = 0, $module = 0, $var = false, $var_name = false) {
 		
 		$root = ($root ?: directories::getRootDirectory());
 		
@@ -195,7 +195,7 @@ class pages extends base_module {
 		return $arr;
 	}
 	
-	public static function getModules($module, $var = false, $var_name = false) {
+	public static function getMods($module, $var = false, $var_name = false) {
 	
 		$is_num_module = (is_numeric($module) || (is_array($module) && is_numeric(current($module))));
 		$is_arr_module = is_array($module);
@@ -701,7 +701,7 @@ class pages extends base_module {
 		
 			$row = $res->fetchAssoc();
 			
-			$arr_request_vars = SiteStartVars::getModuleVars(0);
+			$arr_request_vars = SiteStartVars::getModVariables(0);
 			
 			if ($arr_request_vars) {
 				$url = self::getModUrl($row).implode('/', $arr_request_vars);

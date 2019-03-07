@@ -20,7 +20,7 @@ abstract class register_by extends base_module {
 	abstract protected function processForm();
 	abstract protected function doubleCheckValidUserId($update);
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		$return .= '<select>';
 		$return .= user_groups::createUserGroupsDropdown(user_groups::getUserGroups());
 		$return .= '</select>';
@@ -250,7 +250,7 @@ abstract class register_by extends base_module {
 				".($this->main_table ? "LEFT JOIN ".$this->main_table." ON (".$this->main_table.".user_id = ".$sql_index.")" : "")."
 			";
 
-			if ($this->mod_var && $this->mod_var != $_SESSION['USER_GROUP']) {
+			if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
 				$sql_where = "u.parent_id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'];
 			} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']) {
 				$sql_where = "u.parent_id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
@@ -306,13 +306,13 @@ abstract class register_by extends base_module {
 			$this->checkValidUserId();
 
 			$parent_id = 0;
-			if ($this->mod_var && $this->mod_var != $_SESSION['USER_GROUP']) {
+			if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
 				$parent_id = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'];
 			} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']) {
 				$parent_id = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
 			}
 
-			$arr_user = user_management::addUser(true, ['name' => $_POST['name'], 'uname' => $_POST['email'], 'email' => $_POST['email'], 'group_id' => $this->mod_var, 'parent_id' => $parent_id], false, (bool)$_POST['send_email']);
+			$arr_user = user_management::addUser(true, ['name' => $_POST['name'], 'uname' => $_POST['email'], 'email' => $_POST['email'], 'group_id' => $this->arr_variables, 'parent_id' => $parent_id], false, (bool)$_POST['send_email']);
 			
 			$this->arr_user = user_groups::getUserData($arr_user['id']);
 			
@@ -409,7 +409,7 @@ abstract class register_by extends base_module {
 			return;
 		}
 
-		if ($this->mod_var && $this->mod_var != $_SESSION['USER_GROUP']) {
+		if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
 			
 			$check = user_management::checkUserIds($id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], 'parent');
 		} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']) {

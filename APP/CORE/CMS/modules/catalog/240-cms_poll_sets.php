@@ -18,6 +18,12 @@ class cms_poll_sets extends base_module {
 		static::$label = getLabel('ttl_poll_sets');
 		static::$parent_label = getLabel('ttl_content');
 	}
+	
+	public static function logUserLocations() {
+		return [
+			'TABLE_POLL_SET_OPTION_VOTES' => 'log_user_id'
+		];
+	}
 
 	public function contents() {
 		
@@ -288,7 +294,9 @@ class cms_poll_sets extends base_module {
 				WHERE id = ".(int)$id."
 			");
 						
-			$res = DB::query("DELETE FROM ".DB::getTable('TABLE_POLL_SET_LINK')." WHERE poll_set_id = '".$id."'");
+			$res = DB::query("DELETE FROM ".DB::getTable('TABLE_POLL_SET_LINK')."
+				WHERE poll_set_id = ".(int)$id."
+			");
 			
 			if ($_POST['poll']) {
 				

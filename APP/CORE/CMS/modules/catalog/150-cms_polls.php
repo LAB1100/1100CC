@@ -151,14 +151,27 @@ class cms_polls extends base_module {
 		}
 
 		if ($method == "poll_del" && $id) {
-		
-			$res = DB::query("DELETE p, l, s
-				FROM ".DB::getTable('TABLE_POLLS')." p
-					LEFT JOIN ".DB::getTable('TABLE_POLL_SET_LINK')." l ON (l.poll_id = p.id)
-					LEFT JOIN ".DB::getTable('TABLE_POLL_SETS')." s ON (s.id = l.poll_set_id)
-					LEFT JOIN ".DB::getTable('TABLE_POLL_SET_OPTIONS')." so ON (so.poll_set_id = s.id)
-				WHERE p.id = ".(int)$id."");
 				
+			$res = DB::queryMulti("
+				".DBFunctions::deleteWith(
+					DB::getTable('TABLE_POLL_SET_OPTIONS'), 'so', 'poll_set_id',
+					"JOIN ".DB::getTable('TABLE_POLL_SETS')." s ON (s.id = so.poll_set_id)
+					JOIN ".DB::getTable('TABLE_POLL_SET_LINK')." l ON (l.poll_set_id = s.id AND l.poll_id = ".(int)$id.")"
+				)."
+				;
+				".DBFunctions::deleteWith(
+					DB::getTable('TABLE_POLL_SETS'), 's', 'id',
+					"JOIN ".DB::getTable('TABLE_POLL_SET_LINK')." l ON (l.poll_set_id = s.id AND l.poll_id = ".(int)$id.")"
+				)."
+				;
+				DELETE FROM ".DB::getTable('TABLE_POLL_SET_LINK')."
+					WHERE poll_id = ".(int)$id."
+				;
+				DELETE FROM ".DB::getTable('TABLE_POLLS')."
+					WHERE id = ".(int)$id."
+				;
+			");
+		
 			$this->msg = true;
 		}
 	}	

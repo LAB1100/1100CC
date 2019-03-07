@@ -14,7 +14,7 @@ class calendar extends base_module {
 		static::$parent_label = getLabel('lbl_communication');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="date_before_amount">';
 		for ($i = 0; $i <= 10; $i++) {
@@ -70,29 +70,29 @@ class calendar extends base_module {
 		$date_start = new DateTime(($date ? '@'.$date : false));
 		$date_start->setTime(0, 0, 0);
 		if ($direction == "prev_range" || $direction == "next_day") {
-			$date_start->modify(-($this->mod_var->date_range_amount).' '.$this->mod_var->date_range_unit);
+			$date_start->modify(-($this->arr_variables['date_range_amount']).' '.$this->arr_variables['date_range_unit']);
 		}
 		if ($direction == "prev_day") {
 			$date_start->modify('-1 day');
 		} else if ($direction == "next_day") {
 			$date_start->modify('+1 day');
 		}
-		$date_start->modify(-($this->mod_var->date_before_amount).' '.$this->mod_var->date_before_unit);
+		$date_start->modify(-($this->arr_variables['date_before_amount']).' '.$this->arr_variables['date_before_unit']);
 		$date_end = new DateTime(($date ? '@'.$date : false));
 		$date_end->setTime(23, 59, 59);
 		if ($direction == "next_range" || $direction == "prev_day") {
-			$date_end->modify(+($this->mod_var->date_range_amount).' '.$this->mod_var->date_range_unit);
+			$date_end->modify(+($this->arr_variables['date_range_amount']).' '.$this->arr_variables['date_range_unit']);
 		}
 		if ($direction == "prev_day") {
 			$date_end->modify('-1 day');
 		} else if ($direction == "next_day") {
 			$date_end->modify('+1 day');
 		}
-		$date_end->modify(+($this->mod_var->date_after_amount).' '.$this->mod_var->date_after_unit);
+		$date_end->modify(+($this->arr_variables['date_after_amount']).' '.$this->arr_variables['date_after_unit']);
 		
 		$date_range_start = new DateTime(($date ? '@'.$date : false));
 		if ($direction == "prev_range" || $direction == "next_day") {
-			$date_range_start->modify(-($this->mod_var->date_range_amount).' '.$this->mod_var->date_range_unit);
+			$date_range_start->modify(-($this->arr_variables['date_range_amount']).' '.$this->arr_variables['date_range_unit']);
 		}
 		if ($direction == "prev_day") {
 			$date_range_start->modify('-1 day');
@@ -103,7 +103,7 @@ class calendar extends base_module {
 		$date_range_end = new DateTime(($date ? '@'.$date : false));
 		$date_range_end->setTime(23, 59, 59);
 		if ($direction == "next_range" || $direction == "prev_day") {
-			$date_range_end->modify(+($this->mod_var->date_range_amount).' '.$this->mod_var->date_range_unit);
+			$date_range_end->modify(+($this->arr_variables['date_range_amount']).' '.$this->arr_variables['date_range_unit']);
 		}
 		if ($direction == "prev_day") {
 			$date_range_end->modify('-1 day');

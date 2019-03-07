@@ -17,7 +17,7 @@ abstract class register_self extends base_module {
 	abstract protected function extraFields($arr_fields);
 	abstract protected function processForm();
 		
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="user_group_id">'
 			.user_groups::createUserGroupsDropdown(user_groups::getUserGroups(), false, true)
@@ -46,7 +46,7 @@ abstract class register_self extends base_module {
 			<form id="f:'.static::class.':user_add-0">
 				<fieldset><ul>
 					<li><label>'.getLabel('lbl_name_display').'</label><input name="name" type="text" /></li>
-					'.(!$this->mod_var->email_as_username ? '<li><label>'.getLabel('lbl_username').'</label><input name="uname" type="text" /></li>' : '').'
+					'.(!$this->arr_variables['email_as_username'] ? '<li><label>'.getLabel('lbl_username').'</label><input name="uname" type="text" /></li>' : '').'
 					<li><label>'.getLabel('lbl_email').'</label><input name="email" type="text" /></li>
 					<li><label>'.getLabel('lbl_password').'</label><input name="password" id="password" type="password" /></li>
 					<li><label>'.getLabel('lbl_confirmation').'</label><input name="password_confirm" type="password" /></li>
@@ -56,7 +56,7 @@ abstract class register_self extends base_module {
 			</form>';
 			
 			$arr_validate = ['name' => 'required', 'email' => 'required', 'password' => 'required', 'password_confirm' => ['required' => true, 'equalTo' => '#password']];
-			if (!$this->mod_var->email_as_username) {
+			if (!$this->arr_variables['email_as_username']) {
 				$arr_validate['uname'] = 'required';
 			}
 			
@@ -97,7 +97,7 @@ abstract class register_self extends base_module {
 			
 			$url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'confirm/';
 		
-			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->mod_var->email_as_username ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->mod_var->user_group_id ?: SiteStartVars::$user_group), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $url);
+			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->arr_variables['email_as_username'] ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->arr_variables['user_group_id'] ?: SiteStartVars::$user_group), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $url);
 			
 			user_management::updateUserLinkedData($user['id'], $user_data);
 			

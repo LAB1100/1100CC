@@ -237,7 +237,14 @@ function ElementObjectByParameters(object_class, object_target, arr_arguments) {
 			return;
 		}
 		
-		new object_class(this, ...arr_arguments);
+		//new object_class(this, ...arr_arguments);
+		
+		var arr_arguments_all = Array.from(arr_arguments);
+		arr_arguments_all.unshift(this);
+		
+		var instance = Object.create(object_class.prototype);
+		instance.constructor = object_class;
+		object_class.apply(instance, arr_arguments_all);
 	};
 }
 
@@ -954,7 +961,7 @@ function Tooltip() {
 		
 		if (elm_hover && elm === elm_hover) {
 			
-			if (is_static) { // Repostion, possibly moved
+			if (is_static) { // Reposition, possibly moved
 				
 				pos_source = POSITION.getElementToDocument(elm);
 
@@ -4706,6 +4713,16 @@ function FormManager(elm, arr_options) {
 			
 			elm_found.autocompleter.reset();
 		});
+		
+		// Checking values after reset requires pushing code onto the event stack
+		
+		setTimeout(function() {
+			
+			runElementSelectorFunction(elm, '.editor-content', function(elm_found) {
+				
+				elm_found.edit_content.update();
+			});
+		}, 0);
 	});
 }
 

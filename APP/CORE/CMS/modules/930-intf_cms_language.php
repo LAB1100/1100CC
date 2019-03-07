@@ -79,7 +79,7 @@ class intf_cms_language extends cms_language {
 	
 	private static function contentTabCms() {
 					
-		$res = DB::query("SELECT lang_code, flag, label, user, is_default FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." AS language ORDER BY lang_code");
+		$res = DB::query("SELECT lang_code, label, user, is_default FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." AS language ORDER BY lang_code");
 		
 		if ($res->getRowCount() == 0) {
 			$return .= '<section class="info">'.getLabel('msg_no_language').'</section>';
@@ -88,7 +88,6 @@ class intf_cms_language extends cms_language {
 			$return .= '<table class="list">
 				<thead>
 					<tr>
-						<th></th>
 						<th><span>Code</span></th>
 						<th class="max"><span>Label</span></th>
 						<th><span>User</span></th>
@@ -101,7 +100,6 @@ class intf_cms_language extends cms_language {
 					while ($row = $res->fetchAssoc()) {
 								
 						$return .= '<tr id="x:intf_cms_language:language_id-'.$row['lang_code'].'">
-							<td><img src="/'.DIR_FLAGS.$row['flag'].'"></td>
 							<td>'.$row['lang_code'].'</td>	
 							<td>'.$row['label'].'</td>	
 							<td><span class="icon" data-category="status">'.getIcon(($row['user'] ? 'tick' : 'min')).'</span></td>
@@ -119,7 +117,7 @@ class intf_cms_language extends cms_language {
 	
 	private static function contentTabCore() {
 			
-		$res = DB::query("SELECT lang_code, flag, label
+		$res = DB::query("SELECT lang_code, label
 								FROM ".DB::getTable('TABLE_CORE_LANGUAGE')." AS language
 							ORDER BY lang_code
 		");
@@ -131,16 +129,15 @@ class intf_cms_language extends cms_language {
 			$return .= '<table class="list">
 				<thead>
 					<tr>
-						<th></th>
 						<th><span>Code</span></th>
 						<th class="max"><span>Label</span></th>
 						'.($_SESSION['CORE'] ? '<th></th>' : '').'
 					</tr>
 				</thead>
 				<tbody>';
-					while($row = $res->fetchAssoc()) {		
+					while($row = $res->fetchAssoc()) {	
+							
 						$return .= '<tr id="x:intf_cms_language:language_id-'.$row['lang_code'].'">
-							<td><img src="/'.DIR_FLAGS.$row['flag'].'"></td>
 							<td>'.$row['lang_code'].'</td>	
 							<td>'.$row['label'].'</td>	
 							'.($_SESSION['CORE'] ? '<td><input type="button" class="data edit popup language_core_edit" value="edit" /><input type="button" class="data del msg language_core_del" value="del" /></td>' : '').'
@@ -158,31 +155,21 @@ class intf_cms_language extends cms_language {
 		$return = '.cms_language .list tr > :first-child { padding: 1px 4px 1px 4px; }
 			.cms_language .list tr > :first-child img { vertical-align: middle; }
 			
-			#frm-language > fieldset { display: inline-block; vertical-align: top; }
-			#frm-language .flags { position: relative; width:400px; display: inline-block; }
-			#frm-language .flags.hide { display: none; }
-			#frm-language #img-icon:empty { display: block; width: 30px; height: 30px; cursor: pointer; border: 1px dashed #bdbdbd; }
-			#frm-language .flags img { margin:5px; cursor:pointer; float: left; }';
+			#frm-language > fieldset { display: inline-block; vertical-align: top; }';
 		
 		return $return;
 	}
 	
 	public static function js() {
 
-		$return = "$(document).on('change', '[id=f\\\:intf_cms_language\\\:host_language-0] [name^=host_name]', function() {
-			$(this).formCommand();		
-		}).on('change', '.cms_language input[name=is_default_language]', function() {
-			$(this).quickCommand();		
-		}).on('click', '#frm-language #img-icon', function() {
-		  $('.flags').removeClass('hide');
-		}).on('click', '#frm-language .flags img', function() {
-			var img_src = $(this).attr('src');
-			var img_lang_code = $(this).attr('id');
-			
-			$('#img-icon').html('<img src=\"'+img_src+'\">');
-			$('input[name=\"flag\"]').val(img_lang_code);
-			$('.flags').addClass('hide');
-		});";
+		$return = "SCRIPTER.static('#mod-intf_cms_language', function(elm_scripter) {
+		
+			elm_scripter.on('change', '[id=f\\\:intf_cms_language\\\:host_language-0] [name^=host_name]', function() {
+				COMMANDS.formCommand(this);		
+			}).on('change', '.cms_language input[name=is_default_language]', function() {
+				COMMANDS.quickCommand(this);
+			});
+		})";
 		
 		return $return;
 	}
@@ -211,7 +198,8 @@ class intf_cms_language extends cms_language {
 									(host_name, lang_code)
 										VALUES
 									('".DBFunctions::strEscape($host_name)."',
-									'".DBFunctions::strEscape($value)."')");
+									'".DBFunctions::strEscape($value)."')
+				");
 			}
 			
 			$this->msg = true;
@@ -253,13 +241,6 @@ class intf_cms_language extends cms_language {
 					<li>
 						<label>Label</label>
 						<div><input type="text" name="label" value="'.htmlspecialchars($row['label']).'" /></div>
-					</li>
-					<li>
-						<label>Flag</label>
-						<div>
-							<div id="img-icon">'.((!empty($row['flag'])) ? '<img src="/'.DIR_FLAGS.$row['flag'].'" />' : '').'</div>
-							<input type="hidden" name="flag" value="'.$row['flag'].'" />
-						</div>
 					</li>';
 					if ($mode == 'language_cms_insert' || $mode == 'language_cms_update') {
 						
@@ -272,35 +253,14 @@ class intf_cms_language extends cms_language {
 						</li>';
 					}
 				$this->html .= '</ul></fieldset>
-				<div class="flags hide">';
-				
-					$dir_flags = opendir('./'.DIR_FLAGS);
-
-					while($img_flag = readdir($dir_flags)) {
-						$arr_flag[] = $img_flag;
-					}
-					
-					closedir($dir_flags);
-					
-					$flag_count	= count($arr_flag);
-					
-					for($i=0; $i < $flag_count; $i++){
-						if ($arr_flag[$i] != '.' && $arr_flag[$i] != '..') {
-							$this->html .= '<img id="'.$arr_flag[$i].'" title="'.$arr_flag[$i].'" src="/'.DIR_FLAGS.$arr_flag[$i].'" />';
-						}
-					}			
-				$this->html .= '</div>
 			</form>';
 			
 			$this->validate = json_encode(
 				[
-					"lang_code" => ["required" => "function() {
+					'lang_code' => ['required' => "function() {
 						return (!$('[name=\"copy\"]').val());
 					}"],
-					"label" => ["required" => "function() {
-						return (!$('[name=\"copy\"]').val());
-					}"],
-					"flag" => ["required" => "function() {
+					'label' => ['required' => "function() {
 						return (!$('[name=\"copy\"]').val());
 					}"]
 				]
@@ -311,7 +271,7 @@ class intf_cms_language extends cms_language {
 		
 		if ($method == "language_cms_insert" || $method == "language_core_insert") {
 		
-			if ($method == "language_core_insert" && !$_SESSION["CORE"]) {
+			if ($method == "language_core_insert" && !$_SESSION['CORE']) {
 				error(getLabel("msg_not_allowed"));
 			}
 			
@@ -323,20 +283,18 @@ class intf_cms_language extends cms_language {
 			$res = DB::query("INSERT INTO ".DB::getTable(($method == 'language_cms_insert' ? 'TABLE_CMS_LANGUAGE' : 'TABLE_CORE_LANGUAGE'))."
 				(
 					lang_code,
-					label,
-					flag
+					label
 					".($method == 'language_cms_insert' ? ", user" : "")."
 				)
 					VALUES
 				(
 					'".DBFunctions::strEscape($_POST['lang_code'])."',
-					'".DBFunctions::strEscape($_POST['label'])."',
-					'".DBFunctions::strEscape($_POST['flag'])."'
+					'".DBFunctions::strEscape($_POST['label'])."'
 					".($method == 'language_cms_insert' ? ", ".(int)$_POST['user'] : "")."
 				)
 			");
 			
-			$this->html = ($method == "language_cms_insert" ? self::contentTabCms() : self::contentTabCore());
+			$this->html = ($method == 'language_cms_insert' ? self::contentTabCms() : self::contentTabCore());
 			$this->msg = true;
 		}
 		
@@ -348,19 +306,18 @@ class intf_cms_language extends cms_language {
 				
 			$res = DB::query("UPDATE ".DB::getTable(($method == 'language_cms_update' ? 'TABLE_CMS_LANGUAGE' : 'TABLE_CORE_LANGUAGE'))." SET
 					lang_code = '".DBFunctions::strEscape($_POST['lang_code'])."',
-					label = '".DBFunctions::strEscape($_POST['label'])."',
-					flag = '".DBFunctions::strEscape($_POST['flag'])."'
+					label = '".DBFunctions::strEscape($_POST['label'])."'
 					".($method == 'language_cms_update' ? ", user = ".(int)$_POST['user'] : "")."
 				WHERE lang_code = '".DBFunctions::strEscape($id)."'
 			");
 			
-			$this->html = ($method == "language_cms_update" ? self::contentTabCms() : self::contentTabCore());
+			$this->html = ($method == 'language_cms_update' ? self::contentTabCms() : self::contentTabCore());
 			$this->msg = true;
 		}
 		
 		if (($method == "language_cms_del" || $method == "language_core_del") && $id) {
 		
-			if ($method == "language_core_del" && !$_SESSION['CORE']) {
+			if ($method == 'language_core_del' && !$_SESSION['CORE']) {
 				error(getLabel('msg_not_allowed'));
 			}
 				

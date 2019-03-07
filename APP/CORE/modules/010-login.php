@@ -14,7 +14,7 @@ class login extends base_module {
 		static::$parent_label = getLabel('lbl_users');
 	}
 		
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select>';
 		$return .= directories::createDirectoriesDropdown(directories::getDirectories(), false, true);
@@ -87,14 +87,14 @@ class login extends base_module {
 				$message = getLabel('msg_login_recover_confirmed');
 			}
 		
-			if ($this->mod_var) {
-				$dir = directories::getDirectories($this->mod_var);
+			if ($this->arr_variables) {
+				$dir = directories::getDirectories($this->arr_variables);
 				$dir = str_replace(' ', '', $dir['path']).'/';
 			} else {
 				$dir = ''.SiteStartVars::getBasePath();
 			}
 			
-			$arr_request_vars = SiteStartVars::getModuleVars(0);
+			$arr_request_vars = SiteStartVars::getModVariables(0);
 			
 			$input_error = ($arr_request_vars[0] == 'LOGIN_INCORRECT' ? 'input-error' : '');
 			Labels::setVariable('url_recover_password', SiteStartVars::getModUrl($this->mod_id).'recover/');
@@ -153,8 +153,8 @@ class login extends base_module {
 		
 		if ($method == "recover") {
 
-			if ($this->mod_var) {
-				$dir = directories::getDirectories($this->mod_var);
+			if ($this->arr_variables) {
+				$dir = directories::getDirectories($this->arr_variables);
 				$user_group_id = $dir['user_group_id'];
 			} else {
 				$user_group_id = SiteStartVars::$dir['user_group_id'];

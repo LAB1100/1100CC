@@ -355,6 +355,9 @@ class intf_user_management extends user_management {
 				$arr_sql_columns[] = $arr_column['TABLE_NAME'].".\"".$arr_column['COLUMN_NAME']."\"";
 			}
 			
+			$arr_sql_columns_search = $arr_sql_columns;
+			unset($arr_sql_columns_search[0]); // Remove 'enabled' column
+			
 			$sql_table = DB::getTable('TABLE_USERS');
 			
 			$sql_index = $sql_table.'.id';
@@ -366,9 +369,9 @@ class intf_user_management extends user_management {
 				$sql_table .= " LEFT JOIN ".$key." ON (".$key.".".$value['to_column']." = ".$value['from_table'].".".$value['from_column'].") ";
 			}
 			
-			$sql_where = "group_id = ".$id."";
+			$sql_where = "group_id = ".(int)$id."";
 								 
-			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, false, $arr_sql_columns_as, $sql_table, $sql_index, '', '', $sql_where);
+			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', '', $sql_where);
 			
 			$nr_columns = count($arr_sql_columns);
 			

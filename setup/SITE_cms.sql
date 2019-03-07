@@ -15,7 +15,6 @@ CREATE TABLE `cms_labels` (
 
 CREATE TABLE `cms_language` (
   `lang_code` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `flag` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `label` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `user` tinyint(1) NOT NULL,
   `is_default` tinyint(1) NOT NULL DEFAULT '0'
@@ -183,7 +182,7 @@ CREATE TABLE `site_log` (
 CREATE TABLE `site_log_users` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL DEFAULT '0',
-  `cms_user_id` int(11) NOT NULL DEFAULT '0',
+  `user_class` tinyint(4) NOT NULL,
   `ip` varbinary(16) NOT NULL,
   `ip_proxy` varbinary(16) NOT NULL,
   `url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -319,7 +318,7 @@ CREATE TABLE `view_user_parent` (
 );
 DROP TABLE IF EXISTS `view_user_parent`;
 
-CREATE VIEW `view_user_parent`  AS  select `u`.`id` AS `id`,`u`.`name` AS `parent_name`,`u`.`group_id` AS `parent_group_id` from `users` `u` ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `view_user_parent`  AS  select `u`.`id` AS `id`,`u`.`name` AS `parent_name`,`u`.`group_id` AS `parent_group_id` from `users` `u` ;
 
 
 ALTER TABLE `cms_dashboard_widgets`
@@ -388,8 +387,7 @@ ALTER TABLE `site_log`
 
 ALTER TABLE `site_log_users`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`),
-  ADD KEY `cms_user_id` (`cms_user_id`);
+  ADD KEY `user_id` (`user_id`,`user_class`) USING BTREE;
 
 ALTER TABLE `site_pages`
   ADD PRIMARY KEY (`id`),

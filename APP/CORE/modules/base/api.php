@@ -17,7 +17,7 @@ abstract class api extends base_module {
 	abstract protected function contentsFormConfiguration();
 	abstract protected function processFormConfiguration();
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="api_id">'.cms_general::createDropdown(apis::getAPIs()).'</select>';
 		
@@ -780,7 +780,7 @@ abstract class api extends base_module {
 	
 	protected function setConfig() {
 		
-		$this->arr_api = apis::getAPIs($this->mod_var->api_id);
+		$this->arr_api = apis::getAPIs($this->arr_variables['api_id']);
 		
 		if (!$this->arr_api['clients_user_group_id']) {
 			if ($this->arr_api['client_users_user_group_id']) {

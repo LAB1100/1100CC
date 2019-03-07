@@ -14,7 +14,7 @@ class blog_tag_cloud extends base_module {
 		static::$parent_label = getLabel('lbl_communication');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		
 		$return .= '<select name="limit" title="Limit">';
 			for ($i = 10; $i <= 100; $i = $i+10) {
@@ -36,7 +36,7 @@ class blog_tag_cloud extends base_module {
 	
 	public function contents() {
 		
-		$blog_id = ($this->mod_var->id ?: 0);
+		$blog_id = ($this->arr_variables['id'] ?: 0);
 		
 		$arr_link = blog::findMainBlog($blog_id);
 		$arr_link_mod_var = json_decode($arr_link['var'], true);
@@ -66,7 +66,7 @@ class blog_tag_cloud extends base_module {
 		$spread = ($spread == 0 ? 1 : $spread); // we don't want to divide by zero
 		$step = (($max_size - $min_size) / $spread); // determine the font-size increment, this is the increase per tag quantity (times used)
 
-		$nr_preview = (int)$this->mod_var->preview;
+		$nr_preview = (int)$this->arr_variables['preview'];
 		$nr_preview = ($nr_preview && $nr_preview < count($arr_tags_sorted) ? $nr_preview : 0);
 			
 		$arr_html = [];
@@ -153,7 +153,7 @@ class blog_tag_cloud extends base_module {
 				WHERE l.blog_id = ".(int)$blog_id."
 				GROUP BY t.id
 				ORDER BY count DESC
-				".($this->mod_var->limit ? "LIMIT ".(int)$this->mod_var->limit : '')
+				".($this->arr_variables['limit'] ? "LIMIT ".(int)$this->arr_variables['limit'] : '')
 			);
 			
 			while ($arr_row = $res->fetchAssoc()) {

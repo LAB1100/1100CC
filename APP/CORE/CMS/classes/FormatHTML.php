@@ -27,7 +27,6 @@ class FormatHTML {
 		}
 		
 		$this->doc = self::openHTMLDocument($this->html);
-
 	}
 	
 	public function getHTML() {
@@ -35,7 +34,7 @@ class FormatHTML {
 		$this->html = self::closeHTMLDocument($this->doc);
 		
 		$this->html = str_replace("  ", " &#160;", $this->html); // Maintain spacing
-		$this->html = str_replace("\t", "<span class=\"tab\"></span>", $this->html); // Tab
+		$this->html = str_replace("\t", '<span class="tab"></span>', $this->html); // Tab
 		
 		return $this->html;
 	}

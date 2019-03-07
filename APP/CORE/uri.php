@@ -10,7 +10,7 @@
 // 1100CC Framework:
 
 	$arr_uri_translator = SiteStartVars::$uri_translator;
-	$arr_request_vars = SiteStartVars::getModuleVars(0);
+	$arr_request_vars = SiteStartVars::getModVariables(0);
 	
 	$str_identifier = implode('/', $arr_request_vars);
 	

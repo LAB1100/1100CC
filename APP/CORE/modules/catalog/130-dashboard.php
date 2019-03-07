@@ -14,7 +14,7 @@ class dashboard extends base_module {
 		static::$parent_label = getLabel('ttl_site');
 	}
 		
-	public static function moduleVar() {
+	public static function moduleVariables() {
 	
 		$return .= '<select>';
 		$return .= cms_general::createDropdown(cms_dashboards::getDashboards());
@@ -27,15 +27,15 @@ class dashboard extends base_module {
 	
 		if ($this->arr_query[0] == 'jump') {
 			
-			Response::location(pages::getPageUrl(pages::getModules((int)$this->arr_query[1])));
+			Response::location(pages::getPageUrl(pages::getMods((int)$this->arr_query[1])));
 			die;
 		}	
 			
-		$dashboard_options = cms_dashboards::getDashboards($this->mod_var);
+		$dashboard_options = cms_dashboards::getDashboards($this->arr_variables);
 		
-		$arr_widgets = cms_dashboards::getWidgets($this->mod_var, $_SESSION['USER_ID']);
+		$arr_widgets = cms_dashboards::getWidgets($this->arr_variables, $_SESSION['USER_ID']);
 
-		$arr_modules = pages::getModules(arrValuesRecursive('module_id', $arr_widgets));		
+		$arr_modules = pages::getMods(arrValuesRecursive('module_id', $arr_widgets));		
 		$arr_modules = pages::filterClearance($arr_modules, $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]);
 
 		$arr_columns = [];
@@ -97,9 +97,8 @@ class dashboard extends base_module {
 	public function createWidget($arr_widget, $module_row) {
 
 		$mod = new $module_row['module'];
-		$mod->arr_mod = $module_row;
-		$mod->mod_var = (substr($module_row['var'], 0, 1) == '{' ? json_decode($module_row['var']) : $module_row['var']);
-		$mod->mod_id = $module_row['id'];
+		$mod->setMod($module_row, $module_row['id']);
+		$mod->setModVariables($module_row['var']);
 		
 		$mod_widget_properties = $mod::widgetProperties();
 		
@@ -205,7 +204,7 @@ class dashboard extends base_module {
 				u.module_id, u.method, u.x AS user_x, u.y AS user_y, w.*
 					FROM ".DB::getTable('TABLE_DASHBOARD_WIDGETS')." w
 					LEFT JOIN ".DB::getTable('TABLE_DASHBOARD_WIDGET_DATA')." u ON (u.dashboard_id = w.dashboard_id AND u.module_id = w.module_id AND u.method = w.method AND u.user_id = ".$_SESSION['USER_ID'].")
-				WHERE w.dashboard_id = ".$this->mod_var." AND w.module_id = ".$module_id." AND w.method = '".$method."'
+				WHERE w.dashboard_id = ".$this->arr_variables." AND w.module_id = ".$module_id." AND w.method = '".$method."'
 			");
 			
 			$arr_row = $res->fetchAssoc();
@@ -215,7 +214,7 @@ class dashboard extends base_module {
 				$res = DB::queryMulti("
 					".DBFunctions::updateWith(
 						DB::getTable('TABLE_DASHBOARD_WIDGET_DATA'), 'u', ['dashboard_id', 'module_id', 'method'],
-						"JOIN ".DB::getTable('TABLE_DASHBOARD_WIDGETS')." w ON (w.dashboard_id = ".$this->mod_var." AND w.dashboard_id = u.dashboard_id AND w.module_id = u.module_id AND w.method = u.method)",
+						"JOIN ".DB::getTable('TABLE_DASHBOARD_WIDGETS')." w ON (w.dashboard_id = ".$this->arr_variables." AND w.dashboard_id = u.dashboard_id AND w.module_id = u.module_id AND w.method = u.method)",
 						['y' => 'u.y-1']
 					)."
 						AND u.y > ".(int)(isset($arr_row['user_y']) ? $arr_row['user_y'] : $arr_row['y'])."
@@ -224,7 +223,7 @@ class dashboard extends base_module {
 					;
 					".DBFunctions::updateWith(
 						DB::getTable('TABLE_DASHBOARD_WIDGET_DATA'), 'u', ['dashboard_id', 'module_id', 'method'],
-						"JOIN ".DB::getTable('TABLE_DASHBOARD_WIDGETS')." w ON (w.dashboard_id = ".$this->mod_var." AND w.dashboard_id = u.dashboard_id AND w.module_id = u.module_id AND w.method = u.method)",
+						"JOIN ".DB::getTable('TABLE_DASHBOARD_WIDGETS')." w ON (w.dashboard_id = ".$this->arr_variables." AND w.dashboard_id = u.dashboard_id AND w.module_id = u.module_id AND w.method = u.method)",
 						['y' => 'u.y+1']
 					)."
 						AND u.y >= ".(int)$value['y']."
@@ -238,14 +237,14 @@ class dashboard extends base_module {
 					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_DASHBOARD_WIDGET_DATA')."
 						(dashboard_id, module_id, method, user_id, x, y)
 							VALUES
-						(".$this->mod_var.", ".$module_id.", '".$method."', ".$_SESSION['USER_ID'].", ".(int)$value['x'].", ".(int)$value['y'].")
+						(".$this->arr_variables.", ".$module_id.", '".$method."', ".$_SESSION['USER_ID'].", ".(int)$value['x'].", ".(int)$value['y'].")
 						".DBFunctions::onConflict('dashboard_id, module_id, method, user_id', ['x', 'y'])."
 					");
 				} else if ($arr_row['module_id']) {
 				
 					$res = DB::query("UPDATE ".DB::getTable('TABLE_DASHBOARD_WIDGET_DATA')."
 						SET x = NULL, y = NULL
-						WHERE dashboard_id = ".$this->mod_var." AND module_id = ".$module_id." AND method = '".$method."'
+						WHERE dashboard_id = ".$this->arr_variables." AND module_id = ".$module_id." AND method = '".$method."'
 							AND user_id = ".$_SESSION['USER_ID']."
 					");
 					
@@ -261,14 +260,14 @@ class dashboard extends base_module {
 					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_DASHBOARD_WIDGET_DATA')."
 						(dashboard_id, module_id, method, user_id, ".$attr.")
 							VALUES
-						(".$this->mod_var.", ".$module_id.", '".$method."', ".$_SESSION['USER_ID'].", ".DBFunctions::escapeAs($value['val'], DBFunctions::TYPE_BOOLEAN).")
+						(".$this->arr_variables.", ".$module_id.", '".$method."', ".$_SESSION['USER_ID'].", ".DBFunctions::escapeAs($value['val'], DBFunctions::TYPE_BOOLEAN).")
 						".DBFunctions::onConflict('dashboard_id, module_id, method, user_id', [$attr])."
 					");
 				} else if ($arr_row['module_id']) {
 				
 					$res = DB::query("UPDATE ".DB::getTable('TABLE_DASHBOARD_WIDGET_DATA')."
 						SET ".$attr." = NULL
-						WHERE dashboard_id = ".$this->mod_var." AND module_id = ".$module_id." AND method = '".$method."'
+						WHERE dashboard_id = ".$this->arr_variables." AND module_id = ".$module_id." AND method = '".$method."'
 							AND user_id = ".$_SESSION['USER_ID']."
 					");
 					
@@ -280,7 +279,7 @@ class dashboard extends base_module {
 
 				$res = DB::query("SELECT u.*
 						FROM ".DB::getTable('TABLE_DASHBOARD_WIDGET_DATA')." u
-					WHERE u.dashboard_id = ".$this->mod_var." AND u.module_id = ".$module_id." AND u.method = '".$method."'
+					WHERE u.dashboard_id = ".$this->arr_variables." AND u.module_id = ".$module_id." AND u.method = '".$method."'
 						AND u.user_id = ".$_SESSION['USER_ID']."
 				");
 				
@@ -298,7 +297,7 @@ class dashboard extends base_module {
 				if ($do_del) {
 					
 					$res = DB::query("DELETE FROM ".DB::getTable('TABLE_DASHBOARD_WIDGET_DATA')."
-						WHERE dashboard_id = ".$this->mod_var." AND module_id = ".$module_id." AND method = '".$method."'
+						WHERE dashboard_id = ".$this->arr_variables." AND module_id = ".$module_id." AND method = '".$method."'
 							AND user_id = ".$_SESSION['USER_ID']."
 					");
 				}

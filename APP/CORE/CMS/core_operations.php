@@ -923,6 +923,11 @@
 		
 		protected $arr_access = [];
 		
+		protected $mod_id;
+		protected $arr_mod;
+		protected $arr_variables;
+		protected $arr_query;
+		
 		public static function moduleProperties() {
 			
 			static::$label = 'unknown';
@@ -949,7 +954,34 @@
 			return $this->arr_access[$module];
 		}
 		
-		//public static function moduleVar() {}
+		//public static function moduleVariables() {}
+		
+		public function setMod($arr_mod, $mod_id) {
+				
+			$this->arr_mod = $arr_mod;
+			$this->mod_id = $mod_id;
+		}
+		
+		public function setModQuery($arr_query) {
+			
+			$this->arr_query = $arr_query;
+		}
+		
+		public function setModVariables($arr_variables) {
+			
+			if ($arr_variables === null || $arr_variables === '') {
+				
+				$this->arr_variables = [];
+				return;
+			}
+			
+			if (is_string($arr_variables) && substr($arr_variables, 0, 1) == '{') {
+				
+				$arr_variables = json_decode($arr_variables, true);
+			}
+			
+			$this->arr_variables = $arr_variables;
+		}
 		
 		//public function contents() {}
 		//public function js() {}

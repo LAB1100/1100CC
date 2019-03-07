@@ -7,7 +7,7 @@
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-Settings::set('messaging_allow_message_all', ['all_individual' => true, 'all' => true]); // Override $this->mod_var->allow_message_all
+Settings::set('messaging_allow_message_all', ['all_individual' => true, 'all' => true]); // Override $this->arr_variables['allow_message_all']
 
 class messaging extends base_module {
 
@@ -16,7 +16,7 @@ class messaging extends base_module {
 		static::$parent_label = getLabel('lbl_users');
 	}
 	
-	public static function moduleVar() {
+	public static function moduleVariables() {
 		$return = '<input type="checkbox" name="cms_only" data-group="allow" class="unique" value="1" title="'.getLabel('lbl_cms_only').'" />'
 		.'<input type="checkbox" name="user_group" data-group="allow" value="1" title="'.getLabel('lbl_user_group').'" />'
 		.'<input type="checkbox" name="parent" data-group="allow" value="1" title="'.getLabel('lbl_parent').'" />'
@@ -118,7 +118,7 @@ class messaging extends base_module {
 			
 			<fieldset><ul>
 				<li><label>'.getLabel('lbl_subject').'</label>'.$str_subject.'</li>
-				'.(!$this->mod_var->cms_only && $str_participants ? '<li><label>'.getLabel('lbl_participants').'</label><div>'.$str_participants.'</div></li>' : '').'
+				'.(!$this->arr_variables['cms_only'] && $str_participants ? '<li><label>'.getLabel('lbl_participants').'</label><div>'.$str_participants.'</div></li>' : '').'
 			</ul></fieldset>
 			
 			<ul class="options">';
@@ -230,7 +230,7 @@ class messaging extends base_module {
 
 			$arr_users = $this->getUsers($value);
 			
-			if (!$id && $this->mod_var->allow_message_all && Settings::get('messaging_allow_message_all')) {
+			if (!$id && $this->arr_variables['allow_message_all'] && Settings::get('messaging_allow_message_all')) {
 				if (Settings::get('messaging_allow_message_all', 'all_individual')) {
 					$arr[] = ['id' => 'all_individual', 'label' => getLabel('lbl_message_all_individual'), 'value' => getLabel('lbl_message_all_individual')];
 				}
@@ -438,10 +438,10 @@ class messaging extends base_module {
 	private function getUsers($value = false, $all = false) {
 		
 		$arr_users = user_management::filterUsers($value, [
-				'group_id' => ($this->mod_var->user_group ? $_SESSION['USER_GROUP'] : false),
-				'parent_id' => ($this->mod_var->parent ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
-				'siblings_parent_id' => ($this->mod_var->siblings ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
-				'children_id' => ($this->mod_var->children ? $_SESSION['USER_ID'] : false)
+				'group_id' => ($this->arr_variables['user_group'] ? $_SESSION['USER_GROUP'] : false),
+				'parent_id' => ($this->arr_variables['parent'] ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
+				'siblings_parent_id' => ($this->arr_variables['siblings'] ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
+				'children_id' => ($this->arr_variables['children'] ? $_SESSION['USER_ID'] : false)
 			], ($all ? false : 20)
 		);
 		unset($arr_users[$_SESSION['USER_ID']]);
@@ -468,7 +468,7 @@ class messaging extends base_module {
 	
 	private function getValidParticipants($arr_participants, $conversation_id = false) {
 		
-		if ($this->mod_var->allow_message_all && Settings::get('messaging_allow_message_all')) {
+		if ($this->arr_variables['allow_message_all'] && Settings::get('messaging_allow_message_all')) {
 			
 			if ((Settings::get('messaging_allow_message_all', 'all') && in_array('all', $arr_participants)) || (Settings::get('messaging_allow_message_all', 'all_individual') && in_array('all_individual', $arr_participants))) {
 			
@@ -483,10 +483,10 @@ class messaging extends base_module {
 			
 		$arr_allowed_users = user_management::filterUsers(false,
 			[
-				'group_id' => ($this->mod_var->user_group ? $_SESSION['USER_GROUP'] : false),
-				'parent_id' => ($this->mod_var->parent ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
-				'siblings_parent_id' => ($this->mod_var->siblings ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
-				'children_id' => ($this->mod_var->children ? $_SESSION['USER_ID'] : false),
+				'group_id' => ($this->arr_variables['user_group'] ? $_SESSION['USER_GROUP'] : false),
+				'parent_id' => ($this->arr_variables['parent'] ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
+				'siblings_parent_id' => ($this->arr_variables['siblings'] ? $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] : false),
+				'children_id' => ($this->arr_variables['children'] ? $_SESSION['USER_ID'] : false),
 				'arr_filter' => $arr_participants
 			],
 			false

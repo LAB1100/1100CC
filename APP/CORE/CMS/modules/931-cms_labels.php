@@ -125,7 +125,7 @@ class cms_labels extends base_module {
 								
 									foreach ($arr_language as $lang_code => $arr_row) {
 										
-										$return .= '<li><a href="#"><img src="/'.DIR_FLAGS.$arr_row['flag'].'" title="'.htmlspecialchars($arr_row['label']).'" /></a></li>';
+										$return .= '<li><a href="#">'.$arr_row['label'].'</a></li>';
 									}
 									
 								$return .= '</ul>';
@@ -145,7 +145,7 @@ class cms_labels extends base_module {
 						foreach($arr_language as $lang_code => $arr_row) {
 							
 							$return .= '<tr>
-								<td><img src="/'.DIR_FLAGS.$arr_row['flag'].'" title="'.htmlspecialchars($arr_row['label']).'" /></td>
+								<td><span>'.$arr_row['label'].'</span></td>
 								<td><textarea name="lang_code['.$lang_code.']">'.htmlspecialchars($arr_label[$lang_code]).'</textarea></td>
 							</tr>';
 						}
@@ -232,7 +232,7 @@ class cms_labels extends base_module {
 					foreach ($arr_lang as $lang_code => $row) {
 						
 						$this->html .= '<li>
-							<label><img src="/'.DIR_FLAGS.$row['flag'].'" title="'.htmlspecialchars($row['label']).'" /></label>
+							<label><span>'.$row['label'].'</span></label>
 							<div><textarea name="lang_code['.$lang_code.']">'.htmlspecialchars($arr_label[$lang_code]).'</textarea></div>
 						</li>';
 					}

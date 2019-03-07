@@ -6,7 +6,6 @@ CREATE TABLE `core_labels` (
 
 CREATE TABLE `core_language` (
   `lang_code` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
-  `flag` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `label` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -195,42 +195,42 @@ class SiteEndVars {
 		return self::$arr_feedback;
 	}
 	
-	public static function setModuleVars($module_id = false, $arr_var_names = [], $overwrite = true) {
+	public static function setModVariables($mod_id = false, $arr_var_names = [], $overwrite = true) {
 		
 		if ($overwrite) {
-			self::$arr_request_vars[$module_id] = [];
+			self::$arr_request_vars[$mod_id] = [];
 		}
 
 		foreach ($arr_var_names as $var_name => $var) {
 							
 			if (!is_numeric($var_name)) {
 				if ($var === false) {
-					unset(self::$arr_request_vars[$module_id][$var_name]);
+					unset(self::$arr_request_vars[$mod_id][$var_name]);
 				} else {
-					self::$arr_request_vars[$module_id][$var_name] = array_merge((array)self::$arr_request_vars[$module_id][$var_name], (array)$var);
+					self::$arr_request_vars[$mod_id][$var_name] = array_merge((array)self::$arr_request_vars[$mod_id][$var_name], (array)$var);
 				}
 			} else {
-				self::$arr_request_vars[$module_id][] = $var;
+				self::$arr_request_vars[$mod_id][] = $var;
 			}
 		}
 	}
 	
-	public static function getLocationVars() {
+	public static function getLocationVariables() {
 		
 		$arr = [];
 		
 		ksort(self::$arr_request_vars);
 		
-		$cur_module_id = false;
+		$cur_mod_id = false;
 		
-		foreach (self::$arr_request_vars as $module_id => $arr_var_names) {
+		foreach (self::$arr_request_vars as $mod_id => $arr_var_names) {
 			
 			if (!$arr_var_names) {
 				continue;
 			}
 			
-			if ($module_id) {
-				$arr[] = $module_id.'.m';
+			if ($mod_id) {
+				$arr[] = $mod_id.'.m';
 			}
 			
 			$cur_var_name = false;
@@ -255,7 +255,7 @@ class SiteEndVars {
 				$cur_var_name = $var_name;
 			}
 			
-			$cur_module_id = $module_id;
+			$cur_mod_id = $mod_id;
 		}
 
 		return $arr;
@@ -265,7 +265,7 @@ class SiteEndVars {
 		
 		$location = SiteStartVars::getBasePath(0, $rel);
 		
-		$arr_location_vars = self::getLocationVars();
+		$arr_location_vars = self::getLocationVariables();
 		
 		if ($arr_location_vars) {
 			
@@ -280,20 +280,20 @@ class SiteEndVars {
 		return $location;
 	}
 	
-	public static function getModuleLocation($module_id, $arr_var_names = [], $overwrite = true, $rel = true) {
+	public static function getModLocation($mod_id, $arr_var_names = [], $overwrite = true, $rel = true) {
 		
-		return Response::addParseDelay(false, function() use ($module_id, $arr_var_names, $overwrite, $rel) {
+		return Response::addParseDelay(false, function() use ($mod_id, $arr_var_names, $overwrite, $rel) {
 		
-			$arr_cur_page_module_vars = self::$arr_request_vars[$module_id];
+			$arr_cur_page_module_vars = self::$arr_request_vars[$mod_id];
 			
-			self::setModuleVars($module_id, $arr_var_names, $overwrite);
+			self::setModVariables($mod_id, $arr_var_names, $overwrite);
 			
 			$location = self::getLocation($rel);
 			
-			self::$arr_request_vars[$module_id] = $arr_cur_page_module_vars;
+			self::$arr_request_vars[$mod_id] = $arr_cur_page_module_vars;
 			
 			return $location;
-		});			
+		});
 	}
 	
 	public static function addServerNameCustom($value, $pos = false) {
