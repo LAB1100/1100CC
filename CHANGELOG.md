@@ -14,3 +14,5 @@ Initial release.
 * Changed the JavaScript spread operator for ElementObjectByParameters in core_shed.js to better support a bit older browser versions.
 * Various fixes, modernisation, and overall streamlining.
 * Improved URL parsing in HTML and plain text in FormatBBCode.php.
+
+## VERSION x.x
