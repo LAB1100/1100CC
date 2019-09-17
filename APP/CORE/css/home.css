@@ -146,6 +146,7 @@ fieldset > ul > li > label:first-child + * > .options { margin: 0px; }
 .options fieldset > ul > li > label:first-child + * input.date-time { width: 4em; }
 .options fieldset > ul > li > label:first-child + textarea,
 .options fieldset > ul > li > label:first-child + * textarea { width: 200px; }
+.options fieldset > ul > li > label:first-child + * .regex > input[name$="[flags]"] { width: 35px; }
 ul.sorter > li > div > input.date,
 ul.sorter > li > div > input.datepicker,
 ul.sorter > li > ul > li > input.date,
@@ -183,18 +184,19 @@ table.list tbody tr:hover { background: #eeeeee; }
 
 fieldset > legend { margin-top: 0px; margin-bottom: 4px; }
 fieldset > legend > * { display: inline-block; vertical-align: middle; }
-fieldset > ul { margin: -4px 0px !important; display: table; vertical-align: middle; border-collapse: separate; border-spacing: 0px 4px; }
+fieldset > ul { margin: -5px 0px !important; display: table; vertical-align: middle; border-collapse: separate; border-spacing: 0px 5px; }
 fieldset > ul > li { display: table-row; height: 100%; }
-fieldset > ul > li > label:first-child { display: table-cell; vertical-align: top; padding: 0px 15px 2px 0px; text-align: right; width: 1%; white-space: nowrap; height: 100%; }
-fieldset > ul > li > label:first-child::before { content: '';  display: block; height: calc(50% - (1em / 2)); min-height: 2px; max-height: 6px; }
+fieldset > ul > li > label:first-child { display: table-cell; vertical-align: top; padding: 2px 15px 2px 0px; text-align: right; width: 1%; white-space: nowrap; height: 100%; }
+/* fieldset > ul > li > label:first-child::before { content: '';  display: block; height: calc(40% - (1em / 2)); min-height: 2px; max-height: 6px; } */
 fieldset > ul > li > label:first-child + * { display: table-cell; width: 100%; vertical-align: middle; margin-left: 0px; border-spacing: 0px; }
 fieldset > ul > li > label:first-child:empty { padding: 0px; width: 0%; }
 
 .options fieldset { margin: 8px 0px; vertical-align: top; }
 .options fieldset fieldset { margin: 0px; margin-left: 30px; }
+.options fieldset .options fieldset { margin-left: 0px; }
 .options fieldset fieldset > *:first-child { margin-top: 0px; }
 .options fieldset fieldset > *:last-child { margin-bottom: 0px; }
-.options fieldset > ul { position:relative; display: inline-block; margin-left: 4px; }
+.options fieldset > ul { position:relative; display: inline-block; margin-left: 5px; }
 .options fieldset > ul:first-child,
 .options fieldset > legend + ul { margin-left: 0px; }
 .options fieldset > ul > li > label:first-child { text-align: left; width: auto; }

@@ -386,8 +386,8 @@ class cms_calendar extends base_module {
 
 	public static function handleCalendarEvent($arr_event, $event_id = false) {
 		
-		$date = str2SQlDate($arr_event['date'].' '.$arr_event['date_t']);
-		$date_end = str2SQlDate($arr_event['date_end'].' '.$arr_event['date_end_t']);
+		$date = DBFunctions::str2Date($arr_event['date'].' '.$arr_event['date_t']);
+		$date_end = DBFunctions::str2Date($arr_event['date_end'].' '.$arr_event['date_end_t']);
 		if ($date >= $date_end) {
 			error(getLabel('msg_date_incorrect'));
 		}

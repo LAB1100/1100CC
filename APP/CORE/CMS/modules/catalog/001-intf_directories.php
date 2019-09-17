@@ -340,7 +340,7 @@ class intf_directories extends directories {
 				
 				// Remove own references
 				
-				$res = DB::query("DELETE FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." WHERE descendant_id = '".$id."'");
+				$res = DB::query("DELETE FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." WHERE descendant_id = ".(int)$id."");
 
 				// Remove only lower references from all children
 				
@@ -349,14 +349,14 @@ class intf_directories extends directories {
 				$res_children = DB::query("SELECT
 					descendant_id, path_length
 						FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')."
-					WHERE ancestor_id = ".$id."
+					WHERE ancestor_id = ".(int)$id."
 				");
 				
 				while ($row_children = $res_children->fetchAssoc()) {
 					$arr[] = $row_children['descendant_id'];
 				}
 				
-				$arr[] = $id;
+				$arr[] = (int)$id;
 				$del = DB::query("DELETE
 					FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')."
 					WHERE descendant_id IN ('".implode("','", $arr)."')
@@ -368,7 +368,7 @@ class intf_directories extends directories {
 				DB::query("INSERT INTO ".DB::getTable('TABLE_DIRECTORY_CLOSURE')."
 					(ancestor_id, descendant_id, path_length)
 						VALUES
-					(".$id.", ".$id.", 0)
+					(".(int)$id.", ".(int)$id.", 0)
 				");		
 				
 				$res = DB::query("SELECT
@@ -382,7 +382,7 @@ class intf_directories extends directories {
 					DB::query("INSERT INTO ".DB::getTable('TABLE_DIRECTORY_CLOSURE')."
 						(ancestor_id, descendant_id, path_length)
 							VALUES
-						(".$row['ancestor_id'].", ".$id.", ".($row['path_length']+1).")
+						(".$row['ancestor_id'].", ".(int)$id.", ".($row['path_length']+1).")
 					");
 					
 					// Insert new children references based on new parent
@@ -424,7 +424,7 @@ class intf_directories extends directories {
 				$arr[] = $row_children['descendant_id'];
 			}
 			
-			$arr[] = $id;
+			$arr[] = (int)$id;
 			
 			$del = DB::query("DELETE FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." WHERE descendant_id IN (".implode(',', $arr).")");
 			

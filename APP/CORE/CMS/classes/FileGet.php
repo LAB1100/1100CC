@@ -108,6 +108,7 @@ class FileGet {
 		if ($this->arr_options['timeout']) {
 			curl_setopt($curl, CURLOPT_TIMEOUT, $this->arr_options['timeout']);
 		}
+		curl_setopt($curl, CURLOPT_USERAGENT, Labels::getServerVariable('user_agent'));
 		
 		curl_setopt($curl, CURLOPT_HEADER, false);
 		curl_setopt($curl, CURLOPT_HEADERFUNCTION, function ($curl, $header) use (&$continue, &$redirect, &$store) { // Check each header for errors

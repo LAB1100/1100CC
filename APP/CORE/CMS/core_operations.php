@@ -105,21 +105,21 @@
 	
 		switch ($level) {
 			case DIR_HOME:
-				$dir = DIR_MODULES;
+				$directory = DIR_MODULES;
 				break;
 			case DIR_CMS:
-				$dir = DIR_CMS.DIR_MODULES;
+				$directory = DIR_CMS.DIR_MODULES;
 				break;
 			default:
-				$dir = (IS_CMS ? DIR_CMS.DIR_MODULES : DIR_MODULES);
+				$directory = (IS_CMS ? DIR_CMS.DIR_MODULES : DIR_MODULES);
 		}
 		
-		$modules = [];
+		$arr_modules = [];
 		$arr_links = [];
 		
-		$autoload_abstract = function($class) use ($dir) {
+		$autoload_abstract = function($class) use ($directory) {
 
-			$c = $dir.DIR_MODULES_ABSTRACT.$class.'.php';
+			$c = $directory.DIR_MODULES_ABSTRACT.$class.'.php';
 
 			if (isPath(DIR_ROOT_SITE.$c)) {
 				$f = DIR_ROOT_SITE.$c;
@@ -131,30 +131,30 @@
 			}
 		};
 		
-		$arr_dir_it = ['site' => new DirectoryIterator(DIR_ROOT_SITE.$dir), 'core' => new DirectoryIterator(DIR_ROOT_CORE.$dir), 'catalog' => new DirectoryIterator(DIR_ROOT_CORE.$dir.DIR_MODULES_CATALOG)];
+		$arr_it_directory = ['site' => new DirectoryIterator(DIR_ROOT_SITE.$directory), 'core' => new DirectoryIterator(DIR_ROOT_CORE.$directory), 'catalog' => new DirectoryIterator(DIR_ROOT_CORE.$directory.DIR_MODULES_CATALOG)];
 		
-		foreach ($arr_dir_it as $dir_type => $dir_it) {
+		foreach ($arr_it_directory as $directory_type => $it_directory) {
 			
-			if ($dir_type != 'catalog' || ($dir_type == 'catalog' && $arr_links)) {
+			if ($directory_type != 'catalog' || ($directory_type == 'catalog' && $arr_links)) {
 				
-				foreach ($dir_it as $file_info) {
+				foreach ($it_directory as $file) {
 					
-					if($file_info->isFile()) {
+					if($file->isFile()) {
 						
-						if ($dir_type != 'catalog' && ($file_info->getExtension() == 'mlnk')) {
+						if ($directory_type != 'catalog' && ($file->getExtension() == 'mlnk')) {
 							
-							$class = $file_info->getBasename('.mlnk');
+							$class = $file->getBasename('.mlnk');
 							$arr_links[$class] = 1;
 						} else {
 							
-							$file_name = $file_info->getFilename();
-							preg_match('/^[0-9]*-(.*)\.php/', $file_name, $match);
+							$filename = $file->getFilename();
+							preg_match('/^[0-9]*-(.*)\.php/', $filename, $match);
 							$class = $match[1];
 							
-							if (($dir_type != 'catalog' && !$modules[$class]) || ($dir_type == 'catalog' && $arr_links[$class])) {
+							if (($directory_type != 'catalog' && !$arr_modules[$class]) || ($directory_type == 'catalog' && $arr_links[$class])) {
 								
-								$file_dir = $file_info->getPath().'/';
-								$modules[$class] = ['file' => $file_name, 'dir' => $file_dir, 'time' => $file_info->getMTime()];
+								$path_file = $file->getPath().'/';
+								$arr_modules[$class] = ['file' => $filename, 'path' => $path_file, 'time' => $file->getMTime()];
 							}
 						}
 					}
@@ -162,19 +162,19 @@
 			}
 		}
 		
-		uasort($modules, function($a, $b) {
+		uasort($arr_modules, function($a, $b) {
 			return $a['file']>$b['file'];
 		});
 		
 		spl_autoload_register($autoload_abstract, true, true);
 		
-		foreach ($modules as $class => $arr) {
-			require($arr['dir'].$arr['file']);
+		foreach ($arr_modules as $class => $arr) {
+			require($arr['path'].$arr['file']);
 		}
 		
 		spl_autoload_unregister($autoload_abstract);
 		
-		return $modules;
+		return $arr_modules;
 	}
 	
 	function getModuleConfiguration($method, $call = true, $level = false, $module = false) {
@@ -210,23 +210,59 @@
 		return $arr;
 	}
 	
-	function __autoload($class) {
-
-		$c1 = DIR_CLASSES.$class.'.php';
-		$c2 = DIR_CMS.DIR_CLASSES.$class.'.php';
+	function findFilePath($filename, $path = '') {
 		
-		if (isPath(DIR_SITE.$c1)) {
-			$f = DIR_SITE.$c1;
-		} else if (isPath(DIR_SITE.$c2)) {
-			$f = DIR_SITE.$c2;
-		} else if (isPath($c1)) {
-			$f = $c1;
-		} else if (isPath($c2)) {
-			$f = $c2;
+		static $arr_path_files = [];
+		
+		if (!isPath($path)) {
+			return false;
 		}
-		if ($f) {
-			require($f);
+
+		if ($arr_path_files[$path]) {
+			
+			return ($arr_path_files[$path][$filename] ?: false);
+		} else {
+			
+			$it_directory = new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS);
+			$it_files = new RecursiveIteratorIterator($it_directory, RecursiveIteratorIterator::LEAVES_ONLY); // LEAVES_ONLY, only files
+
+			foreach ($it_files as $file) {
+				
+				$cur_path = $file->getPath();
+				$cur_filename = $file->getFilename();
+				
+				$arr_path_files[$path][$cur_filename] = $cur_path;
+			}
+			
+			return ($arr_path_files[$path][$filename] ?: false);
 		}
+	}
+	
+	function __autoload($class) {
+		
+		$filename = $class.'.php';
+		
+		$arr_paths = [
+			DIR_SITE.DIR_CLASSES,
+			DIR_SITE.DIR_CMS.DIR_CLASSES,
+			DIR_CLASSES,
+			DIR_CMS.DIR_CLASSES
+		];
+		
+		foreach ($arr_paths as $cur_path) {
+			
+			$path = findFilePath($filename, $cur_path);
+			
+			if (!$path) {
+				continue;
+			}
+			
+			require($path.'/'.$filename);
+			
+			return true;
+		}
+		
+		return false;
 	}
 	
 	spl_autoload_register('__autoload');
@@ -391,29 +427,6 @@
 		return number_format($nr, $decimals, '.', ' '); // U+205F - MEDIUM MATHEMATICAL SPACE
 	}
 
-	function arrParseRecursive($value, $what = 'int') {
-					
-		if (is_array($value)) {
-			
-			array_walk_recursive($value, function(&$v, $k) use ($what) {
-				$v = arrParseRecursive($v, $what);
-			});
-		} else {
-
-			if ($what == 'int') {
-				$value = (int)$value;
-			} else if ($what == 'trim') {
-				if ($value !== null) {
-					$value = trim($value, " \x00..\x1F\x7F"); // Also remove control characters
-				}
-			} else {
-				$value = $what($value);
-			}
-		}
-		
-		return $value;
-	}
-	
 	function getExecutionTime($reset = false) {
 		
 		static $microtime_start = null;
@@ -497,17 +510,6 @@
 		if ($code == 'hex') {
 			return '#'.strtolower(substr(preg_replace('/[^a-f0-9]/i', '', $str), 0, 6));
 		}
-	}
-	
-	function str2SQlDate($str) {
-				
-		if (is_numeric($str)) {
-			$int = (($str > 0 && strlen((int)$str) == 4) ? strtotime('01-01-'.$str) : $str);
-		} else if ($str) {
-			$int = strtotime($str);
-		}
-				
-		return ($int ? date('Y-m-d H:i:s', $int) : false);
 	}
 	
 	function strShift($str, $n = 13) {
@@ -665,17 +667,70 @@
 		return ($path ? file_exists($path) : false);
 	}
 	
-	/*
-	function arrValuesRecursive($key, $arr) {
-	
-		$val = array();
-		array_walk_recursive($arr, function($v, $k) use($key, &$val) {
-			if($k == $key) array_push($val, $v);
-		});
+	function parseValue($value, $what) {
 		
-		return array_filter($val);
+		switch ($what) {
+			
+			case 'int':
+				$value = (int)$value;
+				break;
+			case 'trim':
+				if ($value !== null) {
+					$value = trim($value, " \x00..\x1F\x7F"); // Also remove control characters
+				}
+				break;
+			default:
+				$value = $what($value);
+		}
+		
+		return $value;
 	}
-	*/
+	
+	function arrParseRecursive($arr, $what = 'int', $arr_keys = null, $keys_include = true) {
+		
+		if (!is_array($arr)) {
+			return parseValue($arr, $what);
+		}
+		
+		if ($arr_keys !== null && !is_array($arr_keys)) {
+			$arr_keys = [$arr_keys => true];
+		}
+		
+		foreach ($arr as $key => &$value) {
+			
+			if ($arr_keys !== null) {
+				if ($keys_include == true && !$arr_keys[$key] || $keys_include == false && $arr_keys[$key]) {
+					continue;
+				}
+			}
+			
+			if (is_array($value)) { // Recursive
+
+				$value = arrParseRecursive($value, $what, $arr_keys, $keys_include);
+			} else {
+				
+				$value = parseValue($value, $what);
+			}
+		}
+		
+		return $arr;
+	}
+	
+	function arrFilterRecursive($arr, $func_check = null, $flag = 0) {
+		
+		foreach ($arr as &$value) {
+			
+			if (is_array($value)) {
+				$value = arrFilterRecursive($value, $func_check); 
+			} 
+		} 
+		
+		if ($func_check !== null) {
+			return array_filter($arr, $func_check, $flag);
+		} else {
+			return array_filter($arr);
+		}
+	}
 	
 	function arrValuesRecursive($key, $arr, &$arr_flat = []) {
 	
@@ -695,6 +750,31 @@
 		}
 		
 		return $arr_flat;
+	}
+	
+	function arrHasValuesRecursive($key, $arr_values, $arr) {
+		
+		if (!is_array($arr_values)) {
+			$arr_values = [$arr_values => true];
+		}
+	
+		foreach ($arr as $k => $v) {
+			
+			if (($k === $key || $key === false) && $arr_values[$v]) {
+				return $v;
+			}
+			
+			if ($v && is_array($v)) { // Recursive
+
+				$value_found = arrHasValuesRecursive($key, $arr_values, $v);
+				
+				if ($value_found !== false) {
+					return $value_found;
+				}
+			}
+		}
+		
+		return false;
 	}
 	
 	function arrHasKeysRecursive($arr_keys, $arr, $only_positive = false) {
@@ -794,6 +874,19 @@
 				);
 			}
 		}
+	}
+	
+	function arrMergeValues($arrs) {
+		
+		$arr_buffer = [];
+		
+		foreach ($arrs as $arr) {
+			foreach ($arr as $v) {
+				$arr_buffer[$v] = true;
+			}
+		}
+		
+		return array_keys($arr_buffer);
 	}
 	
 	function arrIsAssociative($arr) {
@@ -933,15 +1026,17 @@
 			static::$label = 'unknown';
 			static::$parent_label = 'unknown';
 		}
+		
+		//public static function moduleVariables() {}
 
 		public static function setCache($key, $value = null) {
 		
-			self::$arr_cache[$key] = $value;
+			self::$arr_cache[static::class][$key] = $value;
 		}
 		
 		public static function getCache($key) {
 			
-			return self::$arr_cache[$key];
+			return self::$arr_cache[static::class][$key];
 		}
 		
 		function __construct() {
@@ -953,9 +1048,7 @@
 			
 			return $this->arr_access[$module];
 		}
-		
-		//public static function moduleVariables() {}
-		
+				
 		public function setMod($arr_mod, $mod_id) {
 				
 			$this->arr_mod = $arr_mod;

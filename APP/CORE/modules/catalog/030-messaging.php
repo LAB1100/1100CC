@@ -516,7 +516,7 @@ class messaging extends base_module {
 		}
 		
 		if ($all) {
-			$arr_participants = array_unique(array_merge($arr_participants, array_keys($this->getUsers(false, $all))));
+			$arr_participants = arrMergeValues([$arr_participants, array_keys($this->getUsers(false, $all))]);
 		}
 		
 		return $arr_participants;

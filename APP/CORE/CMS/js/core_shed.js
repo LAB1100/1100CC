@@ -92,6 +92,13 @@ function runElementSelectorFunction(elm, selector, callback) {
 	}
 }
 
+function runElementsSelectorFunction(elms, selector, callback) {
+	
+	for (var i = 0, len = elms.length; i < len; i++) {
+		runElementSelectorFunction(elms[i], selector, callback);
+	}
+}
+
 function setElementData(elm, key, arr, overwrite) {
 	
 	var elm = getElement(elm);
@@ -481,10 +488,14 @@ $(document).on('documentloaded ajaxloaded', function(e) {
 			new FormManager(elm_form);
 		});
 		
-		runElementSelectorFunction(elm, '.sorter', function(elm_found) {
+		runElementSelectorFunction(elm, 'ul.sorter', function(elm_found) {
+			
+			var elm_menu = $(elm_found).closest('li').prev('li').find('menu.sorter');
+			
 			new Sorter(elm_found, {
-				prepend : elm_found.classList.contains('reverse'),
-				auto_add : elm_found.dataset.sorter_auto_add
+				prepend: elm_found.classList.contains('reverse'),
+				auto_add: elm_found.dataset.sorter_auto_add,
+				elm_menu: (elm_menu.length ? elm_menu[0] : false)
 			});
 		});
 
@@ -513,6 +524,7 @@ $(document).on('documentloaded ajaxloaded', function(e) {
 		runElementSelectorFunction(elm, 'input.autocomplete', function(elm_found) {
 			new AutoCompleter(elm_found, {
 				multi: elm_found.classList.contains('multi'),
+				order: elm_found.dataset.order,
 				delay: elm_found.dataset.delay
 			});
 		});
@@ -1004,6 +1016,24 @@ function Tooltip() {
 			}
 		}
 	};
+	
+	this.getTitle = function(elm_check) {
+		
+		if (elm_check) {
+			
+			var elm_check = getElement(elm_check);
+			
+			if (elm_check !== elm) {
+				return elm_check.getAttribute('title');
+			}
+		}
+		
+		if (!elm) {
+			return false;
+		}
+		
+		return title;
+	};
 		
 	this.checkElement = function(elm_check, selector_check, func) {
 
@@ -1029,16 +1059,16 @@ function Tooltip() {
 			
 			elm_target.tooltip_element_is_checked = true;
 			
-			var title = func(elm_target);
+			var title_check = func(elm_target);
 			
-			if (title === false) {
+			if (title_check === false) {
 				return;
 			}
 									
-			if (!title){
+			if (!title_check){
 				elm_target.removeAttribute('title');
 			} else {
-				elm_target.setAttribute('title', title);
+				elm_target.setAttribute('title', title_check);
 			}
 
 			func_over(e); // Run the event over the tooltip listener itself
@@ -4664,9 +4694,9 @@ function FormManager(elm, arr_options) {
 					
 	elm.addEventListener('ajaxsubmit', function(e) {
 	
-		runElementSelectorFunction(elm, '.sorter', function(elm_found) {
+		runElementSelectorFunction(elm, 'ul.sorter', function(elm_found) {
 			
-			if (elm_found.matches('form .sorter .sorter')) { // Sorters could be nested, make sure only the top one is used
+			if (elm_found.matches('form ul.sorter ul.sorter')) { // Sorters could be nested, make sure only the top one is used
 				return;
 			}
 			
@@ -4684,9 +4714,9 @@ function FormManager(elm, arr_options) {
 	
 	elm.addEventListener('ajaxsubmitted', function(e) {
 		
-		runElementSelectorFunction(elm, '.sorter', function(elm_found) {
+		runElementSelectorFunction(elm, 'ul.sorter', function(elm_found) {
 			
-			if (elm_found.matches('form .sorter .sorter')) { // Sorters could be nested, make sure only the top one is used
+			if (elm_found.matches('form ul.sorter ul.sorter')) { // Sorters could be nested, make sure only the top one is used
 				return;
 			}
 			
@@ -4700,9 +4730,9 @@ function FormManager(elm, arr_options) {
 	
 	elm.addEventListener('reset', function(e) {
 		
-		runElementSelectorFunction(elm, '.sorter', function(elm_found) {
+		runElementSelectorFunction(elm, 'ul.sorter', function(elm_found) {
 			
-			if (elm_found.matches('form .sorter .sorter')) { // Sorters could be nested, make sure only the top one is used
+			if (elm_found.matches('form ul.sorter ul.sorter')) { // Sorters could be nested, make sure only the top one is used
 				return;
 			}
 			
@@ -4741,6 +4771,7 @@ function AutoCompleter(elm, arr_options) {
 	
 	var arr_options = $.extend({
 		multi: false,
+		order: false,
 		name: '',
 		delay: 0
 	}, arr_options);
@@ -4762,8 +4793,10 @@ function AutoCompleter(elm, arr_options) {
 	
 	if (arr_options.multi) {
 		
-		arr_elm.values = cur.prev('.autocomplete').find('ul');
-		arr_elm.input_id = cur.prev('.autocomplete').prev('input:hidden');
+		var elm_tags = cur.prev('.autocomplete');
+		
+		arr_elm.values = elm_tags.find('ul');
+		arr_elm.input_id = elm_tags.prev('input:hidden');
 		if (!arr_options.name) {
 			arr_options.name = arr_elm.input_id.attr('name');
 		}
@@ -4796,6 +4829,16 @@ function AutoCompleter(elm, arr_options) {
 				value_default.push([str_value, elms_input[i].value]);
 			}
 		}
+		
+		if (arr_options.order) {
+			
+			elm_tags[0].classList.add('order');
+			
+			new SortSorter(arr_elm.values, {
+				items: '> li',
+				handle: '> li > span:first-child'
+			});
+		}
 	} else {
 		
 		arr_elm.input_id = cur.prev('input:hidden');
@@ -4809,7 +4852,11 @@ function AutoCompleter(elm, arr_options) {
 	
 	var value_input = input;
 	var value_stored = input;
-	cur.attr('placeholder', input);
+	
+	var str_placeholder_default = (cur[0].placeholder ? cur[0].placeholder : '');
+	if (input) {
+		cur[0].placeholder = input;
+	}
 	
 	var timer_delay = false;
 	
@@ -4905,7 +4952,7 @@ function AutoCompleter(elm, arr_options) {
 			arr_elm.input_id.val('');
 			value_stored = '';
 			value_input = '';
-			cur.attr('placeholder', '');
+			cur[0].placeholder = str_placeholder_default;
 		}
 	}).on('click.autocomplete focus.autocomplete', function(e) {
 		
@@ -5100,7 +5147,7 @@ function AutoCompleter(elm, arr_options) {
 
 		value_input = input;
 		value_stored = input;
-		cur.attr('placeholder', input);
+		cur[0].placeholder = input;
 		
 		arr_elm.input_id.val(id);
 		
@@ -5133,7 +5180,7 @@ function AutoCompleter(elm, arr_options) {
 		
 		value_input = '';
 		value_stored = '';
-		cur.attr('placeholder', '');
+		cur[0].placeholder = str_placeholder_default;
 		
 		arr_elm.input_id.val('');
 	};
@@ -5153,7 +5200,7 @@ function Sorter(elm, arr_options) {
 	var SELF = this;
 	
 	var arr_options = $.extend({
-		controls: false,
+		elm_menu: false,
 		prepend: false,
 		auto_add: false
 	}, arr_options || {});
@@ -5180,10 +5227,11 @@ function Sorter(elm, arr_options) {
 	if (!elm_source.length && !elms_row.length) {
 		return;
 	}
-	
-	var elm_first = elms_row.first();
-	
+
 	if (!elm_source.length) {
+		
+		var elm_first = elms_row.first();
+		
 		var html_source = elm_first[0].outerHTML;
 		var is_copy = true;
 	}
@@ -5191,29 +5239,25 @@ function Sorter(elm, arr_options) {
 	elms_row.each(function() {
 		arr_html_default.push(this.outerHTML);
 	});
-										
-	if (elm_first.children('span').length || elm_first.find('.handle').length) {
-		
-		var selector_handle = '.handle';
-		
-		var elm_span = elm_first.children('span');
-		if (elm_span.length) {
-			selector_handle = (elm_span.first().is(':last-child') ? '> li > span:last-child' : '> li > span:first-child');
-		}
-		
-		new SortSorter(cur, {
-			items: '> li',
-			handle: selector_handle
-		});		
-	}
 	
-	if (arr_options.controls) {
+	if (arr_options.elm_menu) {
 		
-		arr_options.controls.off('.sorter').on('click.sorter', '.add', function() {
-			SELF.addRow();
-		}).on('click.sorter', '.del', function() {
-			SELF.clean();
-		});
+		var elm_menu = getElement(arr_options.elm_menu);
+		
+		$(elm_menu).off('.sorter')
+			.on('click.sorter', '.add', function() {
+				SELF.addRow();
+			}).on('click.sorter', '.del', function() {
+				SELF.clean();
+			}).on('click.sorter', '.order', function() {
+				
+				if (!this.nextElementSibling && this.previousElementSibling && this.previousElementSibling.classList.contains('split')) {
+					elm_menu.removeChild(this.previousElementSibling);
+				}
+				elm_menu.removeChild(this);
+				
+				SELF.initSortSorter(true);
+			});
 	}
 	if (arr_options.auto_add) {
 		
@@ -5226,6 +5270,65 @@ function Sorter(elm, arr_options) {
 			SELF.addRow({focus: false});
 		});
 	}
+	
+	var func_init = function() {
+		
+		SELF.initSortSorter();
+	};
+	
+	this.initSortSorter = function(generate) {
+		
+		var func_html = function() {
+			
+			ASSETS.getIcons(cur, ['updown'], function(data) {
+				
+				var elms_row = cur.children('li');
+			
+				var elm_source = $(html_source);
+				elms_row = elms_row.add(elm_source);
+				
+				elms_row = elms_row.prepend('<span></span>');
+				elms_row = elms_row.children('span:first-child');
+
+				for (var i = 0, len = elms_row.length; i < len; i++) {
+			
+					elms_row[i].innerHTML = '<span class="icon">'+data.updown+'</span>';
+				}
+				
+				html_source = elm_source[0].outerHTML;
+				
+				func_sort();
+			});
+		};
+		
+		var func_sort = function() {
+			
+			var elms_row = cur.children('li');
+			var elm_first = elms_row.first();
+			
+			if (!elm_first.children('span').length && !elm_first.find('.handle').length) {
+				return;
+			}
+			
+			var selector_handle = '.handle';
+			
+			var elm_span = elm_first.children('span');
+			if (elm_span.length) {
+				selector_handle = (elm_span.first().is(':last-child') ? '> li > span:last-child' : '> li > span:first-child');
+			}
+			
+			new SortSorter(cur, {
+				items: '> li',
+				handle: selector_handle
+			});
+		};
+		
+		if (generate) {
+			func_html();
+		} else {
+			func_sort();
+		}
+	};
 
 	this.getSource = function() {
 		
@@ -5251,7 +5354,7 @@ function Sorter(elm, arr_options) {
 		
 		// Manage dynamic array-in-name setting
 		
-		var num_replace = (elm_target.find('.sorter').length + 1);
+		var num_replace = (elm_target.find('ul.sorter').length + 1);
 		var elm_targets = elm_target.find('input, select, textarea');
 		
 		replaceArrayInName(elm_targets, num_replace);
@@ -5321,6 +5424,8 @@ function Sorter(elm, arr_options) {
 			SCRIPTER.triggerEvent(cur, 'ajaxloaded', {elm: elm_target});
 		}
 	};
+	
+	func_init();
 }
 
 $.fn.sorter = function() {

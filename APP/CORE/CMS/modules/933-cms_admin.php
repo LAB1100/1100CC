@@ -488,7 +488,7 @@ class cms_admin extends base_module {
 		
 		/*
 		$arr_database_tables = [
-			DATABASE => [
+			DATABASE:TO_DATABASE => [
 				['name' => DB::getTable('TABLE'), 'create' => bool, 'truncate' => bool, 'field' => 'from_id', 'on' => [
 					['to_id', DB::getTable('TABLE'), 'with_id']
 				]],
@@ -506,6 +506,10 @@ class cms_admin extends base_module {
 
 		foreach ($arr_database_tables as $database => $arr_tables) {
 			
+			$arr_database = explode(':', $database);
+			$database_from = $arr_database[0];
+			$database_to = ($arr_database[1] ?: $database_from);
+			
 			foreach ($arr_tables as $arr_table) {
 				
 				$arr_table_name = explode('.', $arr_table['name']);
@@ -514,7 +518,7 @@ class cms_admin extends base_module {
 					TABLE_NAME AS name,
 					TABLE_TYPE AS type
 						FROM information_schema.TABLES
-					WHERE TABLE_SCHEMA = '".$database."'
+					WHERE TABLE_SCHEMA = '".$database_from."'
 						AND TABLE_NAME = '".($arr_table_name[1] ?: $arr_table_name[0])."'
 				");
 				
@@ -526,11 +530,15 @@ class cms_admin extends base_module {
 				
 				$file_dump = fopen($path_dump, 'w');
 				
-				$sql_table_name = DB::getTable($arr_table['name']); // Parse for processing
+				$table_name = $arr_table['name'];
+				$table_name_to = str_replace($database_from, $database_to, $table_name);
+				
+				$sql_table_name = DB::getTable($table_name); // Parse for processing
+				$sql_table_name_print = DB::getTable($table_name_to);
 				
 				if ($arr_table['create']) {
 						
-					$return = 'DROP '.($arr_sql_table['type'] == 'VIEW' ? 'VIEW' : 'TABLE').' IF EXISTS '.$sql_table_name.";\n\n";
+					$return = 'DROP '.($arr_sql_table['type'] == 'VIEW' ? 'VIEW' : 'TABLE').' IF EXISTS '.$sql_table_name_print.";\n\n";
 					
 					$res = DB::query('SHOW CREATE '.($arr_sql_table['type'] == 'VIEW' ? 'VIEW' : 'TABLE').' '.$sql_table_name);
 					
@@ -543,7 +551,7 @@ class cms_admin extends base_module {
 							
 				if ($arr_sql_table['type'] != 'VIEW') {
 						
-					DB::setDatabase($database);
+					DB::setDatabase($database_from);
 
 					$sql = 'SELECT DISTINCT table_0.* FROM '.$sql_table_name.' AS table_0';
 
@@ -570,23 +578,27 @@ class cms_admin extends base_module {
 					
 					$nr_fields = $res->getFieldCount();
 					$arr_types = [];
+					$arr_func_callback = [];
 					
 					for ($i = 0; $i < $nr_fields; $i++) {
 						
 						$arr_types[$i] = $res->getFieldDataType($i);
-						//$arr_types[$i] = $res->fetch_field_direct($i)->type;
+						
+						$arr_meta = $res->getFieldMeta($i);
+
+						$arr_func_callback[$i] = ($arr_table['callback'][$arr_meta['name']] ?: false);
 					}
 					
 					if ($arr_table['truncate']) {
 						
-						$return = 'DELETE FROM '.$sql_table_name.";\n\n";
+						$return = 'DELETE FROM '.$sql_table_name_print.";\n\n";
 						
 						fwrite($file_dump, $return);
 					}
 
 					while ($arr_row = $res->fetchRow()) {
 						
-						$return = 'INSERT INTO '.$sql_table_name.' VALUES(';
+						$return = 'INSERT INTO '.$sql_table_name_print.' VALUES(';
 						
 						for ($i = 0; $i < $nr_fields; $i++) {
 							
@@ -598,6 +610,11 @@ class cms_admin extends base_module {
 							} else {
 								
 								$type = $arr_types[$i];
+								$func = $arr_func_callback[$i];
+								
+								if ($func !== false) {
+									$value = $func($value);
+								}
 								
 								//if ($type == MYSQLI_TYPE_SHORT || $type == MYSQLI_TYPE_LONG) {
 								if ($type == DBFunctions::TYPE_INTEGER) {
@@ -633,13 +650,13 @@ class cms_admin extends base_module {
 				}
 
 				fclose($file_dump);
-				
-				$filename = $database.'/'.$arr_table['name'].'.sql';
+
+				$filename = $database_to.'/'.$table_name_to.'.sql';
 				
 				if ($arr_filenames[$filename]) {
 					
 					$arr_filenames[$filename]++;
-					$filename = $database.'/'.$arr_table['name'].'_'.$arr_filenames[$filename].'.sql';
+					$filename = $database_to.'/'.$table_name_to.'_'.$arr_filenames[$filename].'.sql';
 				} else {
 
 					$arr_filenames[$filename] = 1;
@@ -677,6 +694,8 @@ class cms_admin extends base_module {
 			$count = 0;
 			$arr_row = [];
 			
+			DB::startTransaction('cms_admin_sql');
+			
 			while (!feof($file)) {
 				
 				$arr_row[] = fgets($file);
@@ -703,6 +722,8 @@ class cms_admin extends base_module {
 				
 				DB::queryMulti($sql);
 			}
+			
+			DB::commitTransaction('cms_admin_sql');
 
 			DB::setDatabase();
 			

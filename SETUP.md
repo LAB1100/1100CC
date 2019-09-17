@@ -133,6 +133,11 @@ Currently MySQL works as a master for development, you can use [PGLoader](https:
 LOAD DATABASE
 	FROM mysql://root:?PASSWORD?@127.0.0.1/1100CC
 	INTO postgresql://postgres:?PASSWORD?@127.0.0.1/CC1100
+	
+	CAST
+		type int with extra auto_increment to serial drop typemod keep default keep not null,
+		type int to int drop typemod keep default keep not null,
+		type bigint to bigint drop typemod keep default keep not null
 ;
 ```
 
@@ -140,11 +145,21 @@ LOAD DATABASE
 LOAD DATABASE
 	FROM mysql://root:?PASSWORD?@127.0.0.1/?SITE?_home
 	INTO postgresql://postgres:?PASSWORD?@127.0.0.1/CC1100
+	
+	CAST
+		type int with extra auto_increment to serial drop typemod keep default keep not null,
+		type int to int drop typemod keep default keep not null,
+		type bigint to bigint drop typemod keep default keep not null
 ;
 
 LOAD DATABASE
 	FROM mysql://root:?PASSWORD?@127.0.0.1/?SITE?_cms
 	INTO postgresql://postgres:?PASSWORD?@127.0.0.1/CC1100
+	
+	CAST
+		type int with extra auto_increment to serial drop typemod keep default keep not null,
+		type int to int drop typemod keep default keep not null,
+		type bigint to bigint drop typemod keep default keep not null
 
 	AFTER LOAD DO
 

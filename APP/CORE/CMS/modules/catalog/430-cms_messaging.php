@@ -494,13 +494,7 @@ class cms_messaging extends base_module {
 			$arr_users[$arr_row['group_id']]['email'][] = $arr_row['email'];
 			$arr_users[$arr_row['group_id']]['vars'][] = ['name' => $arr_row['name']];
 		}
-		
-		Labels::setVariable('link', false);
-		Labels::setVariable('link_opt_out', false);
-		Labels::setVariable('name', false); // Name is printed in the email
-		
-		$msg = Labels::printLabels(getLabel('mail_messaging_notification').getLabel('txt_email_opt_out'));
-				
+								
 		foreach ($arr_users as $user_group_id => $arr_email_vars) {
 			
 			$module_url = pages::getModUrl(pages::getClosestMod('messaging', false, false, $user_group_id));
@@ -514,7 +508,7 @@ class cms_messaging extends base_module {
 			$mail = new Mail();
 			$mail->to($arr_email_vars['email'], $arr_email_vars['vars']);
 			$mail->subject(getLabel('mail_messaging_notification_title'));
-			$mail->message($msg);
+			$mail->message(getLabel('mail_messaging_notification', 'L', true).getLabel('txt_email_opt_out', 'L', true));
 			$mail->send();
 		}
 	}

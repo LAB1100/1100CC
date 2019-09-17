@@ -85,7 +85,7 @@ class WebSocketUser {
 
 			if (!$arr['date_active']) {
 				
-				$date = str2SQlDate(time());
+				$date = DBFunctions::str2Date(time());
 				
 				DB::setConnection(DB::CONNECT_CMS);
 				

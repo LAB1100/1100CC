@@ -9,7 +9,7 @@
 
 class Mail {
 	
-    private $from_1100cc = '';
+	private $from_1100cc = '';
 	private $from_name = '';
 	private $header = '';
 	private $footer = '';
@@ -23,7 +23,7 @@ class Mail {
 	private $arr_vars = [];
 	private $arr_attachments = [];
 
-    public function __construct($email = false, $subject = false, $message = false) {
+	public function __construct($email = false, $subject = false, $message = false) {
 		
 		if ($email) {
 			$this->to($email);
@@ -41,9 +41,9 @@ class Mail {
 		
 		$this->header = getLabel('email_header', 'D');
 		$this->footer = getLabel('email_footer', 'D');
-    }
-    
-    public function subject($subject) {
+	}
+
+	public function subject($subject) {
 		
 		$this->subject = Labels::parseTextVariables($subject);
 	}
@@ -53,7 +53,7 @@ class Mail {
 		$this->message = Labels::parseTextVariables($message);
 	}
 	
-    public function to($to, $arr_vars = false) {
+	public function to($to, $arr_vars = false) {
 		
 		if (is_array($to)) {
 			$this->arr_to = array_merge($this->arr_to, $to);
@@ -66,14 +66,14 @@ class Mail {
 				$this->arr_vars[] = $arr_vars;
 			}
 		}
-    }
-    
-    public function from($from) {
+	}
+
+	public function from($from) {
 		
 		$this->from = Labels::parseTextVariables($from);
-    }
-    
-    public function attachment($arr_attachments) {
+	}
+
+	public function attachment($arr_attachments) {
 		
 		// $arr_attachments = array("filename" => file/string)
 		
@@ -93,8 +93,8 @@ class Mail {
 		
 		$this->tag = $tag;
 	}
-    
-    public function send() {
+	
+	public function send() {
 		
 		$from_1100cc = Labels::printLabels($this->from_1100cc);
 		$from = Labels::printLabels($this->from);
@@ -194,5 +194,5 @@ class Mail {
 				error('Mail ERROR: '.$e->getMessage(), TROUBLE_NOTICE, LOG_BOTH, false, $e); // Make notice
 			}
 		}
-    }
+	}
 }

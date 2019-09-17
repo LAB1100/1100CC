@@ -384,7 +384,30 @@ class Response {
 	
 	public static function addParsePost($value, $arr_options) {
 		
-		$identifier = 'l:'.$arr_options['limit'].'_a:'.$arr_options['affix'].'_'.$arr_options['strip'].'_'.$arr_options['case'];
+		$identifier = '';
+		
+		foreach ($arr_options as $key_option => $value_option) {
+			
+			switch ($key_option) {
+				case 'limit':
+					$identifier .= ':l:'.$value_option;
+					break;
+				case 'affix':
+					$identifier .= ':a:'.$value_option;
+					break;
+				case 'strip':
+					$identifier .= ':s:'.$value_option;
+					break;
+				case 'case':
+					$identifier .= ':c:'.$value_option;
+					break;
+				case 'regex':
+					$identifier .= ':x:'.$value_option['pattern'].$value_option['flags'].$value_option['template'];
+					break;
+			}
+		}
+		
+		// $identifier = hash('md5', serialize($arr_options));
 		
 		$id = self::$arr_parse_post_identifiers[$identifier];
 		
@@ -591,6 +614,11 @@ class Response {
 					
 					$str = $str.$arr_options['affix'];
 				}
+			}
+			if ($arr_options['regex']) {
+				
+				$arr_regex = $arr_options['regex'];
+				$str = preg_replace('/'.$arr_regex['pattern'].'/'.$arr_regex['flags'], $arr_regex['template'], $str);
 			}
 			
 			$str = self::encode($str);

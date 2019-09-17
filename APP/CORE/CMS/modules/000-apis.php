@@ -180,9 +180,9 @@ class apis extends base_module {
 		
 		if ($arr_client_user) {
 			if ($arr_client_user['date_valid']) {
-				$date_valid = str2SQlDate($arr_client_user['date_valid'].' '.$arr_client_user['date_valid_t']);
+				$date_valid = DBFunctions::str2Date($arr_client_user['date_valid'].' '.$arr_client_user['date_valid_t']);
 			} else if ($arr_client_user['time_amount'] && $arr_client_user['time_unit']) {
-				$date_valid = str2SQlDate(time() + (($arr_client_user['time_amount'] * $arr_client_user['time_unit']) * 60));
+				$date_valid = DBFunctions::str2Date(time() + (($arr_client_user['time_amount'] * $arr_client_user['time_unit']) * 60));
 			}
 		}
 		

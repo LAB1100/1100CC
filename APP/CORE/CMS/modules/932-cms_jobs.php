@@ -65,9 +65,9 @@ class cms_jobs extends base_module {
 			foreach($arr_job_properties as $module => $methods) {
 				foreach($methods as $method => $arr_options) {
 				
-					$minutes = ($arr_jobs[$module][$method]['minutes'] === '-1' ? 'manual' : $arr_jobs[$module][$method]['minutes']);
+					$seconds = ($arr_jobs[$module][$method]['seconds'] === '-1' ? 'manual' : $arr_jobs[$module][$method]['seconds']);
 					if ($arr_options['service']) {
-						$minutes = ($arr_jobs[$module][$method]['minutes'] === '0' ? 'always' : $minutes);
+						$seconds = ($arr_jobs[$module][$method]['seconds'] === '0' ? 'always' : $seconds);
 					}
 					
 					$str_options = $arr_jobs[$module][$method]['options'];
@@ -75,7 +75,7 @@ class cms_jobs extends base_module {
 					$return .= '<tr id="x:cms_jobs:job-'.$module.'.'.$method.'">
 						<td>'.$arr_options['label'].'</td>
 						<td><input type="hidden" id="y:cms_jobs:set_job_options-'.$module.'.'.$method.'" name="jobs['.$module.']['.$method.'][options]" value="'.($str_options ? htmlspecialchars($str_options) : 'null').'" /><input type="button" class="data edit" value="edit" /></td>
-						<td><select name="jobs['.$module.']['.$method.'][timer]">'.cms_general::createDropdown(($arr_options['service'] ? $arr_timer_service : $arr_timer), $minutes).'</select></td>
+						<td><select name="jobs['.$module.']['.$method.'][timer]">'.cms_general::createDropdown(($arr_options['service'] ? $arr_timer_service : $arr_timer), $seconds).'</select></td>
 						<td>'.($arr_jobs[$module][$method]['date_executed'] ? date('d-m-Y H:i:s', strtotime($arr_jobs[$module][$method]['date_executed'])) : '<span class="icon" data-category="status">'.getIcon('min').'</span>').'</td>
 						<td><span class="icon" data-category="status">'.getIcon(($arr_jobs[$module][$method]['running'] ? 'tick' : 'min')).'</span></td>
 						<td>'.($arr_jobs[$module][$method] && !$arr_jobs[$module][$method]['running'] ? '<input type="button" class="data add quick run_job" value="run" />' : ($arr_jobs[$module][$method] && $arr_options['service'] ? '<input type="button" class="data del msg stop_job" value="stop" />' : '')).'</td>
@@ -291,15 +291,19 @@ class cms_jobs extends base_module {
 		if ($type == 'service') {
 			$arr[] = ['id' => 'always', 'name' => getLabel('lbl_always')];
 		}
-		$arr[] = ['id' => 1, 'name' => getLabel('unit_minute')];
-		$arr[] = ['id' => 5, 'name' => '5 '.getLabel('unit_minutes')];
-		$arr[] = ['id' => 15, 'name' => '15 '.getLabel('unit_minutes')];
-		$arr[] = ['id' => 30, 'name' => '30 '.getLabel('unit_minutes')];
-		$arr[] = ['id' => 60, 'name' => getLabel('unit_hour')];
-		$arr[] = ['id' => 720, 'name' => '12 '.getLabel('unit_hours')];
-		$arr[] = ['id' => 1440, 'name' => getLabel('unit_day')];
-		$arr[] = ['id' => 10080, 'name' => getLabel('unit_week')];
-		$arr[] = ['id' => 40320, 'name' => getLabel('unit_month')];
+		$arr[] = ['id' => 1, 'name' => getLabel('unit_second')];
+		$arr[] = ['id' => 5, 'name' => '5 '.getLabel('unit_second')];
+		$arr[] = ['id' => 15, 'name' => '15 '.getLabel('unit_second')];
+		$arr[] = ['id' => 30, 'name' => '30 '.getLabel('unit_second')];
+		$arr[] = ['id' => 60, 'name' => getLabel('unit_minute')];
+		$arr[] = ['id' => 5*60, 'name' => '5 '.getLabel('unit_minutes')];
+		$arr[] = ['id' => 15*60, 'name' => '15 '.getLabel('unit_minutes')];
+		$arr[] = ['id' => 30*60, 'name' => '30 '.getLabel('unit_minutes')];
+		$arr[] = ['id' => 3600, 'name' => getLabel('unit_hour')];
+		$arr[] = ['id' => 3600*12, 'name' => '12 '.getLabel('unit_hours')];
+		$arr[] = ['id' => 86400, 'name' => getLabel('unit_day')];
+		$arr[] = ['id' => 86400*7, 'name' => getLabel('unit_week')];
+		$arr[] = ['id' => 86400*28, 'name' => getLabel('unit_month')];
 
 		return $arr;
 	}
@@ -322,7 +326,7 @@ class cms_jobs extends base_module {
 			$arr['process_id'] = $row['process_id'];
 			$arr['date_executed'] = [
 				'previous' => $row['date_executed'],
-				'now' => str2SQlDate(time())
+				'now' => false
 			];
 
 			return $arr;
@@ -350,10 +354,10 @@ class cms_jobs extends base_module {
 					}
 					
 					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_SITE_JOBS')."
-						(module, method, minutes, options, date_executed)
+						(module, method, seconds, options, date_executed)
 							VALUES
 						('".DBFunctions::strEscape($module)."', '".DBFunctions::strEscape($method)."', ".(int)$timer.", '".DBFunctions::strEscape($str_options)."', NOW())
-						".DBFunctions::onConflict('module, method', ['minutes', 'options'])."
+						".DBFunctions::onConflict('module, method', ['seconds', 'options'])."
 					");
 									
 					$arr_jobs_cur[] = $module.$method;
@@ -404,7 +408,7 @@ class cms_jobs extends base_module {
 			(date)
 				VALUES
 			(NOW())
-			".DBFunctions::onConflict('unique_row', false, 'unique_row = 1')."
+			".DBFunctions::onConflict('unique_row', false, 'unique_row = TRUE')."
 		");
 	}
 	
@@ -452,7 +456,7 @@ class cms_jobs extends base_module {
 		$res = DB::query("SELECT TRUE
 				FROM ".DB::getTable('TABLE_SITE_JOBS')." j,
 				".DB::getTable('TABLE_SITE_JOBS_TIMER')." jt
-			WHERE j.minutes >= 0 AND j.date_executed < NOW()
+			WHERE j.seconds >= 0 AND j.date_executed < NOW()
 				AND (jt.unique_row IS NOT NULL AND jt.date IS NULL OR jt.date < NOW())
 			LIMIT 1
 		");
@@ -527,8 +531,8 @@ class cms_jobs extends base_module {
 			
 			$res = DB::query("SELECT j.*
 					FROM ".DB::getTable('TABLE_SITE_JOBS')." j
-				WHERE j.minutes >= 0
-					AND (j.date_executed + ".DBFunctions::interval(1, 'MINUTE', 'j.minutes').") < NOW()
+				WHERE j.seconds >= 0
+					AND (j.date_executed + ".DBFunctions::interval(1, 'SECOND', 'j.seconds').") < NOW()
 					AND j.date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 					AND j.running = FALSE
 			");
@@ -543,8 +547,8 @@ class cms_jobs extends base_module {
 					$res_check = DB::query("SELECT TRUE
 							FROM".DB::getTable('TABLE_SITE_JOBS')." j
 						WHERE j.module = '".$module."' AND j.method = '".$method."'
-							AND j.minutes >= 0
-							AND (j.date_executed + ".DBFunctions::interval(1, 'MINUTE', 'j.minutes').") < NOW()
+							AND j.seconds >= 0
+							AND (j.date_executed + ".DBFunctions::interval(1, 'SECOND', 'j.seconds').") < NOW()
 							AND j.date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 							AND j.running = FALSE
 					");
@@ -563,8 +567,8 @@ class cms_jobs extends base_module {
 								$update = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET 
 										running = TRUE
 									WHERE module = '".$module."' AND method = '".$method."'
-										AND minutes >= 0
-										AND (date_executed + ".DBFunctions::interval(1, 'MINUTE', 'minutes').") < NOW()
+										AND seconds >= 0
+										AND (date_executed + ".DBFunctions::interval(1, 'SECOND', 'seconds').") < NOW()
 										AND date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 								");
 								
@@ -588,9 +592,9 @@ class cms_jobs extends base_module {
 			$res = DB::query("SELECT j.*
 				FROM ".DB::getTable('TABLE_SITE_JOBS')." j
 				WHERE 
-					(j.minutes > 0 AND (j.date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').") OR j.date_executed = NOW()))
+					(j.seconds > 0 AND j.date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER')."))
 						OR
-					(j.minutes = 0 AND j.process_date < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER')."))
+					(j.seconds = 0 AND j.process_date < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER')."))
 				LIMIT 1
 			");
 			
@@ -637,8 +641,8 @@ class cms_jobs extends base_module {
 			$update = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET 
 					running = TRUE
 				WHERE module = '".$module."' AND method = '".$method."'
-					AND minutes >= 0
-					AND (date_executed + ".DBFunctions::interval(1, 'MINUTE', 'minutes').") < NOW()
+					AND seconds >= 0
+					AND (date_executed + ".DBFunctions::interval(1, 'SECOND', 'seconds').") < NOW()
 					AND date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 			");
 			
@@ -760,6 +764,13 @@ class cms_jobs extends base_module {
 		};
 		
 		try {
+
+			$float_time = microtime(true);
+
+			// Make sure the Job does not run in this same second; this allows us to catch the true state of things for the current second as well
+			time_sleep_until($float_time + 1);
+			
+			$arr_job['date_executed']['now'] = DBFunctions::str2Date((int)$float_time);
 			
 			$module::$method($arr_job);
 		} catch (Exception $e) {
@@ -771,7 +782,7 @@ class cms_jobs extends base_module {
 		DB::setConnection(DB::CONNECT_CMS);
 		
 		DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET
-				date_executed = '".str2SQlDate($arr_job['date_executed']['now'])."'
+				date_executed = '".DBFunctions::str2Date($arr_job['date_executed']['now'])."'
 			WHERE module = '".$module."' AND method = '".$method."'
 		");
 		

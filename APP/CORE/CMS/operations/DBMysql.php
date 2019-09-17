@@ -91,7 +91,7 @@ class DB extends DBBase {
 			} catch (Exception $e) {
 
 				static::$last_query = $q;
-				static::error($e);
+				static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
 			}
 		} else {
 			
@@ -103,7 +103,7 @@ class DB extends DBBase {
 			} catch (Exception $e) {
 
 				static::$last_query = $q;
-				static::error($e);
+				static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
 			}
 		}
 		
@@ -118,7 +118,7 @@ class DB extends DBBase {
 		} catch (Exception $e) {
 
 			static::$last_query = $q;
-			static::error($e);
+			static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 		
 		static::$connection_active_is_async = true;
@@ -180,7 +180,7 @@ class DB extends DBBase {
 		} catch (Exception $e) {
 
 			static::$last_query = $q;
-			static::error($e);
+			static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 
 		if (static::$connection_active->errno) { // Something went wrong, but could not be caught because only the first query can be caught
@@ -204,7 +204,7 @@ class DB extends DBBase {
 			DBStatement::reset();
 
 			static::$last_query = $q;
-			static::error($e);
+			static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 		
 		return new DBStatement($statement);
@@ -248,6 +248,8 @@ class DB extends DBBase {
 			case 1406:
 				$msg = getLabel('msg_error_database_data_field_limit');
 				break;
+			case 1070:
+				$msg = getLabel('msg_error_database_index_limit');
 		}
 		
 		return $msg;
@@ -268,7 +270,7 @@ class DBStatement extends DBStatementBase {
 			
 			$position = $this->arr_variables[$variable][0]+1;
 			
-			$arr_collect[$position] = &$value;
+			$arr_collect[$position] = $value;
 			
 			$format .= $this->arr_variables[$variable][1];
 		}
@@ -375,8 +377,9 @@ class DBResult extends DBResultBase {
 
 class DBFunctions extends DBFunctionsBase {
 	
-	const CAST_TYPE_INTEGER = 'UNSIGNED';
+	const CAST_TYPE_INTEGER = 'SIGNED';
 	const CAST_TYPE_STRING = 'CHAR';
+	const CAST_TYPE_BINARY = 'BINARY';
 			
 	public static function strEscape($str) {
 		
@@ -456,24 +459,32 @@ class DBFunctions extends DBFunctionsBase {
 		$sql = 'ON DUPLICATE KEY UPDATE';
 		$sql_affix = '';
 		
-		if ($arr_values) {
+		if (!$arr_values && !$sql_other) {
 			
-			foreach ($arr_values as &$value) {
+			$arr_key = explode(',', $key);
+			
+			$sql_affix = ' '.$arr_key[0].' = VALUES('.$arr_key[0].')'; // Select the first field of the key constraint and dummy-update that one
+		} else {
+		
+			if ($arr_values) {
 				
-				$value = $value.' = VALUES('.$value.')';
+				foreach ($arr_values as &$value) {
+					
+					$value = $value.' = VALUES('.$value.')';
+				}
+				
+				$sql_affix .= ' '.implode(',', $arr_values);
 			}
 			
-			$sql_affix .= ' '.implode(',', $arr_values);
+			if ($sql_other) {
+				
+				$sql_other = preg_replace_callback('/\[(.*?)\]/', function ($arr_matches) { // [fieldname]
+					return 'VALUES('.$arr_matches[1].')'; 
+				}, $sql_other);
+				
+				$sql_affix .= ($sql_affix ? ',' : '').' '.$sql_other;
+			}
 		}
-		
-		if ($sql_other) {
-			
-			$sql_other = preg_replace_callback('/\[(.*?)\]/', function ($arr_matches) { // [fieldname]
-				return 'VALUES('.$arr_matches[1].')'; 
-			}, $sql_other);
-			
-			$sql_affix .= ($sql_affix ? ',' : '').' '.$sql_other;
-		}		
 		
 		return $sql.$sql_affix;
 	}

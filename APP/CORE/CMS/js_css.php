@@ -10,14 +10,14 @@
 // 1100CC Framework:
 
 	$arr['js'] = [
-		DIR_JS.'jquery.min.js',
-		DIR_JS.'jquery.validate.min.js',
-		DIR_JS.'jquery.rangyinputs.js',
-		DIR_JS.'ResizeSensor.js',
-		DIR_JS.'Tween.js',
-		DIR_JS.'PrismJS.js',
-		DIR_JS.'jquery.caretposition.js',
-		DIR_JS.'Sortable.js',
+		DIR_JS.'support/jquery.min.js',
+		DIR_JS.'support/jquery.validate.min.js',
+		DIR_JS.'support/jquery.rangyinputs.js',
+		DIR_JS.'support/ResizeSensor.js',
+		DIR_JS.'support/Tween.js',
+		DIR_JS.'support/PrismJS.js',
+		DIR_JS.'support/jquery.caretposition.js',
+		DIR_JS.'support/Sortable.js',
 		DIR_JS.'core_polyfill.js',
 		DIR_JS.'core_feedback.js',
 		DIR_JS.'core_shed.js',

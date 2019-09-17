@@ -68,11 +68,18 @@ function Commands() {
 		
 		return setElementData(elm, 'command_id', identifier, true);
 	};
-	this.getID = function(elm) {
+	this.getID = function(elm, parse) {
+		
+		var elm = getElement(elm);
 		
 		var command_id = getElementData(elm, 'command_id');
 		if (command_id === undefined || command_id === ''|| command_id === null) {
 			command_id = false;
+		}
+		
+		if (command_id === false && parse) {
+			var arr_match = elm.getAttribute('id').match(/([dfxy]):([^:]*):([^-]*)-(.*)/);
+			command_id = arr_match[4];
 		}
 		
 		return command_id;
@@ -100,7 +107,7 @@ function Commands() {
 
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
 
-		var match = elm.attr('id').match(/([xy]):(.*):(.*)-(.*)/);
+		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
 		if (cur.data('method')) {
 			var method = cur.data('method');
@@ -343,7 +350,7 @@ function Commands() {
 
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
 
-		var match = elm.attr('id').match(/([xy]):(.*):(.*)-(.*)/);
+		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
 		if (cur.data('method')) {
 			var method = cur.data('method');
@@ -487,7 +494,7 @@ function Commands() {
 
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
 
-		var match = elm.attr('id').match(/([xy]):(.*):(.*)-(.*)/);
+		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
 		if (cur.data('method')) {
 			var method = cur.data('method');
@@ -566,7 +573,7 @@ function Commands() {
 		SCRIPTER.triggerEvent(cur, 'command');
 
 		var elm = cur.closest('[id^="f:"]');
-		var match = elm.attr('id').match(/[f]:(.*):(.*)-(.*)/);
+		var match = elm.attr('id').match(/f:([^:]*):([^-]*)-(.*)/);
 
 		if (cur.data('method')) {
 			var method = cur.data('method');
@@ -1013,7 +1020,7 @@ function Commands() {
 				var html = json.html;
 				var elm_html = false;
 				
-				if (html && typeof html === 'string') {
+				if (html && typeof html === 'string' && html.indexOf('<') >= 0 && html.indexOf('>') >= 1) {
 					
 					try {
 						elm_html = $(html).filter('*'); // Only keep elements, not text nodes
@@ -1028,7 +1035,7 @@ function Commands() {
 					setElementData(elm_html, 'rules', json.validate, true);
 				}
 				
-				elm_result = target.apply(elm, [(elm_html ? elm_html : html)]);
+				elm_result = target.apply(elm[0], [(elm_html ? elm_html : html)]);
 				if (!elm_result) {
 					elm_result = elm_html;
 				}
@@ -1190,7 +1197,7 @@ function Commands() {
 			}
 		} else if (typeof target === "function") {
 			
-			target.apply(elm);
+			target.apply(elm[0]);
 		}
 		if (arr_settings.remove && target != false) {
 			
@@ -1383,7 +1390,7 @@ function DataTable(elm, arr_options) {
 
 	SCRIPTER.triggerEvent(cur, 'command');
 	
-	var match = cur.attr('id').match(/d:(.*):(.*)-(.*)/);
+	var match = cur.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
 	
 	if (cur.data('method')) {
 		var method = cur.data('method');
@@ -2081,7 +2088,7 @@ function DataTable(elm, arr_options) {
 		
 		cur[0].dataset.pause = 0;
 		
-		var match = cur.attr('id').match(/d:(.*):(.*)-(.*)/);
+		var match = cur.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
 		
 		if (cur.data('method')) {
 			var method = cur.data('method');

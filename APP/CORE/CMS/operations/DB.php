@@ -316,7 +316,7 @@ abstract class DBBase {
 		$msg_client = static::getErrorMessage($e->getCode());
 
 		if ($msg_client) {
-			msg($msg_client, Trouble::label(TROUBLE_ERROR), LOG_CLIENT, false, Trouble::type(TROUBLE_ERROR));
+			msg($msg_client, Trouble::label(TROUBLE_ERROR), LOG_CLIENT, false, Trouble::type(TROUBLE_NOTICE));
 		}
 
 		error($msg, $code, LOG_BOTH, $debug, $e);
@@ -579,12 +579,30 @@ abstract class DBFunctionsBase {
 		return $sql_order;
 	}
 	
+	public static function str2Date($str) {
+				
+		if (is_numeric($str)) {
+			$int = (($str > 0 && strlen((int)$str) == 4) ? strtotime('01-01-'.$str) : $str);
+		} else if ($str) {
+			$int = strtotime($str);
+		}
+				
+		return ($int ? date('Y-m-d H:i:s', $int) : false);
+	}
+	
 	public static function str2Search($str) {
 		
 		$str = str_replace(['%', '_'], ['\%', '\_'], $str);
 		$str = str_replace(['[*]', '[*1]', '[*2]', '[*3]'], ['%', '_', '__', '___'], $str);
 		
 		return static::strEscape($str);
+	}
+	
+	public static function str2Name($str) { // Clean table names
+		
+		$str = str_replace(['-'], ['min'], $str);
+		
+		return $str;
 	}
 	
 	abstract public static function sqlTableOptions($engine);

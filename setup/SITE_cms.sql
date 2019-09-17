@@ -156,7 +156,7 @@ CREATE TABLE `site_jobs` (
   `module` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `method` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `options` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `minutes` int(11) NOT NULL,
+  `seconds` int(11) NOT NULL,
   `date_executed` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `running` tinyint(1) NOT NULL DEFAULT '0',
   `process_id` int(11) DEFAULT NULL,
@@ -374,9 +374,9 @@ ALTER TABLE `site_directory_closure`
 
 ALTER TABLE `site_jobs`
   ADD PRIMARY KEY (`module`,`method`),
-  ADD KEY `minutes` (`minutes`,`date_executed`),
+  ADD KEY `seconds` (`seconds`,`date_executed`),
   ADD KEY `running` (`running`),
-  ADD KEY `service_process_id` (`process_id`);
+  ADD KEY `process_id` (`process_id`);
 
 ALTER TABLE `site_jobs_timer`
   ADD PRIMARY KEY (`unique_row`);

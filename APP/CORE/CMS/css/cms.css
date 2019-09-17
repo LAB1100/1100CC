@@ -242,8 +242,8 @@ fieldset > ul { margin: -6px 0px !important; margin-left: 6px; position: relativ
 fieldset > ul:first-child,
 fieldset > legend + ul { margin-left: 0px; }
 fieldset > ul > li { display: table-row; height: 100%; }
-fieldset > ul > li > label:first-child { display: table-cell; vertical-align: top; padding: 0px 15px 2px 0px; white-space: nowrap; height: 100%; }
-fieldset > ul > li > label:first-child::before { content: '';  display: block; height: calc(50% - (1em / 2)); min-height: 2px; max-height: 6px; }
+fieldset > ul > li > label:first-child { display: table-cell; vertical-align: top; padding: 2px 15px 2px 0px; white-space: nowrap; height: 100%; }
+/* fieldset > ul > li > label:first-child::before { content: '';  display: block; height: calc(50% - (1em / 2)); min-height: 2px; max-height: 6px; } */
 fieldset > ul > li > label:first-child + * { display: inline-block; vertical-align: middle; margin-left: 0px; border-spacing: 0px; }
 fieldset > ul > li > label:first-child:empty { padding: 0px; width: 0%; }
 fieldset > ul > li > label:first-child + span,

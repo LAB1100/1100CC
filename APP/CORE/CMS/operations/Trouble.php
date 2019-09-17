@@ -63,20 +63,6 @@ class Trouble {
 		
 		return new RealTrouble($msg, $code, $exception);
 	}
-	
-	public static function parseCode($code) {
-		
-		if ($code >= 1000) { // Suppression parameter is combined with error code
-			
-			$suppress = floor($code/1000); // Division
-			$code = ($code % 1000); // Remainder
-		} else {
-			
-			$suppress = ($code >= TROUBLE_FATAL && $code <= TROUBLE_DATABASE && STATE == 'production' && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH);
-		}
-		
-		return ['code' => $code, 'suppress' => $suppress];
-	}
 
 	public static function label($code) {
 		
@@ -169,7 +155,7 @@ class Trouble {
 		}
 		
 		$msg = self::strMsg($exception);
-		$arr_code = self::parseCode($exception->getCode());
+		$arr_code = self::parseCode($exception);
 		$debug = self::strDebug($exception);
 		
 		if (!Mediator::$in_cleanup) {
@@ -202,6 +188,22 @@ class Trouble {
 			
 			msg($msg, self::label($arr_code['code']), $arr_code['suppress'], $debug, self::type($arr_code['code']));
 		}
+	}
+	
+	public static function parseCode($exception) {
+		
+		$code = $exception->getCode();
+		
+		if ($code >= 1000) { // Suppression parameter is combined with error code
+			
+			$suppress = floor($code/1000); // Division
+			$code = ($code % 1000); // Remainder
+		} else {
+			
+			$suppress = ($code >= TROUBLE_FATAL && $code <= TROUBLE_DATABASE && STATE == 'production' && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH);
+		}
+		
+		return ['code' => $code, 'suppress' => $suppress];
 	}
 	
 	public static function strMsg($exception) {

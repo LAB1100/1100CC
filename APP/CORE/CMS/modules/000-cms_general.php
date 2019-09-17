@@ -488,9 +488,14 @@ class cms_general extends base_module {
 	public static function createSelectorList($arr, $name, $selected = [], $label_column = 'name', $id_column = 'id') {
 		
 		$return .= '<ul class="select">';
+		
 		foreach ($arr as $arr_option) {
-			$return .= '<li><label><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><span>'.$arr_option[$label_column].'</span></label></li>';
+			
+			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
+			
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><div>'.$arr_option[$label_column].'</div></label></li>';
 		}
+		
 		$return .= '</ul>';
 		
 		return ($arr ? $return : '<span>'.getLabel('lbl_none').'</span>');
@@ -499,9 +504,14 @@ class cms_general extends base_module {
 	public static function createSelectorRadioList($arr, $name, $selected = false, $label_column = 'name', $id_column = 'id') {
 		
 		$return .= '<ul class="select">';
+		
 		foreach ($arr as $arr_option) {
-			$return .= '<li><label><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><span>'.$arr_option[$label_column].'</span></label></li>';
+			
+			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
+			
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><div>'.$arr_option[$label_column].'</div></label></li>';
 		}
+		
 		$return .= '</ul>';
 		
 		return ($arr ? $return : '<span>'.getLabel('lbl_none').'</span>');
@@ -535,7 +545,7 @@ class cms_general extends base_module {
 			$str_tags .= '<li><span><input type="hidden" name="'.$name.'['.$key.']" value="'.$key.'"/>'.$value.'</span><span class="handler"></span></li>';
 		}
 		
-		return '<input type="hidden" name="'.$name.'" value=""'.($id_value ? ' id="'.$id_value.'"' : '').' /><div class="autocomplete tags'.($arr_options['list'] ? ' list' : '').'"><input type="hidden" name="'.$name.'" value="" /><ul>'.$str_tags.'</ul></div><input type="search" class="autocomplete multi" id="'.$id.'" value=""'.($arr_options['delay'] ? ' data-delay="'.$arr_options['delay'].'"' : '').' />';
+		return '<input type="hidden" name="'.$name.'" value=""'.($id_value ? ' id="'.$id_value.'"' : '').' /><div class="autocomplete tags'.($arr_options['list'] ? ' list' : '').'"><input type="hidden" name="'.$name.'" value="" /><ul>'.$str_tags.'</ul></div><input type="search" class="autocomplete multi" id="'.$id.'" value=""'.($arr_options['delay'] ? ' data-delay="'.$arr_options['delay'].'"' : '').($arr_options['order'] ? ' data-order="1"' : '').' />';
 	}
 	
 	public static function createIframeDynamic($body, $head = false, $body_class = false, $class = false) {

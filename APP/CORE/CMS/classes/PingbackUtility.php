@@ -97,6 +97,7 @@ class PingbackUtility {
 		$url_pingback = '';
 		
 		$curl = curl_init($url);
+		curl_setopt($curl, CURLOPT_USERAGENT, Labels::getServerVariable('user_agent'));
 		curl_setopt($curl, CURLOPT_HEADER, false);
 		curl_setopt($curl, CURLOPT_HEADERFUNCTION, function ($url, $header) use ($curl, &$url_pingback) {
 						

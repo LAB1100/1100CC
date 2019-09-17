@@ -672,7 +672,7 @@ class cms_newsletters extends base_module {
 			}
 		}		
 		
-		return array_unique(array_merge($arr_email_database, $arr_email_users));
+		return arrMergeValues([$arr_email_database, $arr_email_users]);
 	}
 	
 	public static function getTemplates($template = 0) {

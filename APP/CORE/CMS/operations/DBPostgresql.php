@@ -354,6 +354,7 @@ class DBFunctions extends DBFunctionsBase {
 	
 	const CAST_TYPE_INTEGER = 'INTEGER';
 	const CAST_TYPE_STRING = 'VARCHAR';
+	const CAST_TYPE_BINARY = 'BYTEA';
 			
 	public static function strEscape($str) {
 		
@@ -398,6 +399,11 @@ class DBFunctions extends DBFunctionsBase {
 	}
 	
 	public static function onConflict($key, $arr_values, $sql_other = false) {
+		
+		if (!$arr_values && !$sql_other) {
+			
+			return 'ON CONFLICT ('.$key.') DO NOTHING';
+		}
 		
 		$sql = 'ON CONFLICT ('.$key.') DO UPDATE SET';
 		$sql_affix = '';

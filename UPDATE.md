@@ -32,8 +32,24 @@ Run SQL queries in database ?SITE?_cms:
 ALTER TABLE `cms_language` DROP `flag`;
 ```
 
+---
+
 Run SQL queries in database 1100CC:
 
 ```sql
 ALTER TABLE `core_language` DROP `flag`;
+```
+
+## VERSION 10.3
+
+Update 1100CC [1100CC.core_labels.en.sql](/setup/1100CC.core_labels.en.sql).
+
+---
+
+Run SQL queries in database ?SITE?_cms:
+
+```sql
+ALTER TABLE `site_jobs` CHANGE `minutes` `seconds` INT(11) NOT NULL;
+
+UPDATE site_jobs SET seconds = seconds * 60 WHERE seconds > 0;
 ```
