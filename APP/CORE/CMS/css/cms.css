@@ -181,11 +181,9 @@ fieldset > ul > li > label:first-child + * > .options { margin: 0px; }
 
 .tags { margin: 0px; }
 .tags > ul > li > span { line-height: 18px; height: 18px; background-color: #e8e8e8; font-size: 11px; }
-.tags > ul > li > span + span.handler:hover { background-color: #009cff; }
+.tags > ul > li > span + span.handler:hover { background-color: var(--highlight); }
 
 div.autocomplete.tags { max-width: 300px; }
-
-ul.dropdown > li > a.active { background-color: #009cff; }
 
 div.filebrowse > .progressbar { width: 150px; }
 
@@ -262,7 +260,7 @@ fieldset > ul > li > label:first-child + div { display: table-cell; }
 .mod-list > li:hover,
 .mod-list > li > ul > li:hover,
 .mod-list li.active,
-.mod-list > li > ul > li.active { background-color: #009cff; }
+.mod-list > li > ul > li.active { background-color: var(--highlight); }
 .mod-list > li:hover > a,
 .mod-list > li > ul > li:hover > a,
 .mod-list > li:hover > span,

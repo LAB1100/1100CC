@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -36,17 +36,17 @@ class ExitPage {
 	protected function createPage() {
 		
 		if ($this->title) {
-			$title = $this->title;
+			$str_title = $this->title;
 		} else {
-			$title = 'OOPS - '.strtoupper($this->header).' - '.SiteEndVars::getTitle();
+			$str_title = 'OOPS - '.strtoupper($this->header).' - '.SiteEndVars::getTitle();
 		}
-
+		
 		$html = '<!DOCTYPE html>
 				<html lang="en">
 					<head>
 					
-					<title>'.$title.'</title>
-					<link rel="shortcut icon" href="/css/favicon.ico" />
+					<title>'.$str_title.'</title>
+					'.SiteEndVars::getIcons().'
 					'.$this->getHeadTags().'
 
 				</head>
@@ -117,6 +117,8 @@ class ExitPage {
 	}
 	
 	protected function getHeadTags() {
+		
+		$return = '';
 	
 		foreach ($this->arr_head_tags as $tag) {
 			

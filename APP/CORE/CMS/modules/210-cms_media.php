@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -24,7 +24,7 @@ class cms_media extends base_module {
 	
 	public function contents() {
 
-		$return .= '<div class="section"><h1 id="x:cms_media:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_media:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
 		<div class="media">';
 						
 			$return .= '<div class="options">
@@ -151,6 +151,7 @@ class cms_media extends base_module {
 					$mode = 'update';
 				}
 			} else {
+				
 				$mode = 'insert';
 				
 				$arr_tags = [];
@@ -227,7 +228,7 @@ class cms_media extends base_module {
 			
 			$this->html .= '</form>';
 			
-			$this->validate = '{"file[]": "required"}';
+			$this->validate = ['file[]' => 'required'];
 		}
 		
 		if ($method == "media_info" && (int)$id) {
@@ -443,7 +444,7 @@ class cms_media extends base_module {
 						$arr_str_locations[] = '['.strtoupper($value['table']).'] '.$value['column'].' ('.$value['count'].')';
 					}
 					
-					$arr_data[] = '<span class="info"><span class="icon" title="'.($arr_str_locations ? implode('<br />', $arr_str_locations) : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.(int)$location_count.'</span></span>';
+					$arr_data[] = '<span class="info"><span class="icon" title="'.strEscapeHTML(($arr_str_locations ? implode('<br />', $arr_str_locations) : getLabel('inf_none'))).'">'.getIcon('info').'</span><span>'.(int)$location_count.'</span></span>';
 				}
 				
 				$arr_data[] = $arr_row['tags'];
@@ -601,7 +602,7 @@ class cms_media extends base_module {
 				
 				$row = $res->fetchAssoc();
 				
-				$this->html = ((int)$id ? BASE_URL_HOME : '/').DIR_CMS.DIR_UPLOAD.$row['directory'].$row['filename'];
+				$this->html = ((int)$id ? URL_BASE_HOME : '/').DIR_CMS.DIR_UPLOAD.$row['directory'].$row['filename'];
 			} else if ($_POST['custom_url']) {
 				
 				$this->html = $_POST['custom_url'];
@@ -631,13 +632,13 @@ class cms_media extends base_module {
 		$res = DB::query("SELECT
 			m.*
 				FROM ".DB::getTable('TABLE_MEDIA')." m
-				".((int)$tag ? "LEFT JOIN ".DB::getTable('TABLE_MEDIA_INTERNAL_TAGS')." mt ON (mt.media_id = m.id)" : "")."
+				".($tag ? "LEFT JOIN ".DB::getTable('TABLE_MEDIA_INTERNAL_TAGS')." mt ON (mt.media_id = m.id)" : "")."
 			WHERE TRUE
-				".((int)$media ? "AND m.id IN (".(is_array($media) ? implode(",", $media) : $media).")" : "")."
-				".((int)$tag ? "AND mt.tag_id = ".$tag."" : "")."
+				".($media ? "AND m.id IN (".(is_array($media) ? implode(',', arrParseRecursive($media, 'int')) : (int)$media).")" : "")."
+				".($tag ? "AND mt.tag_id = ".(int)$tag."" : "")."
 			ORDER BY label
 		");
-					
+		
 		while ($row = $res->fetchAssoc()) {
 			$arr[$row['id']] = $row;
 		}
@@ -702,7 +703,9 @@ class cms_media extends base_module {
 		
 		while ($row = $res->fetchAssoc()) {
 			
-			$arr[$row['table_name'].$row['column_name']] = ['table' => $row['table_name'], 'column' => $row['column_name'], 'count' => $arr[$row['table_name'].$row['column_name']]['count']+1];
+			$num_count = (($arr[$row['table_name'].$row['column_name']]['count'] ?? 0) + 1);
+			
+			$arr[$row['table_name'].$row['column_name']] = ['table' => $row['table_name'], 'column' => $row['column_name'], 'count' => $num_count];
 		}
 		
 		return $arr;

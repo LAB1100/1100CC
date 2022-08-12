@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -37,15 +37,15 @@ class PingbackServer {
 	protected $source_title;
 	protected $source_excerpt;
 	protected $blog_post_id;
-	protected $arr_options = [
+	protected $arr_settings = [
 		'encoding' => 'utf-8'
 	];
 
-	public function __construct($arr_options = []){
+	public function __construct($arr_settings = []){
 		
 		$this->server = xmlrpc_server_create();
 		
-		$this->setOptions($arr_options);
+		$this->setConfiguration($arr_settings);
 		
 		if (!xmlrpc_server_register_method($this->server, 'pingback.ping', [$this, 'ping'])) {
 			error('Failed to register method to server');
@@ -135,20 +135,20 @@ class PingbackServer {
 		return $this->getSuccessAsArray();
 	}
 	
-	public function getOption($option) {
+	public function getConfigurationOption($option) {
 		
-		return isset($this->arr_options[$option]) ? $this->arr_options[$option] : null;
+		return isset($this->arr_settings[$option]) ? $this->arr_settings[$option] : null;
 	}
 	
-	public function setOption($option, $value) {
+	public function setConfigurationOption($option, $value) {
 		
-		$this->arr_options[$option] = $value;
+		$this->arr_settings[$option] = $value;
 	}
 	
-	public function setOptions($options = []) {
+	public function setConfiguration($arr_settings = []) {
 		
-		foreach ($options as $option => $value) {
-			$this->setOption($option, $value);
+		foreach ($arr_settings as $option => $value) {
+			$this->setConfigurationOption($option, $value);
 		}
 	}
 
@@ -158,7 +158,7 @@ class PingbackServer {
 			$this->request = $request;
 		}
 	
-		$this->response = xmlrpc_server_call_method($this->server, $this->request, null, ['encoding' => $this->getOption('encoding')]);
+		$this->response = xmlrpc_server_call_method($this->server, $this->request, null, ['encoding' => $this->getConfigurationOption('encoding')]);
 	}
 
 	public function setResponse($response) {

@@ -218,7 +218,9 @@ class FormatHTML2Text {
         'width' => 70,          //  Maximum width of the formatted text, in columns.
                                 //  Set this value to 0 (or less) to ignore word wrapping
                                 //  and not constrain text to a fixed-width column.
-    );
+		'break' => PHP_EOL,
+		'cut' => false
+	);
 
     private function legacyConstruct($html = '', $fromFile = false, array $options = array())
     {
@@ -388,7 +390,7 @@ class FormatHTML2Text {
         $text = ltrim($text, "\n");
 
         if ($this->options['width'] > 0) {
-            $text = wordwrap($text, $this->options['width']);
+            $text = strWrap($text, $this->options['width'], $this->options['break'], $this->options['cut']);
         }
     }
 
@@ -517,7 +519,7 @@ class FormatHTML2Text {
                         $this->converter($body);
                         // Add citation markers and create PRE block
                         $body = preg_replace('/((^|\n)>*)/', '\\1> ', trim($body));
-                        $body = '<pre>' . htmlspecialchars($body, $this->htmlFuncFlags, self::ENCODING) . '</pre>';
+                        $body = '<pre>' . strEscapeHTML($body, $this->htmlFuncFlags, self::ENCODING) . '</pre>';
                         // Re-set text width
                         $this->options['width'] = $pWidth;
                         // Replace content
@@ -623,7 +625,7 @@ class FormatHTML2Text {
     {
         $str = html_entity_decode($str, $this->htmlFuncFlags, self::ENCODING);
         $str = mb_strtoupper($str);
-        $str = htmlspecialchars($str, $this->htmlFuncFlags, self::ENCODING);
+        $str = strEscapeHTML($str, $this->htmlFuncFlags, self::ENCODING);
 
         return $str;
     }

@@ -2,15 +2,15 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class Process {
 	
-	protected $pid;
 	protected $command;
+	protected $pid;
 
     public function __construct($cl = false) {
 		
@@ -20,10 +20,10 @@ class Process {
 			
 		$this->command = $cl;
 		
-		$this->runCommand();
+		$this->open();
     }
     
-	protected function runCommand() {
+	protected function open() {
 		
 		/*
 		 * Do no wait/block (nohub) command
@@ -35,15 +35,15 @@ class Process {
         $command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
         exec($command, $op);
         
-        $this->pid = (int)$op[0];
+        $this->setPID((int)$op[0]);
     }
 
-	public function setPid($pid) {
+	public function setPID($pid) {
 		
         $this->pid = $pid;
     }
 
-	public function getPid() {
+	public function getPID() {
 		
         return $this->pid;
     }
@@ -64,13 +64,13 @@ class Process {
 	public function start() {
 		
 		if ($this->command != '') {
-			$this->runCommand();
+			$this->open();
 		} else {
 			return true;
 		}
     }
 
-	public function stop() {
+	public function close() {
 		
 		$command = 'kill '.$this->pid;
 		exec($command);

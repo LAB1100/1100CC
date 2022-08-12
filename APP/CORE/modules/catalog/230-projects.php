@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class projects extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select>';
+		$return = '<select>';
 		for ($i = 0; $i <= 20; $i++) {
 			$return .= '<option value="'.$i.'">'.$i.'</option>';
 		}
@@ -29,11 +29,14 @@ class projects extends base_module {
 	
 		$arr_projects = cms_projects::getProjects(0, $this->arr_variables);
 		
+		$return = '';
+		
 		if ($arr_projects) {
+			
 			$return .= '<h1>Related</h1>';
 			
 			foreach ($arr_projects as $row) {
-				$return .= '<div class="project"><a href="'.$row["url"].'" target="_blank"><img src="'.$row["img"].'" title="'.htmlspecialchars($row["description"]).'" alt="" /><span>'.htmlspecialchars($row["name"]).'</span></a></div>';
+				$return .= '<div class="project"><a href="'.$row["url"].'" target="_blank"><img src="'.$row["img"].'" title="'.strEscapeHTML($row["description"]).'" alt="" /><span>'.strEscapeHTML($row["name"]).'</span></a></div>';
 			}
 		}
 								

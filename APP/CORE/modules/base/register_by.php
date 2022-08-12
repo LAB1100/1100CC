@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,10 +18,11 @@ abstract class register_by extends base_module {
 	protected $arr_user = [];
 	abstract protected function contentsForm();
 	abstract protected function processForm();
-	abstract protected function doubleCheckValidUserId($update);
+	abstract protected function doubleCheckAuthorisedUserId($user_id);
 	
 	public static function moduleVariables() {
-		$return .= '<select>';
+		
+		$return = '<select>';
 		$return .= user_groups::createUserGroupsDropdown(user_groups::getUserGroups());
 		$return .= '</select>';
 		
@@ -30,13 +31,13 @@ abstract class register_by extends base_module {
 
 	public function contents() {
 	
-		$return .= $this->createAddUser();
+		$return = $this->createAddUser();
 
 		$return .= '<table class="display" id="d:'.static::class.':data-0">
 				<thead>
 					<tr>
 						<th><span title="'.getLabel('lbl_enabled').'">E</span></th>
-						<th class="max limit">'.getLabel('lbl_name_display').'</th>
+						<th class="max limit" data-sort="asc-0">'.getLabel('lbl_name_display').'</th>
 						<th class="max limit">'.getLabel('lbl_username').'</th>';
 						foreach ($this->columns as $key => $value) {
 							$return .= '<th>'.$key.'</th>';
@@ -56,7 +57,7 @@ abstract class register_by extends base_module {
 	
 	private function createAddUser() {
 	
-		$return .= '<form id="f:'.static::class.':add-0" class="options">
+		$return = '<form id="f:'.static::class.':add-0" class="options">
 			<menu>
 				<input type="submit" value="'.getLabel('lbl_add').' '.getLabel('lbl_user').'" />
 			</menu>
@@ -66,15 +67,28 @@ abstract class register_by extends base_module {
 	}
 
 	private function createForm($id = false) {
-	
+		
+		$str_url_account = false;
+		
 		if ($id) {
 			
-			$this->checkValidUserId($id);
+			$this->checkAuthorisedUserId($id);
 		
 			$this->arr_user = user_groups::getUserData($id);
+			
+			$arr_user_account = user_management::getUserAccount($id);
+						
+			if ($arr_user_account['passkey']) {
+				
+				$arr_mod = pages::getClosestMod('login', 0, 0, $arr_user_account['group_id']);
+				
+				$str_url_account = pages::getModUrl($arr_mod).'welcome/'.$id.'/'.$arr_user_account['passkey'];
+			}
 		}
 		
-		$return .= '<div class="tabs">
+		$return = '<h1>'.($id ? getLabel('lbl_user').': '.strEscapeHTML($this->arr_user[DB::getTableName('TABLE_USERS')]['name']) : getLabel('lbl_user')).'</h1>
+		
+		<div class="tabs">
 			<ul>
 				<li><a href="#">'.getLabel('lbl_user').'</a></li>
 				'.(isset($_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]) ? '<li><a href="#">'.getLabel('lbl_page_clearance').'</a></li>' : '').'
@@ -83,12 +97,48 @@ abstract class register_by extends base_module {
 			<div>
 				<div class="options fieldsets"><div>';
 							
-					$return .= '<fieldset><legend>'.getLabel('lbl_account').'</legend><ul>
-						'.($id ? '<li><label>'.getLabel('lbl_active').'</label><span>'.cms_general::createSelectorRadio([['id' => '1', 'name' => getLabel('lbl_active')], ['id' => '0', 'name' => getLabel('lbl_inactive')]], 'enabled', (int)$this->arr_user[DB::getTableName('TABLE_USERS')]['enabled']).'</span></li>' : '').'
-						<li><label>'.getLabel('lbl_name_display').'</label><input name="name" type="text" value="'.$this->arr_user[DB::getTableName('TABLE_USERS')]['name'].'" /></li>
-						<li><label>'.getLabel('lbl_email').'</label><input name="email" type="text" value="'.$this->arr_user[DB::getTableName('TABLE_USERS')]['email'].'" /></li>
-						'.($id ? '<li><label>'.getLabel('lbl_password_reset').'</label><input name="reset_password" type="checkbox" value="1" /></li>' : '').'
-						<li><label>'.getLabel('lbl_email_confirm').'</label><input name="send_email" type="checkbox" value="1"'.(!$id ? ' checked="checked"' : '').' /></li>
+					$return .= '<fieldset><legend>'.getLabel('lbl_account').'</legend><ul>';
+						if ($id) {
+							
+							$return .= '<li>
+								<label>'.getLabel('lbl_active').'</label>
+								<span>'.cms_general::createSelectorRadio([['id' => '1', 'name' => getLabel('lbl_active')], ['id' => '0', 'name' => getLabel('lbl_inactive')]], 'enabled', (int)$this->arr_user[DB::getTableName('TABLE_USERS')]['enabled']).'</span>
+							</li>';
+						}
+						$return .= '<li>
+							<label>'.getLabel('lbl_name_display').'</label>
+							<input name="name" type="text" value="'.strEscapeHTML($this->arr_user[DB::getTableName('TABLE_USERS')]['name']).'" />
+						</li>
+						<li>
+							<label>'.getLabel('lbl_email').'</label>
+							<input name="email" type="text" value="'.strEscapeHTML($this->arr_user[DB::getTableName('TABLE_USERS')]['email']).'" />
+						</li>';
+						if ($str_url_account) {
+						
+							$return .= '<li>
+								<label>'.getLabel('lbl_account').' '.getLabel('lbl_url').'</label>
+								<div>
+									<div class="hide-edit hide">'
+										.'<div class="password-url" title="'.getLabel('inf_copy_click').'">'.$str_url_account.'</div>'
+									.'</div>'
+									.'<input type="button" class="data neutral" value="show" />
+								</div>
+							</li>';
+						}
+						$return .= '<li>
+							<label>'.getLabel('lbl_send').'</label>
+							<div>';
+								if ($id) {
+									
+									$arr_email_options = [['id' => '', 'name' => getLabel('lbl_no').' '.getLabel('lbl_email')], ['id' => user_management::MAIL_ACCOUNT, 'name' => getLabel('lbl_send_account'), 'title' => getLabel('inf_send_account_confirmation')], ['id' => user_management::MAIL_ACCOUNT_PASSWORD, 'name' => getLabel('lbl_send_account_password'), 'title' => getLabel('inf_send_account_confirmation')]];
+									
+									$return .= cms_general::createSelectorRadioList($arr_email_options, 'send_mail');
+								} else {
+									
+									$return .= '<label title="'.getLabel('inf_send_account_confirmation').'"><input type="checkbox" name="send_mail" value="'.user_management::MAIL_ACCOUNT.'" checked="checked" /><span>'.getLabel('lbl_send_account').'</span></label>';
+								}
+							$return .= '</div>
+						</li>
 					</ul></fieldset>';
 					
 					$return .= $this->contentsForm();
@@ -127,7 +177,7 @@ abstract class register_by extends base_module {
 											
 					$return .= '<div class="node">
 						<h4>'.($cur_dir['root'] ? getLabel('name', 'D') : $cur_dir['title']).'</h4>
-						<fieldset>
+						<div><fieldset>
 							<ul><li>';
 						
 								$arr_pages_clearance = [];
@@ -146,7 +196,7 @@ abstract class register_by extends base_module {
 								$return .= cms_general::createSelectorList($arr_pages_clearance, 'pages_clearance', $arr_cur_clearance, 'title');
 											
 							$return .= '</li></ul>
-						</fieldset>';
+						</fieldset></div>';
 						
 						if ($arr_path['subs']) {
 							
@@ -188,11 +238,15 @@ abstract class register_by extends base_module {
 	
 		$class = static::class;
 	
-		$return = '.mod.'.$class.' {  }
-					.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=address] { width: 115px; }
-					.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=address_nr] { width: 30px; }
-					.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=zipcode] { width: 60px; }
-					.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=zipcode_l] { width: 30px; }';
+		$return = '
+			.mod.'.$class.' {  }
+			.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=address] { width: 115px; }
+			.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=address_nr] { width: 30px; }
+			.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=zipcode] { width: 60px; }
+			.mod.'.$class.' fieldset > ul > li > label:first-child + * input[name=zipcode_l] { width: 30px; }
+			.mod.'.$class.' fieldset > ul > li > label:first-child + * .password-url { font-family: var(--font-mono); cursor: pointer; }
+			.mod.'.$class.' fieldset > ul > li > label:first-child + * .password-url.pulse { background-color: transparent; color: var(--highlight); }
+		';
 		
 		return $return;
 	}
@@ -205,6 +259,10 @@ abstract class register_by extends base_module {
 		
 			elm_scripter.on('click', '.edit', function() {
 				$(this).quickCommand(elm_scripter.children('form'), {html: 'replace'});
+			}).on('click', '.password-url', function() {
+				
+				navigator.clipboard.writeText(this.textContent);
+				new Pulse(this, {duration: 500});
 			});
 		});";
 		
@@ -303,7 +361,7 @@ abstract class register_by extends base_module {
 				error(getLabel('msg_error_email_format'));
 			}
 			
-			$this->checkValidUserId();
+			$this->checkAuthorisedUserId();
 
 			$parent_id = 0;
 			if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
@@ -312,7 +370,7 @@ abstract class register_by extends base_module {
 				$parent_id = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
 			}
 
-			$arr_user = user_management::addUser(true, ['name' => $_POST['name'], 'uname' => $_POST['email'], 'email' => $_POST['email'], 'group_id' => $this->arr_variables, 'parent_id' => $parent_id], false, (bool)$_POST['send_email']);
+			$arr_user = user_management::addUser(true, ['name' => $_POST['name'], 'uname' => $_POST['email'], 'email' => $_POST['email'], 'group_id' => $this->arr_variables, 'parent_id' => $parent_id], false, (bool)$_POST['send_mail']);
 			
 			$this->arr_user = user_groups::getUserData($arr_user['id']);
 			
@@ -332,13 +390,14 @@ abstract class register_by extends base_module {
 				error(getLabel('msg_error_email_format'));
 			}
 
-			$this->checkValidUserId($id);
+			$this->checkAuthorisedUserId($id);
 			
 			$user_id = $id;
+			$str_password = ((int)$_POST['send_mail'] == user_management::MAIL_ACCOUNT_PASSWORD ? generateRandomString(10) : false); // Reset the password, force old password invalid
 			
 			$this->arr_user = user_groups::getUserData($id);
 
-			user_management::updateUser($user_id, $_POST['enabled'], ['name' => $_POST['name'], 'uname' => $this->arr_user[DB::getTableName('TABLE_USERS')]['uname'], 'email' => $_POST['email']], ((int)$_POST['reset_password'] ? generateRandomString(10) : false), (bool)$_POST['send_email']);
+			user_management::updateUser($user_id, $_POST['enabled'], ['name' => $_POST['name'], 'uname' => $this->arr_user[DB::getTableName('TABLE_USERS')]['uname'], 'email' => $_POST['email']], $str_password, (int)$_POST['send_mail']);
 			
 			$user_data = $this->process();
 			$user_data += $this->processForm();
@@ -352,7 +411,7 @@ abstract class register_by extends base_module {
 		
 		if ($method == "del" && (int)$id) {
 			
-			$this->checkValidUserId($id);
+			$this->checkAuthorisedUserId($id);
 			
 			user_management::delUser($id);
 			
@@ -361,7 +420,7 @@ abstract class register_by extends base_module {
 		
 		if ($method == "active" && (int)$id) {
 			
-			$this->checkValidUserId($id);
+			$this->checkAuthorisedUserId($id);
 		
 			$user = user_management::updateUser($id, 1);
 			
@@ -370,7 +429,7 @@ abstract class register_by extends base_module {
 		}
 		if ($method == "inactive" && (int)$id) {
 			
-			$this->checkValidUserId($id);
+			$this->checkAuthorisedUserId($id);
 		
 			$update_user = user_management::updateUser($id, 0);
 			
@@ -400,10 +459,10 @@ abstract class register_by extends base_module {
 		
 		return $arr;
 	}
-	
-	private function checkValidUserId($id = false) {
 		
-		$this->doubleCheckValidUserId($id);
+	private function checkAuthorisedUserId($id = false) {
+		
+		$this->doubleCheckAuthorisedUserId($id);
 		
 		if (!$id) {
 			return;
@@ -411,16 +470,16 @@ abstract class register_by extends base_module {
 
 		if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
 			
-			$check = user_management::checkUserIds($id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], 'parent');
+			$is_valid = user_management::checkUserIds($id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], 'parent');
 		} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']) {
 			
-			$check = user_management::checkUserIds($id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'], 'parent');
+			$is_valid = user_management::checkUserIds($id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'], 'parent');
 		} else {
 			
-			$check = user_management::checkUserIds($id, $_SESSION['USER_GROUP'], 'group');
+			$is_valid = user_management::checkUserIds($id, $_SESSION['USER_GROUP'], 'group');
 		}
 	
-		if (!$check) {
+		if (!$is_valid) {
 			error(getLabel('msg_not_allowed'));
 		}
 	}

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -20,7 +20,7 @@ class DB extends DBBase {
 		$host = ($arr_connection_details['host'] == 'localhost' ? static::$localhost : $arr_connection_details['host']);
 		$arr_host = explode(':', $host);
 		$host = $arr_host[0];
-		$port = ($arr_host[1] ?: null);
+		$port = ($arr_host[1] ?? null);
 		$host = ($host == 'localhost' && $port ? '127.0.0.1' : $host); // Port is required, force TCP
 		$database = ($arr_connection_details['database'] ?: static::$database_home);
 		
@@ -33,7 +33,7 @@ class DB extends DBBase {
 				case 1040:
 				case 1203:
 				case 2002:
-					if (SiteStartVars::getRequestState() == 'index') {
+					if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX) {
 						error('Too many users. Please press the refresh button in your browser to retry.');
 					} else {
 						error('The server load is very high at the moment.');
@@ -48,7 +48,7 @@ class DB extends DBBase {
 			SET SESSION time_zone = '+00:00';
 			
 			SET SESSION sql_mode = (SELECT CONCAT(@@sql_mode, ',ANSI_QUOTES'));
-			SET SESSION group_concat_max_len = 102400;
+			SET SESSION group_concat_max_len = 100000;
 			
 			SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
 		");
@@ -82,7 +82,9 @@ class DB extends DBBase {
 	}
 	
 	public static function query($q, $modifier = null) {
-	
+		
+		$modifier = ($modifier ?? MYSQLI_STORE_RESULT);
+		
 		if (!static::$connection_active_is_async) {
 			
 			try {
@@ -248,8 +250,12 @@ class DB extends DBBase {
 			case 1406:
 				$msg = getLabel('msg_error_database_data_field_limit');
 				break;
+			case 1062:
+				$msg = getLabel('msg_error_database_duplicate_record');
+				break;
 			case 1070:
 				$msg = getLabel('msg_error_database_index_limit');
+				break;
 		}
 		
 		return $msg;
@@ -274,6 +280,8 @@ class DBStatement extends DBStatementBase {
 			
 			$format .= $this->arr_variables[$variable][1];
 		}
+		
+		ksort($arr_collect);
 		
 		$this->statement->bind_param(...$arr_collect);
 	}
@@ -378,7 +386,9 @@ class DBResult extends DBResultBase {
 class DBFunctions extends DBFunctionsBase {
 	
 	const CAST_TYPE_INTEGER = 'SIGNED';
+	const CAST_TYPE_DECIMAL = 'DECIMAL';
 	const CAST_TYPE_STRING = 'CHAR';
+	const CAST_TYPE_BOOLEAN = 'SIGNED';
 	const CAST_TYPE_BINARY = 'BINARY';
 			
 	public static function strEscape($str) {
@@ -408,12 +418,27 @@ class DBFunctions extends DBFunctionsBase {
 			case static::TYPE_BOOLEAN:
 				$value = ($value ? true : false);
 				break;
+			case static::TYPE_INTEGER:
+				$value = (int)$value;
+				break;
+			case static::TYPE_FLOAT:
+				$value = (float)$value;
+				break;
 			case static::TYPE_BINARY:
 				$value = $value;
 				break;
 		}
 		
 		return $value;
+	}
+	
+	public static function castAs($value, $what, $length = false) {
+		
+		if (!$what) {
+			return $value;
+		}
+		
+		return 'CAST('.$value.' AS '.$what.($length ? '('.$length.')' : '').')';
 	}
 	
 	public static function sqlImplode($expression, $separator = ', ', $clause = false) {
@@ -492,6 +517,13 @@ class DBFunctions extends DBFunctionsBase {
 	public static function interval($amount, $unit, $field = false) {
 		
 		$sql = 'INTERVAL '.($field ? $field.' * ' : '').(int)$amount.' '.$unit;
+		
+		return $sql;
+	}
+	
+	public static function timeDifference($unit, $field_start, $field_end) {
+		
+		$sql = 'TIMESTAMPDIFF('.$unit.', '.$field_start.', '.$field_end.')';
 		
 		return $sql;
 	}

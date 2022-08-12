@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,15 +16,13 @@ class cms_input_controller extends base_module {
 	
 	public static function webServiceProperties() {
 		return [
-			'InputController' => [
-				'passkey' => true
-			]
+			'WebServiceTaskInputController' => []
 		];
 	}
 	
 	public function contents() {
 		
-		$return .= '';
+		$return = '';
 		
 		return $return;
 	}

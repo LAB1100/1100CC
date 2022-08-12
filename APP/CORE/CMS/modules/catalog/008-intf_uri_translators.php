@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -48,10 +48,9 @@ class intf_uri_translators extends uris {
 		$arr_hosts = cms_details::getSiteDetailsHosts();
 		
 		if (!$arr_hosts) {
-			
-			$msg = getLabel('msg_no', 'L', true);
-			
+
 			Labels::setVariable('name', getLabel('lbl_server_hosts'));
+			$msg = getLabel('msg_no', 'L', true);
 			
 			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
 		} else {
@@ -88,10 +87,9 @@ class intf_uri_translators extends uris {
 		$arr_uri_translators = self::getURITranslators();
 		
 		if (!$arr_uri_translators) {
-			
-			$msg = getLabel('msg_no', 'L', true);
-			
+
 			Labels::setVariable('name', getLabel('lbl_uri_translators'));
+			$msg = getLabel('msg_no', 'L', true);
 			
 			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
 		} else {
@@ -192,11 +190,11 @@ class intf_uri_translators extends uris {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_uri_translator['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_uri_translator['name']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_host_name').'</label>
-						<div><input type="text" name="host_name" value="'.htmlspecialchars($arr_uri_translator['host_name']).'" placeholder="'.SERVER_NAME_SITE_NAME.'" /></div>
+						<div><input type="text" name="host_name" value="'.strEscapeHTML($arr_uri_translator['host_name']).'" placeholder="'.SERVER_NAME_SITE_NAME.'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_delay').'</label>

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -19,7 +19,7 @@ abstract class register_self extends base_module {
 		
 	public static function moduleVariables() {
 		
-		$return .= '<select name="user_group_id">'
+		$return = '<select name="user_group_id">'
 			.user_groups::createUserGroupsDropdown(user_groups::getUserGroups(), false, true)
 		.'</select>'
 		.'<input type="checkbox" name="email_as_username" value="1" title="'.getLabel('inf_email_as_username').'" />';
@@ -35,13 +35,13 @@ abstract class register_self extends base_module {
 
 			user_management::confirmUser('account', $this->arr_query[1], $this->arr_query[2]);
 			
-			$return .= '<h1>'.self::$label.'</h1>';
+			$return = '<h1>'.self::$label.'</h1>';
 			
 			$return .= '<p>'.getLabel('msg_registration_confirmed').'</p>';
 				
 		} else {
 			
-			$return .= '<h1>'.self::$label.'</h1>
+			$return = '<h1>'.self::$label.'</h1>
 			
 			<form id="f:'.static::class.':user_add-0">
 				<fieldset><ul>
@@ -60,8 +60,8 @@ abstract class register_self extends base_module {
 				$arr_validate['uname'] = 'required';
 			}
 			
-			SiteEndVars::addScript("$(document).on('ready', function() {
-				$('#f\\\:".static::class."\\\:user_add-0').data('rules', ".json_encode(array_merge($arr_validate, $this->arr_validate_extra)).");
+			SiteEndVars::addScript("$(document).on('documentloaded', function() {
+				setElementData($('#f\\\:".static::class."\\\:user_add-0'), 'rules', ".value2JSON(array_merge($arr_validate, $this->arr_validate_extra)).");
 			});");
 		}
 		
@@ -95,9 +95,9 @@ abstract class register_self extends base_module {
 			
 			$user_data = $this->processForm();
 			
-			$url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'confirm/';
+			$str_url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'confirm/';
 		
-			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->arr_variables['email_as_username'] ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->arr_variables['user_group_id'] ?: SiteStartVars::$user_group), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $url);
+			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->arr_variables['email_as_username'] ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->arr_variables['user_group_id'] ?: SiteStartVars::$user_group), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $str_url);
 			
 			user_management::updateUserLinkedData($user['id'], $user_data);
 			

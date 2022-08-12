@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -44,10 +44,14 @@ class apis extends base_module {
 								ah.host_name
 							FROM ".DB::getTable('SITE_API_HOSTS')." ah
 							JOIN ".DB::getTable('SITE_APIS')." a ON (a.id = ah.api_id)
-						".($host_name ? "WHERE CASE
-							WHEN LEFT(ah.host_name, 1) = ':' THEN ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($host_name)."'", "SUBSTRING(ah.host_name FROM 2)")."
-							ELSE ah.host_name = '".DBFunctions::strEscape($host_name)."'
-						END" : "")."
+						".($host_name ? "WHERE
+							(
+								ah.host_name = '".DBFunctions::strEscape($host_name)."'
+							) OR (
+								ah.host_name LIKE ':%'
+								AND ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($host_name)."'", "SUBSTRING(ah.host_name FROM 2)")."
+							)
+						" : "")."
 		");
 							
 		while ($arr_host = $res->fetchAssoc()) {
@@ -71,7 +75,7 @@ class apis extends base_module {
 		
 		$arr = [];
 
-		$res = DB::query("SELECT ac.api_id, ac.name, ac.id, ac.enabled AS enabled, ac.secret AS secret, ac.user_id, ac.time_amount, ac.time_unit, a.name AS api_name, ac_u.name AS user_name
+		$res = DB::query("SELECT ac.api_id, ac.name, ac.id, ac.enabled AS enabled, ac.secret AS secret, ac.user_id, ac.time_amount, ac.time_unit, ac.request_limit_disable, a.name AS api_name, ac_u.name AS user_name
 								FROM ".DB::getTable('SITE_API_CLIENTS')." ac
 								JOIN ".DB::getTable('SITE_APIS')." a ON (a.id = ac.api_id)
 								LEFT JOIN ".DB::getTable('TABLE_USERS')." ac_u ON (ac_u.id = ac.user_id)
@@ -80,6 +84,12 @@ class apis extends base_module {
 		");
 
 		$arr = $res->fetchAssoc();
+		
+		if ($arr) {
+			
+			$arr['enabled'] = DBFunctions::unescapeAs($arr['enabled'], DBFunctions::TYPE_BOOLEAN);
+			$arr['request_limit_disable'] = DBFunctions::unescapeAs($arr['request_limit_disable'], DBFunctions::TYPE_BOOLEAN);
+		}
 
 		return $arr;
 	}
@@ -88,7 +98,7 @@ class apis extends base_module {
 		
 		$arr = [];
 
-		$res = DB::query("SELECT ac.api_id, acu.client_id, acu.user_id, ac.enabled AS client_enabled, ac.name AS client_name, acu.enabled AS enabled, acu.token, acu.date, acu.date_valid, a.name AS api_name, ac_u.name AS client_user_name, acu_u.name AS user_name
+		$res = DB::query("SELECT ac.api_id, acu.client_id, acu.user_id, ac.enabled AS client_enabled, ac.name AS client_name, ac.request_limit_disable AS client_request_limit_disable, acu.enabled AS enabled, acu.token, acu.date, acu.date_valid, a.name AS api_name, ac_u.name AS client_user_name, acu_u.name AS user_name
 								FROM ".DB::getTable('SITE_API_CLIENT_USERS')." acu
 								JOIN ".DB::getTable('SITE_API_CLIENTS')." ac ON (ac.id = acu.client_id)
 								JOIN ".DB::getTable('SITE_APIS')." a ON (a.id = ac.api_id)
@@ -100,7 +110,14 @@ class apis extends base_module {
 		");
 
 		$arr = $res->fetchAssoc();
-
+		
+		if ($arr) {
+			
+			$arr['enabled'] = DBFunctions::unescapeAs($arr['enabled'], DBFunctions::TYPE_BOOLEAN);
+			$arr['client_enabled'] = DBFunctions::unescapeAs($arr['client_enabled'], DBFunctions::TYPE_BOOLEAN);
+			$arr['client_request_limit_disable'] = DBFunctions::unescapeAs($arr['client_request_limit_disable'], DBFunctions::TYPE_BOOLEAN);
+		}
+		
 		return $arr;
 	}
 	
@@ -108,7 +125,7 @@ class apis extends base_module {
 		
 		$arr = [];
 
-		$res = DB::query("SELECT ac.api_id, acu.client_id, acu.user_id, ac.enabled AS client_enabled, ac.name AS client_name, acu.enabled AS enabled, acu.token, acu.date, acu.date_valid, a.name AS api_name
+		$res = DB::query("SELECT ac.api_id, acu.client_id, acu.user_id, ac.enabled AS client_enabled, ac.name AS client_name, ac.request_limit_disable AS client_request_limit_disable, acu.enabled AS enabled, acu.token, acu.date, acu.date_valid, a.name AS api_name
 								FROM ".DB::getTable('SITE_API_CLIENT_USERS')." acu
 								JOIN ".DB::getTable('SITE_API_CLIENTS')." ac ON (ac.id = acu.client_id)
 								JOIN ".DB::getTable('SITE_APIS')." a ON (a.id = ac.api_id)
@@ -116,7 +133,14 @@ class apis extends base_module {
 		");
 
 		$arr = $res->fetchAssoc();
-
+		
+		if ($arr) {
+			
+			$arr['enabled'] = DBFunctions::unescapeAs($arr['enabled'], DBFunctions::TYPE_BOOLEAN);
+			$arr['client_enabled'] = DBFunctions::unescapeAs($arr['client_enabled'], DBFunctions::TYPE_BOOLEAN);
+			$arr['client_request_limit_disable'] = DBFunctions::unescapeAs($arr['client_request_limit_disable'], DBFunctions::TYPE_BOOLEAN);
+		}
+		
 		return $arr;
 	}
 		
@@ -129,9 +153,22 @@ class apis extends base_module {
 			
 			DB::setConnection(DB::CONNECT_CMS);
 			
-			$res = DB::query("INSERT INTO ".DB::getTable('SITE_API_CLIENTS')." (api_id, user_id, id, enabled, secret, name, time_amount, time_unit)
-									VALUES
-								(".(int)$arr_client['api_id'].", ".(int)$arr_client['user_id'].", '".DBFunctions::strEscape($identifier)."', ".(int)$enabled.", '".DBFunctions::strEscape($secret)."', '".DBFunctions::strEscape($arr_client['name'])."', ".(int)$arr_client['time_amount'].", ".(int)$arr_client['time_unit'].")
+			$do_request_limit_disable = (IS_CMS ? $arr_client['request_limit_disable'] : false);
+						
+			$res = DB::query("INSERT INTO ".DB::getTable('SITE_API_CLIENTS')."
+				(api_id, user_id, id, enabled, secret, name, request_limit_disable, time_amount, time_unit)
+					VALUES
+				(
+					".(int)$arr_client['api_id'].",
+					".(int)$arr_client['user_id'].",
+					'".DBFunctions::strEscape($identifier)."',
+					".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN).",
+					'".DBFunctions::strEscape($secret)."',
+					'".DBFunctions::strEscape($arr_client['name'])."',
+					".DBFunctions::escapeAs($do_request_limit_disable, DBFunctions::TYPE_BOOLEAN).",
+					".(int)$arr_client['time_amount'].",
+					".(int)$arr_client['time_unit']."
+				)
 			");
 			
 			$client_id = $identifier;
@@ -146,25 +183,26 @@ class apis extends base_module {
 			if (!$arr_client) {
 				
 				$res = DB::query("UPDATE ".DB::getTable('SITE_API_CLIENTS')." SET
-											enabled = ".(int)$enabled."
-											".($regenerate ? "
-												, secret = '".DBFunctions::strEscape($secret)."'
-											" : "")."
-										WHERE id = '".DBFunctions::strEscape($client_id)."'
+						enabled = ".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN)."
+						".($regenerate ? "
+							, secret = '".DBFunctions::strEscape($secret)."'
+						" : "")."
+					WHERE id = '".DBFunctions::strEscape($client_id)."'
 				");
 			} else {
-				
+								
 				$res = DB::query("UPDATE ".DB::getTable('SITE_API_CLIENTS')." SET
-											".($arr_client['api_id'] ? "api_id = ".(int)$arr_client['api_id']."," : "")."
-											".($arr_client['user_id'] ? "user_id = ".(int)$arr_client['user_id']."," : "")."
-											enabled = ".(int)$enabled.",
-											name = '".DBFunctions::strEscape($arr_client['name'])."',
-											time_amount = ".(int)$arr_client['time_amount'].",
-											time_unit = ".(int)$arr_client['time_unit']."
-											".($regenerate ? "
-												, secret = '".DBFunctions::strEscape($secret)."'
-											" : "")."
-										WHERE id = '".DBFunctions::strEscape($client_id)."'
+						".($arr_client['api_id'] ? "api_id = ".(int)$arr_client['api_id']."," : "")."
+						".($arr_client['user_id'] ? "user_id = ".(int)$arr_client['user_id']."," : "")."
+						enabled = ".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN).",
+						name = '".DBFunctions::strEscape($arr_client['name'])."',
+						".(IS_CMS ? "request_limit_disable = ".DBFunctions::escapeAs($arr_client['request_limit_disable'], DBFunctions::TYPE_BOOLEAN)."," : "")."
+						time_amount = ".(int)$arr_client['time_amount'].",
+						time_unit = ".(int)$arr_client['time_unit']."
+						".($regenerate ? "
+							, secret = '".DBFunctions::strEscape($secret)."'
+						" : "")."
+					WHERE id = '".DBFunctions::strEscape($client_id)."'
 				");
 			}
 		}
@@ -193,8 +231,8 @@ class apis extends base_module {
 			DB::setConnection(DB::CONNECT_CMS);
 			
 			$res = DB::query("INSERT INTO ".DB::getTable('SITE_API_CLIENT_USERS')." (client_id, user_id, enabled, token, date, date_valid)
-									VALUES
-								('".DBFunctions::strEscape($client_id)."', ".(int)$arr_client_user['user_id'].", ".(int)$enabled.", '".DBFunctions::strEscape($token)."', NOW(), ".($date_valid ? "'".$date_valid."'" : "NULL").")
+					VALUES
+				('".DBFunctions::strEscape($client_id)."', ".(int)$arr_client_user['user_id'].", ".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN).", '".DBFunctions::strEscape($token)."', NOW(), ".($date_valid ? "'".$date_valid."'" : "NULL").")
 			");
 		} else {
 			
@@ -207,7 +245,7 @@ class apis extends base_module {
 			if (!$arr_client_user) {
 				
 				$res = DB::query("UPDATE ".DB::getTable('SITE_API_CLIENT_USERS')." SET
-											enabled = ".(int)$enabled."
+											enabled = ".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN)."
 											".($regenerate ? "
 												, token = '".DBFunctions::strEscape($token)."'
 											" : "")."
@@ -218,7 +256,7 @@ class apis extends base_module {
 					
 				$res = DB::query("UPDATE ".DB::getTable('SITE_API_CLIENT_USERS')." SET
 											".($arr_client_user['user_id'] ? "user_id = ".(int)$arr_client_user['user_id']."," : "")."
-											enabled = ".(int)$enabled.",
+											enabled = ".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN).",
 											date_valid = ".($date_valid ? "'".$date_valid."'" : "NULL")."
 											".($regenerate ? "
 												, token = '".DBFunctions::strEscape($token)."'

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -10,7 +10,7 @@
 // 1100CC Framework:
 
 	ini_set('display_errors', 0);
-	ini_set('error_reporting', E_ALL & ~E_NOTICE);
+	ini_set('error_reporting', E_ALL);
 	
 	if (!isset($_SERVER['SITE_NAME'])) { // Cleanup server variables when applicable, depends on host
 		
@@ -18,11 +18,10 @@
 			$_SERVER[str_replace('REDIRECT_', '', $key)] = $value;
 		}
 	}
-
-	require('./CMS/core_operations.php');
-
+	
 	$_SERVER['DIR_INDEX'] = dirname(__FILE__);
 	
+	require('./CMS/core_operations.php');
 	require('./CMS/core_settings.php');
 	
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -35,7 +34,7 @@
 				$arr = json_decode($json, true);
 				$_POST = $arr;
 			}
-		} else if ($_POST['json']) { // Posted data in serialized format, check for JSON data
+		} else if (!empty($_POST['json'])) { // Posted data in serialized format, check for JSON data
 			
 			$arr = json_decode($_POST['json'], true);
 			unset($_POST['json']);
@@ -48,16 +47,22 @@
 	
 	require('login.php');
 	
-	$arr_path_info = explode('/', $_SERVER['PATH_INFO']);
+	$arr_path_info = [];
+
+	if ($_SERVER['PATH_INFO'] != '' && $_SERVER['PATH_INFO'] != '/') {
+		$arr_path_info = explode('/', $_SERVER['PATH_INFO']);
+	}
 	
-	if ($arr_path_info[1] == 'robots.txt' || $arr_path_info[1] == 'humans.txt' || $arr_path_info[1] == 'version.txt') {
+	$str_path_start = ($arr_path_info[1] ?? '');
+	
+	if ($str_path_start == 'robots.txt' || $str_path_start == 'humans.txt' || $str_path_start == 'version.txt') {
 		
 		header('Content-Type: text/plain;charset=utf-8');
 		
-		if ($arr_path_info[1] == 'robots.txt') {
+		if ($str_path_start == 'robots.txt') {
 			echo 'User-agent: *'.PHP_EOL;
-			echo 'Disallow: '.(STATE == 'development' ? '/' : '').PHP_EOL;
-		} else if ($arr_path_info[1] == 'version.txt') {
+			echo 'Disallow: '.(STATE == STATE_DEVELOPMENT ? '/' : '').PHP_EOL;
+		} else if ($str_path_start == 'version.txt') {
 			echo Labels::getServerVariable('version');
 		} else {
 			echo Labels::getServerVariable('humans');
@@ -67,34 +72,37 @@
 	}
 	
 	// Prepare
-	SiteStartVars::$cms_modules = getModules(DIR_CMS);
-	SiteStartVars::$modules = getModules();
+	SiteStartVars::$arr_cms_modules = getModules(DIR_CMS);
+	SiteStartVars::$arr_modules = getModules();
 	
 	DB::setConnection(DB::CONNECT_HOME);
 	
 	Labels::setSystemLabels();
-	
+		
 	// Process request
 	
-	$arr_uri_translator = uris::getURITranslatorHosts(SERVER_NAME);
+	SiteStartVars::$uri_translator = (uris::getURITranslatorHosts(SERVER_NAME) ?: false);
+	SiteStartVars::$api = (apis::getAPIHosts(SERVER_NAME) ?: false);
+	
+	SiteStartVars::checkRequestOptions();
 		
-	if ($arr_uri_translator && $arr_path_info[1]) {
-		
-		SiteStartVars::$uri_translator = $arr_uri_translator;
-		
-		SiteStartVars::setRequestVariables(array_slice($arr_path_info, 1));
+	if (SiteStartVars::$uri_translator) {
+				
+		if ($str_path_start) {
+			SiteStartVars::setRequestVariables(array_slice($arr_path_info, 1));
+		}
 		
 		// Request
 		require('uri.php');
+		
+		SiteStartVars::setRequestVariables();
 	}
-	
-	$arr_api = apis::getAPIHosts(SERVER_NAME);
-		
-	if ($arr_api) {
-		
+				
+	if (SiteStartVars::$api) {
+				
 		Response::setFormat(Response::OUTPUT_JSON | Response::PARSE_PRETTY);
 		
-		SiteStartVars::$api = $arr_api;
+		$arr_api = SiteStartVars::$api;
 		
 		$JSON = Response::getObject();
 	
@@ -105,7 +113,9 @@
 
 		$JSON->timestamp = date('c');
 		
-		$check = Log::checkRequest('api_home_'.$arr_api['id'], false, (($arr_api['request_limit_amount'] * $arr_api['request_limit_unit']) * 60), ['ip' => $arr_api['request_limit_ip'], 'ip_block' => ($arr_api['request_limit_ip'] * 4), 'global' => $arr_api['request_limit_global']]);
+		$str_request_identifier = 'api_home_'.$arr_api['id'];
+		
+		$check = Log::checkRequest($str_request_identifier, false, (($arr_api['request_limit_amount'] * $arr_api['request_limit_unit']) * 60), ['ip' => $arr_api['request_limit_ip'], 'ip_block' => ($arr_api['request_limit_ip'] * 4), 'global' => $arr_api['request_limit_global']]);
 		
 		if ($check !== true) {
 			
@@ -124,51 +134,64 @@
 			error(Labels::getSystemLabel('msg_api_limit'), TROUBLE_REQUEST_LIMIT, LOG_CLIENT);
 		}
 		
-		Log::logRequest('api_home_'.$arr_api['id']);
-
-		SiteStartVars::setRequestVariables(($arr_path_info[1] ? array_slice($arr_path_info, 1) : []));
-		
 		// Authorization
-		if ($arr_path_info[1] == 'authorization') {
+		if ($str_path_start == 'authorization') {
 			
 		}
 		
 		// Authentication
 		if ($_SERVER['HTTP_AUTHORIZATION']) {
-		
-			$arr_method_token = explode(' ', $_SERVER['HTTP_AUTHORIZATION']);
-		
-			if ($arr_method_token[0] == 'Bearer' && $arr_method_token[1]) {
+			
+			try {
 				
-				HomeLogin::API($arr_method_token[1]);
-			} else {
+				$arr_method_token = explode(' ', $_SERVER['HTTP_AUTHORIZATION']);
+			
+				if ($arr_method_token[0] == 'Bearer' && $arr_method_token[1]) {
+					
+					$arr_api_client_user = HomeLogin::API($arr_method_token[1]);
+					
+					if (!$arr_api_client_user['client_request_limit_disable']) {
 				
-				error(Labels::getSystemLabel('msg_missing_information').' Invalid authentication method.', TROUBLE_INVALID_REQUEST);
+						Log::logRequest($str_request_identifier);
+					}
+				} else {
+					
+					error(Labels::getSystemLabel('msg_missing_information').' Invalid authentication method.', TROUBLE_INVALID_REQUEST);
+				}
+			} catch (Exception $e) {
+				
+				Log::logRequest($str_request_identifier);
+				throw($e);
 			}
+		} else {
+			
+			Log::logRequest($str_request_identifier);
 		}
 		
 		$JSON->authenticated = ($_SESSION['USER_ID'] ? true : false);
+		
+		SiteStartVars::setRequestVariables(($str_path_start ? array_slice($arr_path_info, 1) : []));
 
 		// Request
 		require('api.php');
 				
-	} else if ($arr_path_info[1] == 'combine') {
+	} else if ($str_path_start == 'combine') {
 		
 		require('./CMS/core_combine.php');
 		SiteStartVars::setJSCSS();
 		
-		$type = $arr_path_info[2];
+		$type = ($arr_path_info[2] ?? '');
 		
 		if ($type != 'js' && $type != 'css') {
 			pages::noPage(true);
 		}
 		
-		$modules = SiteStartVars::$modules;
-		$ie_tag = $arr_path_info[3];
+		$arr_modules = SiteStartVars::$arr_modules;
+		$ie_tag = ($arr_path_info[3] ?? '');
 
-		CombineJSCSS::combine(SiteStartVars::$js_css[$type], $modules, $type, $ie_tag);
+		CombineJSCSS::combine(SiteStartVars::$js_css[$type], $arr_modules, $type, $ie_tag);
 	
-	} else if ($arr_path_info[1] == 'cache') {
+	} else if ($str_path_start == 'cache') {
 				
 		$cache = new FileCache($arr_path_info[2], $arr_path_info[3], implode('/', array_slice($arr_path_info, 4)));
 		$cache->cache();
@@ -176,36 +199,45 @@
 	
 	} else {
 		
-		Response::setFormat((SiteStartVars::getRequestState() == 'index' ? Response::OUTPUT_HTML : Response::OUTPUT_JSON) | Response::RENDER_HTML);
+		Response::setFormat((SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX ? Response::OUTPUT_XML : Response::OUTPUT_JSON) | Response::RENDER_HTML);
+		
+		if (getLabel('throttle', 'D', true)) {
+			
+			$num_window = (Settings::get('request_throttle_window') ?: 30 * 60);
+			$is_heated = Log::checkRequestThrottle($num_window, (Settings::get('request_throttle_per_second') ?: 2));
+			
+			if ($is_heated) {
+				
+				Labels::setVariable('minutes', $num_window / 60);
+				error(getLabel('msg_request_throttle_limit'), TROUBLE_REQUEST_LIMIT, LOG_CLIENT);
+			}
+		}
 			
 		if (getLabel('use_servers', 'D', true)) {
 			cms_details::useServerFiles();
 		}
 	
 		// URL
-		if (!$arr_path_info) {
+		$str_path_last = '';
+		
+		if ($arr_path_info) {
 			
-			$arr_path_info = [];
-		} else {
+			$str_path_last = $arr_path_info[count($arr_path_info)-1];
 			
-			$last_path = $arr_path_info[count($arr_path_info)-1];
-			
-			if (!$last_path) {
+			if ($str_path_last && !preg_grep("/\.(p|c|s|l|e|manifest)$/", $arr_path_info)) {
 				
-				array_pop($arr_path_info); // Remove empty / @ end
-			} else if ($last_path && !preg_grep("/\.(p|c|s|l|e|manifest)$/", $arr_path_info)) {
-				
-				$arr_path_info[count($arr_path_info)-1] = $last_path.'.p'; // If no / @ end, and no page kind, assume .p
+				$arr_path_info[count($arr_path_info)-1] = $str_path_last.'.p'; // If no / at the end, and no page kind, assume .p
 			}
 		}
 
 		// Page raw
-		$page_raw = preg_grep("/.+\.(p|c|s|l|e|manifest)$/", $arr_path_info);
+		$arr_page_raw = preg_grep("/.+\.(p|c|s|l|e|manifest)$/", $arr_path_info);
+		$str_page = '';
 		
-		if ($page_raw) {
+		if ($arr_page_raw) {
 			
-			$str_page = reset($page_raw);
-			$page_key = key($page_raw);
+			$str_page = reset($arr_page_raw);
+			$num_page_key = key($arr_page_raw);
 			
 			preg_match("/(.+)\.(p|c|s|l|e|manifest)$/", $str_page, $arr_match);
 			
@@ -217,10 +249,23 @@
 		}
 							
 		// Directory
-		$arr_directory = ($page_raw ? array_slice($arr_path_info, 0, $page_key) : $arr_path_info);
+		if ($str_page) {
+			
+			$arr_directory = array_slice($arr_path_info, 0, $num_page_key);
+			$arr_page_variables = array_slice($arr_path_info, $num_page_key+1);
+		} else {
+			
+			$arr_directory = $arr_path_info;
+			if (!$str_path_last) { // Remove empty / at the end
+				array_pop($arr_directory);
+			}
+			
+			$arr_page_variables = [];			
+		}
+		
 		SiteStartVars::$arr_dir = array_slice($arr_directory, 1);
-		SiteStartVars::setPageVariables(($page_raw ? array_slice($arr_path_info, $page_key+1) : []));
 		SiteStartVars::$dir = directories::traceDirectoryPath($arr_directory);
+		SiteStartVars::setPageVariables($arr_page_variables);
 		
 		if (!SiteStartVars::$dir) { // No directory
 			
@@ -269,7 +314,7 @@
 			$_SERVER['PATH_VIRTUAL'] = SiteEndVars::getLocation(true, true);
 		} else {
 			
-			if ($page_raw) { // Page match
+			if ($str_page) { // Page match
 				SiteStartVars::$page = pages::getPages(SiteStartVars::$page_name, SiteStartVars::$dir['id']);
 			} else if (SiteStartVars::$dir['page_index_id']) { // Try directory index
 				SiteStartVars::$page = pages::getPages(SiteStartVars::$dir['page_index_id']);
@@ -286,27 +331,31 @@
 
 		if (count($user_groups)) {
 			
-			SiteStartVars::requestHTTPS();
+			SiteStartVars::requestSecure();
 			$dir_key = array_keys($user_groups);
 			$dir_key = end($dir_key);
 			$arr_login_directory = array_slice($arr_directory, 0, $dir_key+1);
 			SiteStartVars::$user_group = (int)end($user_groups);
 			SiteStartVars::$login_dir = directories::traceDirectoryPath($arr_login_directory);
 		}
-		
+				
 		// Session
 		SiteStartVars::startSession();
 				
 		// Login
 		HomeLogin::index();
 		
+		if (!empty($_SESSION['USER_ID'])) {
+			Log::updateRequestState(Log::IP_STATE_APPROVED);
+		}
+		
 		// Language
-		if ($_SESSION['LANGUAGE_SYSTEM']) {
+		if (!empty($_SESSION['LANGUAGE_SYSTEM'])) {
 			SiteStartVars::$language = $_SESSION['LANGUAGE_SYSTEM'];
-		} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code']) {
+		} else if (!empty($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code'])) {
 			SiteStartVars::$language = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code'];
 		} else {
-			if (!$_SESSION['LANGUAGE_DEFAULT']) {
+			if (empty($_SESSION['LANGUAGE_DEFAULT'])) {
 				$arr_lang_default = cms_language::getDefaultLanguage(SERVER_NAME_SITE_NAME);
 				$_SESSION['LANGUAGE_DEFAULT'] = $arr_lang_default['lang_code'];
 			}
@@ -314,7 +363,7 @@
 		}
 		
 		// Clearance
-		if (!pages::filterClearance([SiteStartVars::$page], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')])) { // User has no clearance for page
+		if (!pages::filterClearance([SiteStartVars::$page], ($_SESSION['USER_GROUP'] ?? null), ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] ?? null))) { // User has no clearance for page
 			pages::noPage(); // No clearance, no page
 		}
 		
@@ -399,17 +448,21 @@
 			echo $json;
 		} else if (SiteStartVars::$page_kind == '.p') {
 		
-			if (!$_SESSION['PAGE_LOADED']) {
+			if (!isset($_SESSION['PAGE_LOADED'])) {
+				$_SESSION['PAGE_LOADED'] = 0;
 				$_SESSION['LANDING_PAGE'] = SiteStartVars::$page; // Store landing page
 			}
-			if ($_SERVER['HTTP_REFERER'] && strpos($_SERVER['HTTP_REFERER'], BASE_URL) === false) {
+			if ($_SERVER['HTTP_REFERER'] && strpos($_SERVER['HTTP_REFERER'], URL_BASE) === false) {
 				$_SESSION['REFERER_URL'] = $_SERVER['HTTP_REFERER']; // Store referer url
 			}
 			$_SESSION['PAGE_LOADED']++;
 		
 			if (SiteStartVars::$page['url']) {
-				if (SiteStartVars::$arr_request_vars) {
-					Response::location(rtrim(SiteStartVars::$page['url'], '/').'/'.implode('/', SiteEndVars::getLocationVariables()));
+				
+				$arr_location_vars = SiteEndVars::getLocationVariables();
+				
+				if ($arr_location_vars) {
+					Response::location(rtrim(SiteStartVars::$page['url'], '/').'/'.implode('/', $arr_location_vars));
 				} else {
 					Response::location(SiteStartVars::$page['url']);
 				}
@@ -461,11 +514,14 @@
 			
 			$JSON = Response::getObject();
 			$JSON->data_feedback = SiteEndVars::getFeedback();
-			$JSON->location = ['replace' => true, 'url' => SiteEndVars::getLocation()]; // Make sure the resulting location is clean
+			$JSON->location = ['replace' => true, 'url' => SiteEndVars::getLocation(), 'url_canonical' => SiteEndVars::getLocation(true, true)]; // Make sure the resulting location is clean
 			$JSON = Log::addToObj($JSON);
+			if (Settings::get('timing') === true) {
+				$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
+			}
 			SiteEndVars::addScript("PARSE = function() {"
-				."var obj = JSON.parse(".json_encode(json_encode($JSON)).");"
-				."FEEDBACK.check($('body'), obj);"
+				."var obj = JSON.parse(".value2JSON(value2JSON($JSON)).");"
+				."FEEDBACK.check(document.body, obj);"
 			."};");
 
 			if (SiteStartVars::$page['script']) {
@@ -474,37 +530,26 @@
 			
 			SiteStartVars::setJSCSS();
 			require('./CMS/core_combine.php');
-							
-			SiteEndVars::getHeaders();
-			
+										
 			$str_title = SiteEndVars::getTitle();
 			$str_description = SiteEndVars::getDescription();
 			$arr_theme = SiteEndVars::getTheme();
 			
 			$str_url_real = SiteEndVars::getLocation(false, true);
 			$str_url_manifest = (strpos($str_url_real, '.p') !== false ? str_replace('.p', '.manifest', $str_url_real) : $str_url_real.'.manifest');
-			$str_url = SiteEndVars::getUrl();
+			$str_url = (SiteEndVars::getUrl() ?: SiteEndVars::getLocation(false));
 			
 			$str_image = SiteEndVars::getImage();
-			$str_identifier = 'html_images_'.str2Label($str_image);
-			$html_images = Settings::getShare($str_identifier);
+			$str_url_image = URL_BASE.ltrim($str_image, '/');
+			
+			$str_identifier = 'html_icons_'.str2Label($str_image);
+			$html_icons = Settings::getShare($str_identifier);
 				
-			if (!$html_images) {
+			if (!$html_icons) {
 
-				$html_images = '';
+				$html_icons = SiteEndVars::getIcons();
 				
-				foreach ([16, 32, 96, 128, 196] as $nr_size) {
-					$html_images .= '<link rel="icon" type="image/png" href="'.SiteStartVars::getCacheUrl('img', [$nr_size, $nr_size], $str_image).'" sizes="'.$nr_size.'x'.$nr_size.'" />';
-				}
-				foreach ([57, 60, 72, 76, 114, 120, 144, 152] as $nr_size) {
-					$html_images .= '<link rel="apple-touch-icon" href="'.SiteStartVars::getCacheUrl('img', [$nr_size, $nr_size], $str_image).'" sizes="'.$nr_size.'x'.$nr_size.'" />';
-				}
-				
-				$str_url_image = BASE_URL.ltrim($str_image, '/');
-				
-				$html_images .= '<meta property="og:image" content="'.$str_url_image.'" />';
-				
-				Settings::setShare($str_identifier, $html_images, 60);
+				Settings::setShare($str_identifier, $html_icons, 60);
 			}
 			
 			$html = '<!DOCTYPE html>'.PHP_EOL
@@ -521,19 +566,20 @@
 					.'<meta property="og:type" content="'.SiteEndVars::getType().'" />'
 					// Linking
 					.'<link rel="canonical" href="'.$str_url_real.'" />'
-					.($str_url ? '<link rel="shortlink" href="'.$str_url.'" />' : '')
-					.'<meta property="og:url" content="'.($str_url ?: $str_url_real).'" />'
+					.($str_url != $str_url_real ? '<link rel="shortlink" href="'.$str_url.'" />' : '')
+					.'<meta property="og:url" content="'.$str_url.'" />'
 					// Icons
-					.$html_images
+					.$html_icons
+					.'<meta property="og:image" content="'.$str_url_image.'" />'
 					// Theme
 					.'<meta name="theme-color" content="'.$arr_theme['theme_color'].'">'
 					.'<link rel="manifest" href="'.$str_url_manifest.'"'.(SiteStartVars::$user_group ? ' crossOrigin="use-credentials"' : '').' />'
 					.'<meta name="apple-mobile-web-app-capable" content="yes">'
 					.'<meta name="apple-mobile-web-app-status-bar-style" content="black">';
 					// CSS & JS
-					$version = CombineJSCSS::getVersion(SiteStartVars::$js_css['css'], SiteStartVars::$modules);
+					$version = CombineJSCSS::getVersion(SiteStartVars::$js_css['css'], SiteStartVars::$arr_modules);
 					$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" />';
-					$version = CombineJSCSS::getVersion(SiteStartVars::$js_css['js'], SiteStartVars::$modules);
+					$version = CombineJSCSS::getVersion(SiteStartVars::$js_css['js'], SiteStartVars::$arr_modules);
 					$html .= '<script type="text/javascript" src="/combine/js/'.$version.'"></script>';
 					// Other
 					$html .= SiteEndVars::getHeadTags();

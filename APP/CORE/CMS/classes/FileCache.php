@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -41,11 +41,11 @@ class FileCache {
 		
 		$this->create_archive = getLabel(($this->external_protocol ? 'caching_external' : 'caching'), 'D', true);
 		
-		$this->str_options = base64_encode(json_encode($this->arr_options));
+		$this->str_options = base64_encode(value2JSON($this->arr_options));
 		$this->str_url = base64_encode($this->url);
 		
 		$this->archive_folder = ($this->target == DIR_HOME ? DIR_ROOT_CACHE.DIR_HOME : DIR_SITE_CACHE).$this->type.'/';
-		$this->filename = md5($this->str_options.'_'.$this->str_url);
+		$this->filename = value2HashExchange($this->str_options.'_'.$this->str_url);
 		$this->path_destination = $this->archive_folder.$this->filename;
 	}
 	
@@ -101,7 +101,7 @@ class FileCache {
 			
 			if (!isPath($this->path_source)) {
 				
-				if ($this->arr_options['error_source']) { // Local path
+				if (!empty($this->arr_options['error_source'])) { // Local path
 					
 					$error_source = ltrim($this->arr_options['error_source'], '/');
 					if ($this->target == DIR_HOME) {
@@ -139,7 +139,7 @@ class FileCache {
 		if ($this->external_file) {
 			$this->external_file->abort();
 		}
-		if (SiteStartVars::getRequestState() == 'index') {
+		if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX) {
 			pages::noPage();
 		} else {
 			error(getLabel('msg_not_found'));
@@ -159,7 +159,7 @@ class FileCache {
 		
 		$this->data = ob_get_clean();
 		
-		if ($this->arr_options[2]) {
+		if (!empty($this->arr_options[2])) {
 			
 			$temp_path = tempnam(Settings::get('path_temporary'), '1100CC');
 			$file = fopen($temp_path, 'w');
@@ -187,7 +187,7 @@ class FileCache {
 					
 					$arr_blur = ['amount' => (isset($this->arr_options[2]['blur']['amount']) ? (int)$this->arr_options[2]['blur']['amount'] : 3)];
 					
-					$arr_padding['blur'] = ($this->arr_options[2]['blur']['amount'] ?: 3)*2; // Border [amount] to make sure edges are blurred as well
+					$arr_padding['blur'] = ($this->arr_options[2]['blur']['amount'] ?? 3)*2; // Border [amount] to make sure edges are blurred as well
 					$no_plain_image = true;
 				}
 				
@@ -251,7 +251,7 @@ class FileCache {
 			}
 		}
 
-		Response::sendHeader(($this->is_new ? $this->data : $this->path_destination), false, [
+		Response::sendFileHeaders(($this->is_new ? $this->data : $this->path_destination), false, [
 			'ETag: "'.$ie_tag.'"',
 			'Cache-Control: max-age='.(60*60*24),
 			'1100CC-Cached: '.(int)$this->create_archive

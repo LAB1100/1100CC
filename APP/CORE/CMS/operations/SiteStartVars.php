@@ -2,22 +2,27 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class SiteStartVars {
+	
+	const REQUEST_INDEX = 1;
+	const REQUEST_COMMAND = 2;
+	const REQUEST_DOWNLOAD = 3;
+	const REQUEST_API = 4;
 
 	public static $js_css = [];
 	
-	public static $cms_modules = [];
-	public static $cms_vars = [];
+	public static $arr_cms_modules = [];
+	public static $arr_cms_vars = [];
 	
 	public static $arr_request_vars = [];
 	public static $arr_feedback = [];
 
-	public static $modules = [];
+	public static $arr_modules = [];
 	public static $dir = false;
 	public static $arr_dir = [];
 	public static $login_dir = false;
@@ -31,32 +36,38 @@ class SiteStartVars {
 	public static $api = false;
 	
 	public static $language = false;
-	public static $https = null;
-	public static $https_requested = false;
+	public static $do_https = null;
+	public static $do_secure = false;
 	public static $session = false;
 	public static $session_open = 0;
+		
+	public static function setPageVariables($arr_variables = false) {
+		
+		if ($arr_variables === false) {
+			
+			self::$arr_request_vars = [];
+		} else {
 	
-	public static function setPageVariables($arr_variables) {
-	
-		$cur_mod = 0;
-		$cur_var_name = false;
+			$cur_mod = 0;
+			$cur_var_name = false;
 
-		foreach ($arr_variables as $var) {
-			
-			$var = str_replace(['<', '>', '\'', '"', ' ', "\n", "\r"], '', $var); // Cleanup
-			preg_match('%^(\d+)\.m$%', $var, $match);
-			
-			if ($match[1]) {
-				$cur_mod = $match[1];
-				$cur_var_name = false;
-			} else {
-				if (substr($var, -2) == '.v') { // check for '.v'
-					$cur_var_name = substr($var, 0, -2);
+			foreach ($arr_variables as $var) {
+				
+				$var = str_replace(['<', '>', '\'', '"', ' ', "\n", "\r"], '', $var); // Cleanup
+				preg_match('%^(\d+)\.m$%', $var, $match);
+				
+				if ($match[1]) {
+					$cur_mod = $match[1];
+					$cur_var_name = false;
 				} else {
-					if ($cur_var_name) {
-						self::$arr_request_vars[$cur_mod][$cur_var_name][] = $var;
+					if (substr($var, -2) == '.v') { // check for '.v'
+						$cur_var_name = substr($var, 0, -2);
 					} else {
-						self::$arr_request_vars[$cur_mod][] = $var;
+						if ($cur_var_name) {
+							self::$arr_request_vars[$cur_mod][$cur_var_name][] = $var;
+						} else {
+							self::$arr_request_vars[$cur_mod][] = $var;
+						}
 					}
 				}
 			}
@@ -65,14 +76,18 @@ class SiteStartVars {
 		SiteEndVars::$arr_request_vars = self::$arr_request_vars;
 	}
 	
-	public static function setRequestVariables($arr_variables) {
-	
-		self::$arr_request_vars[0] = $arr_variables;
+	public static function setRequestVariables($arr_variables = false) {
+		
+		if ($arr_variables === false) {
+			unset(self::$arr_request_vars[0]);
+		} else {
+			self::$arr_request_vars[0] = $arr_variables;
+		}
 	}
 	
 	public static function getModVariables($mod_id) {
 	
-		return (self::$arr_request_vars[$mod_id] ?: []);
+		return (self::$arr_request_vars[$mod_id] ?? []);
 	}
 	
 	public static function setFeedback($data) {
@@ -82,12 +97,12 @@ class SiteStartVars {
 	
 	public static function getFeedback($variable) {
 		
-		return self::$arr_feedback[$variable];
+		return (self::$arr_feedback[$variable] ?? null);
 	}
 
 	public static function preloadModules() {
 			
-		foreach (self::$modules as $class => $arr) {
+		foreach (self::$arr_modules as $class => $arr) {
 			
 			if (method_exists($class, 'modulePreload')) {
 				$class::modulePreload();
@@ -99,7 +114,7 @@ class SiteStartVars {
 	
 	public static function cooldownModules() {
 
-		foreach (self::$modules as $class => $arr) {
+		foreach (self::$arr_modules as $class => $arr) {
 			if (method_exists($class, 'moduleCooldown')) {
 				$class::moduleCooldown();
 			}
@@ -108,18 +123,23 @@ class SiteStartVars {
 		cms_jobs::callJobs();
 	}
 
-	public static function requestHTTPS() {
+	public static function requestSecure() {
 		
-		self::$https_requested = true;
+		self::$do_secure = true;
+		
+		if (static::getRequestState() == static::REQUEST_INDEX) {
+			
+			Response::addHeaders('Content-Security-Policy: frame-ancestors \'self\'');
+		}
 	}
 	
-	public static function useHTTPS($use_requested = true) {
+	public static function useHTTPS($use_request = true) {
 		
-		if (self::$https === null) {
-			self::$https = (bool)getLabel('https', 'D', true);
+		if (self::$do_https === null) {
+			self::$do_https = (bool)getLabel('https', 'D', true);
 		}
 		
-		return (self::$https && (!$use_requested || (!SERVER_NAME_CUSTOM || self::$https_requested))); // Use https when explicitly requested or when no variable sub-domains are part of the request
+		return (self::$do_https && (!$use_request || (!SERVER_NAME_CUSTOM || self::$do_secure))); // Use https when explicitly requested or when no variable sub-domains are part of the request
 	}
 	
 	public static function startSession() {
@@ -134,12 +154,16 @@ class SiteStartVars {
 
 			$arr_session_options = ['use_only_cookies' => false, 'use_cookies' => false, 'use_trans_sid' => false, 'cache_limiter' => ''];
 		} else {
+			
+			$is_secure = (SERVER_PROTOCOL == 'https://' ? true : false);
 
 			$arr_session_options = [];
-			session_set_cookie_params(0, (IS_CMS ? ini_get('session.cookie_path') : '/'), ini_get('session.cookie_domain'), (SERVER_PROTOCOL == 'https://' ? true : false), true);
+			$arr_cookie_options = ['lifetime' => 0, 'path' => (IS_CMS ? ini_get('session.cookie_path') : '/'), 'domain' => ini_get('session.cookie_domain'), 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None' : null)];
 			
-			self::$session = uniqid();
-			session_name('1100CC_'.(SERVER_PROTOCOL == 'https://' ? 'secure' : 'open'));
+			session_set_cookie_params($arr_cookie_options);	
+			
+			self::$session = uniqid('', true); // As unique as possible over multiple/parallel threads
+			session_name('1100CC_'.($is_secure ? 'secure' : 'open'));
 		}
 		
 		try {
@@ -180,9 +204,17 @@ class SiteStartVars {
 	
 	public static function setCookie($name, $value, $include_sub_domains = false) {
 		
-		setcookie($name, $value, 0, (IS_CMS ? ini_get('session.cookie_path') : '/'), ($include_sub_domains ? SERVER_NAME : ini_get('session.cookie_domain')), (SERVER_PROTOCOL == 'https://' ? true : false), true);
+		if (Response::isSent()) {
+			return;
+		}
+		
+		$is_secure = (SERVER_PROTOCOL == 'https://' ? true : false);
+		
+		$arr_cookie_options = ['expires' => 0, 'path' => (IS_CMS ? ini_get('session.cookie_path') : '/'), 'domain' => ($include_sub_domains ? SERVER_NAME : ini_get('session.cookie_domain')), 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None' : null)];
+		
+		setcookie($name, $value, $arr_cookie_options);
 	}
-	
+
 	public static function setJSCSS() {
 		
 		require('js_css.php');
@@ -196,11 +228,15 @@ class SiteStartVars {
 		foreach ($arr_core_self['css'] as $value) {
 			self::$js_css['css'][$value] = $value;
 		}
-		foreach ((array)$arr_core['js'] as $value) {
-			self::$js_css['js'][$value] = $value;
+		if (isset($arr_core['js'])) {
+			foreach ($arr_core['js'] as $value) {
+				self::$js_css['js'][$value] = $value;
+			}
 		}
-		foreach ((array)$arr_core['css'] as $value) {
-			self::$js_css['css'][$value] = $value;
+		if (isset($arr_core['css'])) {
+			foreach ($arr_core['css'] as $value) {
+				self::$js_css['css'][$value] = $value;
+			}
 		}
 		
 		self::$js_css['js']['modules'] = 'modules';
@@ -225,46 +261,59 @@ class SiteStartVars {
 		foreach ($arr_site_storage['css'] as $value) {
 			self::$js_css['css'][$value] = DIR_SITE_STORAGE.$value;
 		}
-		foreach ((array)$arr_site_storage_self['js'] as $value) {
-			self::$js_css['js'][$value] = DIR_SITE_STORAGE.$value;
+		if (isset($arr_site_storage_self['js'])) {
+			foreach ($arr_site_storage_self['js'] as $value) {
+				self::$js_css['js'][$value] = DIR_SITE_STORAGE.$value;
+			}
 		}
-		foreach ((array)$arr_site_storage_self['css'] as $value) {
-			self::$js_css['css'][$value] = DIR_SITE_STORAGE.$value;
+		if (isset($arr_site_storage_self['css'])) {
+			foreach ($arr_site_storage_self['css'] as $value) {
+				self::$js_css['css'][$value] = DIR_SITE_STORAGE.$value;
+			}
 		}
 	}
 	
-	public static function getBasePath($pop_length = 0, $rel = true) {
+	public static function getBasePath($num_pop_length = 0, $is_relative = true) {
 	
-		$arr_base = ($pop_length && count(self::$arr_dir) ? array_slice(self::$arr_dir, 0, -$pop_length) : self::$arr_dir);
+		$arr_base = ($num_pop_length && count(self::$arr_dir) ? array_slice(self::$arr_dir, 0, -$num_pop_length) : self::$arr_dir);
 
-		return (!$rel ? BASE_URL_HOME : '/').(count($arr_base) ? implode('/', $arr_base).'/' : '');
+		return (!$is_relative ? URL_BASE_HOME : '/').(count($arr_base) ? implode('/', $arr_base).'/' : '');
 	}
 	
-	public static function getPageUrl($name = false, $sub_dir = 0, $rel = true) {
+	public static function getPageUrl($str_name = false, $num_sub_dir = 0, $is_relative = true) {
 	
-		return self::getBasePath($sub_dir, $rel).($name ? $name : self::$page['name']);
+		return self::getBasePath($num_sub_dir, $is_relative).($str_name ? $str_name : self::$page['name']);
 	}
 			
-	public static function getModUrl($id, $name = false, $sub_dir = 0, $rel = true, $arr_vars_page = []) {
+	public static function getModUrl($id, $str_name = false, $num_sub_dir = 0, $is_relative = true, $arr_vars_page = []) {
 	
-		return self::getBasePath($sub_dir, $rel).($name ? $name : self::$page['name']).'.p/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '').$id.'.m/';
+		return self::getBasePath($num_sub_dir, $is_relative).($str_name ? $str_name : self::$page['name']).'.p/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '').$id.'.m/';
 	}
 	
-	public static function getShortcutUrl($name, $root = true, $sub_dir = 0, $rel = true) {
+	public static function getShortcutUrl($str_name, $is_root = true, $num_sub_dir = 0, $is_relative = true, $arr_vars_page = []) {
 		
-		if ($root) {
-			return (!$rel ? BASE_URL_HOME : '/').$name.'.s/';
+		if ($is_root) {
+			return (!$is_relative ? URL_BASE_HOME : '/').$str_name.'.s/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '');
 		} else {
-			return self::getBasePath($sub_dir, $rel).$name.'.s/';
+			return self::getBasePath($num_sub_dir, $is_relative).$str_name.'.s/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '');
 		}
 	}
 	
-	public static function getCacheUrl($type, $arr_options, $url, $target = DIR_HOME) {
+	public static function getShortestModUrl($id, $str_name = false, $str_root_name = false, $is_root = null, $num_sub_dir = 0, $is_relative = true, $arr_vars_page = []) {
+		
+		if ($str_root_name) {
+			return static::getShortcutUrl($str_root_name, $is_root, $num_sub_dir, $is_relative, $arr_vars_page);
+		} else {
+			return static::getModUrl($id, $str_name, $num_sub_dir, $is_relative, $arr_vars_page);
+		}
+	}
 	
-		$cache = new FileCache($type, (array)$arr_options, $url, $target);
+	public static function getCacheUrl($type, $arr_options, $str_url, $target = DIR_HOME) {
+	
+		$cache = new FileCache($type, (array)$arr_options, $str_url, $target);
 		$cache->generate();			
 		
-		return ($target == DIR_HOME && IS_CMS ? BASE_URL_HOME : '/').'cache/'.$type.'/'.$cache->getStringOptions().'/'.$cache->getStringUrl();
+		return ($target == DIR_HOME && IS_CMS ? URL_BASE_HOME : '/').'cache/'.$type.'/'.$cache->getStringOptions().'/'.$cache->getStringUrl();
 	}
 	
 	public static function isProcess() {
@@ -274,22 +323,42 @@ class SiteStartVars {
 	
 	public static function getRequestState() {
 
-		if ($_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') { // Ajax and ajax file uploads
-			return 'command';
+		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') { // Ajax and ajax file uploads
+			return static::REQUEST_COMMAND;
 		} else if (SiteStartVars::$api) { // API calls
-			return 'api';
-		} else if ($_FILES || $_POST['get-download']) { // Plain file upload or download
-			return 'iframe';
+			return static::REQUEST_API;
+		} else if (!empty($_FILES) || !empty($_POST['get-download'])) { // Plain file upload or download
+			return static::REQUEST_DOWNLOAD;
 		} else { // Direct page request
-			return 'index';
+			return static::REQUEST_INDEX;
+		}
+	}
+	
+	public static function checkRequestOptions() {
+				
+		if (isset($_SERVER['HTTP_ORIGIN']) && static::getRequestState() == static::REQUEST_API) {
+
+			Response::addHeaders('Access-Control-Allow-Origin: *');
+			
+			if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+				
+				Response::addHeaders([
+					'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS',
+					'Access-Control-Allow-Headers: *'
+				]);
+				
+				header($_SERVER['SERVER_PROTOCOL'].' 204 No Content');
+				
+				Response::stop('', '');
+			}
 		}
 	}
 	
 	public static function checkCookieSupport() {
 		
-		if (!$_SESSION['PAGE_LOADED'] && !self::isProcess()) { // Check for cookie support
+		if (!isset($_SESSION['PAGE_LOADED']) && !self::isProcess()) { // Check for cookie support
 			
-			$url = '/'.str_replace(BASE_URL, '', $_SERVER['HTTP_REFERER']);
+			$url = '/'.str_replace(URL_BASE, '', $_SERVER['HTTP_REFERER']);
 			Labels::setVariable('url', $url);
 			
 			Log::setMsg(getLabel('msg_no_cookie_support'));
@@ -305,7 +374,7 @@ class SiteStartVars {
 			);
 		}
 	}
-	
+		
 	public static function getRequestOutputFormat($arr_formats) {
 		
 		$queue = new SplPriorityQueue();

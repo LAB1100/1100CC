@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -35,10 +35,9 @@ class cms_blog_post_comments extends base_module {
 		
 		if (!$arr_blog_posts) {
 			
-			$msg = getLabel('msg_no', 'L', true);
-				
 			Labels::setVariable('name', getLabel('lbl_blog_comments'));
-			
+			$msg = getLabel('msg_no', 'L', true);
+
 			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
 		} else {
 					
@@ -57,8 +56,8 @@ class cms_blog_post_comments extends base_module {
 						
 						$return .= '<tr id="x:cms_blog_post_comments:blog_post_comment_id-'.($arr_blog_post['pingback'] ? 'x' : 'c').'_'.$arr_blog_post['id'].'" class="popup" data-method="blog_post_comment_info">
 							<td>'.$arr_blog_post['blog_post_title'].'</td>
-							<td>'.htmlspecialchars($arr_blog_post['name']).'</td>
-							<td>'.htmlspecialchars($arr_blog_post['body']).'</td>
+							<td>'.strEscapeHTML($arr_blog_post['name']).'</td>
+							<td>'.strEscapeHTML($arr_blog_post['body']).'</td>
 							<td>'.date('d-m-\'y H:i', strtotime($arr_blog_post['added'])).'</td>
 							<td>'.($arr_blog_post['pingback'] ? '<span class="icon">'.getIcon('tick').'</span>' : '').'</td>
 						</tr>';
@@ -72,7 +71,7 @@ class cms_blog_post_comments extends base_module {
 	
 	public function contents() {
 		
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 			<div>';
 					
 			$return .= '<form class="options">
@@ -84,10 +83,10 @@ class cms_blog_post_comments extends base_module {
 				<thead> 
 					<tr>				
 						<th class="limit"><span>'.getLabel('lbl_blog').'</span></th>
-						<th><span>'.getLabel('lbl_blog_post').'</span></th>
-						<th class="max"><span>'.getLabel('lbl_name').'</span></th>
+						<th class="limit"><span>'.getLabel('lbl_blog_post').'</span></th>
+						<th class="limit max"><span>'.getLabel('lbl_name').'</span></th>
 						<th class="limit"><span>'.getLabel('lbl_comment').'</span></th>
-						<th data-sort="desc-0" class="limit"><span>'.getLabel('lbl_date').'</span></th>
+						<th data-sort="desc-0"><span>'.getLabel('lbl_date').'</span></th>
 						<th><span>'.getLabel('lbl_ping').'</span></th>
 						<th class="disable-sort menu" id="x:cms_blog_post_comments:comment_id-0" title="'.getLabel('lbl_multi_select').'">'
 							.'<input type="button" class="data del msg del_blog_post_comment" value="del" />'
@@ -158,7 +157,7 @@ class cms_blog_post_comments extends base_module {
 						
 			$arr_blog_post_comment = self::getBlogPostCommentSet($type, $id);
 			
-			$html_comment = htmlspecialchars($arr_blog_post_comment['body']);
+			$html_comment = strEscapeHTML($arr_blog_post_comment['body']);
 			$html_comment = parseBody($html_comment);
 			
 			$return = '<div class="blog-post-comment">
@@ -173,12 +172,12 @@ class cms_blog_post_comments extends base_module {
 					</li>
 					<li>
 						<dt>'.getLabel('lbl_name').'</dt>
-						<dd>'.htmlspecialchars($arr_blog_post_comment['name']).'</dd>
+						<dd>'.strEscapeHTML($arr_blog_post_comment['name']).'</dd>
 					</li>';
 					if ($type == 'x') {
 						$return .= '<li>
 							<dt>'.getLabel('lbl_source').'</dt>
-							<dd><a href="'.htmlspecialchars($arr_blog_post_comment['source']).' target="_blank"><span class="icon">'.getIcon('link').'</span></a></dd>
+							<dd><a href="'.strEscapeHTML($arr_blog_post_comment['source']).' target="_blank"><span class="icon">'.getIcon('link').'</span></a></dd>
 						</li>';
 					}
 					$return .= '<li>
@@ -217,12 +216,12 @@ class cms_blog_post_comments extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_blog_post_comment['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_blog_post_comment['name']).'" /></div>
 					</li>';
 					if ($type == 'x') {
 						$return .= '<li>
 							<label>'.getLabel('lbl_source').'</label>
-							<div><input type="text" name="source" value="'.htmlspecialchars($arr_blog_post_comment['source']).'" /><a href="'.htmlspecialchars($arr_blog_post_comment['source']).'" class="input" target="_blank"><span class="icon">'.getIcon('link').'</span></a></div>
+							<div><input type="text" name="source" value="'.strEscapeHTML($arr_blog_post_comment['source']).'" /><a href="'.strEscapeHTML($arr_blog_post_comment['source']).'" class="input" target="_blank"><span class="icon">'.getIcon('link').'</span></a></div>
 						</li>';
 					}
 					$return .= '<li>
@@ -231,13 +230,13 @@ class cms_blog_post_comments extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_comment').'</label>
-						<div><textarea name="body">'.htmlspecialchars($arr_blog_post_comment['body']).'</textarea></div>
+						<div><textarea name="body">'.strEscapeHTML($arr_blog_post_comment['body']).'</textarea></div>
 					</li>
 				</ul></fieldset>
 			</form>';
 			
 			$this->html = $return;
-			$this->validate = '{"title": "required", "date": "required", "blog": "required"}';
+			$this->validate = ['title' => 'required', 'date' => 'required', 'blog' => 'required'];
 		}
 		
 		// POPUP INTERACT
@@ -298,8 +297,8 @@ class cms_blog_post_comments extends base_module {
 				
 				$arr_data[] = $arr_row['blog_names'];
 				$arr_data[] = $arr_row['title'];
-				$arr_data[] = htmlspecialchars($arr_row['name']);
-				$arr_data[] = htmlspecialchars($arr_row['body']);
+				$arr_data[] = strEscapeHTML($arr_row['name']);
+				$arr_data[] = strEscapeHTML($arr_row['body']);
 				$arr_data[] = date('d-m-Y h:i', strtotime($arr_row['added']));
 				$arr_data[] = ($arr_row['pingback'] ? '<span class="icon">'.getIcon('tick').'</span>' : '');
 				$arr_data[] = '<input type="button" class="data edit popup edit_blog_post_comment" value="edit" /><input type="button" class="data del msg del_blog_post_comment" value="del" /><input class="multi" value="'.($arr_row['pingback'] ? 'x' : 'c').'_'.$arr_row['id'].'" type="checkbox" />';

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -10,20 +10,20 @@
 class header_dropdown extends base_module {
 
 	public static function moduleProperties() {
-		static::$label = getLabel('ttl_header_dropdown');
+		static::$label = getLabel('lbl_header_dropdown');
 		static::$parent_label = getLabel('ttl_site');
 	}
 
 	public function contents() {
 
-		$return .= '<div class="toolbar">
+		$return = '<div class="toolbar">
 				<div class="info"></div>
 			</div>
-			<div class="menu">
-				<span class="toolbar-handle"></span>';
-				$return .= '<div id="y:header_dropdown:time-0" class="clock"><span>'.date("H:i").'</span></div>';
-				$return .= '<div class="navigation">'.navigation::contents().'</div>';
-			$return .= '</div>';
+			<div class="menu">'
+				.'<span class="toolbar-handle"></span>'
+				.'<div id="y:header_dropdown:time-0" class="clock"><span>'.date('H:i').'</span></div>'
+				.'<div class="navigation">'.navigation::contents().'</div>'
+			.'</div>';
 
 		return $return;
 	}

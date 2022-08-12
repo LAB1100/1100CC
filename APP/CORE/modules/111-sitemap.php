@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class sitemap extends base_module {
 
 		$directory_id = SiteStartVars::$dir['id'];
 
-		if (SiteStartVars::$dir['require_login'] && SiteStartVars::$dir['user_group_id'] && SiteStartVars::$dir['user_group_id'] != $_SESSION['USER_GROUP']) {
+		if (SiteStartVars::$dir['require_login'] && SiteStartVars::$dir['user_group_id'] && (empty($_SESSION['USER_GROUP']) || SiteStartVars::$dir['user_group_id'] != $_SESSION['USER_GROUP'])) {
 
 			$directory_id = directories::getParentDirectory();
 		}
@@ -32,13 +32,13 @@ class sitemap extends base_module {
 			$base_url = pages::getBaseUrl($row_directory);
 			
 			$return .= '<ul>
-				<li>'.($row_directory['title'] ? '<a href="'.$base_url.'">'.htmlspecialchars(Labels::parseTextVariables($row_directory['title'])).'</a>' : '').'</li>';
+				<li>'.($row_directory['title'] ? '<a href="'.$base_url.'">'.strEscapeHTML(Labels::parseTextVariables($row_directory['title'])).'</a>' : '').'</li>';
 				
 				if ($arr_directory_pages[$row_directory['id']]) {
 					
-					$arr_directory_pages[$row_directory['id']] = pages::filterClearance($arr_directory_pages[$row_directory['id']], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]);
+					$arr_directory_pages[$row_directory['id']] = pages::filterClearance($arr_directory_pages[$row_directory['id']], ($_SESSION['USER_GROUP'] ?? null), ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] ?? null));
 					foreach ($arr_directory_pages[$row_directory['id']] as $page) {
-						$return .= '<li>'.($page['title'] ? '<a href="'.($page['url'] ? htmlspecialchars($page['url']) : $base_url.$page['name']).'">'.htmlspecialchars(Labels::parseTextVariables($page['title'])).'</a>' : '').'</li>';
+						$return .= '<li>'.($page['title'] ? '<a href="'.($page['url'] ? strEscapeHTML($page['url']) : $base_url.$page['name']).'">'.strEscapeHTML(Labels::parseTextVariables($page['title'])).'</a>' : '').'</li>';
 					}
 				}
 			$return .= '</ul>';

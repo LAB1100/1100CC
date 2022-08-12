@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -39,13 +39,15 @@ class blog_post_comments extends base_module {
 
 		$arr_link = blog::findMainBlog();
 		$arr_query = SiteStartVars::getModVariables($arr_link['id']);
+		
+		$blog_post_id = ($arr_query && $arr_query[0] ? (int)$arr_query[0] : false);
 
-		if ($arr_query && (int)$arr_query[0]) {
+		if ($blog_post_id) {
 				
 			$return .= '<h1>'.getLabel('ttl_comments').'</h1>
 			<span class="a">'.getLabel('lbl_add_comment').'</span>
 			
-			<form id="f:blog_post_comments:add_comment-'.$arr_query[0].'">
+			<form id="f:blog_post_comments:add_comment-'.$blog_post_id.'">
 				<fieldset><ul>
 					<li><label>'.getLabel('lbl_name').'</label><input type="text" name="name" value="'.($_SESSION['CUR_USER'] ? $_SESSION['CUR_USER'][TABLE_USER]['uname'] : '').'" /></li>
 					<li><label>'.getLabel('lbl_comment').'</label><textarea name="body"></textarea></li>
@@ -55,7 +57,7 @@ class blog_post_comments extends base_module {
 			
 			<div>';
 			
-			$arr_blog_post_comments = cms_blog_post_comments::getBlogPostComments($arr_query[0]);
+			$arr_blog_post_comments = cms_blog_post_comments::getBlogPostComments($blog_post_id);
 			
 			foreach ($arr_blog_post_comments as $arr_blog_post_comment) {
 			
@@ -140,9 +142,9 @@ class blog_post_comments extends base_module {
 	
 	private static function createComment($arr_comment) {
 	
-		$poster = ($arr_comment['pingback'] ? '<a href="'.htmlspecialchars($arr_comment['source']).'" target="_blank">'.htmlspecialchars($arr_comment['name']).'</a>' : htmlspecialchars($arr_comment['name']));
+		$poster = ($arr_comment['pingback'] ? '<a href="'.strEscapeHTML($arr_comment['source']).'" target="_blank">'.strEscapeHTML($arr_comment['name']).'</a>' : strEscapeHTML($arr_comment['name']));
 				
-		$html_comment = htmlspecialchars($arr_comment['body']);
+		$html_comment = strEscapeHTML($arr_comment['body']);
 		$html_comment = parseBody($html_comment);
 		
 		$return .= '<div class="comment'.($arr_comment['pingback'] ? ' pingback' : '').'">

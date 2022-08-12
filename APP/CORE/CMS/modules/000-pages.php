@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -477,9 +477,10 @@ class pages extends base_module {
 
 		$res = DB::query($query);
 									
-		$arr = $res->fetchAssoc();
+		$arr = ($res->fetchAssoc() ?: []);
 		
 		if ($arr) {
+			
 			$arr['shortcut_root'] = DBFunctions::unescapeAs($arr['shortcut_root'], DBFunctions::TYPE_BOOLEAN);
 			$arr['clearance'] = DBFunctions::unescapeAs($arr['clearance'], DBFunctions::TYPE_BOOLEAN);
 			$arr['require_login'] = DBFunctions::unescapeAs($arr['require_login'], DBFunctions::TYPE_BOOLEAN);
@@ -601,7 +602,9 @@ class pages extends base_module {
 		
 		foreach ($arr_pages_or_modules as $key => $arr_page_or_module) {
 			
-			if (($arr_page_or_module['require_login'] && $arr_page_or_module['user_group_id'] != $user_group_id) || (!$arr_page_or_module['clearance'] && $arr_clearance[($arr_page_or_module['page_id'] ?: $arr_page_or_module['id'])]) || ($arr_page_or_module['clearance'] && !$arr_clearance[($arr_page_or_module['page_id'] ?: $arr_page_or_module['id'])])) {
+			$has_clearance = ($arr_clearance && !empty($arr_clearance[($arr_page_or_module['page_id'] ?: $arr_page_or_module['id'])]));
+			
+			if ((!empty($arr_page_or_module['require_login']) && $arr_page_or_module['user_group_id'] != $user_group_id) || (!$arr_page_or_module['clearance'] && $has_clearance) || ($arr_page_or_module['clearance'] && !$has_clearance)) {
 				unset($arr_pages_or_modules[$key]);
 			}
 		}
@@ -619,7 +622,7 @@ class pages extends base_module {
 				$arr['path'] = $directory['path'];
 			}
 			
-			return BASE_URL_HOME.ltrim(str_replace(' ', '', $arr['path']).'/', '/');
+			return URL_BASE_HOME.ltrim(str_replace(' ', '', $arr['path']).'/', '/');
 		} else {
 			
 			return false;
@@ -636,7 +639,7 @@ class pages extends base_module {
 				$arr['path'] = $directory['path'];
 			}
 			
-			return (!$rel ? BASE_URL_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').($arr['page_name'] ?: $arr['name']).'';
+			return (!$rel ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').($arr['page_name'] ?: $arr['name']).'';
 		} else {
 			
 			return false;
@@ -653,7 +656,7 @@ class pages extends base_module {
 				$arr['path'] = $directory['path'];
 			}
 			
-			return (!$rel ? BASE_URL_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['page_name'].'.p/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '').$arr['id'].'.m/';
+			return (!$rel ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['page_name'].'.p/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '').$arr['id'].'.m/';
 		} else {
 			
 			return false;
@@ -672,10 +675,10 @@ class pages extends base_module {
 					$arr['path'] = $directory['path'];
 				}
 				
-				return BASE_URL_HOME.ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['shortcut'].'.s/';
+				return URL_BASE_HOME.ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['shortcut'].'.s/';
 			} else {
 				
-				return BASE_URL_HOME.$arr['shortcut'].'.s/';
+				return URL_BASE_HOME.$arr['shortcut'].'.s/';
 			}
 		} else {
 			
@@ -709,8 +712,8 @@ class pages extends base_module {
 				$url = self::getPageUrl($row);
 			}
 			
-			header('Location: '.$url);
-			die;
+			Response::location($url);
+			exit;
 		} else {
 			
 			self::noPage();
@@ -751,6 +754,6 @@ class pages extends base_module {
 			Response::location($url);
 		}
 		
-		die;
+		exit;
 	}
 }

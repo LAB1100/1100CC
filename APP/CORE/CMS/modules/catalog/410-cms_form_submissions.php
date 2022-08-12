@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -113,35 +113,45 @@ class cms_form_submissions extends base_module {
 	
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_forms:new-0"><span>'.self::$label.'</span></h1>
+		$arr_forms = cms_forms::getForms();
+		$use_form_id = key($arr_forms);
+		
+		$form_submission_id = (int)(SiteStartVars::$arr_cms_vars[2] ?? null);
+			
+		if ($form_submission_id) {
+
+			$arr_form_submission = self::getFormSubmissionSet($form_submission_id);
+			
+			if ($arr_form_submission) {
+				
+				$use_form_id = $arr_form_submission['submission']['form_id'];
+								
+				SiteEndVars::addScript("SCRIPTER.static('#mod-cms_form_submissions', function(elm_scripter) {
+					
+					var elm_toolbox = getContainerToolbox(elm_scripter);
+					var elm_command = $('<div id=\"y:cms_form_submissions:view-".$form_submission_id." \"></div>').appendTo(elm_toolbox);
+					
+					elm_command.popupCommand();
+				});");
+			}
+		}
+		
+		$return = '<div class="section"><h1 id="x:cms_forms:new-0"><span>'.self::$label.'</span></h1>
 		<div>';
 
-			$arr_forms = cms_forms::getForms();
-		
 			if ($arr_forms) {
 				
 				$return .= '<form class="options filter">
-					<label>'.getLabel('lbl_form').':</label><select id="y:cms_form_submissions:get_form_submissions-0">'.cms_general::createDropdown($arr_forms).'</select>
-					<label>'.getLabel('lbl_filter').':</label>'.self::createFilterColumns(key($arr_forms)).'
+					<label>'.getLabel('lbl_form').':</label><select id="y:cms_form_submissions:get_form_submissions-0">'.cms_general::createDropdown($arr_forms, $use_form_id).'</select>
+					<label>'.getLabel('lbl_filter').':</label>'.self::createFilterColumns($use_form_id).'
 				</form>';
-				$return .= '<div class="dynamic-data">'.self::createDataTable(key($arr_forms)).'</div>';
+				$return .= '<div class="dynamic-data">'.self::createDataTable($use_form_id).'</div>';
 			} else {
 				
 				$return .= '<section class="info">'.getLabel('msg_no_forms').'</section>';
 			}
 						
 		$return .= '</div></div>';
-		
-		if (SiteStartVars::$cms_vars[2]) {
-			
-			SiteEndVars::addScript("SCRIPTER.static('#mod-cms_form_submissions', function(elm_scripter) {
-				
-				var elm_toolbox = getContainerToolbox(elm_scripter);
-				var elm_command = $('<div id=\"y:cms_form_submissions:view-".(int)SiteStartVars::$cms_vars[2]." \"></div>').appendTo(elm_toolbox);
-				
-				elm_command.popupCommand();
-			});");
-		}
 		
 		return $return;
 	}
@@ -152,7 +162,7 @@ class cms_form_submissions extends base_module {
 		
 		$arr_columns = (array)$_SESSION['cms_form_submissions'][$form_id]['arr_columns'];
 		
-		$return .= '<table class="display" id="d:cms_form_submissions:data-'.$form_id.'">
+		$return = '<table class="display" id="d:cms_form_submissions:data-'.$form_id.'">
 		<thead> 
 			<tr>';
 			
@@ -195,7 +205,7 @@ class cms_form_submissions extends base_module {
 			$arr_select[] = $arr_field['field_details'];
 		}
 		
-		$return .= '<div class="input" id="y:cms_form_submissions:filter_form_columns-'.$form_id.'">'.cms_general::createSelector($arr_select, 'filter', ($arr_columns ?: []), 'label', 'field_id').'</div>';
+		$return = '<div class="input" id="y:cms_form_submissions:filter_form_columns-'.$form_id.'">'.cms_general::createSelector($arr_select, 'filter', ($arr_columns ?: []), 'label', 'field_id').'</div>';
 		
 		return $return;
 	}
@@ -288,21 +298,17 @@ class cms_form_submissions extends base_module {
 						$this->html .= '</select>';
 					} else if ($arr_field['field_details']['type'] == 'text') {
 
-						$this->html .= '<textarea name="field['.$field_id.'][]">'.$arr_form_submission['fields'][$field_id]['field_input']['field_value'].'</textarea>';
+						$this->html .= '<textarea name="field['.$field_id.'][]">'.strEscapeHTML($arr_form_submission['fields'][$field_id]['field_input']['field_value']).'</textarea>';
 					} else if ($arr_field['field_details']['type'] == 'field_date') {
 
-						$this->html .= '<input type="text" class="datepicker" name="field['.$field_id.'][]" value="'.$arr_form_submission['fields'][$field_id]['field_input']['field_value'].'" />';
-					} else if ($arr_field['field_details']['type'] == 'field_surname') {
-						
-						$arr_split = explode('$|$', $arr_form_submission['fields'][$field_id]['field_input']['field_value']);
-						$this->html .= '<input type="text" name="field['.$field_id.'][0]" title="'.getLabel('lbl_name_insertion').'" value="'.$arr_split[0].'" /><input type="text" name="field['.$field_id.'][1]" value="'.$arr_split[1].'" />';
+						$this->html .= '<input type="text" class="datepicker" name="field['.$field_id.'][]" value="'.strEscapeHTML($arr_form_submission['fields'][$field_id]['field_input']['field_value']).'" />';
 					} else if ($arr_field['field_details']['type'] == 'field_address') {
 						
 						$arr_split = explode('$|$', $arr_form_submission['fields'][$field_id]['field_input']['field_value']);
-						$this->html .= '<input type="text" name="field['.$field_id.'][0]" value="'.$arr_split[0].'" /><input type="text" name="field['.$field_id.'][1]" title="'.getLabel('lbl_address_number').'" value="'.$arr_split[1].'" /><input type="text" name="field['.$field_id.'][2]" title="'.getLabel('lbl_address_number_affix').'" value="'.$arr_split[2].'" />';
+						$this->html .= '<input type="text" name="field['.$field_id.'][0]" value="'.strEscapeHTML($arr_split[0]).'" /><input type="text" name="field['.$field_id.'][1]" title="'.getLabel('lbl_address_number').'" value="'.strEscapeHTML($arr_split[1]).'" /><input type="text" name="field['.$field_id.'][2]" title="'.getLabel('lbl_address_number_affix').'" value="'.strEscapeHTML($arr_split[2]).'" />';
 					} else {
 						
-						$this->html .= '<input type="text" name="field['.$field_id.'][]" value="'.$arr_form_submission['fields'][$field_id]['field_input']['field_value'].'" />';
+						$this->html .= '<input type="text" name="field['.$field_id.'][]" value="'.strEscapeHTML($arr_form_submission['fields'][$field_id]['field_input']['field_value']).'" />';
 					}
 					
 					$this->html .= '</div>
@@ -329,7 +335,7 @@ class cms_form_submissions extends base_module {
 			$return = '<div class="record"><dl>
 				<li>
 					<dt>'.getLabel('lbl_form').'</dt>
-					<dd>'.htmlspecialchars($arr_form_set['details']['name']).'</dd>
+					<dd>'.strEscapeHTML($arr_form_set['details']['name']).'</dd>
 				</li>
 				<li>
 					<dt></dt>
@@ -340,7 +346,7 @@ class cms_form_submissions extends base_module {
 
 					foreach ($arr_form_set['fields'] as $arr_field) {
 												
-						$return .= '<th>'.htmlspecialchars($arr_field['field_details']['label']).'</th>';
+						$return .= '<th>'.strEscapeHTML($arr_field['field_details']['label']).'</th>';
 					}
 					
 					$return .= '</tr><tr>';
@@ -355,13 +361,13 @@ class cms_form_submissions extends base_module {
 								foreach(($arr_field['field_details']['field_sub_table'] ? cms_forms::getFieldSubTableValues($arr_field['field_details']['field_sub_table']) : $arr_field['field_subs']) as $arr_field_sub) {
 									
 									if ($arr_form_submission['fields'][$field_id]['field_subs'][$arr_field_sub['field_sub_id']]['field_sub_value']) {
-										$return .= '<li>'.htmlspecialchars($arr_field_sub['field_sub_label']).'</li>';
+										$return .= '<li>'.strEscapeHTML($arr_field_sub['field_sub_label']).'</li>';
 									}
 								}
 							$return .= '</ul>';
 						} else {
 							
-							$return .= str_replace('$|$', ' ', $arr_form_submission['fields'][$field_id]['field_input']['field_value']);
+							$return .= strEscapeHTML(str_replace('$|$', ' ', $arr_form_submission['fields'][$field_id]['field_input']['field_value']));
 						}
 						
 						$return .= '</td>';
@@ -398,7 +404,7 @@ class cms_form_submissions extends base_module {
 					<fieldset><ul>
 						<li>
 							<label>'.getLabel('lbl_remark').'</label>
-							<div><textarea name="remark">'.$arr_form_submission['submission']['remark'].'</textarea></div>
+							<div><textarea name="remark">'.strEscapeHTML($arr_form_submission['submission']['remark']).'</textarea></div>
 						</li>
 						<li>
 							<label>'.getLabel('lbl_internal_tags').'</label>
@@ -550,7 +556,7 @@ class cms_form_submissions extends base_module {
 						continue;
 					}
 					
-					$arr_data[] = '<span class="limit">'.str_replace('$|$', ' ', $arr_row['field_'.$field_id]).'</span>';
+					$arr_data[] = '<span class="limit">'.str_replace('$|$', ' ', strEscapeHTML($arr_row['field_'.$field_id])).'</span>';
 				}
 				
 				$arr_data[] = date('d-m-Y', strtotime($arr_row['date']));

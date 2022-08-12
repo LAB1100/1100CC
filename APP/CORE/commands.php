@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,14 +13,17 @@
 	
 	$JSON = Response::getObject();
 	
-	if ($_POST['module'] == 'cms_general') {
+	if (empty($_POST['module'])) {
+		
+		// Nothing
+	} else if ($_POST['module'] == 'cms_general') {
 	
 		$general = new cms_general;
 		$general->commands($_POST['method'], $_POST['id'], $_POST['value']);
 		
 		$JSON->html = $general->html;
 	
-	} else if ($_POST['module']) {
+	} else {
 		
 		$module = $_POST['module'];
 		$method = $_POST['method'];
@@ -50,7 +53,7 @@
 			
 			$page_dir = directories::getDirectories(SiteStartVars::$page['directory_id']);
 			
-			error('Request originates from invalid path: '.SiteStartVars::$dir['path'].' => '.htmlspecialchars($module).':'.htmlspecialchars($method).' (using: '.str_replace(' ', '', $page_dir['path']).' '.htmlspecialchars($_POST['mod']).')');
+			error('Request originates from invalid path: '.SiteStartVars::$dir['path'].' => '.strEscapeHTML($module).':'.strEscapeHTML($method).' (using: '.str_replace(' ', '', $page_dir['path']).' '.strEscapeHTML($_POST['mod']).')');
 		}
 
 		$arr = $res->fetchAssoc();
@@ -62,40 +65,52 @@
 
 		if ($module != 'this' && $module != $arr['module']) { // Targetting module other than source module
 			
-			$arr_mod_target = $mod->getExternalModule($module);
 			$module_target = $module;
+			
+			$arr_mod_target = $mod->getExternalModule($module);
+			$arr_mod_target_method = ($arr_mod_target[$method] ?? null);
 			
 			if ($arr_mod_target === null) { // Disallow all
 				
 				$module = false;
-			} else if ($arr_mod_target[$method] === null) { // Allow or disallow method by abstaining
-					
-				if ($arr_mod_target['*'] === false) {
+			} else if ($arr_mod_target_method === true) { // Allow specific method
 				
+				$module = $module;
+			} else if ($arr_mod_target_method === false) { // Disallow specific method
+				
+				$module = false;
+			} else if ($arr_mod_target_method !== null) { // Override
+				
+				if ($arr_mod_target_method['module']) {
+					$module = $arr_mod_target_method['module'];
+				}
+				if ($arr_mod_target_method['method']) {
+					$method = $arr_mod_target_method['method'];
+				}
+			} else if (isset($arr_mod_target['*'])) { // Override any
+				
+				$arr_mod_target_method = $arr_mod_target['*'];
+				
+				if ($arr_mod_target_method === false) {
+					
 					$module = false;
 				} else {
 					
-					$module = $module;
+					if ($arr_mod_target_method['module']) {
+						$module = $arr_mod_target_method['module'];
+					}
+					if ($arr_mod_target_method['method']) {
+						$method = $arr_mod_target_method['method'];
+					}
 				}
-			} else if ($arr_mod_target[$method] === true) { // Allow specific method
+			} else { // Allow by abstaining
 				
 				$module = $module;
-			} else if ($arr_mod_target[$method] === false) { // Disallow specific method
-				
-				$module = false;
-			} else if ($arr_mod_target[$method]) { // Override
-				
-				if ($arr_mod_target[$method]['module']) {
-					$module = $arr_mod_target[$method]['module'];
-				}
-				if ($arr_mod_target[$method]['method']) {
-					$method = $arr_mod_target[$method]['method'];
-				}
 			}
 			
 			if ($module == false) {
 				
-				error('Module '.$arr['module'].' does not allow relaying '.htmlspecialchars($module_target));
+				error('Module '.$arr['module'].' does not allow relaying '.strEscapeHTML($module_target));
 			} else if ($module != 'this' && $module != $arr['module']) {
 				
 				$mod_target = new $module;
@@ -107,7 +122,7 @@
 		
 		$JSON->html =& $mod->html;
 		
-		$method = ($method && $_POST['confirmed'] ? ['method' => $method, 'confirmed' => true] : $method);
+		$method = ($method && !empty($_POST['confirmed']) ? ['method' => $method, 'confirmed' => true] : $method);
 
 		$mod->commands($method, $_POST['id'], $_POST['value']);
 		
@@ -120,7 +135,7 @@
 		
 		$JSON->confirm = $mod->confirm;
 		$JSON->download = $mod->download;
-		$JSON->validate = ($mod->validate && !is_array($mod->validate) ? json_decode($mod->validate) : $mod->validate);
+		$JSON->validate = $mod->validate;
 		$JSON->data = $mod->data;
 		$JSON->refresh_table = $mod->refresh_table;
 		$JSON->reset_form = $mod->reset_form;
@@ -141,5 +156,8 @@
 
 	$JSON = Log::addToObj($JSON);
 	$JSON->timestamp = date('c');
+	if (Settings::get('timing') === true) {
+		$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
+	}
 	
 	Response::stop('', $JSON);

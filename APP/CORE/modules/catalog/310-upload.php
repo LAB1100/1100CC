@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class upload extends base_module {
 	
 	public function contents() {
 				
-		$return .= '<h1>'.getLabel('lbl_upload').' '.getLabel('lbl_file').'</h1>
+		$return = '<h1>'.getLabel('lbl_upload').' '.getLabel('lbl_file').'</h1>
 		
 		<form id="f:upload:upload_file-0">
 			<fieldset><ul>
@@ -56,13 +56,13 @@ class upload extends base_module {
 	
 		if ($method == "upload_file") {
 			
-			$file_upload = new FileStore($_FILES['file'], DIR_SITE_STORAGE.DIR_UPLOAD);
+			$file_upload = new FileStore($_FILES['file'], DIR_SITE_STORAGE.DIR_UPLOAD, FileStore::getSizeLimit(FileStore::STORE_FILE));
 			
 			$arr_result = $file_upload->getDetails();
 						
 			$this->html = '<h2>'.getLabel('lbl_result').'</h2>
 			<div class="record"><dl>
-				<li><dt>URL</dt><dd><a href="'.BASE_URL.DIR_UPLOAD.$arr_result['name'].'">'.BASE_URL.DIR_UPLOAD.$arr_result['name'].'</a></dd></li>
+				<li><dt>URL</dt><dd><a href="'.URL_BASE.DIR_UPLOAD.$arr_result['name'].'">'.URL_BASE.DIR_UPLOAD.$arr_result['name'].'</a></dd></li>
 				<li><dt>Size</dt><dd>'.bytes2String($arr_result['size']).'</dd></li>
 				<li><dt>Type</dt><dd>'.$arr_result['type'].'</dd></li>
 			</dl></div>';

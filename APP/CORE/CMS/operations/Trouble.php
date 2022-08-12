@@ -2,12 +2,22 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class RealTrouble extends Exception {
+	
+	public function setMessage($str) {
+		
+		$this->message = $str;
+	}
+}
+class RealTroubleThrown extends RealTrouble {
+		
+}
+class RealTroubleDB extends RealTrouble {
 		
 }
 
@@ -15,20 +25,20 @@ class Trouble {
 
 	private static $arr_trouble = [
 
-		TROUBLE_ERROR => [['STATUS', 'error'], 'alert'], // Default self-thrown error
+		TROUBLE_ERROR => [['STATUS', 'error'], 'alert', 'RealTroubleThrown'], // Default self-thrown error
 		TROUBLE_FATAL => [['FATAL', 'server_error'], 'alert'], // Fatal code-base error
 		TROUBLE_WARNING => [['WARNING', 'warning'], 'alert'], // Runtime error
 		TROUBLE_NOTICE => [['NOTICE', 'notice'], 'attention'], // Runtime notice
 		TROUBLE_UNKNOWN => [['UNKNOWN', 'unknown'], 'attention'], // Unknown notice
-		TROUBLE_DATABASE => [['DATABASE', 'server_error'], 'alert'], // Database error
+		TROUBLE_DATABASE => [['DATABASE', 'server_error'], 'alert', 'RealTroubleDB'], // Database error
 
-		TROUBLE_ACCESS_DENIED => [['REQUEST', 'access_denied'], 'alert'],
-		TROUBLE_INVALID_REQUEST => [['REQUEST', 'invalid_request'], 'alert'],
-		TROUBLE_REQUEST_LIMIT => [['REQUEST', 'request_limit'], 'alert'],
-		TROUBLE_UNAUTHORIZED_CLIENT => [['REQUEST', 'unauthorized_client'], 'alert']
+		TROUBLE_ACCESS_DENIED => [['REQUEST', 'access_denied'], 'alert', 'RealTroubleThrown'],
+		TROUBLE_INVALID_REQUEST => [['REQUEST', 'invalid_request'], 'alert', 'RealTroubleThrown'],
+		TROUBLE_REQUEST_LIMIT => [['REQUEST', 'request_limit'], 'alert', 'RealTroubleThrown'],
+		TROUBLE_UNAUTHORIZED_CLIENT => [['REQUEST', 'unauthorized_client'], 'alert', 'RealTroubleThrown']
 	];
 		
-	public static function fling($msg = '', $code = 0, $suppress = LOG_BOTH, $debug = false, $exception = null) {
+	public static function fling($msg = '', $code = TROUBLE_ERROR, $suppress = LOG_BOTH, $debug = false, $exception = null) {
 
 		switch ($code) {
 			case TROUBLE_NOTICE:
@@ -38,7 +48,7 @@ class Trouble {
 				
 				$e = self::create($msg, $code, $suppress, $debug, $exception);
 				
-				$suppress = ($suppress ?: (STATE == 'production' && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH));
+				$suppress = ($suppress ?: (STATE == STATE_PRODUCTION && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH));
 				$msg = self::strMsg($e);
 				$debug = self::strDebug($e);
 				
@@ -53,7 +63,7 @@ class Trouble {
 		}
 	}
 	
-	public static function create($msg = '', $code = 0, $suppress = LOG_BOTH, $debug = false, $exception = null) {
+	public static function create($msg = '', $code = TROUBLE_ERROR, $suppress = LOG_BOTH, $debug = false, $exception = null) {
 		
 		$code = ($suppress ? $code + ($suppress * 1000) : $code); // Combine suppression parameter with error code
 
@@ -61,17 +71,19 @@ class Trouble {
 			$msg = $msg.PHP_EOL.self::strMsgSeparator().PHP_EOL.$debug;
 		}
 		
-		return new RealTrouble($msg, $code, $exception);
+		$class = (self::$arr_trouble[$code][2] ?? 'RealTrouble');
+		
+		return new $class($msg, $code, $exception);
 	}
 
 	public static function label($code) {
 		
-		return (self::$arr_trouble[$code] ? self::$arr_trouble[$code][0] : self::$arr_trouble[0][0]);
+		return (isset(self::$arr_trouble[$code]) ? self::$arr_trouble[$code][0] : self::$arr_trouble[0][0]);
 	}
 	
 	public static function type($code) {
 		
-		return (self::$arr_trouble[$code] ? self::$arr_trouble[$code][1] : self::$arr_trouble[0][1]);
+		return (isset(self::$arr_trouble[$code]) ? self::$arr_trouble[$code][1] : self::$arr_trouble[0][1]);
 	}
 	
 	public static function core($code, $msg, $file, $line, $exception = null) {
@@ -158,6 +170,13 @@ class Trouble {
 		$arr_code = self::parseCode($exception);
 		$debug = self::strDebug($exception);
 		
+		if ($arr_code['code'] == TROUBLE_ERROR) {
+			$b_state = Mediator::SHUTDOWN_INIT_SCRIPT;
+		} else {
+			$b_state = Mediator::SHUTDOWN_INIT_SYSTEM;
+		}
+		Mediator::setShutdown((Mediator::getShutdown() & ~Mediator::SHUTDOWN_INIT_UNDETERMINED) | $b_state);
+		
 		if (!Mediator::$in_cleanup) {
 			
 			$msg_log = Labels::getSystemLabel('msg_error');
@@ -200,7 +219,7 @@ class Trouble {
 			$code = ($code % 1000); // Remainder
 		} else {
 			
-			$suppress = ($code >= TROUBLE_FATAL && $code <= TROUBLE_DATABASE && STATE == 'production' && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH);
+			$suppress = ($code >= TROUBLE_FATAL && $code <= TROUBLE_DATABASE && STATE == STATE_PRODUCTION && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH);
 		}
 		
 		return ['code' => $code, 'suppress' => $suppress];
@@ -333,7 +352,7 @@ class Trouble {
 	
 		// Thrown error handler
 		
-		Mediator::$shutdown = 'soft'; // End of script, we're dealing with uncaught errors
+		Mediator::setShutdown(MEDIATOR::SHUTDOWN_SOFT | Mediator::SHUTDOWN_INIT_UNDETERMINED); // End of script, we're dealing with uncaught errors
 		
 		$obj = Response::getObject();
 		unset($obj->data, $obj->html, $obj->data_feedback);
@@ -349,16 +368,33 @@ class Trouble {
 	}
 	
 	public static function runtime($code, $msg, $file, $line) {
-	
+		
 		// Runtime errors
-			
-		if (!(error_reporting() & $code)) { // if error was suppressed with the @-operator, error code is not included in error_reporting
+
+		// Return false to execute the PHP internal error handler
+		/*if (!(error_reporting() & $code)) { // if error was suppressed with the @-operator, error_reporting() does not report error flags
 			return false;
+		}*/
+		
+		// Coding style: Ignore undefined array indexes. Make sure to poperly check essential arrays, but ignore possible subsequent exceptions.
+		if (strStartsWith($msg, 'Undefined array key') || strStartsWith($msg, 'Trying to access array offset on value of type')) {
+			$code = E_NOTICE;
+		}
+		if (strStartsWith($msg, 'Undefined index:') || strStartsWith($msg, 'Undefined offset:')) { // PHP 7.x
+			$code = E_NOTICE;
+		}
+		// Code has to be fixed
+		if (strStartsWith($msg, 'Undefined variable $')) {
+			$code = E_NOTICE;
+		}
+
+		//if (($code == E_NOTICE || $code == E_DEPRECATED) && STATE == STATE_PRODUCTION) {
+		if ($code == E_NOTICE || ($code == E_DEPRECATED && STATE == STATE_PRODUCTION)) {
+			return true;
 		}
 
 		self::core($code, $msg, $file, $line); // Depending on the $code, it might or might not throw an error
-		
-		// Don't execute PHP internal error handler
+
 		return true;
 	}
 	
@@ -372,7 +408,7 @@ class Trouble {
 			case E_COMPILE_ERROR:
 			case E_COMPILE_WARNING:
 				
-				Mediator::$shutdown = 'hard';
+				Mediator::setShutdown(MEDIATOR::SHUTDOWN_HARD | Mediator::SHUTDOWN_INIT_SYSTEM);
 				
 				$obj = Response::getObject();
 				unset($obj->data, $obj->html, $obj->data_feedback);

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -19,7 +19,7 @@ class cms_users extends base_module {
 	
 	public function contents() {
 	
-		$return .= '<div class="section"><h1 id="x:cms_users:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup user_add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_users:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup user_add" value="add" /></h1>
 		<div class="section-body">';
 		
 			$return .= '<table class="list">
@@ -95,11 +95,11 @@ class cms_users extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_user['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_user['name']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_username').'</label>
-						<div><input type="text" name="uname" value="'.htmlspecialchars($arr_user['uname']).'" /></div>
+						<div><input type="text" name="uname" value="'.strEscapeHTML($arr_user['uname']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_image').'</label>
@@ -111,7 +111,7 @@ class cms_users extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_email').'</label>
-						<div><input type="text" name="email" value="'.htmlspecialchars($arr_user['email']).'" /></div>
+						<div><input type="text" name="email" value="'.strEscapeHTML($arr_user['email']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_password').'</label>

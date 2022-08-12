@@ -2,22 +2,24 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class CMSLogin {
 	
-	static public function index() {
+	public static function index() {
 		
-		if (SiteStartVars::$cms_vars[1] == 'logout') {
+		$str_page = (SiteStartVars::$arr_cms_vars[1] ?? '');
+		
+		if ($str_page == 'logout') {
 			
 			$_SESSION = [];
 			session_destroy();
 			
-			Response::location(BASE_URL.'/');
-		} else if ($_SESSION['USER_ID'] && !isset($_POST['login_ww']) && !isset($_POST['login_user'])) {
+			Response::location(URL_BASE.'/');
+		} else if (!empty($_SESSION['USER_ID']) && !isset($_POST['login_user']) && !isset($_POST['login_ww'])) {
 
 			self::updateLogin();
 		} else if (isset($_POST['login_user']) && isset($_POST['login_ww'])) {		
@@ -29,16 +31,16 @@ class CMSLogin {
 		}
 	}
 		
-	static private function toLogin($error = false) {
+	private static function toLogin($error = false) {
 	
 		if (!$error) {
-			$_SESSION['RETURN_TO'] = ($_SERVER['PATH_VIRTUAL'] ?: $_SERVER['PATH_INFO']);
+			$_SESSION['RETURN_TO'] = (!empty($_SERVER['PATH_VIRTUAL']) ? $_SERVER['PATH_VIRTUAL'] : $_SERVER['PATH_INFO']);
 		}
 		
 		Response::location('/login/'.($error ? 'LOGIN_INCORRECT' : ''));
 	}
 	
-	static private function updateLogin() {
+	private static function updateLogin() {
 		
 		$arr_user = cms_users::getCMSUsers($_SESSION['USER_ID'], $_SESSION['CORE']);
 		
@@ -67,9 +69,12 @@ class CMSLogin {
 		}
 	}
 	
-	static private function checkLogin($username, $password) {
+	private static function checkLogin($username, $password) {
 	
 		SiteStartVars::checkCookieSupport();
+		
+		$username = (is_string($username) ? $username : '');
+		$password = (is_string($password) ? $password : '');
 				
 		$check = Log::checkRequest('login_cms', $username, 10, ['identifier' => 2, 'ip' => 4, 'ip_block' => 4, 'global' => 50]);
 		
@@ -136,7 +141,7 @@ class CMSLogin {
 			
 			Log::logRequest('login_cms', $username);
 			
-			self::toLogin(true);	
+			self::toLogin(true);
 		}
 	}
 }

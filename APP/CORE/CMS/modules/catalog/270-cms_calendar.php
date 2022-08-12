@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -26,7 +26,7 @@ class cms_calendar extends base_module {
 
 	public function contents() {
 
-		$return .= '<div class="section"><h1 id="x:cms_calendar:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_calendar:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
 		<div class="calendar">';
 				
 		$return .= '<div class="options filter">
@@ -107,7 +107,7 @@ class cms_calendar extends base_module {
 						}
 
 						$arr_classes = array_filter([(($cur_day < 1 || $cur_day > $days_in_month) ? 'day-outside-month' : ''), ($cur_date == date('Y-m-d') ? 'today active' : '')]);
-						$return .= '<td'.($arr_names ? ' title="'.htmlspecialchars(implode('<br />', $arr_names)).'"' : '').($arr_classes ? ' class="'.implode(" ", $arr_classes).'"' : '').'><div class="indicator'.($arr_events_date ? ' active' : '').'">'.(count($arr_events_date) ?: '').'</div>'.($str_colors ? '<ul class="colors">'.$str_colors.'</ul>' : '').date("d", $cur_time).'<input type="hidden" id="y:cms_calendar:view_day-'.$cur_time.'" value="'.$cur_time.'" /></td>';
+						$return .= '<td'.($arr_names ? ' title="'.strEscapeHTML(implode('<br />', $arr_names)).'"' : '').($arr_classes ? ' class="'.implode(" ", $arr_classes).'"' : '').'><div class="indicator'.($arr_events_date ? ' active' : '').'">'.(count($arr_events_date) ?: '').'</div>'.($str_colors ? '<ul class="colors">'.$str_colors.'</ul>' : '').date("d", $cur_time).'<input type="hidden" id="y:cms_calendar:view_day-'.$cur_time.'" value="'.$cur_time.'" /></td>';
 					}
 								
 				$return .= '</tr>';
@@ -286,7 +286,7 @@ class cms_calendar extends base_module {
 				<table>
 					<tr>
 						<td>'.getLabel('lbl_name').'</td>
-						<td><input type="text" name="name" value="'.htmlspecialchars($arr_event_set['details']['name']).'"></td>
+						<td><input type="text" name="name" value="'.strEscapeHTML($arr_event_set['details']['name']).'"></td>
 					</tr>
 					<tr>
 						<td>'.getLabel('lbl_date').'</td>
@@ -336,7 +336,7 @@ class cms_calendar extends base_module {
 				</table>
 				</form>';
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 				
 		// POPUP INTERACT

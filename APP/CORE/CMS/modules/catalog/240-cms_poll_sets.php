@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -27,7 +27,7 @@ class cms_poll_sets extends base_module {
 
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_poll_sets:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_poll_sets:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
 		<div class="poll_sets">';
 
 			$return .= '<table class="display" id="d:cms_poll_sets:data-0">
@@ -129,7 +129,7 @@ class cms_poll_sets extends base_module {
 					$this->html .= '</tr>
 					<tr>
 						<td>'.getLabel('lbl_label').'</td>
-						<td><textarea name="label">'.htmlspecialchars($row['label']).'</textarea></td>
+						<td><textarea name="label">'.strEscapeHTML($row['label']).'</textarea></td>
 					</tr>';
 					if ($mode == "insert") {
 						
@@ -165,7 +165,7 @@ class cms_poll_sets extends base_module {
 				</table>
 				</form>';
 			
-			$this->validate = '{"label": "required", "date": "required"}';
+			$this->validate = ['label' => 'required', 'date' => 'required'];
 		}
 		
 		// POPUP INTERACT
@@ -221,7 +221,7 @@ class cms_poll_sets extends base_module {
 				$arr_data['id'] = 'x:cms_poll_sets:poll_set_id-'.$arr_row['id'];
 				$arr_data[] = '<span class="icon" data-category="status">'.getIcon((DBFunctions::unescapeAs($arr_row['enabled'], DBFunctions::TYPE_BOOLEAN) ? 'tick' : 'min')).'</span>';
 				$arr_data[] = $arr_row['label'];
-				$arr_data[] = '<span class="info"><span class="icon" title="'.($arr_row['options_combined'] ? htmlspecialchars('<ul>'.$arr_row['options_combined'].'</ul>') : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.$arr_row['set_vote_count'].'</span></span>';
+				$arr_data[] = '<span class="info"><span class="icon" title="'.($arr_row['options_combined'] ? strEscapeHTML('<ul>'.$arr_row['options_combined'].'</ul>') : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.$arr_row['set_vote_count'].'</span></span>';
 				$arr_data[] = date('d-m-Y', strtotime($arr_row['date']));
 				
 				if (count($arr_polls) > 1) {

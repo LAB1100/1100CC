@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class intf_user_management extends user_management {
 	
 	public function contents() {
 		
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div class="user_management">';
 					
 			$res = DB::query("SELECT *
@@ -84,7 +84,9 @@ class intf_user_management extends user_management {
 	public static function css() {
 	
 		$return = '#frm-user_management input[name=password] { width: 130px; }
-				#frm-user_management [name=password] + .icon { margin-left: 4px; cursor: pointer; }
+				#frm-user_management [name=password] + .icon { margin-left: 4px; }
+				#frm-user_management .password-url { font-family: var(--font-mono); cursor: pointer; }
+				#frm-user_management .password-url.pulse { background-color: transparent; color: var(--highlight); }
 				#frm-user_management input[name=street] { width: 115px; }
 				#frm-user_management input[name=streetnr] { margin-left: 5px; width: 30px; }
 				#frm-user_management .icon[id*=popup_user_clearance] { cursor: pointer; }
@@ -102,13 +104,21 @@ class intf_user_management extends user_management {
 	
 		$return = "SCRIPTER.dynamic('#frm-user_management', function(elm_scripter) {
 		
-			elm_scripter.on('click', '[name=password] + .icon', function() {
-				$(this).quickCommand(elm_scripter.find('input[name=password]'));
+			elm_scripter.on('click', '[name=password] + button', function() {
+				
+				COMMANDS.quickCommand(this, elm_scripter.find('input[name=password]'));
+			}).on('click', '.password-url', function() {
+				
+				navigator.clipboard.writeText(this.textContent);
+				new Pulse(this, {duration: 500});
 			}).on('click', '[id^=y\\\:intf_user_management\\\:popup_user_clearance-]', function() {
+				
 				var elm_target = $(this).prev('input');
+				
 				COMMANDS.setData(this, {clearance: elm_target.val()});
 				COMMANDS.setTarget(this, elm_target);
-				$(this).popupCommand();
+				
+				COMMANDS.popupCommand(this);
 			})
 		});";
 		
@@ -120,20 +130,32 @@ class intf_user_management extends user_management {
 		// POPUP
 		
 		if ($method == "edit" || $method == "add") {
+			
+			$arr_row = [];
+			$str_url_account = false;
 		
 			if ($method == "edit" && (int)$id) {
 			
 				$arr_row = user_groups::getUserData($id, true);
-			
+				$arr_user_account = user_management::getUserAccount($id);
+				
 				$user_group_id = $arr_row[DB::getTableName('TABLE_USERS')]['group_id'];
-
+				
+				if ($arr_user_account['passkey']) {
+					
+					$arr_mod = pages::getClosestMod('login', 0, 0, $user_group_id);
+					
+					$str_url_account = pages::getModUrl($arr_mod).'welcome/'.$id.'/'.$arr_user_account['passkey'];
+				}
+				
 				$mode = "update";
 			} else if ($method == "add" && (int)$id) {
-			
+				
 				$user_group_id = $id;
 			
 				$mode = "insert";
 			} else {
+				
 				error('missing ID');
 			}
 
@@ -150,26 +172,33 @@ class intf_user_management extends user_management {
 				<hr />
 				<ul>';
 					if ($arr_row[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] !== null) {
+						
 						$this->html .= '<li>
 							<label>'.getLabel('lbl_clearance').'</label>
-							<div><input type="hidden" name="col['.DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id]" value="'.htmlspecialchars(json_encode(array_keys($arr_row[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]))).'" /><span id="y:intf_user_management:popup_user_clearance-'.$user_group_id.'" class="icon" title="'.getLabel('inf_set_user_clearance').'">'.getIcon('clearance').'</span></div>
+							<div>'
+								.'<input type="hidden" name="col['.DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id]" value="'.strEscapeHTML(value2JSON(array_keys($arr_row[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]))).'" />'
+								.'<button type="button" id="y:intf_user_management:popup_user_clearance-'.$user_group_id.'" title="'.getLabel('inf_set_user_clearance').'"><span class="icon">'.getIcon('clearance').'</span></button>'
+							.'</div>
 						</li>';
 					}
 					$this->html .= '<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_row[DB::getTableName('TABLE_USERS')]['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_row[DB::getTableName('TABLE_USERS')]['name']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_username').'</label>
-						<div><input type="text" name="uname" value="'.htmlspecialchars($arr_row[DB::getTableName('TABLE_USERS')]['uname']).'" /></div>
+						<div><input type="text" name="uname" value="'.strEscapeHTML($arr_row[DB::getTableName('TABLE_USERS')]['uname']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_password').'</label>
-						<div><input type="text" name="password" value="" /><span id="y:intf_user_management:gen_password-0" class="icon" title="'.getLabel('inf_generate_password').'">'.getIcon('refresh').'</span></div>
+						<div>'
+							.'<input type="text" name="password" value="" /><button type="button" id="y:intf_user_management:gen_password-0" title="'.getLabel('inf_generate_password').'"><span class="icon">'.getIcon('refresh').'</span></button>'
+							.$html_url_account
+						.'</div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_email').'</label>
-						<div><input type="text" name="email" value="'.htmlspecialchars($arr_row[DB::getTableName('TABLE_USERS')]['email']).'" /></div>
+						<div><input type="text" name="email" value="'.strEscapeHTML($arr_row[DB::getTableName('TABLE_USERS')]['email']).'" /></div>
 					</li>';
 					if ($arr_user_group['parent_id']) {
 						
@@ -178,9 +207,31 @@ class intf_user_management extends user_management {
 							<div><input type="hidden" name="parent_id" value="'.$arr_row[DB::getTableName('TABLE_USERS')]['parent_id'].'" /><input type="text" id="y:intf_user_management:lookup_parent_user-'.$arr_user_group['parent_id'].'" class="autocomplete" value="'.$arr_row[DB::getTableName('VIEW_USER_PARENT')]['parent_name'].'" /></div>
 						</li>';
 					}
+					if ($str_url_account) {
+						
+						$this->html .= '<li>
+							<label>'.getLabel('lbl_account').' '.getLabel('lbl_url').'</label>
+							<div>
+								<div class="hide-edit hide">'
+									.'<div class="password-url" title="'.getLabel('inf_copy_click').'">'.$str_url_account.'</div>'
+								.'</div>'
+								.'<input type="button" class="data neutral" value="show" />
+							</div>
+						</li>';
+					}
 					$this->html .= '<li>
-						<label></label>
-						<div><label title="'.getLabel('inf_send_confirmation_email').'"><input type="checkbox" name="confirm_mail" value="1" /><span>'.getLabel('lbl_email').'</span></label></div>
+						<label>'.getLabel('lbl_send').'</label>
+						<div>';
+							if ($mode == 'update') {
+								
+								$arr_email_options = [['id' => '', 'name' => getLabel('lbl_no').' '.getLabel('lbl_email')], ['id' => static::MAIL_ACCOUNT, 'name' => getLabel('lbl_send_account'), 'title' => getLabel('inf_send_account_confirmation')], ['id' => static::MAIL_ACCOUNT_PASSWORD, 'name' => getLabel('lbl_send_account_password'), 'title' => getLabel('inf_send_account_confirmation')]];
+								
+								$this->html .= cms_general::createSelectorRadioList($arr_email_options, 'send_mail');
+							} else {
+								
+								$this->html .= '<label title="'.getLabel('inf_send_account_confirmation').'"><input type="checkbox" name="send_mail" value="'.static::MAIL_ACCOUNT.'" /><span>'.getLabel('lbl_send_account').'</span></label>';
+							}
+						$this->html .= '</div>
 					</li>
 				</ul>
 				<hr />
@@ -203,7 +254,7 @@ class intf_user_management extends user_management {
 										}
 										$this->html .= cms_general::createMultiSelect('col['.$arr_column['SOURCE_TABLE_NAME'].'.'.$arr_column['SOURCE_COLUMN_NAME'].']', 'y:intf_user_management:lookup_table-'.$arr_column['TABLE_NAME'].'.'.$arr_column['LINK_COLUMN_NAME'].'.'.$arr_column['COLUMN_NAME'], $arr_tags);
 									} else {
-										$this->html .= '<input type="hidden" name="col['.$arr_column['SOURCE_TABLE_NAME'].'.'.$arr_column['SOURCE_COLUMN_NAME'].']" value="'.htmlspecialchars($arr_row[$arr_column['SOURCE_TABLE_NAME']][$arr_column['SOURCE_COLUMN_NAME']]).'" /><input type="text" id="y:intf_user_management:lookup_table-'.$arr_column['TABLE_NAME'].'.'.$arr_column['LINK_COLUMN_NAME'].'.'.$arr_column['COLUMN_NAME'].'" class="autocomplete" value="'.htmlspecialchars($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]).'" />';
+										$this->html .= '<input type="hidden" name="col['.$arr_column['SOURCE_TABLE_NAME'].'.'.$arr_column['SOURCE_COLUMN_NAME'].']" value="'.strEscapeHTML($arr_row[$arr_column['SOURCE_TABLE_NAME']][$arr_column['SOURCE_COLUMN_NAME']]).'" /><input type="text" id="y:intf_user_management:lookup_table-'.$arr_column['TABLE_NAME'].'.'.$arr_column['LINK_COLUMN_NAME'].'.'.$arr_column['COLUMN_NAME'].'" class="autocomplete" value="'.strEscapeHTML($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]).'" />';
 									}
 								} else {
 									$arr_class = [];
@@ -214,7 +265,7 @@ class intf_user_management extends user_management {
 											$value_column = date('d-m-Y'.($arr_column['DATA_TYPE'] == 'datetime' ? ' h:i:s' : ''), ($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']] ? strtotime($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]) : time()));
 											break;
 										default:
-											$value_column = htmlspecialchars($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]);
+											$value_column = strEscapeHTML($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]);
 									}
 									$this->html .= '<input type="text" '.($arr_class ? ' class="'.implode(" ", $arr_class).'"' : '').'name="col['.$arr_column['TABLE_NAME'].'.'.$arr_column['COLUMN_NAME'].']" value="'.$value_column.'" />';
 								}
@@ -331,7 +382,7 @@ class intf_user_management extends user_management {
 		
 		if ($method == "return_user_clearance") {
 			
-			$this->html = ($_POST['pages'] ? json_encode(array_keys($_POST['pages'])) : '');
+			$this->html = ($_POST['pages'] ? value2JSON(array_keys($_POST['pages'])) : '');
 		}
 		
 		// DATATABLE
@@ -364,9 +415,9 @@ class intf_user_management extends user_management {
 			
 			$arr_sql_columns_as[] = $sql_table.'.id';
 						
-			foreach ($arr_tables as $key => $value) {
+			foreach ($arr_tables as $key => $arr_table) {
 				
-				$sql_table .= " LEFT JOIN ".$key." ON (".$key.".".$value['to_column']." = ".$value['from_table'].".".$value['from_column'].") ";
+				$sql_table .= " LEFT JOIN ".$key." ON (".$key.".".$arr_table['to_column']." = ".$arr_table['from_table'].".".$arr_table['from_column'].") ";
 			}
 			
 			$sql_where = "group_id = ".(int)$id."";
@@ -417,7 +468,7 @@ class intf_user_management extends user_management {
 	
 		if ($method == "insert") {
 		
-			$new_user = self::addUser($_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'group_id' => $id, 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (bool)$_POST['confirm_mail']);
+			$new_user = self::addUser($_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'group_id' => $id, 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (bool)$_POST['send_mail']);
 			
 			self::updateUserLinkedData($new_user['id'], $_POST['col']);
 											
@@ -427,7 +478,7 @@ class intf_user_management extends user_management {
 		
 		if ($method == "update" && (int)$id) {
 
-			$update_user = self::updateUser($id, $_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (bool)$_POST['confirm_mail']);
+			$update_user = self::updateUser($id, $_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (int)$_POST['send_mail']);
 			
 			$_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'] = ($_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'] ? array_filter(json_decode($_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'], true)) : []);
 			

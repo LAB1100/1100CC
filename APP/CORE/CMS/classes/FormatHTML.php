@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -32,6 +32,16 @@ class FormatHTML {
 	public function getHTML() {
 		
 		$this->html = self::closeHTMLDocument($this->doc);
+		
+		$this->html = str_replace("  ", " &#160;", $this->html); // Maintain spacing
+		$this->html = str_replace("\t", '<span class="tab"></span>', $this->html); // Tab
+		
+		return $this->html;
+	}
+	
+	public function getXHTML() {
+		
+		$this->html = self::closeXHTMLDocument($this->doc);
 		
 		$this->html = str_replace("  ", " &#160;", $this->html); // Maintain spacing
 		$this->html = str_replace("\t", '<span class="tab"></span>', $this->html); // Tab
@@ -118,19 +128,24 @@ class FormatHTML {
 	
 	private function handleNewlines() {
 	
-		$this->html = preg_replace("/>\s*\n+/si", "><OutputNewline>", $this->html); // Clean newlines between tags
+		$this->html = preg_replace("/>\s*\n+/si", '><OutputNewline>', $this->html); // Keep and clean newlines between tags
 		$this->html = nl2br($this->html); // Add the newlines
-		$this->html = str_replace("<OutputNewline>", "\n", $this->html); // Restore newlines in output
+		$this->html = str_replace('<OutputNewline>', "\n", $this->html); // Restore newlines in output
 	}
 	
-	static public function openHTMLDocument($html) {
+	public static function openHTMLDocument($html) {
 	
 		$html = '<div>'.$html.'</div>'; // Wrap in <div>
 
-		libxml_use_internal_errors(true);
 		$doc = new DOMDocument();
 		$doc->strictErrorChecking = false;
-		$doc->loadHTML('<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body>'.$html.'</body></html>');
+		
+		try {
+			$doc->loadHTML('<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body>'.$html.'</body></html>');
+		} catch (Exception $e) {
+			
+		}
+		
 		// Remove <!DOCTYPE 
 		$doc->removeChild($doc->firstChild);
 		// Remove <html><head></head><body></body></html> 
@@ -139,16 +154,65 @@ class FormatHTML {
 		return $doc;
 	}
 	
-	static public function closeHTMLDocument($doc) {
+	public static function closeHTMLDocument($doc) {
 	
 		$html = $doc->saveHTML($doc->firstChild); // Read from first child to prevent character encoding
+
 		$html = substr($html, 5, -6); // Remove wrapper <div>
 
 		return $html;
 	}
 	
+	public static function closeXHTMLDocument($doc) {
+
+		$html = $doc->saveXML($doc->firstChild); // Read from first child to prevent character encoding
+		
+		$html = substr($html, 5, -6); // Remove wrapper <div>
+
+		return $html;
+	}
+	
+	public static function getTextContent($text) {
+		
+		// replace <br> with spaces so that Text<br>Text becomes two words
+		$text = preg_replace('/\<br(\s*)?\/?\>/i', ' ', $text);
+
+		// add extra space between tags, e.g. <p>Text</p><p>Text</p>
+		$text = str_replace('><', '> <', $text);
+
+		// only now remove all HTML tags
+		$text = self::strip($text);
+
+		// replace all tabs, newlines, and carrriage returns with spaces
+		$text = str_replace(["\t", "\n", "\r"], ' ', $text);
+
+		// replace entities with plain spaces
+		$text = str_replace(['&#20;', '&#160;', '&nbsp;'], ' ', $text);
+
+		// collapse whitespace
+		$text = preg_replace('/\s\s+/', ' ', $text);
+
+		return $text;
+	}
+	
+	public static function strip($text) {
+		
+		$text = strip_tags($text);
+		
+		return $text;
+	}
+	
+	public static function test($str) {
+		
+		// Crude test to check if string contains possible set of html tags
+		
+		$has_html = (strpos($str, '<') !== false && ((strpos($str, '</') !== false && substr_count($str, '>') > 1) || strpos($str, '/>') !== false) && preg_match('/<[a-zA-Z]+(?:[\s\S]+=[\'"][\s\S]+>|>)/', $str) === 1);
+		
+		return $has_html;
+	}
+	
 	// https://codex.wordpress.org/Function_Reference/wpautop
-	static public function autoP($pee, $br = true) {
+	public static function autoP($pee, $br = true) {
 		
 		$pre_tags = [];
 		if (trim($pee) === '') {
@@ -250,7 +314,7 @@ class FormatHTML {
 			// Normalize <br>
 			$pee = str_replace(['<br>', '<br/>'], '<br />', $pee);
 			// Replace any new line characters that aren't preceded by a <br /> with a <br />.
-			$pee = preg_replace('|(?<!<br />)\s*\n|', "<br />\n", $pee);
+			$pee = preg_replace('|(?<!<br />)\s*\n|', "<br />", $pee);
 			// Replace newline placeholders with newlines.
 			$pee = str_replace('<PreserveNewline />', "\n", $pee);
 		}

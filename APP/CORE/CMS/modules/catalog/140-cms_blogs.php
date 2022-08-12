@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class cms_blogs extends base_module {
 	
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_blogs:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup blog_add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_blogs:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup blog_add" value="add" /></h1>
 		<div class="blogs">';
 
 			$res = DB::query("SELECT
@@ -74,7 +74,7 @@ class cms_blogs extends base_module {
 							$return .= '<tr id="x:cms_blogs:blog_id-'.$arr_row['id'].'">
 								<td>'.$arr_row['name'].'</td>
 								<td><span class="info"><span class="icon" title="'.($arr_paths ? implode('<br />', $arr_paths) : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.count($arr_paths).'</span></span></td>
-								<td><span class="info"><span class="icon" title="'.(htmlspecialchars($arr_row['blog_posts']) ?: getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.(int)$arr_row['blog_post_count'].'</span></span></td>
+								<td><span class="info"><span class="icon" title="'.(strEscapeHTML($arr_row['blog_posts']) ?: getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.(int)$arr_row['blog_post_count'].'</span></span></td>
 								<td><input type="button" class="data edit popup blog_edit" value="edit" /><input type="button" class="data del msg blog_del" value="del" /></td>
 							</tr>';
 						}
@@ -124,12 +124,12 @@ class cms_blogs extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr['name']).'"></div>
 					</li>		
 				</ul></fieldset>
 			</form>';
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		// POPUP INTERACT
@@ -173,12 +173,12 @@ class cms_blogs extends base_module {
 			
 			$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_BLOGS')." WHERE id = ".(int)$blog_id."");
 			
-			$arr = $res->fetchAssoc();			
+			$arr = ($res->fetchAssoc() ?: []);
 		} else {
 			
 			$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_BLOGS')." ORDER BY id");
 			
-			while($row = $res->fetchAssoc()) {
+			while ($row = $res->fetchAssoc()) {
 				$arr[] = $row;
 			}
 		}

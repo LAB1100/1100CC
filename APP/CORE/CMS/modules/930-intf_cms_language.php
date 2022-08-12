@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -152,10 +152,9 @@ class intf_cms_language extends cms_language {
 	
 	public static function css() {
 	
-		$return = '.cms_language .list tr > :first-child { padding: 1px 4px 1px 4px; }
-			.cms_language .list tr > :first-child img { vertical-align: middle; }
-			
-			#frm-language > fieldset { display: inline-block; vertical-align: top; }';
+		$return = '			
+			#frm-language > fieldset { display: inline-block; vertical-align: top; }
+		';
 		
 		return $return;
 	}
@@ -236,11 +235,11 @@ class intf_cms_language extends cms_language {
 					}
 					$this->html .= '<li>
 						<label>Code</label>
-						<div><input type="text" name="lang_code" value="'.htmlspecialchars($row['lang_code']).'" /></div>
+						<div><input type="text" name="lang_code" value="'.strEscapeHTML($row['lang_code']).'" /></div>
 					</li>
 					<li>
 						<label>Label</label>
-						<div><input type="text" name="label" value="'.htmlspecialchars($row['label']).'" /></div>
+						<div><input type="text" name="label" value="'.strEscapeHTML($row['label']).'" /></div>
 					</li>';
 					if ($mode == 'language_cms_insert' || $mode == 'language_cms_update') {
 						
@@ -255,16 +254,14 @@ class intf_cms_language extends cms_language {
 				$this->html .= '</ul></fieldset>
 			</form>';
 			
-			$this->validate = json_encode(
-				[
-					'lang_code' => ['required' => "function() {
-						return (!$('[name=\"copy\"]').val());
-					}"],
-					'label' => ['required' => "function() {
-						return (!$('[name=\"copy\"]').val());
-					}"]
-				]
-			);
+			$this->validate = [
+				'lang_code' => ['required' => 'function() {
+					return (!$(\'[name="copy"]\').val());
+				}'],
+				'label' => ['required' => 'function() {
+					return (!$(\'[name="copy"]\').val());
+				}']
+			];
 		}
 				
 		// QUERY

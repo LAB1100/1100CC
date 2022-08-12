@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -17,6 +17,7 @@ class messaging extends base_module {
 	}
 	
 	public static function moduleVariables() {
+		
 		$return = '<input type="checkbox" name="cms_only" data-group="allow" class="unique" value="1" title="'.getLabel('lbl_cms_only').'" />'
 		.'<input type="checkbox" name="user_group" data-group="allow" value="1" title="'.getLabel('lbl_user_group').'" />'
 		.'<input type="checkbox" name="parent" data-group="allow" value="1" title="'.getLabel('lbl_parent').'" />'
@@ -46,7 +47,7 @@ class messaging extends base_module {
 
 	public function contents() {
 				
-		$return .= '<h1>'.getLabel('lbl_messaging').'</h1>'
+		$return = '<h1>'.getLabel('lbl_messaging').'</h1>'
 		
 		.'<menu><input type="button" id="y:messaging:inbox-0" value="'.getLabel('lbl_inbox').'" /><input type="button" id="y:messaging:new-0" value="'.getLabel('lbl_new').' '.getLabel('lbl_conversation').'" /></menu>'
 		
@@ -57,7 +58,7 @@ class messaging extends base_module {
 	
 	private static function createConversationList() {
 
-		$return .= '<table class="conversations display" id="d:messaging:data-0">
+		$return = '<table class="conversations display" id="d:messaging:data-0">
 			<thead> 
 				<tr>							
 					<th>'.getLabel('lbl_user').'</th>
@@ -76,7 +77,7 @@ class messaging extends base_module {
 					<td colspan="5" class="empty">'.getLabel('msg_loading_server_data').'</td>
 				</tr>
 			</tbody>
-			</table>';
+		</table>';
 		
 		return $return;
 	}
@@ -107,14 +108,14 @@ class messaging extends base_module {
 		}
 		
 		if (!$conversation_id || $is_owner) {
-			$str_subject = '<input type="text" name="subject" value="'.htmlspecialchars($arr_conversation_set['details']['subject']).'" />';
+			$str_subject = '<input type="text" name="subject" value="'.strEscapeHTML($arr_conversation_set['details']['subject']).'" />';
 			$str_participants = cms_general::createMultiSelect('participants', 'y:messaging:lookup_user-'.(int)$conversation_id, $arr_participants_selected);
 		} else {
-			$str_subject = '<span>'.htmlspecialchars($arr_conversation_set['details']['subject']).'</span>';
+			$str_subject = '<span>'.strEscapeHTML($arr_conversation_set['details']['subject']).'</span>';
 			$str_participants = implode(", ", $arr_participants_selected);
 		}
 	
-		$return .= '<form class="conversation" id="f:messaging:'.($conversation_id ? 'update-'.$conversation_id : 'insert-0').'">
+		$return = '<form class="conversation" id="f:messaging:'.($conversation_id ? 'update-'.$conversation_id : 'insert-0').'">
 			
 			<fieldset><ul>
 				<li><label>'.getLabel('lbl_subject').'</label>'.$str_subject.'</li>
@@ -126,7 +127,7 @@ class messaging extends base_module {
 				if ($conversation_id) {
 					foreach ($arr_conversation_set['messages'] as $key => $value) {
 						$return .= '<li'.($value['message_user_id'] == $_SESSION['USER_ID'] ? ' class="own"' : '').'>
-							<cite><span>'.(htmlspecialchars($value['message_user_name']) ?: '[x]').'</span><span>'.date('d-m-Y H:i', strtotime($value['message_date'])).'</span></cite>
+							<cite><span>'.(strEscapeHTML($value['message_user_name']) ?: '[x]').'</span><span>'.date('d-m-Y H:i', strtotime($value['message_date'])).'</span></cite>
 							<div class="body">'.parseBody($value['message_body']).'</div>
 						</li>';
 					}
@@ -320,7 +321,7 @@ class messaging extends base_module {
 				$arr_data['attr']['data-method'] = 'view';
 			
 				$arr_data[] = $arr_row['last_message_user_name'];
-				$arr_data[] = '<span>'.htmlspecialchars($arr_row['subject']).'</span><span class="body"> - '.strip_tags($arr_row['last_message_body']).'</span>';
+				$arr_data[] = '<span>'.strEscapeHTML($arr_row['subject']).'</span><span class="body"> - '.strip_tags($arr_row['last_message_body']).'</span>';
 				$arr_data[] = (int)$arr_row['message_count'];
 				$arr_data[] = ($arr_row['participant_user_groups'] ? '' : $arr_row['participants']);
 				$arr_data[] = date('d-m-Y H:i', strtotime($arr_row['last_message_activity']));
@@ -432,6 +433,7 @@ class messaging extends base_module {
 		");
 		
 		$row = $res->fetchRow();
+		
 		return $row[0];
 	}
 		

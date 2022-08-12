@@ -2,28 +2,44 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class Mediator {
-		
-	public static $shutdown = false;
+	
+	const SHUTDOWN_SILENT = 1;
+	const SHUTDOWN_SOFT = 2;
+	const SHUTDOWN_HARD = 4;
+	
+	const SHUTDOWN_INIT_UNDETERMINED = 8;
+	const SHUTDOWN_INIT_SCRIPT = 16;
+	const SHUTDOWN_INIT_SYSTEM = 32;
+	
 	public static $in_cleanup = false;
+
+	protected static $shutdown = false;
 	
-	private static $arr_events = [];
-	private static $arr_processes = [];
-	private static $arr_locks = [];
+	protected static $arr_events = [];
+	protected static $arr_processes = [];
+	protected static $arr_locks = [];
 	
-	private static $run_module = false;
-	private static $run_method = false;
-	private static $arr_run_options = false;
+	protected static $run_module = false;
+	protected static $run_method = false;
+	protected static $arr_run_options = false;
+	
+	protected static $timeout_lock_sleep = 0.25; // Seconds
+	protected static $timeout_lock_notify = 60; // Seconds
+	
+	const LOCK_POOL_SEPARATOR = '::';
+	const LOCK_POOL_EMPTY = '::::';
 	
 	public static function attach($event, $id, $function) {
 		
-		list($name, $space) = explode('.', $event);
-		$space = ($space ?: 0);
+		$arr_event = explode('.', $event);
+		$name = $arr_event[0];
+		$space = ($arr_event[1] ?? 0);
 		
 		$s_arr =& self::$arr_events[$name];
 		
@@ -32,7 +48,7 @@ class Mediator {
 			$s_arr[$space][$id] = $function;
 		} else {
 			
-			if (!$s_arr[$space]) {
+			if (!isset($s_arr[$space])) {
 				$s_arr[$space] = [];
 			}
 			
@@ -45,8 +61,9 @@ class Mediator {
 	
 	public static function remove($event, $id = false) {
 		
-		list($name, $space) = explode('.', $event);
-		$space = ($space ?: 0);
+		$arr_event = explode('.', $event);
+		$name = $arr_event[0];
+		$space = ($arr_event[1] ?? 0);
 		
 		if ($id !== false) {
 
@@ -63,8 +80,9 @@ class Mediator {
 	
 	public static function runListener($event, $id, $data = false) {
 		
-		list($name, $space) = explode('.', $event);
-		$space = ($space ?: 0);
+		$arr_event = explode('.', $event);
+		$name = $arr_event[0];
+		$space = ($arr_event[1] ?? 0);
 		
 		$function = self::$arr_events[$name][$space][$id];
 					
@@ -89,142 +107,160 @@ class Mediator {
 	
 	public static function runListeners($event, $data = false) {
 		
-		list($name, $space) = explode('.', $event);
-		$space = ($space ?: 0);
+		$arr_event = explode('.', $event);
+		$name = $arr_event[0];
+		$space = ($arr_event[1] ?? 0);
 		
 		if ($space) {
 			
-			foreach ((array)self::$arr_events[$name][$space] as $id => $function) {
+			if (isset(self::$arr_events[$name][$space])) {
 				
-				self::runListener($event, $id, $data);
+				foreach (self::$arr_events[$name][$space] as $id => $function) {
+					
+					self::runListener($event, $id, $data);
+				}
 			}
 		} else {
 			
-			foreach ((array)self::$arr_events[$name] as $space => $arr_events) {
+			if (isset(self::$arr_events[$name])) {
 				
-				foreach ($arr_events as $id => $function) {
-				
-					self::runListener($name.'.'.$space, $id, $data);
+				foreach (self::$arr_events[$name] as $space => $arr_events) {
+					
+					foreach ($arr_events as $id => $function) {
+					
+						self::runListener($name.'.'.$space, $id, $data);
+					}
 				}
 			}
 		}
 	}
-	
-	public static function lock($identifier) {
-		
-		$path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
-		
-		$file = fopen($path, 'c');
-		
-		if (flock($file, LOCK_EX | LOCK_NB)) {
 			
-			self::$arr_locks[$identifier] = $file;
-			
-			return true;
-		}
-		
-		return false;
-	}
-		
 	public static function setLock($identifier, $code) {
 		
 		$path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
-		$path_queue = $path.'_queue';
-				
-		// Update lock queue with latest code
+		$path_pool = $path.'_pool';
+		$time_self = microtime(true);
 		
-		$file_queue = fopen($path_queue, 'w');
-		flock($file_queue, LOCK_EX);
-		fwrite($file_queue, $code);
-
+		$file_pool = fopen($path_pool, 'c+');
+		flock($file_pool, LOCK_EX);
+		
+		list($code_initial, $time_initial, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
+		
 		// Try to get the lock
 		
 		$file = fopen($path, 'c');
 		
 		if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock
-			
-			ftruncate($file, 0);
-			fwrite($file, $code);
+
+			fseek($file_pool, 0);
+			ftruncate($file_pool, 0);
+			fwrite($file_pool, $code.'::'.microtime(true).'::'.$time_initial);
+			fflush($file_pool);
 			
 			self::$arr_locks[$identifier] = $file;
 			
-			// Remove queue lock
-			flock($file_queue, LOCK_UN);
-			fclose($file_queue);
-			
+			flock($file_pool, LOCK_UN); // Remove pool lock
+			fclose($file_pool);
+
 			return true;
 		}
 		
-		fclose($file);
-	
-		// Need to wait for an active lock
-			
-		$file = fopen($path, 'r');
-		$cur_code = fread($file, 1024);
+		flock($file, LOCK_UN);
 		fclose($file);
 		
-		// Remove queue lock
-		flock($file_queue, LOCK_UN);
-		fclose($file_queue);
+		flock($file_pool, LOCK_UN); // Remove pool lock
+		fclose($file_pool);
 
-		$do_queue = ($cur_code != $code); // Our code seems to be different (newer) than the current one, so queue to get a lock
+		$do_pool = ($code_initial && $code_initial != $code); // Our code seems to be different (newer) than the current one, so join the pool to get a lock
 		
 		while (true) {
+
+			usleep(static::$timeout_lock_sleep * 1000000); // Wait 0.25 seconds
 			
-			usleep(250000); // Wait 0.25 seconds
+			if ($do_pool) { // Add to the pool, exit when the pool date is initiated later and has finished (time_done), or when we get lock
+				
+				$file_pool = fopen($path_pool, 'c+');
+				flock($file_pool, LOCK_EX);
 			
-			$file_queue = fopen($path_queue, 'r');
-			flock($file_queue, LOCK_SH);
-							
-			if ($do_queue) { // Queue until lock is released to attempt to get our own lock
+				list($code_pool, $time_pool, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
 				
-				$queue_code = fread($file_queue, 1024);
-				
-				if ($queue_code != $code) { // Check if our queue still reigns authority because a newer thread might have swooped in with a newer code
-				
-					$do_queue = false; // No need to queue for authority anymore, we are outdated
-				} else {
+				if (!$code_pool || (float)$time_done >= $time_self) { // There has been a process initialised and finished after us.
 					
-					// Try to get the lock
-					$file = fopen($path, 'c');
-				
-					if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock
-						
-						ftruncate($file, 0);
-						fwrite($file, $code);
-						
-						self::$arr_locks[$identifier] = $file;
-						
-						// Remove queue lock
-						flock($file_queue, LOCK_UN);
-						fclose($file_queue);
-			
-						return true;
-					}
-					
-					fclose($file);
-				}
-			}
-			
-			if (!$do_queue) {
-			
-				$file = fopen($path, 'r');
-				$cur_code = fread($file, 1024);
-				fclose($file);
-				
-				if ($cur_code != $code) { // The active lock is gone
-					
-					// Remove queue lock
-					flock($file_queue, LOCK_UN);
-					fclose($file_queue);
+					flock($file_pool, LOCK_UN); // Remove pool lock
+					fclose($file_pool);
 				
 					return false;
 				}
+
+				// Try to get the lock
+				$file = fopen($path, 'c');
+				
+				if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock
+					
+					fseek($file_pool, 0);
+					ftruncate($file_pool, 0);
+					fwrite($file_pool, $code.'::'.microtime(true).'::'.$time_pool);
+					fflush($file_pool);
+					
+					self::$arr_locks[$identifier] = $file;
+					
+					flock($file_pool, LOCK_UN); // Remove pool lock
+					fclose($file_pool);
+			
+					return true;
+				}
+				
+				flock($file, LOCK_UN);
+				fclose($file);
+				
+				flock($file_pool, LOCK_UN); // Remove pool lock
+				fclose($file_pool);
+			} else {
+				
+				$file_pool = fopen($path_pool, 'r');
+				flock($file_pool, LOCK_EX);
+				
+				list($code_pool, $time_pool, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
+			
+				if (!$code_pool || $code_pool != $code_initial || $time_pool != $time_initial) { // The initial lock has changed
+					
+					flock($file_pool, LOCK_UN); // Remove pool lock
+					fclose($file_pool);
+					
+					return false;
+				}
+				
+				$file = fopen($path, 'r');
+
+				if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock, initial lock is obviously gone
+
+					flock($file, LOCK_UN);
+					fclose($file);
+					
+					flock($file_pool, LOCK_UN); // Remove pool lock
+					fclose($file_pool);
+					
+					return false;
+				}
+				
+				flock($file, LOCK_UN);
+				fclose($file);
+				
+				flock($file_pool, LOCK_UN); // Remove pool lock
+				fclose($file_pool);
 			}
 			
-			// Remove queue lock
-			flock($file_queue, LOCK_UN);
-			fclose($file_queue);
+			$time_now = microtime(true);
+			$time_notify = ($time_notify ?? $time_now);
+			
+			if (($time_now - $time_notify) > static::$timeout_lock_notify) {
+				
+				msg('Lock status:'.EOL_1100CC
+					.'	'.$identifier.' = '.(int)($time_now - $time_self).' seconds.'
+				, 'MEDIATOR', LOG_SYSTEM, 'Path lock: '.$path.EOL_1100CC.'Path pool: '.$path_pool);
+				
+				$time_notify = ($time_now - (($time_now - $time_notify) % static::$timeout_lock_notify));
+			}
 		}
 	}
 	
@@ -235,9 +271,7 @@ class Mediator {
 		$file = fopen($path, 'c');
 		
 		if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock
-			
-			ftruncate($file, 0);
-			
+						
 			self::$arr_locks[$identifier] = $file;
 						
 			return true;
@@ -249,34 +283,34 @@ class Mediator {
 	public static function unsetLock($identifier) {
 		
 		$path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
-		$path_queue = $path.'_queue';
+		$path_pool = $path.'_pool';
 		
-		// Update lock queue with latest code and instance
-		$file_queue = fopen($path_queue, 'w');
-		flock($file_queue, LOCK_EX);
+		// Clear pool file state
+		$file_pool = fopen($path_pool, 'c');
+		flock($file_pool, LOCK_EX);
 		
-		ftruncate($file_queue, 0);
+		ftruncate($file_pool, 0);
 		
-		flock($file_queue, LOCK_UN);
-		fclose($file_queue);
+		flock($file_pool, LOCK_UN);
+		fclose($file_pool);
 	}
 	
 	public static function removeLock($identifier) {
 		
 		$file = self::$arr_locks[$identifier];
 		
-		ftruncate($file, 0);
-		
 		flock($file, LOCK_UN);
 		fclose($file);
+		
+		unset(self::$arr_locks[$identifier]);
 	}
 	
 	public static function runAsync($module, $method, $arr_options = []) {
 		
 		$state = STATE.';'.(SiteStartVars::useHTTPS(false) ? 'https' : 'http');
 		
-		$process = new Process("php -q ".DIR_ROOT_CORE.DIR_CMS."index.php '".SITE_NAME."' '".SERVER_NAME_1100CC."' '".SERVER_NAME_CUSTOM."' '".SERVER_NAME_SUB."' '".$state."' '".$module."' '".$method."' '".($arr_options ? json_encode($arr_options) : '')."'");
-		$process_id = $process->getPid();
+		$process = new Process("php -q ".DIR_ROOT_CORE.DIR_CMS."index.php '".SITE_NAME."' '".SERVER_NAME_1100CC."' '".SERVER_NAME_CUSTOM."' '".SERVER_NAME_SUB."' '".$state."' '".$module."' '".$method."' '".($arr_options ? value2JSON($arr_options) : '')."'");
+		$process_id = $process->getPID();
 		
 		self::$arr_processes[$module][$method][$process_id] = $process_id;
 		
@@ -291,9 +325,9 @@ class Mediator {
 		foreach ($arr as $cur_process_id) {
 		
 			$process = new Process();
-			$process->setPid($cur_process_id);
+			$process->setPID($cur_process_id);
 			
-			$arr_stopped[$cur_process_id] = $process->stop();
+			$arr_stopped[$cur_process_id] = $process->close();
 		}
 	
 		return ($process_id ? current($arr_stopped) : $arr_stopped);
@@ -332,6 +366,16 @@ class Mediator {
 		}
 	}
 	
+	public static function setShutdown($shutdown) {
+		
+		self::$shutdown = $shutdown;
+	}
+	
+	public static function getShutdown() {
+		
+		return self::$shutdown;
+	}
+	
 	public static function terminate($signal) {
 		
 		// Call Mediator::checkState() to listen for signals, or see declare(ticks=x)
@@ -341,7 +385,7 @@ class Mediator {
 			 case SIGALRM:
 				 // handle shutdown task
 				 msg('Received signal '.$signal.'. Closing process:'.PHP_EOL
-					.'	'.SITE_NAME.' '.STATE.' '.self::$run_module.' '.self::$run_method.' '.json_encode(self::$arr_run_options).'.',
+					.'	'.SITE_NAME.' '.STATE.' '.self::$run_module.' '.self::$run_method.' '.value2JSON(self::$arr_run_options).'.',
 				'SYSTEM');
 				 exit;
 				 break;
@@ -361,9 +405,9 @@ function shutdown() {
 		
 	// Closing up
 	
-	if (!Mediator::$shutdown) {
+	if (!Mediator::getShutdown()) {
 
-		Mediator::$shutdown = 'soft';
+		Mediator::setShutdown(Mediator::SHUTDOWN_SILENT);
 		
 		// Check for core error
 		

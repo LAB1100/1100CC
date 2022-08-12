@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class cms_projects extends base_module {
 	
 	public function contents() {
 	
-		$return .= '<div class="section"><h1 id="x:cms_projects:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup project_add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_projects:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup project_add" value="add" /></h1>
 		<div class="cms_projects">';
 		
 			$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_PROJECTS')." AS pr ORDER BY date DESC");
@@ -91,11 +91,11 @@ class cms_projects extends base_module {
 				<table>
 					<tr>
 						<td>Name</td>
-						<td><input type="text" name="name" value="'.htmlspecialchars($row['name']).'"></td>
+						<td><input type="text" name="name" value="'.strEscapeHTML($row['name']).'"></td>
 					</tr>
 					<tr>
 						<td>Description</td>
-						<td><textarea name="description">'.htmlspecialchars($row['description']).'</textarea></td>
+						<td><textarea name="description">'.strEscapeHTML($row['description']).'</textarea></td>
 					</tr>
 					<tr>
 						<td>Image</td>

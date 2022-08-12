@@ -1,7 +1,7 @@
 
 ###
  # 1100CC - web application framework.
- # Copyright (C) 2019 LAB1100.
+ # Copyright (C) 2022 LAB1100.
  #
  # See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  ##
@@ -12,7 +12,7 @@ DirectorySlash Off
 RewriteEngine On
 
 # Set server state to development or production (default)
-#SetEnv STATE development
+SetEnv STATE development
 #SetEnv MESSAGE '[L][msg_site_maintenance] [L][msg_site_read_only]'
 
 ################################################
@@ -50,10 +50,11 @@ RewriteRule ^(.*)$ - [PT,R=403]
 
 # Determine custom section
 	RewriteCond %{ENV:SERVER_NAME_SUB} ((?:cms|s[0-9])\.)?((?:[^\.]+\.)*)$
-RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1%2,E=SERVER_NAME_CUSTOM:%3]
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_CUSTOM:%2]
 
-# Redirect if SITE_NAME is not a directory
+# Redirect if SITE_NAME is not a directory or certificate challenge
 	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME} !-d
+	RewriteCond %{REQUEST_URI} !/\.well-known/acme-challenge/
 	# Http or http(s)
 	RewriteCond %{SERVER_PORT}s ^(?:443(s)|[0-9]+s)$
 RewriteRule ^(.*)$ http%1://%{ENV:SERVER_NAME_SUB}%{ENV:SERVER_NAME_CUSTOM}%{ENV:SITE_NAME}%{REQUEST_URI} [L,R]
@@ -121,3 +122,4 @@ AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/
 php_value max_input_vars 3000
 php_value post_max_size 50M
 php_value upload_max_filesize 50M
+#php_value memory_limit 1024M

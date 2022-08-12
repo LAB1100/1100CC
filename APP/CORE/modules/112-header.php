@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -10,13 +10,13 @@
 class header extends base_module {
 
 	public static function moduleProperties() {
-		static::$label = getLabel('ttl_header');
+		static::$label = getLabel('lbl_header');
 		static::$parent_label = getLabel('ttl_site');
 	}
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select name="directory_id" title="Directory">';
+		$return = '<select name="directory_id" title="Directory">';
 		$return .= directories::createDirectoriesDropdown(directories::getDirectories(), false, true);
 		$return .= '</select>';
 		

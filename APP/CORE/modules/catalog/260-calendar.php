@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class calendar extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select name="date_before_amount">';
+		$return = '<select name="date_before_amount">';
 		for ($i = 0; $i <= 10; $i++) {
 			$return .= '<option value="'.$i.'">'.$i.'</option>';
 		}
@@ -46,7 +46,7 @@ class calendar extends base_module {
 			'trigger' => [DB::getTable('TABLE_CALENDAR_EVENTS'), DB::getTable('TABLE_CALENDAR_EVENTS').'.description'],
 			'title' => [DB::getTable('TABLE_CALENDAR_EVENTS'), DB::getTable('TABLE_CALENDAR_EVENTS').'.name'],
 			'extra_values' => [
-				[DB::getTable('TABLE_CALENDAR_EVENTS'), DB::getTable('TABLE_CALENDAR_EVENTS').'.date']
+				[DB::getTable('TABLE_CALENDAR_EVENTS'), DB::getTable('TABLE_CALENDAR_EVENTS').'.date', 'date']
 			],
 			'search_var' => false,
 			'module_link' => [
@@ -139,7 +139,7 @@ class calendar extends base_module {
 						if ($arr_events[$cur_date->format("Y-m-d")]) {
 							$height = (100/count($arr_events[$cur_date->format("Y-m-d")]));
 							foreach ($arr_events[$cur_date->format("Y-m-d")] as $value) {
-								$return .= '<span style="background-color: #'.$value["color"].'; height: '.$height.'%;" title="'.htmlspecialchars($value["name"]).'"></span>';
+								$return .= '<span style="background-color: #'.$value["color"].'; height: '.$height.'%;" title="'.strEscapeHTML($value["name"]).'"></span>';
 							}
 						}
 					$return .= '</div>
@@ -167,7 +167,7 @@ class calendar extends base_module {
 				$return .= '<div>
 					<dt id="'.$value['id'].'-'.str2URL($value['name']).'">'.createDate($date_range_start->getTimestamp()).createTime($value["date"]).createTime($value["date_end"]).'</dt>
 					<dd>
-						<h1><span style="background-color: #'.$value['color'].';"></span>'.htmlspecialchars($value['name']).'</h1>
+						<h1><span style="background-color: #'.$value['color'].';"></span>'.strEscapeHTML($value['name']).'</h1>
 						<div class="body">'.parseBody($value['description']).'</div>
 					</dd>
 				</div>';
@@ -188,7 +188,7 @@ class calendar extends base_module {
 							<div>';
 							
 								foreach ($arr_events[$cur_date->format("Y-m-d")] as $value) {
-									$return .= '<dd><span style="background-color: #'.$value["color"].';"></span><span>'.date("H:i", strtotime($value["date"])).' - '.date("H:i", strtotime($value["date_end"])).'</span><a href="'.SiteStartVars::getModUrl($this->mod_id).'day/'.$cur_date->format("d-m-Y").'#'.$value["id"].'-'.str2URL($value["name"]).'">'.htmlspecialchars($value["name"]).'</a></dd>';
+									$return .= '<dd><span style="background-color: #'.$value["color"].';"></span><span>'.date("H:i", strtotime($value["date"])).' - '.date("H:i", strtotime($value["date_end"])).'</span><a href="'.SiteStartVars::getModUrl($this->mod_id).'day/'.$cur_date->format("d-m-Y").'#'.$value["id"].'-'.str2URL($value["name"]).'">'.strEscapeHTML($value["name"]).'</a></dd>';
 								}
 							$return .= '</div>
 						</div>';

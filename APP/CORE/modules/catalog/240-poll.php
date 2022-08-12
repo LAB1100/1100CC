@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class poll extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select>';
+		$return = '<select>';
 		$return .= cms_general::createDropdown(cms_polls::getPolls());
 		$return .= '</select>';
 		

@@ -2,14 +2,14 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class FormatExcerpt {
 
-	static public function parse($html, $string, $is_url = false, $xlen = 255, $fill_start = '[...] ', $fill_end = ' [...]') {
+	public static function parse($html, $string, $is_url = false, $xlen = 255, $fill_start = '[...] ', $fill_end = ' [...]') {
 		
 		// the excerpt will come out as
 		// [...] before linktext after [...]
@@ -28,7 +28,7 @@ class FormatExcerpt {
 			for ($i = 0; $i < $num_matches; $i++) {
 				if (rawurldecode($matches[1][$i]) == rawurldecode($string)) {
 					$string = $matches[0][$i];
-					$linktext = self::getTextContent($matches[2][$i]);
+					$linktext = FormatHTML::getTextContent($matches[2][$i]);
 					break;
 				}
 			}
@@ -37,13 +37,13 @@ class FormatExcerpt {
 		$before = '';
 		$after = '';
 		$pos = mb_stripos($html, $string);
-		$before = self::getTextContent(mb_substr($html, 0, $pos));
+		$before = FormatHTML::getTextContent(mb_substr($html, 0, $pos));
 		
 		$strlen = mb_strlen($string);
-		$linktext = ($linktext ?: self::getTextContent(mb_substr($html, $pos, $strlen)));
+		$linktext = ($linktext ?: FormatHTML::getTextContent(mb_substr($html, $pos, $strlen)));
 
 		$pos += $strlen;
-		$after = self::getTextContent(mb_substr($html, $pos));
+		$after = FormatHTML::getTextContent(mb_substr($html, $pos));
 
 		$tlen = mb_strlen($linktext);
 		if ($tlen >= $xlen) {
@@ -122,30 +122,8 @@ class FormatExcerpt {
 
 		return $retval;
 	}
-	
-	static public function getTextContent($text) {
-		// replace <br> with spaces so that Text<br>Text becomes two words
-		$text = preg_replace('/\<br(\s*)?\/?\>/i', ' ', $text);
-
-		// add extra space between tags, e.g. <p>Text</p><p>Text</p>
-		$text = str_replace('><', '> <', $text);
-
-		// only now remove all HTML tags
-		$text = strip_tags($text);
-
-		// replace all tabs, newlines, and carrriage returns with spaces
-		$text = str_replace(["\t", "\n", "\r"], ' ', $text);
-
-		// replace entities with plain spaces
-		$text = str_replace(['&#20;', '&#160;', '&nbsp;'], ' ', $text);
-
-		// collapse whitespace
-		$text = preg_replace('/\s\s+/', ' ', $text);
-
-		return $text;
-	}
-	
-	static public function performHighlight($text, $string) {
+		
+	public static function performHighlight($text, $string) {
 
 		$count = 0;
 		$result = preg_replace_callback("/".$string."+/i",
@@ -155,10 +133,10 @@ class FormatExcerpt {
 			},
             $text);
 			
-		return ["result" => $result, "count" => $count];
+		return ['result' => $result, 'count' => $count];
 	}
 	
-	static public function countString($text, $string) {
+	public static function countString($text, $string) {
 
 		return substr_count(strtolower(strip_tags($text)), strtolower($string));
 	}

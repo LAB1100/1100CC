@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class intf_templates extends templates {
 
 	public function contents() {
 	
-		$return .= '<div class="section templates"><h1 id="x:intf_templates:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup template_add" value="add" /></h1>
+		$return = '<div class="section templates"><h1 id="x:intf_templates:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup template_add" value="add" /></h1>
 			<div>';
 			
 				$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_PAGE_TEMPLATES')."");
@@ -703,7 +703,7 @@ class intf_templates extends templates {
 					<label><input type="checkbox" name="aright" id="aright" value="aright" /><span>Right</span></label>
 					<input name="customclass" id="customclass" type="text" value="" />
 				</div>
-				<input name="html" type="hidden" value="'.htmlspecialchars($row['html_raw']).'" />
+				<input name="html" type="hidden" value="'.strEscapeHTML($row['html_raw']).'" />
 			</div>
 			<div class="settings">
 				<span><strong>Name</strong></span>

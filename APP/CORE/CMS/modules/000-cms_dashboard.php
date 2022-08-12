@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class cms_dashboard extends base_module {
 		
 	public function contents() {
 		
-		$arr_modules = SiteStartVars::$modules;
+		$arr_modules = SiteStartVars::$arr_modules;
 		$arr_module_widget_properties = self::getModuleWidgetProperties($arr_modules);
 		$arr_widgets_user = self::getWidgetsUser($_SESSION['USER_ID']);
 
@@ -28,7 +28,7 @@ class cms_dashboard extends base_module {
 			
 			foreach ($module_widget as $method => $arr_widget) {
 			
-				if ($arr_widgets_user[$module][$method]) {
+				if (isset($arr_widgets_user[$module][$method])) {
 					
 					$arr_user = $arr_widgets_user[$module][$method];
 					
@@ -39,20 +39,20 @@ class cms_dashboard extends base_module {
 				}
 			}
 		}
-		if ($arr_columns['none']) {
+		if (isset($arr_columns['none'])) {
 			$arr_columns['none'] = arrChuckPartition($arr_columns['none'], 3);
 		}
 		
-		$return .= '<div>
+		$return = '<div>
 			<div id="y:cms_dashboard:update-0">';
 
 				for ($i = 0; $i < 3; $i++) {
 					
-					if ($arr_columns['user'][$i]) {
+					if (isset($arr_columns['user'][$i])) {
 						ksort($arr_columns['user'][$i]);
 					}
 					
-					$return .= '<ul>'.($arr_columns['user'][$i] ? implode('', $arr_columns['user'][$i]) : '').($arr_columns['none'][$i] ? implode('', $arr_columns['none'][$i]) : '').'</ul>';
+					$return .= '<ul>'.(isset($arr_columns['user'][$i]) ? implode('', $arr_columns['user'][$i]) : '').(isset($arr_columns['none'][$i]) ? implode('', $arr_columns['none'][$i]) : '').'</ul>';
 				}
 				
 			$return .= '</div>

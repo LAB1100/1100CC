@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class intf_user_groups extends user_groups {
 		
 	public function contents() {
 	
-		$return .= '<div class="section"><h1 id="x:intf_user_groups:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup user_groups_add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:intf_user_groups:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup user_groups_add" value="add" /></h1>
 		<div class="user_groups">';
 		
 			$res = DB::query("SELECT
@@ -182,7 +182,7 @@ class intf_user_groups extends user_groups {
 				<fieldset><ul>
 					<li>
 						<label>Name</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($row['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($row['name']).'"></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_parent').'</label>
@@ -201,19 +201,22 @@ class intf_user_groups extends user_groups {
 										
 										$res_links = DB::query("SELECT *
 												FROM ".DB::getTable('TABLE_USER_GROUP_LINK')."
-											WHERE group_id = ".(int)$id." AND to_table != '".DB::getTableName('VIEW_USER_PARENT')."'
+											WHERE group_id = ".(int)$id." AND (to_table != '".static::formatTableNameToTemplate(DB::getTableName('VIEW_USER_PARENT'))."' AND to_table != '".DB::getTableName('VIEW_USER_PARENT')."')
 											ORDER BY sort
 										");
 										
-										while ($arr_row_links = $res_links->fetchAssoc()) {
+										while ($arr_row = $res_links->fetchAssoc()) {
+											
+											$arr_row['from_table'] = static::formatTableNameFromTemplate($arr_row['from_table']);
+											$arr_row['to_table'] = static::formatTableNameFromTemplate($arr_row['to_table']);
 										
-											$this->html .= '<tr><td><select name="from_table[]" id="y:intf_user_groups:get_from_columns-0">'.self::createLinkDropdown($arr_link_tables, $arr_row_links['from_table']).'</select></td>
-												<td><select name="from_column[]">'.self::createLinkDropdown(self::getLinkColumns($arr_row_links['from_table']), $arr_row_links['from_column']).'</select></td>
+											$this->html .= '<tr><td><select name="from_table[]" id="y:intf_user_groups:get_from_columns-0">'.self::createLinkDropdown($arr_link_tables, $arr_row['from_table']).'</select></td>
+												<td><select name="from_column[]">'.self::createLinkDropdown(self::getLinkColumns($arr_row['from_table']), $arr_row['from_column']).'</select></td>
 												<td><span class="icon">'.getIcon('leftright-arrow-right').'</span></td>
-												<td><select name="to_table[]" id="y:intf_user_groups:get_to_columns-1">'.self::createLinkDropdown($arr_link_tables, $arr_row_links['to_table']).'</select></td>
-												<td><select name="to_column[]">'.self::createLinkDropdown(self::getLinkColumns($arr_row_links['to_table']), $arr_row_links['to_column']).'</select></td>
-												<td><input type="text" name="virtual_name[]" value="'.$arr_row_links['virtual_name'].'" /></td>
-												<td><select name="get_column[]">'.self::createLinkDropdown(self::getLinkColumns($arr_row_links['to_table']), $arr_row_links['get_column']).'</select></td>
+												<td><select name="to_table[]" id="y:intf_user_groups:get_to_columns-1">'.self::createLinkDropdown($arr_link_tables, $arr_row['to_table']).'</select></td>
+												<td><select name="to_column[]">'.self::createLinkDropdown(self::getLinkColumns($arr_row['to_table']), $arr_row['to_column']).'</select></td>
+												<td><input type="text" name="virtual_name[]" value="'.$arr_row['virtual_name'].'" /></td>
+												<td><select name="get_column[]">'.self::createLinkDropdown(self::getLinkColumns($arr_row['to_table']), $arr_row['get_column']).'</select></td>
 												<td><input type="button" class="data add" value="add" /><input type="button" class="data del" value="del" /></td>
 											</tr>';
 											
@@ -311,9 +314,9 @@ class intf_user_groups extends user_groups {
 		if ((int)$_POST['parent_id']) {
 		
 			self::insertUserGroupLink(['group_id' => $user_group,
-				'from_table' => DB::getTableName('TABLE_USERS'),
+				'from_table' => static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS')),
 				'from_column' => 'parent_id',
-				'to_table' => DB::getTableName('VIEW_USER_PARENT'),
+				'to_table' => static::formatTableNameToTemplate(DB::getTableName('VIEW_USER_PARENT')),
 				'to_column' => 'id',
 				'get_column' => 'parent_name',
 				'view' => true
@@ -476,9 +479,9 @@ class intf_user_groups extends user_groups {
 				$is_multi_target_view = ($is_multi_target && DBFunctions::unescapeAs($row_target['is_auto_increment'], DBFunctions::TYPE_BOOLEAN) ? true : false);
 				
 				self::insertUserGroupLink(['group_id' => $user_group,
-					'from_table' => $_POST['from_table'][$key],
+					'from_table' => static::formatTableNameToTemplate($_POST['from_table'][$key]),
 					'from_column' => $_POST['from_column'][$key],
-					'to_table' => $_POST['to_table'][$key],
+					'to_table' => static::formatTableNameToTemplate($_POST['to_table'][$key]),
 					'to_column' => $_POST['to_column'][$key],
 					'get_column' => ($is_multi_target ? $get_column : $_POST['get_column'][$key]),
 					'virtual_name' => $_POST['virtual_name'][$key],

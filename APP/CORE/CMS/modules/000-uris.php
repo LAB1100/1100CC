@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -39,14 +39,19 @@ class uris extends base_module {
 		
 		$arr = [];
 
-		$res = DB::query("SELECT ut.id, ut.name,  ut.host_name, ut.delay, ut.show_remark,
-								uth.host_name AS translator_host_name
-							FROM ".DB::getTable('SITE_URI_TRANSLATOR_HOSTS')." uth
-							JOIN ".DB::getTable('SITE_URI_TRANSLATORS')." ut ON (ut.id = uth.uri_translator_id)
-						".($host_name ? "WHERE CASE
-							WHEN LEFT(uth.host_name, 1) = ':' THEN ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($host_name)."'", "SUBSTRING(uth.host_name FROM 2)")."
-							ELSE uth.host_name = '".DBFunctions::strEscape($host_name)."'
-						END" : "")."
+		$res = DB::query("SELECT
+			ut.id, ut.name,  ut.host_name, ut.delay, ut.show_remark,
+			uth.host_name AS translator_host_name
+				FROM ".DB::getTable('SITE_URI_TRANSLATOR_HOSTS')." uth
+				JOIN ".DB::getTable('SITE_URI_TRANSLATORS')." ut ON (ut.id = uth.uri_translator_id)
+			".($host_name ? "WHERE
+				(
+					uth.host_name = '".DBFunctions::strEscape($host_name)."'
+				) OR (
+					uth.host_name LIKE ':%'
+					AND ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($host_name)."'", "SUBSTRING(uth.host_name FROM 2)")."
+				)
+			" : "")."
 		");
 							
 		while ($arr_host = $res->fetchAssoc()) {
@@ -57,16 +62,48 @@ class uris extends base_module {
 		return ($host_name ? current($arr) : $arr);
 	}
 	
-	public static function getURI($uri_translator_id, $identifier) {
+	public static function getURI($uri_translator_id, $str_identifier, $do_literal = false) {
+				
+		if ($str_identifier == '') {
+			
+			$sql_where = "
+				u.uri_translator_id = ".(int)$uri_translator_id."
+				AND u.identifier = ''
+			";
+		} else {
+			
+			$sql_where = "(
+				u.uri_translator_id = ".(int)$uri_translator_id."
+				AND u.identifier = '".DBFunctions::strEscape($str_identifier)."'
+			) OR (
+				u.uri_translator_id = ".(int)$uri_translator_id."
+				AND u.identifier LIKE ':%'
+				AND ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($str_identifier)."'", "SUBSTRING(u.identifier FROM 2)")."
+			)";
+		}
 		
-		$res = DB::query("SELECT u.uri_translator_id, u.identifier, u.url, u.remark, u.service
-							FROM ".DB::getTable('SITE_URIS')." u
-							LEFT JOIN ".DB::getTable('SITE_URI_TRANSLATORS')." ut ON (ut.id = u.uri_translator_id)
-						WHERE u.uri_translator_id = ".(int)$uri_translator_id."
-							AND u.identifier = '".DBFunctions::strEscape($identifier)."'
+		$res = DB::query("SELECT
+			u.uri_translator_id, u.identifier, u.url, u.remark, u.service
+				FROM ".DB::getTable('SITE_URIS')." u
+				LEFT JOIN ".DB::getTable('SITE_URI_TRANSLATORS')." ut ON (ut.id = u.uri_translator_id)
+			WHERE ".$sql_where."
+			LIMIT 1
 		");
 
 		$arr = $res->fetchAssoc();
+		
+		if (!$arr) {
+			return [];
+		}
+		
+		$is_regex = (substr($arr['identifier'], 0, 1) == ':');
+		
+		if ($is_regex) {
+			
+			if (!$do_literal) {
+				$arr['url'] = preg_replace('<'.substr($arr['identifier'], 1).'>', $arr['url'], $str_identifier); // '<>' as delimiter, as they are not normally used in URLs
+			}
+		}
 	
 		return $arr;
 	}

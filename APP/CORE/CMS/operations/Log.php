@@ -2,12 +2,16 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class Log {
+	
+	const IP_STATE_CHECKED = 1;
+	const IP_STATE_BLOCKED = 2;
+	const IP_STATE_APPROVED = 3;
 	
 	private static $msg = false;
 	private static $arr_msg = [];
@@ -16,6 +20,8 @@ class Log {
 	private static $ip_proxy = false;
 	private static $ip_request = false;
 	private static $ip_request_block = false;
+	private static $num_request_heat = false;
+	private static $num_request_state = 0;
 	private static $log_user_id = false;
 
 	public static function setMsg($msg) {
@@ -36,7 +42,7 @@ class Log {
 					
 		$arr_msgs = [];
 		
-		if (SiteStartVars::getRequestState() == 'api') {
+		if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_API) {
 			
 			foreach (self::$arr_msg as $value) {
 				
@@ -63,6 +69,8 @@ class Log {
 		} else {
 			
 			$type = 'attention';
+			$str = '';
+			$arr_options = null;
 			
 			foreach (self::$arr_msg as $value) {
 				
@@ -96,7 +104,7 @@ class Log {
 				$arr_options = ($arr_options ?: []);
 			}
 			
-			if ($arr_options['clear'] === null) {
+			if (!isset($arr_options['clear'])) {
 				$arr_options['clear'] = ['identifier' => SiteStartVars::getSessionId(true)];
 			}
 			
@@ -205,7 +213,7 @@ class Log {
 					fwrite($file, PHP_EOL.PHP_EOL
 						.str_pad('', 6, '#')
 						.PHP_EOL.$label.': '.$value[0]
-						.PHP_EOL.$value[4].' at '.date('d-m-Y H:i:s').' by '.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name']
+						.PHP_EOL.$value[4].' at '.date('d-m-Y H:i:s').' by '.($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'] ?? '...')
 						.($value[3] ? PHP_EOL.PHP_EOL.$value[3] : '')
 					);
 				}
@@ -226,7 +234,7 @@ class Log {
 			$sql_user_id = 0;
 			$sql_user_class = 0;
 		
-			if ($_SESSION['USER_ID']) {
+			if (!empty($_SESSION['USER_ID'])) {
 				
 				$sql_user_id = $_SESSION['USER_ID'];
 				$sql_user_class = ($_SESSION['USER_GROUP'] ? 3 : ($_SESSION['CORE'] ? 1 : 2));
@@ -235,13 +243,13 @@ class Log {
 			if (SiteStartVars::isProcess()) {
 				
 				$arr_ip = false;
-				$url = BASE_URL;
+				$url = URL_BASE;
 				$referral_url = '';
 			} else {
 				
 				$arr_ip = self::getIP();
-				$url = BASE_URL.ltrim(($_SERVER['PATH_VIRTUAL'] ? $_SERVER['PATH_VIRTUAL'].' (V)' : $_SERVER['PATH_INFO']), '/');
-				$referral_url = $_SESSION['REFERER_URL'];
+				$url = URL_BASE.ltrim(($_SERVER['PATH_VIRTUAL'] ? $_SERVER['PATH_VIRTUAL'].' (V)' : $_SERVER['PATH_INFO']), '/');
+				$referral_url = ($_SESSION['REFERER_URL'] ?? '');
 			}
 			
 			DB::setConnection(DB::CONNECT_CMS);
@@ -262,7 +270,7 @@ class Log {
 	
 	public static function getWhereUserDB() {
 	
-		if ($_SESSION['USER_ID']) {
+		if (!empty($_SESSION['USER_ID'])) {
 			
 			$where = "user_class = ".($_SESSION['USER_GROUP'] ? 3 : ($_SESSION['CORE'] ? 1 : 2));
 		} else {
@@ -279,12 +287,13 @@ class Log {
 		if (!self::$ip) {
 				
 			$ip = $_SERVER['REMOTE_ADDR'];
+			$ip_proxy = false;
 			
 			if ($_SERVER['HTTP_CLIENT_IP'] && filter_var($_SERVER['HTTP_CLIENT_IP'], FILTER_VALIDATE_IP)) {
-				$proxy = $ip;
+				$ip_proxy = $ip;
 				$ip = trim($_SERVER['HTTP_CLIENT_IP']);
 			} else if ($_SERVER['HTTP_X_FORWARDED_FOR']) {
-				$proxy = $ip;
+				$ip_proxy = $ip;
 				if (strpos($_SERVER['HTTP_X_FORWARDED_FOR'], ',') > 0) {
 					$arr_ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
 					$ip = trim($arr_ip[0]);
@@ -294,13 +303,13 @@ class Log {
 			}
 			
 			self::$ip = $ip;
-			self::$ip_proxy = $proxy;
+			self::$ip_proxy = $ip_proxy;
 		}
 					
 		return [self::$ip, self::$ip_proxy];
 	}
 	
-	public static function getIPRequest() {
+	public static function parseIPRequest() {
 		
 		if (self::$ip_request) {
 			return;
@@ -315,23 +324,114 @@ class Log {
 		}
 	}
 	
-	public static function checkRequest($type, $identifier, $interval, $arr_count) {
+	public static function checkRequestThrottle($num_window = 30 * 60, $num_per_second = 1) { // Seconds
 		
-		self::getIPRequest();
+		// Throttle using a rolling window, stored in milliseconds to calculate proper short-term 'heat'
+		
+		self::parseIPRequest();
+		
+		$sql_ip = DBFunctions::escapeAs(self::$ip_request, DBFunctions::TYPE_BINARY);
+		$sql_interval = DBFunctions::interval($num_window, 'SECOND');
+		$sql_time_difference = DBFunctions::timeDifference('MICROSECOND', 'date', 'NOW(3)');
+		
+		$arr_res = DB::queryMulti("
+			INSERT INTO ".DB::getTable('TABLE_LOG_REQUESTS_THROTTLE')."
+				(ip, date, heat, state)
+					VALUES
+				(".$sql_ip.", NOW(3), 1, 0)
+				".DBFunctions::onConflict('ip', false, "
+					heat = (
+						CASE
+							WHEN date < (NOW() - ".$sql_interval.") THEN
+								0
+							ELSE
+								(1 - ((".$sql_time_difference." / 1000) / (".$num_window." * 1000))) * heat
+						END # Lower heat based on time past in the window
+						+ (1000 / ((".$sql_time_difference." / 1000) + 10)) # Simulate the total amount of requests in a second based on time past in the window, and add 10 millisecond as a 'softening' bonus.
+						+ 1 # Add one for the request itself
+					),
+					date = NOW(3)
+				")."
+			;
+			SELECT heat, state
+					FROM ".DB::getTable('TABLE_LOG_REQUESTS_THROTTLE')."
+				WHERE ip = ".$sql_ip."
+			;
+		");
+		
+		$arr_row = $arr_res[1]->fetchRow();
+		
+		$num_heat = $arr_row[0];
+		$num_state = $arr_row[1];
+		
+		$num_threshold = ($num_window * $num_per_second);
+		
+		if (!$num_state && $num_heat > ($num_threshold * 0.01)) { // Check hostname after a certain threshold
+			
+			$num_state = static::IP_STATE_CHECKED;
+			
+			$arr_hosts_blocked = Settings::get('request_hosts_blocked');
+			
+			if ($arr_hosts_blocked) {
+				
+				$str_host = gethostbyaddr(inet_ntop(self::$ip_request));
+				
+				foreach ($arr_hosts_blocked as $str_check) {
+					
+					if (strpos($str_host, $str_check) !== false) {
+					
+						$num_state = static::IP_STATE_BLOCKED;
+						break;
+					}
+				}
+			}
+
+			static::updateRequestState($num_state);
+		}
+		
+		static::$num_request_state = $num_state;
+		static::$num_request_heat = $num_heat;
+		
+		if ($num_state != static::IP_STATE_APPROVED && ($num_heat > $num_threshold || $num_state == static::IP_STATE_BLOCKED)) {
+			
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public static function updateRequestState($num_state) {
+		
+		if ($num_state == static::$num_request_state) {
+			return;
+		}
+		
+		$sql_ip = DBFunctions::escapeAs(self::$ip_request, DBFunctions::TYPE_BINARY);
+	
+		$res = DB::query("
+			UPDATE ".DB::getTable('TABLE_LOG_REQUESTS_THROTTLE')." SET
+				state = ".$num_state."
+			WHERE ip = ".$sql_ip."
+		");
+	}
+	
+	public static function checkRequest($type, $identifier, $num_interval, $arr_count) {
+		
+		self::parseIPRequest();
 		
 		$res = DB::query("SELECT
 			COUNT(*) AS count_global,
 			SUM(CASE WHEN lr.ip_block = ".DBFunctions::escapeAs(self::$ip_request_block, DBFunctions::TYPE_BINARY)." THEN 1 ELSE 0 END) AS count_ip_block,
 			SUM(CASE WHEN lr.ip = ".DBFunctions::escapeAs(self::$ip_request, DBFunctions::TYPE_BINARY)." THEN 1 ELSE 0 END) AS count_ip
-			".($identifier ? ", (SELECT COUNT(DISTINCT lr_i.ip_block)
-				FROM ".DB::getTable('TABLE_LOG_REQUESTS')." lr_i
+			".($identifier !== false ? ", (SELECT COUNT(DISTINCT lr_i.ip_block)
+				FROM ".DB::getTable('TABLE_LOG_REQUESTS_ACCESS')." lr_i
 				WHERE lr_i.type = '".$type."'
-					AND lr_i.date >= (NOW() - ".DBFunctions::interval((int)$interval, 'SECOND').")
+					AND lr_i.date >= (NOW() - ".DBFunctions::interval((int)$num_interval, 'SECOND').")
 					AND lr_i.identifier = '".DBFunctions::strEscape($identifier)."'
 			) AS count_identifier" : "")."
-				FROM ".DB::getTable('TABLE_LOG_REQUESTS')." lr
+				FROM ".DB::getTable('TABLE_LOG_REQUESTS_ACCESS')." lr
 			WHERE lr.type = '".$type."'
-				AND lr.date >= (NOW() - ".DBFunctions::interval((int)$interval, 'SECOND').")
+				AND lr.date >= (NOW() - ".DBFunctions::interval((int)$num_interval, 'SECOND').")
 		");
 		
 		$arr_row = $res->fetchRow();
@@ -351,12 +451,12 @@ class Log {
 	
 	public static function logRequest($type, $identifier = false) {
 		
-		self::getIPRequest();
+		self::parseIPRequest();
 		
-		$res = DB::query("INSERT INTO ".DB::getTable('TABLE_LOG_REQUESTS')."
+		$res = DB::query("INSERT INTO ".DB::getTable('TABLE_LOG_REQUESTS_ACCESS')."
 			(type, identifier, ip, ip_block, date)
 				VALUES
-			('".$type."', ".($identifier ? "'".DBFunctions::strEscape($identifier)."'" : "NULL").", ".DBFunctions::escapeAs(self::$ip_request, DBFunctions::TYPE_BINARY).", ".DBFunctions::escapeAs(self::$ip_request_block, DBFunctions::TYPE_BINARY).", NOW())
+			('".$type."', ".($identifier !== false ? "'".DBFunctions::strEscape($identifier)."'" : "NULL").", ".DBFunctions::escapeAs(self::$ip_request, DBFunctions::TYPE_BINARY).", ".DBFunctions::escapeAs(self::$ip_request_block, DBFunctions::TYPE_BINARY).", NOW())
 		");
 	}
 }

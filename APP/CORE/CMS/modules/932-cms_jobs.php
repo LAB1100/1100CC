@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -21,7 +21,7 @@ class cms_jobs extends base_module {
 			
 		$is_running = self::isSchedulingJobs();
 
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div class="cms_jobs">
 		
 			<form id="f:cms_jobs:update-0">
@@ -50,7 +50,7 @@ class cms_jobs extends base_module {
 		$arr_timer = self::getTimerOptions();
 		$arr_timer_service = self::getTimerOptions('service');
 
-		$return .= '<table class="list">
+		$return = '<table class="list">
 			<thead>
 				<tr>
 					<th class="max"><span>'.getLabel('lbl_task').'</span></th>
@@ -64,21 +64,26 @@ class cms_jobs extends base_module {
 		
 			foreach($arr_job_properties as $module => $methods) {
 				foreach($methods as $method => $arr_options) {
-				
-					$seconds = ($arr_jobs[$module][$method]['seconds'] === '-1' ? 'manual' : $arr_jobs[$module][$method]['seconds']);
-					if ($arr_options['service']) {
-						$seconds = ($arr_jobs[$module][$method]['seconds'] === '0' ? 'always' : $seconds);
-					}
 					
-					$str_options = $arr_jobs[$module][$method]['options'];
+					$arr_job = ($arr_jobs[$module][$method] ?? []);
+
+					$seconds = 0;
+					
+					if (isset($arr_job['seconds'])) {
+						
+						$seconds = ($arr_job['seconds'] === -1 ? 'manual' : $arr_job['seconds']);
+						if ($arr_options['service']) {
+							$seconds = ($arr_job['seconds'] === 0 ? 'always' : $seconds);
+						}
+					}
 					
 					$return .= '<tr id="x:cms_jobs:job-'.$module.'.'.$method.'">
 						<td>'.$arr_options['label'].'</td>
-						<td><input type="hidden" id="y:cms_jobs:set_job_options-'.$module.'.'.$method.'" name="jobs['.$module.']['.$method.'][options]" value="'.($str_options ? htmlspecialchars($str_options) : 'null').'" /><input type="button" class="data edit" value="edit" /></td>
+						<td><input type="hidden" id="y:cms_jobs:set_job_options-'.$module.'.'.$method.'" name="jobs['.$module.']['.$method.'][options]" value="'.(!empty($arr_job['options']) ? strEscapeHTML($arr_job['options']) : 'null').'" /><input type="button" class="data edit" value="edit" /></td>
 						<td><select name="jobs['.$module.']['.$method.'][timer]">'.cms_general::createDropdown(($arr_options['service'] ? $arr_timer_service : $arr_timer), $seconds).'</select></td>
-						<td>'.($arr_jobs[$module][$method]['date_executed'] ? date('d-m-Y H:i:s', strtotime($arr_jobs[$module][$method]['date_executed'])) : '<span class="icon" data-category="status">'.getIcon('min').'</span>').'</td>
-						<td><span class="icon" data-category="status">'.getIcon(($arr_jobs[$module][$method]['running'] ? 'tick' : 'min')).'</span></td>
-						<td>'.($arr_jobs[$module][$method] && !$arr_jobs[$module][$method]['running'] ? '<input type="button" class="data add quick run_job" value="run" />' : ($arr_jobs[$module][$method] && $arr_options['service'] ? '<input type="button" class="data del msg stop_job" value="stop" />' : '')).'</td>
+						<td>'.(!empty($arr_job['date_executed']) ? date('d-m-Y H:i:s', strtotime($arr_job['date_executed'])) : '<span class="icon" data-category="status">'.getIcon('min').'</span>').'</td>
+						<td><span class="icon" data-category="status">'.getIcon((!empty($arr_job['running']) ? 'tick' : 'min')).'</span></td>
+						<td>'.($arr_job && !$arr_job['running'] ? '<input type="button" class="data add quick run_job" value="run" />' : ($arr_job && $arr_options['service'] ? '<input type="button" class="data del msg stop_job" value="stop" />' : '')).'</td>
 					</tr>';
 				}
 			}
@@ -228,7 +233,7 @@ class cms_jobs extends base_module {
 			}
 			
 			$process = new Process();
-			$process->setPid($arr_job['process_id']);
+			$process->setPID($arr_job['process_id']);
 		
 			if (!$process->status()) {
 				error($msg);
@@ -258,7 +263,7 @@ class cms_jobs extends base_module {
 				$this->html = '<section class="info">'.getLabel('msg_no_options').'</section>';
 			} else {
 				
-				$arr_settings = json_decode(htmlspecialchars_decode($value), true);
+				$arr_settings = JSON2Value(strUnescapeHTML($value));
 				
 				$this->html = '<form id="frm-job-options" class="return_job_options">
 					'.$arr_options['options']($arr_settings).'
@@ -268,7 +273,7 @@ class cms_jobs extends base_module {
 		
 		if ($method == "return_job_options") {
 				
-			$this->html = htmlspecialchars(json_encode($_POST['options']));
+			$this->html = strEscapeHTML(value2JSON($_POST['options']));
 		}
 									
 		// QUERY
@@ -342,7 +347,7 @@ class cms_jobs extends base_module {
 				
 				if ((int)$arr_job['timer'] || $arr_job['timer'] == 'manual' || $arr_job['timer'] == 'always') {
 					
-					$str_options = htmlspecialchars_decode($arr_job['options']);
+					$str_options = strUnescapeHTML($arr_job['options']);
 					$str_options = ($str_options == 'null' ? '' : $str_options);
 					
 					$timer = $arr_job['timer'];
@@ -384,6 +389,7 @@ class cms_jobs extends base_module {
 		while ($arr_row = $res->fetchAssoc()) {
 			
 			$arr_row['running'] = DBFunctions::unescapeAs($arr_row['running'], DBFunctions::TYPE_BOOLEAN);
+			$arr_row['seconds'] = (int)$arr_row['seconds'];
 			
 			$arr[$arr_row['module']][$arr_row['method']] = $arr_row;
 		}
@@ -428,7 +434,7 @@ class cms_jobs extends base_module {
 		if ($arr_job_timer['process_id']) {
 		
 			$process = new Process();
-			$process->setPid($arr_job_timer['process_id']);
+			$process->setPID($arr_job_timer['process_id']);
 		
 			if (!$process->status()) {
 				error();
@@ -467,7 +473,7 @@ class cms_jobs extends base_module {
 		
 		// Try to claim the call jobs sequence
 		
-		$lock = Mediator::lock('jobs');
+		$lock = Mediator::checkLock('jobs');
 		
 		if (!$lock) { // Already claimed
 			return;
@@ -494,7 +500,7 @@ class cms_jobs extends base_module {
 		if ($process_id) {
 			
 			$process = new Process();
-			$process->setPid($process_id);
+			$process->setPID($process_id);
 		
 			if (!$process->status()) {
 				$process_id = false;
@@ -523,7 +529,11 @@ class cms_jobs extends base_module {
 	
 	public static function runJobs() {
 		
+		$count = 0;
+		
 		while (true) {
+			
+			$count++;
 				
 			self::cleanupJobs();
 									
@@ -604,8 +614,16 @@ class cms_jobs extends base_module {
 			
 			Mediator::runListeners('cleanup.program');
 			
-			Mediator::checkState();
+			if ($count % 100 == 0) { // Run system-related garbage collections
 
+				// Cleanup PHP sessions
+				session_start();
+				session_gc();
+				session_destroy();
+			}
+			
+			Mediator::checkState();
+			
 			sleep(1);
 		}
 	}
@@ -817,7 +835,7 @@ class cms_jobs extends base_module {
 			if ($arr_row['process_id']) {
 						
 				$process = new Process();
-				$process->setPid($arr_row['process_id']);
+				$process->setPID($arr_row['process_id']);
 			
 				if (!$process->status()) {
 				

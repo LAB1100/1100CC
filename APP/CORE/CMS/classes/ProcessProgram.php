@@ -2,16 +2,14 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-class ProcessProgram {
+class ProcessProgram extends Process {
 	
 	protected $process;
-	protected $command;
-	protected $pid;
 	protected $exitcode;
 	
 	protected $stdin;
@@ -23,22 +21,11 @@ class ProcessProgram {
 	protected $str_stderr;
 	protected $str_stderr_buffer;
 	
-	protected $eol = PHP_EOL;
+	protected $eol = EOL_1100CC;
 	
 	const SIZE_BUFFER_MAX = 8092;
-
-	public function __construct($cl = false) {
-		
-        if ($cl == false) {
-			return;
-		}
-			
-		$this->command = $cl;
-
-		$this->open();
-    }
     
-	private function open() {
+	protected function open() {
 
 		$arr_descriptors = [
 			0 => ['pipe', 'r'], // stdin
@@ -60,8 +47,8 @@ class ProcessProgram {
 		$this->stderr = $arr_pipes[2];
 		stream_set_blocking($this->stderr, false);
 
-		$arr_status = proc_get_status($this->process);
-		$this->pid = $arr_status['pid'];
+		$arr_status = $this->status();
+		$this->setPID($arr_status['pid']);
 		
 		$this->str_stdout_buffer = '';
 		$this->str_stderr_buffer = '';
@@ -84,12 +71,17 @@ class ProcessProgram {
 		$this->stdin = false;
 	}
     
-    public function checkOutput($end = false, $load = false) {
+    public function checkOutput($do_end = false, $do_continuous = false) { // $do_continuous = null to set mode to blocking
 
 		$this->str_stdout = '';
 		$this->str_stderr = '';
-
-		$wait = (0.05 * 1000000); // Seconds to microseconds. Give the ouput a little time to become available
+		
+		$num_wait_seconds = 0;
+		$num_wait_microseconds = (0.05 * 1000000); // Seconds to microseconds. Give the ouput a little time to become available
+		if ($do_continuous === null) { // Set blocking mode
+			$num_wait_seconds = null;
+			$num_wait_microseconds = null;
+		}
 		
 		while (true) {
 			
@@ -98,7 +90,7 @@ class ProcessProgram {
 			$except = null;
 
 			try {
-				$nr_streams = stream_select($arr_read, $arr_write, $except, 0, $wait);
+				$nr_streams = stream_select($arr_read, $arr_write, $except, $num_wait_seconds, $num_wait_microseconds);
 			} catch (Exception $e) {
 				return false; // Encountered an error in our own process
 			}
@@ -156,7 +148,7 @@ class ProcessProgram {
 
 			if ($this->exitcode === null) {
 					
-				$arr_status = proc_get_status($this->process);
+				$arr_status = $this->status();
 
 				if (!$arr_status['running']) {
 
@@ -170,12 +162,12 @@ class ProcessProgram {
 				return false;
 			}
 
-			if ($has_output && $end) { // Looking for an end in the output
+			if ($has_output && $do_end) { // Looking for an end in the output
 				
-				if ($end === true) {
+				if ($do_end === true) {
 					$str_end = $this->eol;
 				} else {
-					$str_end = $end;
+					$str_end = $do_end;
 				}
 				
 				$nr_end = strrpos($this->str_stdout, $str_end);
@@ -197,13 +189,13 @@ class ProcessProgram {
 			
 			// Keep checking and loading data
 
-			if ($load) {
+			if ($do_continuous) {
 				
-				if ($load === true) {
+				if ($do_continuous === true) {
 					continue;
 				} else {
 					
-					$abort = $load(); // Run a custom callback function
+					$abort = $do_continuous(); // Run a custom callback function
 					
 					if ($abort) {
 						return false;
@@ -242,7 +234,8 @@ class ProcessProgram {
 	}
 
 	public function status() {
-
+		
+		return proc_get_status($this->process);
 	}
 
 	public function close($terminate = false) {

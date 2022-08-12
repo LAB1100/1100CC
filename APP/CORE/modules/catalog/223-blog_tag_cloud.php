@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class blog_tag_cloud extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select name="limit" title="Limit">';
+		$return = '<select name="limit" title="Limit">';
 			for ($i = 10; $i <= 100; $i = $i+10) {
 				$return .= '<option value="'.$i.'">'.$i.'</option>';
 			}
@@ -82,9 +82,9 @@ class blog_tag_cloud extends base_module {
 			
 			$title = Labels::printLabels(Labels::parseTextVariables($str_inf_tags));
 			
-			$str_tag = htmlspecialchars($str_tag);
+			$str_tag = strEscapeHTML($str_tag);
 			
-			$arr_html[] = '<a'.($arr_link ? ' href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'tag/'.str_replace(' ', '+', $str_tag).'"' : '').' style="font-size: '.$size.'%" title="'.htmlspecialchars($title).'" data-tag="'.$str_tag.'"'.($nr_preview && $count_tags >= $nr_preview ? ' class="hide-show"' : '').'><span>'.$str_tag.'</span><sup>'.$count.'</sup></a>';
+			$arr_html[] = '<a'.($arr_link ? ' href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'tag/'.str_replace(' ', '+', $str_tag).'"' : '').' style="font-size: '.$size.'%" title="'.strEscapeHTML($title).'" data-tag="'.$str_tag.'"'.($nr_preview && $count_tags >= $nr_preview ? ' class="hide-show"' : '').'><span>'.$str_tag.'</span><sup>'.$count.'</sup></a>';
 			
 			$count_tags++;
 		}

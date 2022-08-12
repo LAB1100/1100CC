@@ -2,12 +2,12 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-class StreamJSON {
+class StreamJSONInput {
 	
 	// With some help from https://github.com/salsify/jsonstreamingparser
 	
@@ -36,8 +36,8 @@ class StreamJSON {
 	protected $str_path_capture;
 	protected $func_return_captured;
 	
-	protected $size_buffer = 8192;
-	protected $line_end = "\n";
+	protected $num_buffer_size = 8192;
+	protected $str_line_end = "\n";
 	protected $bom_utf;
 	protected $do_parse;
 	protected $state;
@@ -49,12 +49,17 @@ class StreamJSON {
 	protected $str_object_key;
 	
 	protected $arr_stack;
-	protected $stack_level;
+	protected $count_stack_level;
 	protected $stacked;
 	
-	protected $capture_stack_level;
+	protected $num_capture_stack_level;
 	protected $str_capture;
 	protected $do_capture;
+	
+	protected $str_buffer = false;
+	protected $length_buffer = false;
+	protected $count_buffer = false;
+	protected $is_eol = false;
 	
 	public function __construct($stream) {
 		
@@ -66,59 +71,35 @@ class StreamJSON {
 		$this->str_path_capture = $str_path_capture;
 		$this->func_return_captured = $func_return_captured;
 		
-		$this->state = self::STATE_START_DOCUMENT;
-		$this->arr_path = [];
-		$this->str_object_key = '';
-		$this->arr_stack = [];
-		$this->stack_level = 0;
-		$this->str_capture = '';
-		$this->do_capture = false;
-		
-		$this->capture_stack_level = 0;
-		$this->capture_stack_level += substr_count($str_path_capture, '{');
-		$this->capture_stack_level += substr_count($str_path_capture, '[');
+		$this->num_capture_stack_level = 0;
+		$this->num_capture_stack_level += substr_count($this->str_path_capture, '{');
+		$this->num_capture_stack_level += substr_count($this->str_path_capture, '[');
+
+		$this->reset();
 		
 		$this->parse();
 	}
 	
-	private function parse() {
+	public function reset() {
 		
 		$this->do_parse = true;
+		
+		// Buffer
+		$this->str_buffer = false;
 		$this->pos_line = 1;
 		$this->pos_character = 1;
 		
+		// Stack
+		$this->state = self::STATE_START_DOCUMENT;
+		$this->arr_path = [];
+		$this->str_object_key = '';
+		$this->arr_stack = [];
+		$this->stacked = null;
+		$this->count_stack_level = 0;
+		$this->str_capture = '';
+		$this->do_capture = false;
+
 		rewind($this->stream);
-		$is_eof = false;
-		
-		while (!feof($this->stream) && !$is_eof) {
-			
-			$pos = ftell($this->stream);
-			$line = stream_get_line($this->stream, $this->size_buffer, $this->line_end);
-			$ended = (bool)(ftell($this->stream) - strlen($line) - $pos);
-			
-			// If we're still at the same place after stream_get_line, we're done
-			$is_eof = ftell($this->stream) == $pos;
-			$len_bytes = strlen($line);
-			
-			for ($i = 0; $i < $len_bytes; $i++) {
-				
-				$this->str_character = $line[$i];
-				
-				$this->consumeCharacter();
-				
-				$this->pos_character++;
-				
-				if (!$this->do_parse) {
-					return;
-				}
-			}
-			
-			if ($ended) {
-				
-				$this->pos_line++;
-				$this->pos_character = 1;
-			}
-		}
 	}
 	
 	public function stop() {
@@ -126,11 +107,62 @@ class StreamJSON {
 		$this->do_parse = false;
 	}
 	
+	public function resume() {
+		
+		$this->do_parse = true;
+		
+		return $this->parse();
+	}
+	
+	protected function parse() {
+		
+		$is_eof = false;
+		
+		while ($this->str_buffer !== false || (!feof($this->stream) && !$is_eof)) {
+			
+			if ($this->str_buffer === false) {
+				
+				$pos = ftell($this->stream);
+				
+				$this->str_buffer = stream_get_line($this->stream, $this->num_buffer_size, $this->str_line_end);
+				$this->length_buffer = strlen($this->str_buffer);
+				$this->is_eol = (bool)(ftell($this->stream) - $this->length_buffer - $pos); // Is end of line
+				$this->count_buffer = 0;
+				
+				// If we're still at the same place after stream_get_line, we're done
+				$is_eof = ftell($this->stream) == $pos;
+			}
+			
+			for ($this->count_buffer; $this->count_buffer < $this->length_buffer; $this->count_buffer++) {
+				
+				$this->str_character = $this->str_buffer[$this->count_buffer];
+				
+				$this->consumeCharacter();
+				
+				$this->pos_character++;
+				
+				if (!$this->do_parse) {
+					return true;
+				}
+			}
+			
+			$this->str_buffer = false;
+			
+			if ($this->is_eol) {
+				
+				$this->pos_line++;
+				$this->pos_character = 1;
+			}
+		}
+		
+		return false;
+	}
+	
 	public function returnCaptured() {
 		
 		$func_return_captured = $this->func_return_captured;
 		
-		if ($this->stacked == self::STACK_ARRAY) {
+		if ($this->stacked === self::STACK_ARRAY) {
 			$func_return_captured('['.$this->str_capture.']');
 		} else {
 			$func_return_captured('{'.$this->str_capture.'}');
@@ -303,9 +335,9 @@ class StreamJSON {
 	
 	private function checkKey() {
 		
-		if ($this->stack_level <= $this->capture_stack_level && !$this->do_capture) {
+		if (!$this->do_capture && $this->count_stack_level <= $this->num_capture_stack_level) {
 			
-			$this->arr_path[$this->stack_level] = ($this->stack_level > 1 ? $this->arr_path[$this->stack_level-1] : '').'{"'.$this->str_object_key.'":';
+			$this->arr_path[$this->count_stack_level] = ($this->count_stack_level > 1 ? $this->arr_path[$this->count_stack_level-1] : '').'{"'.$this->str_object_key.'":';
 		}
 		
 		$this->str_object_key = '';
@@ -344,17 +376,17 @@ class StreamJSON {
 	
 	private function startArray() {
 		
-		$this->stack_level++;
+		$this->count_stack_level++;
 		$this->stacked = self::STACK_ARRAY;
 		$this->arr_stack[] = self::STACK_ARRAY;
 		
 		$this->state = self::STATE_IN_ARRAY;
 		
-		if ($this->stack_level <= $this->capture_stack_level && !$this->do_capture) {
+		if (!$this->do_capture && $this->count_stack_level <= $this->num_capture_stack_level) {
 
-			$this->arr_path[$this->stack_level] = ($this->stack_level > 1 ? $this->arr_path[$this->stack_level-1] : '').'[';
+			$this->arr_path[$this->count_stack_level] = ($this->count_stack_level > 1 ? $this->arr_path[$this->count_stack_level-1] : '').'[';
 			
-			if ($this->stack_level === $this->capture_stack_level && $this->arr_path[$this->stack_level] === $this->str_path_capture) {
+			if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
 								
 				$this->do_capture = true;
 				$this->str_character = false;
@@ -364,7 +396,7 @@ class StreamJSON {
 	
 	private function checkArray() {
 		
-		if ($this->stack_level === $this->capture_stack_level && $this->arr_path[$this->stack_level] === $this->str_path_capture) {
+		if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
 			
 			if ($this->do_capture) {
 				
@@ -380,11 +412,11 @@ class StreamJSON {
 	
 	private function endArray() {
 		
-		$this->stack_level--;
+		$this->count_stack_level--;
 		array_pop($this->arr_stack);
 		$this->stacked = end($this->arr_stack);
 		
-		if ($this->stack_level === $this->capture_stack_level && $this->do_capture) {
+		if ($this->do_capture && $this->count_stack_level === $this->num_capture_stack_level) {
 			
 			$this->str_capture .= ']';
 
@@ -395,24 +427,24 @@ class StreamJSON {
 		
 		$this->state = self::STATE_AFTER_VALUE;
 	
-		if (!$this->stack_level) {
+		if (!$this->count_stack_level) {
 			$this->endDocument();
 		}
 	}
 	
 	private function startObject() {
 		
-		$this->stack_level++;
+		$this->count_stack_level++;
 		$this->stacked = self::STACK_OBJECT;
 		$this->arr_stack[] = self::STACK_OBJECT;
 		
 		$this->state = self::STATE_IN_OBJECT;
 		
-		if ($this->stack_level <= $this->capture_stack_level && !$this->do_capture) {
+		if (!$this->do_capture && $this->count_stack_level <= $this->num_capture_stack_level) {
 
-			$this->arr_path[$this->stack_level] = ($this->stack_level > 1 ? $this->arr_path[$this->stack_level-1] : '').'{';
+			$this->arr_path[$this->count_stack_level] = ($this->count_stack_level > 1 ? $this->arr_path[$this->count_stack_level-1] : '').'{';
 			
-			if ($this->stack_level === $this->capture_stack_level && $this->arr_path[$this->stack_level] === $this->str_path_capture) {
+			if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
 				
 				$this->do_capture = true;
 				$this->str_character = false;
@@ -422,7 +454,7 @@ class StreamJSON {
 	
 	private function checkObject() {
 					
-		if ($this->stack_level === $this->capture_stack_level && $this->arr_path[$this->stack_level] === $this->str_path_capture) {
+		if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
 			
 			if ($this->do_capture) {
 				
@@ -438,13 +470,13 @@ class StreamJSON {
 	
 	private function endObject() {
 		
-		$this->stack_level--;
+		$this->count_stack_level--;
 		array_pop($this->arr_stack);
 		$this->stacked = end($this->arr_stack);
 		
 		$this->state = self::STATE_AFTER_VALUE;
 		
-		if ($this->stack_level === $this->capture_stack_level && $this->do_capture) {
+		if ($this->do_capture && $this->count_stack_level === $this->num_capture_stack_level) {
 			
 			$this->str_capture .= '}';
 
@@ -453,7 +485,7 @@ class StreamJSON {
 			$this->do_capture = false;
 		}
 
-		if (!$this->stack_level) {
+		if (!$this->count_stack_level) {
 			
 			$this->endDocument();
 		}

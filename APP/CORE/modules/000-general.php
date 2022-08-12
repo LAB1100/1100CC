@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -48,7 +48,7 @@ class general extends base_module {
 							
 							$return .= '<li>
 								<label><span>'.$arr_row['label'].'</span></label>
-								<div><textarea name="lang_code['.$lang_code.']">'.htmlspecialchars($arr_label[$lang_code]).'</textarea></div>
+								<div><textarea name="lang_code['.$lang_code.']">'.strEscapeHTML($arr_label[$lang_code]).'</textarea></div>
 							</li>';
 						}
 						
@@ -101,7 +101,7 @@ class general extends base_module {
 		$return = "
 				var IS_CMS = ".(int)IS_CMS.",
 				DIR_CMS = '".DIR_CMS."',
-				BASE_URL_HOME = '".BASE_URL_HOME."';";
+				URL_BASE_HOME = '".URL_BASE_HOME."';";
 		
 		return $return;
 	}
@@ -186,7 +186,7 @@ class general extends base_module {
 				
 				for ($i = 1; $i < count($arr_sql_columns); $i++) {
 					
-					$arr_data[] = htmlspecialchars($arr_row[$i]);
+					$arr_data[] = strEscapeHTML($arr_row[$i]);
 				}
 				
 				$arr_datatable['output']['data'][] = $arr_data;

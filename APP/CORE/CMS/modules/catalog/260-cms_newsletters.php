@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -28,7 +28,7 @@ class cms_newsletters extends base_module {
 	
 	public function contents() {
 
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div class="newsletters">';
 		
 		$return .= '<div id="tabs-newsletters">
@@ -199,7 +199,7 @@ class cms_newsletters extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_title').'</label>
-						<div><input type="text" name="title" value="'.htmlspecialchars($row['title']).'"></div>
+						<div><input type="text" name="title" value="'.strEscapeHTML($row['title']).'"></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_template').'</label>
@@ -235,11 +235,11 @@ class cms_newsletters extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($row['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($row['name']).'"></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_body').'</label>
-						<div>'.cms_general::editBody($row['body'], true).'</div>
+						<div>'.cms_general::editBody($row['body'], 'body', true).'</div>
 					</li>
 				</ul></fieldset>
 			</form>';
@@ -286,7 +286,7 @@ class cms_newsletters extends base_module {
 				}
 				
 				if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-					$arr_insert[$email] = '("'.DBFunctions::strEscape($email).'", "'.DBFunctions::strEscape($name).'")';
+					$arr_insert[$email] = "('".DBFunctions::strEscape($email)."', '".DBFunctions::strEscape($name)."')";
 				}
 			}
 			
@@ -323,14 +323,14 @@ class cms_newsletters extends base_module {
 			
 				$arr_email = self::getDatabaseEmailAddressesRaw();
 				
-				Response::sendHeader(false, 'email_addresses.csv');
+				Response::sendFileHeaders(false, 'email_addresses.csv');
 				
 				$resource = fopen('php://output', 'w');
 					
-				fputcsv($resource, ['email', 'name', 'bounced', 'opt_out'], ';');				
+				fputcsv($resource, ['email', 'name', 'bounced', 'opt_out'], ',', '"', CSV_ESCAPE);				
 			
 				foreach ($arr_email as $value) {
-					fputcsv($resource, [$value['email'], $value['name'], $value['bounced'], $value['opt_out']], ';');
+					fputcsv($resource, [$value['email'], $value['name'], $value['bounced'], $value['opt_out']], ',', '"', CSV_ESCAPE);
 				}
 
 				die;
@@ -362,11 +362,11 @@ class cms_newsletters extends base_module {
 				<table>
 					<tr>
 						<td>'.getLabel('lbl_email').'</td>
-						<td><input type="text" name="email" value="'.htmlspecialchars($arr['email']).'"></td>
+						<td><input type="text" name="email" value="'.strEscapeHTML($arr['email']).'"></td>
 					</tr>
 					<tr>
 						<td>'.getLabel('lbl_name').'</td>
-						<td><input type="text" name="name" value="'.htmlspecialchars($arr['name']).'"></td>
+						<td><input type="text" name="name" value="'.strEscapeHTML($arr['name']).'"></td>
 					</tr>
 					<tr>
 						<td>'.getLabel('lbl_opt_out').'</td>
@@ -445,8 +445,8 @@ class cms_newsletters extends base_module {
 				
 				$arr_data[] = $arr_row['email'];
 				$arr_data[] = $arr_row['name'];
-				$arr_data[] = (DBFunction::unescapeAs($arr_row['bounced'], DBFunctions::TYPE_BOOLEAN) ? '<span class="icon">'.getIcon('tick').'</span>' : '');
-				$arr_data[] = (DBFunction::unescapeAs($arr_row['opt_out'], DBFunctions::TYPE_BOOLEAN) ? '<span class="icon">'.getIcon('tick').'</span>' : '');
+				$arr_data[] = (DBFunctions::unescapeAs($arr_row['bounced'], DBFunctions::TYPE_BOOLEAN) ? '<span class="icon">'.getIcon('tick').'</span>' : '');
+				$arr_data[] = (DBFunctions::unescapeAs($arr_row['opt_out'], DBFunctions::TYPE_BOOLEAN) ? '<span class="icon">'.getIcon('tick').'</span>' : '');
 				$arr_data[] = '<input type="button" class="data edit popup edit_email_address" value="edit" /><input type="button" class="data del msg del_email_address" value="del" />';
 				
 				$arr_datatable['output']['data'][] = $arr_data;
@@ -603,8 +603,8 @@ class cms_newsletters extends base_module {
 		
 		while ($arr_row = $res->fetchAssoc()) {
 			
-			$arr_row['bounced'] = DBFunction::unescapeAs($arr_row['bounced'], DBFunctions::TYPE_BOOLEAN);
-			$arr_row['opt_out'] = DBFunction::unescapeAs($arr_row['opt_out'], DBFunctions::TYPE_BOOLEAN);
+			$arr_row['bounced'] = DBFunctions::unescapeAs($arr_row['bounced'], DBFunctions::TYPE_BOOLEAN);
+			$arr_row['opt_out'] = DBFunctions::unescapeAs($arr_row['opt_out'], DBFunctions::TYPE_BOOLEAN);
 			
 			$arr[] = $arr_row;
 		}

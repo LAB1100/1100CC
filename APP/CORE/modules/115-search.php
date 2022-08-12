@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -10,7 +10,7 @@
 class search extends base_module {
 
 	public static function moduleProperties() {
-		static::$label = getLabel('ttl_search');
+		static::$label = getLabel('lbl_search');
 		static::$parent_label = getLabel('ttl_site');
 	}
 		
@@ -23,18 +23,24 @@ class search extends base_module {
 			} else {
 				$location = pages::getPageUrl(pages::getMods((int)$this->arr_query[1]));
 			}
+			
 			Response::location($location);
-			die;
-		}	
+			exit;
+		}
+		
+		$str_search = static::decodeURLString($this->arr_query[0]);
 				
-		$return .= '<h1>'.getLabel('ttl_search').'</h1>
+		$return .= '<h1>'.getLabel('lbl_search').'</h1>
 		<form id="f:search:search-0">
-			<input type="search" name="string" value="'.htmlspecialchars($this->arr_query[0]).'" /><input type="submit" value="'.getLabel('lbl_search').'" />
+			<input type="search" name="string" value="'.strEscapeHTML($str_search).'" /><input type="submit" value="'.getLabel('lbl_search').'" />
 		</form>
 		<div class="result">';
 			
 			if ($this->arr_query[0]) {
-				$return .= $this->doSearch($this->arr_query[0]);
+				
+				$return .= $this->doSearch($str_search);
+				
+				SiteEndVars::setModVariables($this->mod_id, [], true); // Clear the settings in the url
 			}
 		
 		$return .= '</div>';
@@ -44,15 +50,18 @@ class search extends base_module {
 	
 	public static function css() {
 	
-		$return = '.search form input { vertical-align: top; }
-					.search dl {  }
-					.search dl > dt { margin-top: 8px; }
-					.search dl > dt > a { font-size: 14px; font-weight: bold; }
-					.search dl > dt > span.hits { font-size: 10px; }
-					.search dl > dt > span.link { display: block; }
-					.search dl > dd { color: #666666; }
-					.search dl > dd em { font-style: normal; font-weight: bold; color: #000000; }
-					.search dl > dt > a em { font-style: normal; }';
+		$return = '
+			.search form > input[type=search] { border-top-right-radius: 0px; border-bottom-right-radius: 0px; }
+			.search form > input[type=submit] { margin-left: 0px; border-top-left-radius: 0px; border-bottom-left-radius: 0px; }
+			.search dl { margin-top: 20px; }
+			.search dl > dt { margin-top: 12px; }
+			.search dl > dt > a { font-size: 1.4rem; font-weight: bold; }
+			.search dl > dt > .hits { font-size: 1rem; display: inline-block; }
+			.search dl > dt > .link { display: block; margin-top: 4px; }
+			.search dl > dd { color: #666666; margin-top: 8px; }
+			.search dl > dd em { font-style: normal; font-weight: bold; color: #444444; background-color: #fffc5b; }
+			.search dl > dt > a em { font-style: normal; }
+		';
 		
 		return $return;
 	}
@@ -86,9 +95,9 @@ class search extends base_module {
 		}
 	}
 	
-	private function doSearch($string) {
+	private function doSearch($str) {
 	
-		$arr_strings = self::getKeywords($string);
+		$arr_strings = self::getKeywords($str);
 	
 		if (!$arr_strings) {
 			return '<p>'.getLabel('msg_search_too_short').'</p>';
@@ -97,78 +106,93 @@ class search extends base_module {
 		$arr_search_properties = getModuleConfiguration('searchProperties');
 		
 		$arr_modules = pages::getMods(array_keys($arr_search_properties));
-		$arr_modules = pages::filterClearance($arr_modules, $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]);
+		$arr_modules = pages::filterClearance($arr_modules, ($_SESSION['USER_GROUP'] ?? null), ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] ?? null));
 
 		$arr_search_vars = [];
 		
-		foreach ($arr_modules as $row) {
+		foreach ($arr_modules as $arr_module) {
 			
-			if ($arr_search_properties[$row['module']]['search_var'] && $row['var']) {
+			if ($arr_search_properties[$arr_module['module']]['search_var'] && $arr_module['var']) {
 			
-				if ($arr_search_properties[$row['module']]['module_var']) {
+				if ($arr_search_properties[$arr_module['module']]['module_var']) {
 					
-					$arr_var = json_decode($row['var'], true);
-					$var = $arr_var[$arr_search_properties[$row['module']]['module_var']];
+					$arr_var = json_decode($arr_module['var'], true);
+					$var = $arr_var[$arr_search_properties[$arr_module['module']]['module_var']];
 				} else {
 					
-					$var = $row['var'];
+					$var = $arr_module['var'];
 				}
 				
-				$arr_search_vars[$row['module']][$var] = $row['id'];
-			} else if (!$arr_search_properties[$row['module']]['search_var']) {
+				$arr_search_vars[$arr_module['module']][$var] = $arr_module['id'];
+			} else if (!$arr_search_properties[$arr_module['module']]['search_var']) {
 				
-				$arr_search_vars[$row['module']] = $row['id'];
+				$arr_search_vars[$arr_module['module']] = $arr_module['id'];
 			}
 		}
 
 		if ($arr_search_properties) {
 							
-			$arr_result = self::moduleSearchTriggers($arr_search_properties, $arr_search_vars, $arr_strings);
+			$arr_results = self::moduleSearchTriggers($arr_search_properties, $arr_search_vars, $arr_strings);
 			
 			$arr_bodies = [];
-			foreach ($arr_result as $key => $row) {
-				$arr_bodies[$key] = parseBody($row['value']);
-			}
-			$arr_bodies = Labels::printLabels($arr_bodies);
 			
-			foreach ($arr_result as $key => $row) {
+			foreach ($arr_results as $key => $arr_result) {
 				
-				$module_id = ($row['search_var'] ? $arr_search_vars[$row['module']][$row['search_var']] : $arr_search_vars[$row['module']]);
-				$title = htmlspecialchars(Labels::printLabels(Labels::parseTextVariables($row['title'])));
-				$excerpt = htmlspecialchars(FormatExcerpt::parse($arr_bodies[$key], $arr_strings[0], false, 350, '... ', ' ...'));
+				$str_body = Labels::parseTextVariables($arr_result['value']);
 				
-				foreach ($arr_strings as $string) {
-					
-					$title_h = FormatExcerpt::performHighlight($title, $string);
-					$title = $title_h['result'];
-					$excerpt_h = FormatExcerpt::performHighlight($excerpt, $string);
-					$excerpt = $excerpt_h['result'];
-					$body_count = FormatExcerpt::countString($arr_bodies[$key], $string);
-					$arr_result[$key]['count'] = ($title_h['count']+($body_count ?: $excerpt_h['count']));
+				$str_body = FormatTags::strip($str_body); // Tags are not needed
+				
+				$format = new FormatHTML($str_body);
+				
+				if (Response::getFormat() & Response::RENDER_XML) {
+					$str_body = $format->getXHTML();
+				} else {
+					$str_body = $format->getHTML();
 				}
 				
-				$href = ''.SiteStartVars::getModUrl($this->mod_id).'jump/'.$module_id.($arr_search_properties[$row['module']]['module_query']($row) ?: '');
-				$arr_result[$key]['html'] = '<dt>
-					<a href="'.$href.'" target="_blank">'.$title.'</a>
-					<span class="hits">'.$arr_result[$key]['count'].' hit'.($arr_result[$key]['count'] > 1 ? 's' : '').'</span>
-					<span class="link">'.htmlspecialchars(Labels::parseTextVariables(($arr_modules[$module_id]['directory_title'] ? $arr_modules[$module_id]['directory_title'].' > ' : '> ').$arr_modules[$module_id]['page_title'])).'</span>
+				$arr_bodies[$key] = Labels::printLabels($str_body);
+			}
+						
+			foreach ($arr_results as $key => $arr_result) {
+				
+				$module_id = ($arr_result['search_var'] ? $arr_search_vars[$arr_result['module']][$arr_result['search_var']] : $arr_search_vars[$arr_result['module']]);
+				$str_title = strEscapeHTML(Labels::printLabels(Labels::parseTextVariables($arr_result['title'])));
+				$str_excerpt = FormatExcerpt::parse($arr_bodies[$key], $arr_strings[0], false, 350, '... ', ' ...');
+				
+				foreach ($arr_strings as $str_search) {
+					
+					$str_title_highlight = FormatExcerpt::performHighlight($str_title, $str_search);
+					$str_title = $str_title_highlight['result'];
+					$str_excerpt_highlight = FormatExcerpt::performHighlight($str_excerpt, $str_search);
+					$str_excerpt = $str_excerpt_highlight['result'];
+					$body_count = FormatExcerpt::countString($arr_bodies[$key], $str_search);
+					$arr_results[$key]['count'] = ($str_title_highlight['count']+($body_count ?: $str_excerpt_highlight['count']));
+				}
+				
+				$str_url_extra = ($arr_search_properties[$arr_result['module']]['module_query']($arr_result) ?: '');
+				$str_url = ''.SiteStartVars::getModUrl($this->mod_id).'jump/'.$module_id.$str_url_extra;
+				$arr_results[$key]['html'] = '<dt>
+					<a href="'.$str_url.'" target="_blank">'.$str_title.'</a>
+					<span class="hits">'.$arr_results[$key]['count'].' hit'.($arr_results[$key]['count'] > 1 ? 's' : '').'</span>
+					<span class="link">'.strEscapeHTML(Labels::parseTextVariables(($arr_modules[$module_id]['directory_title'] ? $arr_modules[$module_id]['directory_title'].' > ' : '> ').$arr_modules[$module_id]['page_title'])).'</span>
 				</dt>
-				<dd>'.$excerpt.'</dd>';
+				<dd>'.$str_excerpt.'</dd>';
 			}
 			
-			uasort($arr_result, function($a, $b) {
-				return $a['count']<$b['count'];
+			uasort($arr_results, function($a, $b) {
+				return $a['count'] < $b['count'];
 			});
 			
-			$result = implode('', arrValuesRecursive('html', $arr_result));
+			$result = implode('', arrValuesRecursive('html', $arr_results));
 		}
 
 		if ($result) {
-			$return .= '<h2>'.getLabel('ttl_result').'</h2>
-			<dl>
+			
+			$return .= '<dl>
 			'.$result.'
 			</dl>';
 		} else {
+			
 			return '<p>'.getLabel('msg_search_no_result').'</p>';
 		}
 		
@@ -177,9 +201,22 @@ class search extends base_module {
 			
 	private static function moduleSearchTriggers($arr_search_properties, $arr_search_vars, $arr_strings) {
 	
-		$arr_identifiers = cms_Labels::searchLabels($arr_strings);
-					
+		$arr_strings_identifiers = cms_Labels::searchLabels($arr_strings);
+		
+		$num_extra_values_total = 0;
+		
+		foreach ($arr_search_properties as $module => $arr_search) {
+			
+			if (!$arr_search_vars[$module] || !$arr_search['extra_values']) {
+				continue;
+			}
+			
+			$num_extra_values = count($arr_search['extra_values']);
+			$num_extra_values_total = ($num_extra_values > $num_extra_values_total ? $num_extra_values : $num_extra_values_total);
+		}
+		
 		$arr_query = [];
+		
 		foreach ($arr_search_properties as $module => $arr_search) {
 			
 			if (!$arr_search_vars[$module]) {
@@ -192,14 +229,16 @@ class search extends base_module {
 			$search_var_tc = ($arr_search['search_var'] ? $arr_search['search_var'][1] : false); // Search var is used to lookup module variables
 			$extra_values_tc = '';
 			
-			if ($arr_search['extra_values']) {
+			for ($i = 0; $i < $num_extra_values_total; $i++) {
 				
-				foreach ($arr_search['extra_values'] as $key => $value) {
+				if (!isset($arr_search['extra_values'][$i])) {
 					
-					$extra_values_tc .= ','.$value[1].' AS extra_'.$key;
+					$extra_values_tc .= ',NULL AS extra_'.$i;
+					continue;
 				}
+				
+				$extra_values_tc .= ','.$arr_search['extra_values'][$i][1].' AS extra_'.$i;
 			}
-			reset($arr_search);
 			
 			$query = "SELECT
 				".$trigger_tc." AS value
@@ -218,22 +257,28 @@ class search extends base_module {
 					$arr_module_link_from = $arr_search['module_link'][$i];
 					$arr_module_link_to = $arr_search['module_link'][$i+1];
 					
-					$query .= " LEFT JOIN ".$arr_module_link_to[0]." ON (".$arr_module_link_to[1]." = ".$arr_module_link_from[1].($arr_module_link_to[2] ? " ".$arr_module_link_to[2] : '').")";
+					$query .= " LEFT JOIN ".$arr_module_link_to[0]." ON (".$arr_module_link_to[1]." = ".$arr_module_link_from[1].(isset($arr_module_link_to[2]) ? " ".$arr_module_link_to[2] : '').")";
 				}
 			}
 
 			$arr_query_search = [];
-			foreach ($arr_identifiers as $string => $value) {
+			
+			foreach ($arr_strings_identifiers as $str => $arr_identifiers) {
+				
 				$arr_query_search_or = [];
-				$arr_query_search_or[] = ($title_tc ? "CONCAT(".$title_tc.", ".$trigger_tc.")" : $trigger_tc)." LIKE '%".DBFunctions::strEscape($string)."%'";
-				foreach ($value as $identifier) {
-					$arr_query_search_or[] = ($title_tc ? "CONCAT(".$title_tc.", ".$trigger_tc.")" : $trigger_tc)." LIKE '%[L][".DBFunctions::strEscape($identifier)."]%'";
+				$arr_query_search_or[] = ($title_tc ? "CONCAT(".$title_tc.", ".$trigger_tc.")" : $trigger_tc)." LIKE '%".DBFunctions::strEscape($str)."%'";
+				
+				foreach ($arr_identifiers as $str_identifier) {
+					$arr_query_search_or[] = ($title_tc ? "CONCAT(".$title_tc.", ".$trigger_tc.")" : $trigger_tc)." LIKE '%[L][".DBFunctions::strEscape($str_identifier)."]%'";
 				}
-				$arr_query_search[] = implode(" OR ", $arr_query_search_or);
+				
+				$arr_query_search[] = "(".implode(' OR ', $arr_query_search_or).")";
 			}
-			$query .= " WHERE (".implode(" AND ", $arr_query_search).")";
+			
+			$query .= " WHERE (".implode(' AND ', $arr_query_search).")".(isset($arr_search['trigger'][2]) ? ' '.$arr_search['trigger'][2] : '');
+			
 			if ($search_var_tc) {
-				$query .= " AND ".$search_var_tc." IN (".implode(",", array_keys($arr_search_vars[$module])).")";
+				$query .= " AND ".$search_var_tc." IN (".implode(',', array_keys($arr_search_vars[$module])).")";
 			}
 
 			$arr_query[] = $query;
@@ -247,9 +292,9 @@ class search extends base_module {
 			
 			$match_all = true;
 			
-			foreach ($arr_identifiers as $string => $value) { // All search strings or its identifiers have to be accounted for, meaning no overlap (i.e. "test" must not match [L][lbl_test]
+			foreach ($arr_strings_identifiers as $str => $arr_identifiers) { // All search strings or its identifiers have to be accounted for, meaning no overlap (i.e. "test" must not match [L][lbl_test]
 				
-				if (!preg_match("/".$string."(?!\w*[\]])/i", $arr_row['title'].$arr_row['value']) && (!$value || ($value && !preg_match("/(\\[L\\]\\[".implode("\\]|\\[L\\]\\[", $value)."\\])/", $arr_row['title'].$arr_row['value'])))) {
+				if (!preg_match("/".$str."(?!\w*[\]])/i", $arr_row['title'].$arr_row['value']) && (!$arr_identifiers || ($arr_identifiers && !preg_match("/(\\[L\\]\\[".implode("\\]|\\[L\\]\\[", $arr_identifiers)."\\])/", $arr_row['title'].$arr_row['value'])))) {
 					
 					$match_all = false;
 					break;
@@ -261,7 +306,7 @@ class search extends base_module {
 										
 					foreach ($arr_search['extra_values'] as $key => $value) {
 						
-						$arr_row['extra_values'][$value[0]][$value[1]] = $arr_row['extra_'.$key];
+						$arr_row['extra_values'][$value[0]][($value[2] ?? $value[1])] = $arr_row['extra_'.$key];
 					}
 				}
 				
@@ -272,28 +317,42 @@ class search extends base_module {
 		return $arr;
 	}
 	
-	public static function getKeywords($string) {
+	public static function encodeURLString($str) {
+		
+		$str = ($str ? str_replace(' ', '|', $str) : '');
+		
+		return $str;
+	}
+	
+	public static function decodeURLString($str) {
+		
+		$str = ($str ? str_replace('|', ' ', $str) : '');
+		
+		return $str;
+	}
+	
+	public static function getKeywords($str) {
 	
 		// Replace specific entities with plain spaces
-		$string = str_replace(['.', ',', '_'], ' ', $string);
+		$str = str_replace(['.', ',', '_'], ' ', $str);
 		
 		// Remove non wordlike characters
-		$string = preg_replace('/[^a-z0-9\s]/i', '', $string);
+		$str = preg_replace('/[^a-z0-9\s]/i', '', $str);
 		
-		// Remove small words of 3 chars
-		$string = preg_replace('/(\b\w{1,3}\b)/', '', $string);
+		// Remove small words of 2 chars
+		$str = preg_replace('/(\b\w{1,2}\b)/', '', $str);
 		
 		// Collapse whitespace
-		$string = preg_replace('/\s\s+/', ' ', $string);
+		$str = preg_replace('/\s\s+/', ' ', $str);
 		
-		$string = trim($string);
+		$str = trim($str);
 		
-		if (!$string) {
+		if (!$str) {
 			return [];
 		}
 
 		// create unique keyword search array
-		return array_unique(explode(" ", $string));
+		return array_unique(explode(' ', $str));
 	
 	}
 }

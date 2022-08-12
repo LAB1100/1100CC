@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -11,13 +11,13 @@ class PingbackUtility {
 
 	const REGEXP_PINGBACK_LINK = '<link rel="pingback" href="([^"]+)" ?/?>';
 
-	public static function isURL($url) {
-		return filter_var($url, FILTER_VALIDATE_URL);
+	public static function isURL($str_url) {
+		return filter_var($str_url, FILTER_VALIDATE_URL);
 	}
 	
-	public static function isURLHost($url) {
+	public static function isURLHost($str_url) {
 		
-		preg_match("/^https?:\/\/([^\/]+)\//", $url, $matches);
+		preg_match("/^https?:\/\/([^\/]+)\//", $str_url, $matches);
 		
 		if ($_SERVER['HTTP_HOST'] == $matches[1]) {
 			return true;
@@ -26,9 +26,9 @@ class PingbackUtility {
 		}
 	}
 	
-	public static function getBlogPostId($url) {
+	public static function getBlogPostId($str_url) {
 	
-		preg_match("/\.[m|s]\/(\d+)\//", $url, $match);
+		preg_match("/\.[m|s]\/(\d+)\//", $str_url, $match);
 	
 		$id	= $match[1];
 
@@ -53,11 +53,11 @@ class PingbackUtility {
 		}	
 	}
 	
-	public static function isNewEntry($url, $id) {
+	public static function isNewEntry($str_url, $id) {
 		
 		$query = "SELECT COUNT(id) AS count
 				FROM ".DB::getTable('TABLE_BLOG_POST_XREFS')."
-			WHERE direction = 'in' AND source = '".DBFunctions::strEscape(rawurldecode($url))."'
+			WHERE direction = 'in' AND source = '".DBFunctions::strEscape(rawurldecode($str_url))."'
 				AND blog_post_id = ".(int)$id;
 		
 		$res = DB::query($query);
@@ -71,20 +71,20 @@ class PingbackUtility {
 		}
 	}
 	
-	public static function addEntry($url, $id, $title, $excerpt) {
+	public static function addEntry($str_url, $id, $title, $excerpt) {
 		
 		$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_XREFS')."
 				(direction, added, source, blog_post_id, title, excerpt)
 					VALUES
-				('in', NOW(), '".DBFunctions::strEscape(rawurldecode($url))."', ".(int)$id.", '".DBFunctions::strEscape($title)."', '".DBFunctions::strEscape($excerpt)."')
+				('in', NOW(), '".DBFunctions::strEscape(rawurldecode($str_url))."', ".(int)$id.", '".DBFunctions::strEscape($title)."', '".DBFunctions::strEscape($excerpt)."')
 		");
 
 		return $res;
 	}
 	
-	public static function isPingbackEnabled($url) {
+	public static function isPingbackEnabled($str_url) {
 		
-		return (bool)self::getPingbackServerURL($url);
+		return (bool)self::getPingbackServerURL($str_url);
 	}
 	
 	public static function getRawPostData()	{
@@ -92,39 +92,34 @@ class PingbackUtility {
 		return file_get_contents('php://input');
 	}
 
-	public static function getPingbackServerURL($url) {
+	public static function getPingbackServerURL($str_url) {
 		
-		$url_pingback = '';
+		$str_pingback_url = '';
 		
-		$curl = curl_init($url);
-		curl_setopt($curl, CURLOPT_USERAGENT, Labels::getServerVariable('user_agent'));
-		curl_setopt($curl, CURLOPT_HEADER, false);
-		curl_setopt($curl, CURLOPT_HEADERFUNCTION, function ($url, $header) use ($curl, &$url_pingback) {
-						
-			if (strpos($header, 'X-Pingback:') !== false) {
-				$url_pingback = trim(str_replace('X-Pingback:', '', $header));
+		$do_request = new FileGet($str_url);
+		
+		$do_request->setConfiguration([
+			'header_callback' => function($str_header) use (&$str_pingback_url) {
+				
+				if (strpos($str_header, 'X-Pingback:') !== false) {
+					$str_pingback_url = trim(str_replace('X-Pingback:', '', $str_header));
+				}
 			}
-			
-			return strlen($header);
-		});
-		curl_setopt($curl, CURLOPT_NOBODY, true);
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-		$res = curl_exec($curl);
+		]);
 		
-		curl_close($curl);
+		$do_request->request();
 
-		if ($url_pingback) {
-			return $url_pingback;
+		if ($str_pingback_url) {
+			return $str_pingback_url;
 		}
 		
 		try {
-			$response = file_get_contents($url, null, null, null, 4096); // Get first 4096 bytes of a file, limit resources needed
+			$response = file_get_contents($str_url, null, null, null, 4096); // Get first 4096 bytes of a file, limit resources needed
 		} catch (Exception $e) {
 		
 		}
 
-		return preg_match(self::REGEXP_PINGBACK_LINK, $response, $match) ? $match[1] : false;
+		return (preg_match(self::REGEXP_PINGBACK_LINK, $response, $arr_match) ? $arr_match[1] : false);
 	}
 
 	public static function isBacklinking($from, $to) {
@@ -135,10 +130,14 @@ class PingbackUtility {
 
 			if($content !== false) {
 				
-				libxml_use_internal_errors(true);
 				$doc = new DOMDocument();
 				$doc->strictErrorChecking = false;
-				$doc->loadHTML($content);
+				
+				try {
+					$doc->loadHTML($content);
+				} catch (Exception $e) {
+					
+				}
 				
 				foreach($doc->getElementsByTagName('a') as $link) {
 					
@@ -154,22 +153,24 @@ class PingbackUtility {
 		return false;
 	}
 
-	public static function sendPingback($from, $to, $server) {
+	public static function sendPingback($str_from_url, $str_to_url, $str_server_url) {
 		
-		$request = xmlrpc_encode_request('pingback.ping', [$from, $to]);
-		$curl = curl_init($server);
-		curl_setopt($curl, CURLOPT_POST, true);
-		curl_setopt($curl, CURLOPT_POSTFIELDS, $request);
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-		$response = xmlrpc_decode(curl_exec($curl));
-		curl_close($curl);
+		$str_request = xmlrpc_encode_request('pingback.ping', [$str_from_url, $str_to_url]);
+		
+		$get_request = new FileGet($str_server_url);
+		
+		$get_request->setConfiguration([
+			'post' => $str_request
+		]);
+		
+		$response = $get_request->get();
+		$arr_response = xmlrpc_decode($response);
 
-		if ($response && !$response['faultCode']) {
+		if ($arr_response && !$arr_response['faultCode']) {
 			return true;
-		} else {
-			return false;
 		}
+		
+		return false;
 	}
 	
 	public static function getTitle($html) {

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -59,7 +59,7 @@ class user_groups extends base_module {
 	
 	protected function createLinkDropdown($arr, $selected = 0) {
 
-		$return .= '<option value="0"></option>';
+		$return = '<option value="0"></option>';
 
 		foreach($arr as $value){
 			
@@ -75,7 +75,8 @@ class user_groups extends base_module {
 			
 			$res = DB::query("SELECT *
 					FROM ".DB::getTable('TABLE_USER_GROUP_LINK')."
-				WHERE ".(!$indirect ? "from_table = '".DB::getTableName('TABLE_USERS')."' AND " : "")."group_id = ".(int)$user_group."
+				WHERE group_id = ".(int)$user_group."
+					".(!$indirect ? "AND (from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 				ORDER BY sort
 			");
 		} else {
@@ -83,7 +84,8 @@ class user_groups extends base_module {
 			$res = DB::query("SELECT l.*
 					FROM ".DB::getTable('TABLE_USERS')." u
 					JOIN ".DB::getTable('TABLE_USER_GROUP_LINK')." l ON (l.group_id = u.group_id)
-				WHERE ".(!$indirect ? "l.from_table = '".DB::getTableName('TABLE_USERS')."' AND " : "")."u.id = ".(int)$user_id."
+				WHERE u.id = ".(int)$user_id."
+					".(!$indirect ? "AND (l.from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR l.from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 				ORDER BY sort
 			");
 		}
@@ -95,6 +97,9 @@ class user_groups extends base_module {
 			$arr_row['multi_source'] = DBFunctions::unescapeAs($arr_row['multi_source'], DBFunctions::TYPE_BOOLEAN);
 			$arr_row['multi_target'] = DBFunctions::unescapeAs($arr_row['multi_target'], DBFunctions::TYPE_BOOLEAN);
 			$arr_row['view'] = DBFunctions::unescapeAs($arr_row['view'], DBFunctions::TYPE_BOOLEAN);
+			
+			$arr_row['from_table'] = static::formatTableNameFromTemplate($arr_row['from_table']);
+			$arr_row['to_table'] = static::formatTableNameFromTemplate($arr_row['to_table']);
 			
 			$arr[$arr_row['to_table']] = $arr_row;
 		}
@@ -108,7 +113,8 @@ class user_groups extends base_module {
 			
 			$res = DB::query("SELECT *
 				FROM ".DB::getTable('TABLE_USER_GROUP_LINK')."
-					WHERE ".(!$indirect ? "from_table = '".DB::getTableName('TABLE_USERS')."' AND " : "")."group_id = ".(int)$user_group."
+					WHERE group_id = ".(int)$user_group."
+						".(!$indirect ? "AND (from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 					ORDER BY sort
 			");
 		} else {
@@ -116,7 +122,8 @@ class user_groups extends base_module {
 			$res = DB::query("SELECT l.*
 				FROM ".DB::getTable('TABLE_USERS')." u
 				JOIN ".DB::getTable('TABLE_USER_GROUP_LINK')." l ON (l.group_id = u.group_id)
-					WHERE ".(!$indirect ? "l.from_table = '".DB::getTableName('TABLE_USERS')."' AND " : "")."u.id = ".(int)$user_id."
+					WHERE u.id = ".(int)$user_id."
+						".(!$indirect ? "AND (l.from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR l.from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 					ORDER BY sort
 			");
 		}
@@ -133,6 +140,9 @@ class user_groups extends base_module {
 			$arr_row['multi_source'] = DBFunctions::unescapeAs($arr_row['multi_source'], DBFunctions::TYPE_BOOLEAN);
 			$arr_row['multi_target'] = DBFunctions::unescapeAs($arr_row['multi_target'], DBFunctions::TYPE_BOOLEAN);
 			$arr_row['view'] = DBFunctions::unescapeAs($arr_row['view'], DBFunctions::TYPE_BOOLEAN);
+			
+			$arr_row['from_table'] = static::formatTableNameFromTemplate($arr_row['from_table']);
+			$arr_row['to_table'] = static::formatTableNameFromTemplate($arr_row['to_table']);
 			
 			if ($arr_row['from_table'] == DB::getTableName('TABLE_USERS')) { // Connection to a user related table
 				
@@ -216,6 +226,22 @@ class user_groups extends base_module {
 		return $arr;
 	}
 	
+	public static function formatTableNameToTemplate($str_table_name) {
+		
+		$str_table_name = str_replace(DB::$database_home, '[[home]]', $str_table_name);
+		$str_table_name = str_replace(DB::$database_cms, '[[cms]]', $str_table_name);
+		
+		return $str_table_name;
+	}
+	
+	public static function formatTableNameFromTemplate($str_table_name) {
+		
+		$str_table_name = str_replace('[[home]]', DB::$database_home, $str_table_name);
+		$str_table_name = str_replace('[[cms]]', DB::$database_cms, $str_table_name);
+		
+		return $str_table_name;
+	}
+	
 	public static function getUserData($user_id, $indirect = false) {
 
 		$arr_tables = self::getUserGroupTables(0, $user_id, $indirect);
@@ -263,23 +289,24 @@ class user_groups extends base_module {
 			foreach ($arr_fields_meta as $i => $arr_field_meta) {
 				
 				$table_name = $arr_table_names[$arr_field_meta['table']];
+				$arr_table_info = ($arr_tables[$table_name] ?? null);
 
 				$arr[$table_name] = (!isset($arr[$table_name]) ? [] : $arr[$table_name]); // Make sure the table does exist
 
-				if ($arr_tables[$table_name]['multi_source']) { // If source has multiple rows create multidimensional array based on to_column
+				if ($arr_table_info && $arr_table_info['multi_source']) { // If source has multiple rows create multidimensional array based on to_column
 					
-					if ($arr_row[$arr_tables[$table_name]['to_column']]) { // Do not store empty rows
+					if (!empty($arr_row[$arr_table_info['to_column']])) { // Do not store empty rows
 						
-						$arr[$table_name][$arr_row[$arr_tables[$table_name]['to_column']]][$arr_field_meta['name']] = $arr_row[$i];
+						$arr[$table_name][$arr_row[$arr_table_info['to_column']]][$arr_field_meta['name']] = $arr_row[$i];
 					}
-				} else if ($arr_tables[$table_name]['multi_target']) {  // If target has multiple rows create multidimensional array based on get_column
+				} else if ($arr_table_info && $arr_table_info['multi_target']) {  // If target has multiple rows create multidimensional array based on get_column
 				
-					if ($arr_row[$arr_tables[$table_name]['get_column']]) { // Do not store empty rows
+					if (!empty($arr_row[$arr_table_info['get_column']])) { // Do not store empty rows
 						
-						$arr[$table_name][$arr_row[$arr_tables[$table_name]['get_column']]][$arr_field_meta['name']] = $arr_row[$i];
+						$arr[$table_name][$arr_row[$arr_table_info['get_column']]][$arr_field_meta['name']] = $arr_row[$i];
 					}
 				} else {
-					if ($arr_row[$i]) { // Do not store empty values
+					if (!empty($arr_row[$i])) { // Do not store empty values
 						
 						if ($arr_field_meta['type'] == DBFunctions::TYPE_BOOLEAN) {
 							

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -22,7 +22,7 @@ class cms_messaging extends base_module {
 	
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_messaging:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_messaging:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
 		<div class="messaging">';
 
 			$return .= '<table class="display" id="d:cms_messaging:data-0">
@@ -123,7 +123,7 @@ class cms_messaging extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_subject').'</label>
-						<div><input type="text" name="subject" value="'.htmlspecialchars($arr_conversation_set['details']['subject']).'" /></div>
+						<div><input type="text" name="subject" value="'.strEscapeHTML($arr_conversation_set['details']['subject']).'" /></div>
 					</li>';
 					if ($mode == 'insert') {
 						
@@ -157,7 +157,7 @@ class cms_messaging extends base_module {
 								
 								foreach ($arr_conversation_set['messages'] as $key => $value) {
 									$this->html .= '<li'.(!$value['message_user_id'] ? ' class="own"' : '').'>
-													<cite><span>'.htmlspecialchars($value['message_user_name']).'</span><span>'.date('d-m-Y H:i', strtotime($value['message_date'])).'</span></cite>
+													<cite><span>'.strEscapeHTML($value['message_user_name']).'</span><span>'.date('d-m-Y H:i', strtotime($value['message_date'])).'</span></cite>
 													<div>'.parseBody($value['message_body']).'</div>
 												</li>';
 								}
@@ -257,7 +257,7 @@ class cms_messaging extends base_module {
 				$arr_data['attr']['data-method'] = 'view';
 			
 				$arr_data[] = $arr_row['last_message_user_name'];
-				$arr_data[] = htmlspecialchars($arr_row['subject']);
+				$arr_data[] = strEscapeHTML($arr_row['subject']);
 				$arr_data[] = strip_tags($arr_row['last_message_body']);
 				$arr_data[] = (int)$arr_row['message_count'];
 				$arr_data[] = ($arr_row['participant_user_groups'] ?: $arr_row['participants']);

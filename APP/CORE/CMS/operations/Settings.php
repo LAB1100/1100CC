@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,9 @@ class Settings {
 	public static $arr_storage_paths = [DIR_CSS, DIR_JS, DIR_CMS, DIR_UPLOAD];
 	public static $arr_storage_paths_cacheable = ['combine/', 'cache/'];
 			
-	public static function get($setting, $key = false) { // Get a setting following set, override, add
+	public static function get($setting, $key = false) { // Get a setting following: set or override, and add
+		
+		$value = null;
 		
 		if ($key) {
 			
@@ -27,24 +29,24 @@ class Settings {
 			} else if (isset(self::$arr_override[$setting])) {
 				$value = self::$arr_override[$setting][$key];
 			} else {
-				$value = self::$arr[$setting][$key];
+				$value = (self::$arr[$setting][$key] ?? null);
 			}
 		} else {
 			
-			if (is_array(self::$arr_override[$setting]) || self::$arr_override_keys[$setting]) {
-				$arr_override = array_merge((is_array(self::$arr_override[$setting]) ? self::$arr_override[$setting] : []), (self::$arr_override_keys[$setting] ?: []));
+			if ((isset(self::$arr_override[$setting]) && is_array(self::$arr_override[$setting])) || isset(self::$arr_override_keys[$setting])) {
+				$arr_override = array_merge((isset(self::$arr_override[$setting]) && is_array(self::$arr_override[$setting]) ? self::$arr_override[$setting] : []), (self::$arr_override_keys[$setting] ?? []));
 			} else if (isset(self::$arr_override[$setting])) {
 				$arr_override = self::$arr_override[$setting];
 			}
 			
-			$value = (isset($arr_override) ? $arr_override : self::$arr[$setting]);
+			$value = (isset($arr_override) ? $arr_override : (self::$arr[$setting] ?? null));
 		}
 		
 		if (is_callable($value)) {
 			$value = $value();
 		}
 		
-		if (self::$arr_add[$setting]) {
+		if (isset(self::$arr_add[$setting])) {
 			
 			foreach (self::$arr_add[$setting] as $value_add) {
 				$value = array_merge($value, (is_callable($value_add) ? $value_add() : $value_add));
@@ -88,7 +90,7 @@ class Settings {
 		self::$arr_storage_paths[] = $path;
 	}
 	
-	public static function setShare($key, $value = false, $seconds = false) {
+	public static function setShare($key, $value = false, $num_seconds = false) {
 		
 		$path = self::get('path_temporary').'share_'.$key;
 		
@@ -101,12 +103,12 @@ class Settings {
 		// Just cast classes as objects; plain object access
 		$value = str_replace('stdClass::__set_state', '(object)', $value);
 		
-		$valid = ($seconds ? '(time() < '.(time()+$seconds).')' : 'true');
+		$is_valid = ($num_seconds ? '(time() < '.(time()+$num_seconds).')' : 'true');
 					
 		// Write to temporary file first to ensure atomicity
 		$path_temp = $path.uniqid('', true).'.tmp';
 		
-		file_put_contents($path_temp, '<?php $valid = '.$valid.'; $value = '.$value.';', LOCK_EX);
+		file_put_contents($path_temp, '<?php $is_valid = '.$is_valid.'; $value = '.$value.';', LOCK_EX);
 		
 		rename($path_temp, $path);
 		opcache_invalidate($path);
@@ -116,16 +118,28 @@ class Settings {
 		
 		$path = self::get('path_temporary').'share_'.$key;
 		
+		$is_valid = null;
+		
 		try {
 			include $path;
 		} catch (Exception $e) {
 			// Nothing
 		}
 		
-		if (!$valid) {
+		if (!$is_valid) {
 			return false;
 		}
 		
 		return $value;
+	}
+	
+	public static function getSafeText($str) {
+		
+		if (isPath(DIR_SAFE_SITE.$str)) {
+			
+			return readText(DIR_SAFE_SITE.$str);
+		}
+		
+		return $str;
 	}
 }

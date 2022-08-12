@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -64,6 +64,24 @@ function Commands() {
 		return getElementData(elm, 'target');
 	};
 	
+	this.setModule = function(elm) {
+		
+		return setElementData(elm, 'module', module, true);
+	};
+	this.getModule = function(elm) {
+		
+		var elm = getElement(elm);
+		
+		var module = getElementData(elm, 'module');
+		
+		if (!module) {
+			var arr_match = elm.getAttribute('id').match(/([dfxy]):([^:]*):([^-]*)-(.*)/);
+			module = arr_match[2];
+		}
+		
+		return module;
+	};
+	
 	this.setID = function(elm, identifier) {
 		
 		return setElementData(elm, 'command_id', identifier, true);
@@ -83,6 +101,15 @@ function Commands() {
 		}
 		
 		return command_id;
+	};
+	
+	this.setAbort = function(elm, do_abort) {
+				
+		return setElementData(elm, 'abort', do_abort);
+	};
+	this.isAborted = function(elm) {
+		
+		return getElementData(elm, 'abort');
 	};
 
 	this.setMessage = function(elm, label) {
@@ -104,8 +131,12 @@ function Commands() {
 		var cur = $(elm);
 		
 		SCRIPTER.triggerEvent(cur, 'command');
-
+		
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
+		
+		if (COMMANDS.isAborted(elm)) {
+			return;
+		}
 
 		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
@@ -153,7 +184,7 @@ function Commands() {
 		
 		var arr_request = SELF.prepare(cur, {mod: mod_id, method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()});
 		
-		cur[0].request = $.ajax({
+		FEEDBACK.request(cur, elm, $.ajax({
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
@@ -181,9 +212,10 @@ function Commands() {
 					}
 					var obj_overlay = new Overlay(elm_overlay_target, elm_popup, {
 						call_close: function() {
-							FEEDBACK.stop(elm_popup);
+							FEEDBACK.stopContext(elm_popup);
 						},
-						elm_prevnext: (cur.attr('data-method') ? cur : {})
+						elm_prevnext: (cur.attr('data-method') ? cur : {}),
+						sizing: (settings.overlay_settings ? settings.overlay_settings.sizing : undefined)
 					});
 					
 					var elm_overlay = obj_overlay.getOverlay();
@@ -196,7 +228,7 @@ function Commands() {
 					var call_popup = function(json) {
 						
 						var elm_html = $(json.html);
-						var arr_rules = (json.validate ? json.validate : {});
+						let arr_rules = (json.validate ? json.validate : {});
 						var name_submit = false;
 						
 						elm_popup.html(elm_html);
@@ -215,22 +247,23 @@ function Commands() {
 								$('<input type="submit" value="Save" />').appendTo(elm_menu);
 							}
 							
+							setElementData(elm_form, 'rules', arr_rules);
+							
 							elm_menu.children('*[type=submit]').on('click', function() {
 								
 								name_submit = (this.getAttribute('name') ? this.getAttribute('name') : false);
 								
-								var arr_rules_new = getElementData(elm_form, 'rules'); // The form's rules could have been updated
-								if (arr_rules_new) {
-									arr_rules = arr_rules_new;
-								}
+								arr_rules = getElementData(elm_form, 'rules'); // The form's rules could have been updated
 								
-								if (Object.keys(arr_rules).length && name_submit != 'discard') {
+								if (name_submit != 'discard') {
 			
 									if (!elm_form.data('validator')) {
 											
 										elm_form.validate({
 											rules: arr_rules,
 											submitHandler: function() {
+												
+												this.resetForm();
 												call_submit();
 											}
 										});
@@ -241,6 +274,10 @@ function Commands() {
 									
 									SCRIPTER.triggerEvent(elm_form, 'submit');
 								} else {
+									
+									if (name_submit == 'discard') {
+										FEEDBACK.stopContext(elm_popup);
+									}
 									
 									call_submit();
 								}
@@ -282,7 +319,7 @@ function Commands() {
 								var arr_request = SELF.prepare(elm_form, arr_request);
 								var call = false;
 								
-								elm_popup[0].request = $.ajax({
+								FEEDBACK.request(elm_popup, elm_popup, $.ajax({
 									type: 'POST',
 									contentType: arr_request.contentType,
 									dataType: 'json',
@@ -324,7 +361,7 @@ function Commands() {
 											}
 										});
 									}											
-								});
+								}));
 							}
 						} else {
 							
@@ -335,7 +372,7 @@ function Commands() {
 					call_popup(json);
 				});
 			}
-		});
+		}));
 	};
 	
 	this.messageCommand = function(elm, arr_options) {
@@ -349,6 +386,10 @@ function Commands() {
 		SCRIPTER.triggerEvent(cur, 'command');
 
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
+		
+		if (COMMANDS.isAborted(elm)) {
+			return;
+		}
 
 		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
@@ -384,7 +425,7 @@ function Commands() {
 		} else {
 			var settings = $.extend(arr_options, (elm.data('options') ? elm.data('options') : {}));
 		}
-		var msg = (cur.data('msg') ? cur.data('msg') : 'conf_general');
+		var msg = (COMMANDS.getMessage(cur) ? COMMANDS.getMessage(cur) : 'conf_general');
 		
 		if (!FEEDBACK.start(cur)) {
 			return;
@@ -392,7 +433,7 @@ function Commands() {
 		
 		var arr_request = SELF.prepare(cur, {mod: mod_id, module: 'cms_general', method: 'get_label', id: msg, feedback: FEEDBACK.getFeedback()});
 
-		cur[0].request = $.ajax({
+		FEEDBACK.request(cur, elm, $.ajax({
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
@@ -435,7 +476,7 @@ function Commands() {
 						var arr_request = SELF.prepare(false, {mod: mod_id, method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()});
 						var call = false;
 						
-						elm_popup[0].request = $.ajax({
+						FEEDBACK.request(elm_popup, elm_popup, $.ajax({
 							type: 'POST',
 							contentType: arr_request.contentType,
 							dataType: 'json',
@@ -456,7 +497,7 @@ function Commands() {
 									});
 								});
 							}
-						});
+						}));
 					});
 					$('<input type="button" value="Cancel" />').appendTo(elm_menu).on('click', function() {
 						obj_overlay.close();
@@ -467,7 +508,8 @@ function Commands() {
 						call_close: function() {
 							FEEDBACK.stop(elm_popup);
 						},
-						button_close: false
+						button_close: false,
+						sizing: (settings.overlay_settings ? settings.overlay_settings.sizing : undefined)
 					});
 					
 					var elm_overlay = obj_overlay.getOverlay();
@@ -480,7 +522,7 @@ function Commands() {
 					SCRIPTER.triggerEvent(cur, 'commandintermediate', {elm: elm_popup});
 				});
 			}
-		});
+		}));
 	};
 	
 	this.quickCommand = function(elm, target, arr_options) {
@@ -491,8 +533,12 @@ function Commands() {
 		var cur = $(elm);
 
 		SCRIPTER.triggerEvent(cur, 'command');
-
+		
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
+		
+		if (COMMANDS.isAborted(elm)) {
+			return;
+		}
 
 		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
@@ -535,7 +581,7 @@ function Commands() {
 		var arr_request = SELF.prepare(cur, {mod: getModID(elm), method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()});
 		var call = false;
 		
-		cur[0].request = $.ajax({
+		FEEDBACK.request(cur, elm, $.ajax({
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
@@ -550,7 +596,7 @@ function Commands() {
 				
 				//elm_popup.find('progress').removeClass('hide').attr('value', percent);
 			},
-			success: function(json){
+			success: function(json) {
 				FEEDBACK.check(cur, json, function() {
 					
 					SELF.parse(json, target, elm, settings, call, function() {
@@ -559,7 +605,7 @@ function Commands() {
 					});
 				});
 			}
-		});
+		}));
 	};
 	
 	this.formCommand = function(elm, arr_options, e) {
@@ -571,10 +617,20 @@ function Commands() {
 		var cur = $(elm);
 		
 		SCRIPTER.triggerEvent(cur, 'command');
-
+		
 		var elm = cur.closest('[id^="f:"]');
+			
+		if (COMMANDS.isAborted(elm)) {
+			
+			if (e) {
+				e.preventDefault();
+			}
+			
+			return;
+		}
+		
 		var match = elm.attr('id').match(/f:([^:]*):([^-]*)-(.*)/);
-
+		
 		if (cur.data('method')) {
 			var method = cur.data('method');
 		} else {
@@ -596,7 +652,6 @@ function Commands() {
 		} else {
 			var settings = $.extend(arr_options, (elm.data('options') ? elm.data('options') : {}));
 		}
-		var arr_rules = (getElementData(elm, 'rules') ? getElementData(elm, 'rules') : {});
 		var value = elm.data('value');
 		
 		var name_submit = (e && $(e.target).is(':submit') && e.target.getAttribute('name') ? e.target.getAttribute('name') : false);
@@ -624,7 +679,7 @@ function Commands() {
 			var arr_request = SELF.prepare(elm, arr_request);
 			var call = false;
 			
-			cur[0].request = $.ajax({
+			FEEDBACK.request(cur, elm, $.ajax({
 				type: 'POST',
 				contentType: arr_request.contentType,
 				dataType: 'json',
@@ -667,16 +722,21 @@ function Commands() {
 						});
 					});
 				}
-			});
+			}));
 		};
 
-		if (Object.keys(arr_rules).length && name_submit != 'discard') {
+		if (name_submit != 'discard') {
+			
+			let arr_rules = getElementData(elm, 'rules'); // Always check, the form's rules could have been updated
+			arr_rules = (arr_rules ? arr_rules : {});
 			
 			if (!elm.data('validator')) {
 					
 				elm.validate({
 					rules: arr_rules,
 					submitHandler: function(elm) {
+						
+						this.resetForm();
 						call_submit();
 					}
 				});
@@ -693,6 +753,9 @@ function Commands() {
 			if (e) {
 				e.preventDefault();
 			}
+			
+			FEEDBACK.stopContext(elm);
+									
 			call_submit();
 		}
 	};
@@ -737,7 +800,7 @@ function Commands() {
 		var elm = $(elm);
 		
 		var is_form = (elm && elm.is('form') ? true : false);
-		var has_object = (typeof arr_request.value === 'object');
+		var has_object = (typeof arr_request.value === 'object' && arr_request.value !== null);
 		var has_form = (has_object && arr_request.value.forms);
 			
 		if (is_form || has_form) {
@@ -928,7 +991,8 @@ function Commands() {
 			
 			var obj_overlay = new Overlay(elm_overlay_target, elm_popup, {
 				position: 'middle',
-				button_close: false
+				button_close: false,
+				sizing: (arr_settings.overlay_settings ? arr_settings.overlay_settings.sizing : undefined)
 			});
 			
 			var elm_overlay = obj_overlay.getOverlay();
@@ -940,36 +1004,42 @@ function Commands() {
 			return false;
 		} else if (json.download) {
 			
-			var elm_form = $('<form action="'+call.url+'" method="post"></form>');
+			const elm_form = $('<form action="'+call.url+'" method="post"></form>');
 			
-			elm_form.append($('<input type="hidden" name="get-download" value="1" />'));
-
+			const elm_download = $('<input type="hidden" name="get-download" value="" />');			
+			elm_download.val(json.download === true ? '1' : json.download);
+			
+			elm_form.append(elm_download);
+			
 			try {
 				var arr_data = JSON.parse(call.data);
 			} catch (e) {};
 			
 			if (arr_data) { // JSON
 				
-				var elm_new = $('<input type="hidden" name="json" value="" />');
+				const elm_new = $('<input type="hidden" name="json" value="" />');
 				elm_new.val(call.data);
 				
 				elm_form.append(elm_new);
 			} else { // FormData
 				
-				var form_collect = new FormData(elm_form[0]);
+				const form_collect = new FormData(elm_form[0]);
 				
-				var arr_entries = call.data.entries();
+				const arr_entries = call.data.entries();
 					
-				for (var arr_entry = arr_entries.next(); !arr_entry.done; arr_entry = arr_entries.next()) {
+				for (let arr_entry = arr_entries.next(); !arr_entry.done; arr_entry = arr_entries.next()) {
 					
 					arr_entry = arr_entry.value;
+					let elm_new = null;
 					
 					if (arr_entry[2]) { // File
-						var elm_new = $('<input type="file" name="'+arr_entry[0]+'" value="" />');
+						
+						elm_new = $('<input type="file" name="'+arr_entry[0]+'" value="" />');
 						elm_new[0].files(arr_entry[1]);
 						elm_new.val(arr_entry[2]);
 					} else {
-						var elm_new = $('<input type="hidden" name="'+arr_entry[0]+'" value="" />');
+						
+						elm_new = $('<input type="hidden" name="'+arr_entry[0]+'" value="" />');
 						elm_new.val(arr_entry[1]);
 					}
 					
@@ -977,7 +1047,7 @@ function Commands() {
 				}
 			}
 					
-			var elm_iframe = $('<iframe src="javascript:\'\';"></iframe>')
+			var elm_iframe = $('<iframe src="about:blank"></iframe>')
 				.hide()
 				.appendTo('body');
 				
@@ -1107,18 +1177,21 @@ function Commands() {
 							}
 						}
 						
-						if (json.validate && json.validate[i]) {
+						if (elm_html.length) {
 							
-							setElementData(elm_html, 'rules', json.validate[i], true);
-							
-							var elm_form = elm_html.closest('form');
-							
-							if (elm_form.length) {
-								setElementData(elm_form, 'rules', json.validate[i]);
+							if (json.validate && json.validate[i]) {
+								
+								setElementData(elm_html, 'rules', json.validate[i], true);
+								
+								var elm_form = elm_html.closest('form');
+								
+								if (elm_form.length) {
+									setElementData(elm_form, 'rules', json.validate[i]);
+								}
 							}
+							
+							elm_result = elm_result.add(elm_html);
 						}
-						
-						elm_result = elm_result.add(elm_html);
 					}
 				}
 			} else {
@@ -1164,18 +1237,21 @@ function Commands() {
 						}
 					}
 					
-					if (json.validate) {
-						
-						setElementData(elm_html, 'rules', json.validate, true);
-						
-						var elm_form = elm_html.closest('form');
-						
-						if (elm_form.length) {
-							setElementData(elm_form, 'rules', json.validate);
+					if (elm_html.length) {
+							
+						if (json.validate) {
+							
+							setElementData(elm_html, 'rules', json.validate, true);
+							
+							var elm_form = elm_html.closest('form');
+							
+							if (elm_form.length) {
+								setElementData(elm_form, 'rules', json.validate);
+							}
 						}
+						
+						elm_result = elm_html;
 					}
-					
-					elm_result = elm_html;
 				}
 			}
 			
@@ -1390,6 +1466,10 @@ function DataTable(elm, arr_options) {
 
 	SCRIPTER.triggerEvent(cur, 'command');
 	
+	if (COMMANDS.isAborted(cur)) {
+		return;
+	}
+	
 	var match = cur.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
 	
 	if (cur.data('method')) {
@@ -1404,17 +1484,21 @@ function DataTable(elm, arr_options) {
 	}
 	var command_id = match[3];
 	
-	var allow_search = (cur.data('search') != undefined ? cur.data('search') : true);
-	var value_search = (cur.data('filter_search') ? cur.data('filter_search') : '');
+	var has_search = (cur.data('search') != undefined ? cur.data('search') : true);
+	var value_search = (cur.data('search_settings') ? cur.data('search_settings') : '');
+	var command_filter = cur.data('filter');
 	var settings_filter = cur.data('filter_settings');
-	var value = cur.data('value');
-	if (!value) {
-		value = {};
-		cur.data('value', value);
+	var command_order = cur.data('order');
+	
+	var value_filter = COMMANDS.getData(cur);
+	if (!value_filter) {
+		value_filter = {};
+		COMMANDS.setData(cur, value_filter);
 	}
-	if (settings_filter && typeof value === 'object') {
-		$.extend(value, settings_filter);
+	if (settings_filter && typeof value_filter === 'object') {
+		$.extend(value_filter, settings_filter);
 	}
+	
 	var delay = (cur.data('delay') ? cur.data('delay') : false);
 	
 	// Build
@@ -1424,12 +1508,12 @@ function DataTable(elm, arr_options) {
 	var elm_options = $('<div class="options"></div>').appendTo(elm_container);
 	var elm_options_left = $('<div></div>').appendTo(elm_options);
 	var elm_options_right = $('<div></div>').appendTo(elm_options);
-	if (allow_search) {
+	if (has_search) {
 		var elm_search = $('<input type="search" title="Search" value="'+value_search+'" />').appendTo(elm_options_left);
 	} else {
 		var elm_search = $('<label class="hide"></label>').appendTo(elm_options_left);
 	}
-	var elm_results_per_page = $('<select class="results-per-page" title="Results per page"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="-1">All</option></select>').appendTo(elm_options_left);
+	var elm_results_per_page = $('<select class="results-per-page" title="Results Per Page"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="150">150</option><option value="-1">All</option></select>').appendTo(elm_options_left);
 	var elm_count = $('<span class="count"></span>').appendTo(elm_options_left);
 	var elm_paginate = $('<menu class="paginate"></menu>').appendTo(elm_options_right);
 	var elm_paginate_previous = $('<button type="button"><span class="icon"></span></button>').appendTo(elm_paginate);
@@ -1451,13 +1535,12 @@ function DataTable(elm, arr_options) {
 			for (var i = 0; i < arr_settings.nr_columns; i++) {
 			
 				var elm_column = elms_column[i];
-
-				var elm_icon = $('<span class="icon"></span>');
-				elm_icon = elm_icon[0];
-				elm_column.appendChild(elm_icon);
 				
-				elm_icon.innerHTML = data.updown+data['updown-up']+data['updown-down'];							
+				var elms_icon = elm_column.getElementsByClassName('icon');
+				elms_icon[elms_icon.length-1].innerHTML = data.updown+data['updown-up']+data['updown-down'];							
 			}
+			
+			resizeDataTable(cur);
 			
 			func_column_icons = false;
 		};
@@ -1467,9 +1550,11 @@ function DataTable(elm, arr_options) {
 	
 	cur.appendTo(elm_container);
 	
-	if (cur.data('filter')) {
+	var elm_filter = null;
+	
+	if (command_filter) {
 		
-		var elm_filter = $('<button type="button" title="Open filter" id="'+cur.data('filter')+'" class="filter popup" value=""><span class="icon"></span></button>').on('filteranimate', function() {
+		elm_filter = $('<button type="button" title="Open Filter" id="'+command_filter+'" class="filter popup" value=""><span class="icon"></span></button>').on('filteranimate', function() {
 			
 			if (elm_filter.hasClass('active')) {
 				new Pulse(elm_filter, {duration: 800, delay_out: 300, repeat: true});
@@ -1491,13 +1576,11 @@ function DataTable(elm, arr_options) {
 		
 		elm_filter.on('command', function() {
 			
-			COMMANDS.setData(elm_filter, cur.data('value'), true);
+			COMMANDS.setData(elm_filter, COMMANDS.getData(cur), true);
 		});
 		COMMANDS.setTarget(elm_filter, function(data) {
-
-			var value = $.extend((cur.data('value') ? cur.data('value') : {}), (data.filter ? data.filter : {}));
 			
-			COMMANDS.setData(cur, value, true);
+			COMMANDS.setData(cur, (data.filter ? data.filter : {}), false);
 			
 			SELF.refresh();
 			
@@ -1506,13 +1589,13 @@ function DataTable(elm, arr_options) {
 			
 			//moveScroll(cur, {if_visible: true});
 		});
-		
-		setElementData(cur, 'filter', elm_filter, true);
 	}
 	
-	if (cur.data('order')) {
+	var elm_order = null;
 		
-		var elm_order = $('<button type="button" title="Set Ordering" id="'+cur.data('order')+'" class="popup" value=""><span class="icon"></span></button>');
+	if (command_order) {
+		
+		elm_order = $('<button type="button" title="Set Ordering" id="'+command_order+'" class="popup" value=""><span class="icon"></span></button>');
 		
 		ASSETS.getIcons(cur, ['updown'], function(data) {
 			elm_order[0].children[0].innerHTML = data.updown;
@@ -1526,7 +1609,8 @@ function DataTable(elm, arr_options) {
 		});
 		COMMANDS.setTarget(elm_order, function(data) {
 			
-			func_order(data);			
+			func_order(data);
+			SELF.reload();		
 		});
 	}
 	
@@ -1538,7 +1622,7 @@ function DataTable(elm, arr_options) {
 	
 	// State
 	
-	var arr_command = {method: method, module: module, command_id: command_id, value: value};
+	var arr_command = {method: method, module: module, command_id: command_id, value: value_filter};
 	var arr_settings = {nr_records: false, nr_columns: elms_column.length, search: value_search, arr_order_column: {}, nr_records_start: 0, nr_records_length: 25};
 	
 	var do_sort = false;
@@ -1551,6 +1635,8 @@ function DataTable(elm, arr_options) {
 			
 			elm_column.innerHTML = '<span>'+elm_column.innerHTML+'</span>';
 		}
+		
+		elm_column.innerHTML += '<span class="icon"></span>';
 		
 		var sort = elm_column.dataset.sort;
 		
@@ -1578,7 +1664,8 @@ function DataTable(elm, arr_options) {
 		arr_settings.nr_records_length = parseInt(this.value);
 		func_load();
 	});
-	if (allow_search) {
+	if (has_search) {
+		
 		elm_search.on('change keyup', function() {
 			
 			if (this.value == arr_settings.search) {
@@ -1613,6 +1700,7 @@ function DataTable(elm, arr_options) {
 		arr_column_order[nr_column] = [(!sort || sort != 'asc-0' ? 'asc' : 'desc'), 0];
 		
 		func_order(arr_column_order);
+		SELF.reload();
 	});
 
 	// Use
@@ -1640,8 +1728,6 @@ function DataTable(elm, arr_options) {
 		}
 		
 		do_sort = true;
-
-		SELF.reload();
 	};
 	
 	this.getColumnsInfo = function() {
@@ -1762,7 +1848,7 @@ function DataTable(elm, arr_options) {
 			
 			var arr_request = COMMANDS.prepare(cur, $.extend({mod: getModID(cur), method: arr_command.method, id: arr_command.command_id, module: arr_command.module, value: arr_command.value, feedback: FEEDBACK.getFeedback()}, arr_settings_new));
 			
-			cur[0].request = $.ajax({
+			FEEDBACK.request(cur, cur, $.ajax({
 				type: 'POST',
 				contentType: arr_request.contentType,
 				dataType: 'json',
@@ -1811,7 +1897,7 @@ function DataTable(elm, arr_options) {
 						}
 					});
 				}
-			});
+			}));
 		}
 		
 		if (delay) {
@@ -1859,16 +1945,16 @@ function DataTable(elm, arr_options) {
 		
 		if (!nr_records_filtered) {
 			if (nr_records) {
-				var str_count = 'No results from '+formatNumber(nr_records , 0, str_thousands, false);
+				var str_count = 'No results from '+formatNumber(nr_records , 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '');
 			} else {
 				var str_count = 'None';
 			}
 		} else {
 			var str_count = formatNumber((arr_settings.nr_records_start + 1), 0, str_thousands, false)+' - '+formatNumber(nr_records_end , 0, str_thousands, false);
 			if (nr_records == nr_records_filtered) {
-				str_count = str_count+' of <strong>'+formatNumber(nr_records, 0, str_thousands, false)+'</strong>';
+				str_count = str_count+' of <strong>'+formatNumber(nr_records, 0, str_thousands, false)+'</strong>'+(data.total_records_info ? data.total_records_info : '');
 			} else {
-				str_count = str_count+' of <strong>'+formatNumber(nr_records_filtered, 0, str_thousands, false)+'</strong> from '+formatNumber(nr_records, 0, str_thousands, false);
+				str_count = str_count+' of <strong>'+formatNumber(nr_records_filtered, 0, str_thousands, false)+'</strong>'+(data.total_records_filtered_info ? data.total_records_filtered_info : '')+' from '+formatNumber(nr_records, 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '');
 			}
 		}
 		
@@ -1967,7 +2053,7 @@ function DataTable(elm, arr_options) {
 			}
 		} else {
 			
-			var elm_tr = $('<tr><td colspan="'+arr_settings.nr_columns+'" class="empty">No Results.</td></tr>');
+			var elm_tr = $('<tr><td colspan="'+arr_settings.nr_columns+'" class="empty">No results.</td></tr>');
 
 			elm_body_new[0].appendChild(elm_tr[0]);
 		}
@@ -1994,6 +2080,25 @@ function DataTable(elm, arr_options) {
 	}).on('reload', function() {
 		SELF.reload();
 	});
+	
+	this.getFilter = function() {
+		
+		return arr_command.value;
+	};
+	this.setFilter = function(filter, is_active) {
+		
+		if (!elm_filter) {
+			return;
+		}
+		
+		const func_filter = COMMANDS.getTarget(elm_filter);
+								
+		func_filter({filter: filter, active: is_active});
+	};
+	this.getSearch = function() {
+		
+		return arr_settings.search;
+	};	
 
 	this.handleColumn = function(selector, content, selector_before) {
 		
@@ -2015,11 +2120,13 @@ function DataTable(elm, arr_options) {
 			var elm_content = $(content);
 			
 			ASSETS.getIcons(cur, ['updown', 'updown-up', 'updown-down'], function(data) {
-			
-				var elm_icon = $('<span class="icon"></span>');
-				elm_content.append(elm_icon);
-						
-				elm_icon[0].innerHTML = data.updown+data['updown-up']+data['updown-down'];							
+				
+				elm_content[0].innerHTML += '<span class="icon"></span>';
+				
+				var elms_icon = elm_content[0].getElementsByClassName('icon');
+				elms_icon[elms_icon.length-1].innerHTML = data.updown+data['updown-up']+data['updown-down'];
+				
+				resizeDataTable(cur);
 			});
 			
 			if (elm_target.length) {
@@ -2082,9 +2189,18 @@ function DataTable(elm, arr_options) {
 		}
 	};
 	
+	this.resetSort = function() {
+
+		func_order({});
+	};
+	
 	this.refresh = function() {
 									
 		SCRIPTER.triggerEvent(cur, 'command');
+		
+		if (COMMANDS.isAborted(cur)) {
+			return;
+		}
 		
 		cur[0].dataset.pause = 0;
 		
@@ -2101,7 +2217,7 @@ function DataTable(elm, arr_options) {
 			var module = match[1];
 		}
 		var command_id = match[3];
-		var value = (cur.data('value') ? cur.data('value') : '');
+		var value = (COMMANDS.getData(cur) ? COMMANDS.getData(cur) : '');
 						
 		arr_command.method = method;
 		arr_command.module = module;
@@ -2125,6 +2241,8 @@ $(document).on('click', '*[type=button].popup, .a.popup, tr.popup', function(e) 
 		return;
 	}
 	
+	e.stopPropagation();
+	
 	COMMANDS.popupCommand(this);
 });
 
@@ -2136,7 +2254,7 @@ $.fn.popupCommand = function(arr_options) {
 	});
 };
 
-$(document).on('click', '*[type=button].msg', function() {
+$(document).on('click', '*[type=button].msg', function(e) {
 	
 	var cur = $(this);
 	
@@ -2145,6 +2263,8 @@ $(document).on('click', '*[type=button].msg', function() {
 	if (cur.hasClass('del')) {
 		arr_options.remove = true;
 	}
+	
+	e.stopPropagation();
 	
 	COMMANDS.messageCommand(this, arr_options);
 });
@@ -2157,7 +2277,9 @@ $.fn.messageCommand = function(arr_options) {
 	});
 };
 
-$(document).on('click', '*[type=button].quick, .a.quick', function() {
+$(document).on('click', '*[type=button].quick, .a.quick', function(e) {
+	
+	e.stopPropagation();
 	
 	COMMANDS.quickCommand(this);
 });

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -64,10 +64,10 @@ class object_interaction {
 		}
 			
 		$script .= "var obj_mapscroller = new MapScroller(target, {
-				arr_levels: ".json_encode($arr_layers).",
+				arr_levels: ".value2JSON($arr_layers).",
 				default_center: {x: ".($this->arr['stage']['view_x']/100).", y: ".($this->arr['stage']['view_y']/100)."},
 				default_zoom: ".($this->arr['stage']['zoom_auto'] ? "{top_right: {x: 0, y: 0}, bottom_left: {x: 0, y: 1}}" : $this->arr['stage']['zoom_level_default']).",
-				tile_path: '".str_replace('://', '://s{s}.', BASE_URL).DIR_CMS.DIR_UPLOAD."object_interaction/stage_".$this->arr['stage']['id']."/tile-{z}-{x}-{y}.jpg',
+				tile_path: '".str_replace('://', '://s{s}.', URL_BASE).DIR_CMS.DIR_UPLOAD."object_interaction/stage_".$this->arr['stage']['id']."/tile-{z}-{x}-{y}.jpg',
 				background_path: '/".DIR_CMS.DIR_UPLOAD."object_interaction/stage_".$this->arr['stage']['id']."/background.jpg'
 			});
 			
@@ -157,7 +157,7 @@ class object_interaction {
 		$arr_style_extra = [];
 		$arr_classes = [];
 		
-		$info = parseBody($arr_object['body'], ['function' => 'htmlspecialchars']);
+		$info = parseBody($arr_object['body'], ['function' => 'strEscapeHTML']);
 		if ($arr_object['img']) {
 						
 			$img_width = ($arr_object['width']/100)*(($this->arr['stage']['zoom_max']/100)*$this->stage_width); // Image width * max zoomed stage width

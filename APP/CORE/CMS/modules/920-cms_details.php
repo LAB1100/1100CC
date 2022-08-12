@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -34,8 +34,8 @@ class cms_details extends base_module {
 					return '<label>'.getLabel('lbl_age').'</label><input type="text" name="options[age_amount]" value="'.$options['age_amount'].'" /><select name="options[age_unit]">'.cms_general::createDropdown(cms_general::getTimeUnits(), $options['age_unit']).'</select>';
 				},
 			],
-			'syncServerFiles' => [
-				'label' => getLabel('lbl_server_file_sync')
+			'clearStaticServerFiles' => [
+				'label' => getLabel('lbl_static_server_file_clear')
 			],
 			'runWebService' => [
 				'label' => getLabel('lbl_run_web_service'),
@@ -43,6 +43,7 @@ class cms_details extends base_module {
 				'options' => function($options) {
 					return '<fieldset><ul>
 						<li><label>'.getLabel('lbl_server_host_port').'</label><input type="text" name="options[port]" value="'.$options['port'].'" /> <span>(+1 SSL)</span></li>
+						<li><label>'.getLabel('lbl_verbose').'</label><input type="checkbox" name="options[verbose]"'.($options['verbose'] ? ' checked="checked"' : '').'" /></li>
 					</ul></fieldset>';
 				},
 			]
@@ -51,7 +52,7 @@ class cms_details extends base_module {
 
 	public function contents() {
 	
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div class="details">';
 		
 			$arr = self::getSiteDetails();
@@ -74,57 +75,57 @@ class cms_details extends base_module {
 							<fieldset><legend>Info</legend><ul>
 								<li>
 									<label>'.getLabel('lbl_name').'</label>
-									<div><input type="text" name="details[name]" value="'.htmlspecialchars($arr['name']).'" /></div>
+									<div><input type="text" name="details[name]" value="'.strEscapeHTML($arr['name']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_address').'</label>
-									<div><input type="text" name="details[address]" value="'.htmlspecialchars($arr['address']).'" /><input type="text" name="details[address_nr]" value="'.htmlspecialchars($arr['address_nr']).'" /></div>
+									<div><input type="text" name="details[address]" value="'.strEscapeHTML($arr['address']).'" /><input type="text" name="details[address_nr]" value="'.strEscapeHTML($arr['address_nr']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_zipcode').'</label>
-									<div><input type="text" name="details[zipcode]" value="'.htmlspecialchars($arr['zipcode']).'" /></div>
+									<div><input type="text" name="details[zipcode]" value="'.strEscapeHTML($arr['zipcode']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_city').'</label>
-									<div><input type="text" name="details[city]" value="'.htmlspecialchars($arr['city']).'" /></div>
+									<div><input type="text" name="details[city]" value="'.strEscapeHTML($arr['city']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_country').'</label>
-									<div><input type="text" name="details[country]" value="'.htmlspecialchars($arr['country']).'" /></div>
+									<div><input type="text" name="details[country]" value="'.strEscapeHTML($arr['country']).'" /></div>
 								</li>
 							</ul></fieldset>
 						
 							<fieldset><legend>Info</legend><ul>
 								<li>
 									<label>'.getLabel('lbl_email').'</label>
-									<div><input type="text" name="details[email]" value="'.htmlspecialchars($arr['email']).'" /></div>
+									<div><input type="text" name="details[email]" value="'.strEscapeHTML($arr['email']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_phone').'</label>
-									<div><input type="text" name="details[tel]" value="'.htmlspecialchars($arr['tel']).'" /></div>
+									<div><input type="text" name="details[tel]" value="'.strEscapeHTML($arr['tel']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_fax').'</label>
-									<div><input type="text" name="details[fax]" value="'.htmlspecialchars($arr['fax']).'" /></div>
+									<div><input type="text" name="details[fax]" value="'.strEscapeHTML($arr['fax']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_bank').'</label>
-									<div><input type="text" name="details[bank]" value="'.htmlspecialchars($arr['bank']).'" /></div>
+									<div><input type="text" name="details[bank]" value="'.strEscapeHTML($arr['bank']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_bank_nr').'</label>
-									<div><input type="text" name="details[bank_nr]" value="'.htmlspecialchars($arr['bank_nr']).'" /></div>
+									<div><input type="text" name="details[bank_nr]" value="'.strEscapeHTML($arr['bank_nr']).'" /></div>
 								</li>
 							</ul></fieldset>
 						
 							<fieldset><legend>Meta</legend><ul>
 								<li>
 									<label>'.getLabel('lbl_title').'</label>
-									<div><input type="text" name="details[title]" value="'.htmlspecialchars($arr['title']).'" /></div>
+									<div><input type="text" name="details[title]" value="'.strEscapeHTML($arr['title']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_description').'</label>
-									<div><textarea name="details[description]" />'.htmlspecialchars($arr['description']).'</textarea></div>
+									<div><textarea name="details[description]" />'.strEscapeHTML($arr['description']).'</textarea></div>
 								</li>
 								<li>
 									<label></label>
@@ -137,44 +138,44 @@ class cms_details extends base_module {
 										$arr_tags = preg_replace("/><(?=[^\/])/", ">>,<<", $arr['head_tags']);
 										$arr_tags = explode(">,<", $arr_tags);
 										foreach ($arr_tags as $value) {
-											$arr_sorter[] = ['value' => '<input type="text" name="details[head_tags][]" value="'.htmlspecialchars($value).'" />'];
+											$arr_sorter[] = ['value' => '<input type="text" name="details[head_tags][]" value="'.strEscapeHTML($value).'" />'];
 										}
 										$return .= cms_general::createSorter($arr_sorter, false);
 									$return .= '</div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_html').'</label>
-									<div><textarea name="details[html]" />'.htmlspecialchars($arr['html']).'</textarea></div>
+									<div><textarea name="details[html]" />'.strEscapeHTML($arr['html']).'</textarea></div>
 								</li>
 							</ul></fieldset>
 							
 							<fieldset><legend>Mail</legend><ul>
 								<li>
 									<label>'.getLabel('lbl_email_header').'</label>
-									<div><textarea name="details[email_header]" />'.htmlspecialchars($arr['email_header']).'</textarea></div>
+									<div><textarea name="details[email_header]" />'.strEscapeHTML($arr['email_header']).'</textarea></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_email_footer').'</label>
-									<div><textarea name="details[email_footer]" />'.htmlspecialchars($arr['email_footer']).'</textarea></div>
+									<div><textarea name="details[email_footer]" />'.strEscapeHTML($arr['email_footer']).'</textarea></div>
 								</li>
 							</ul></fieldset>
 						
 							<fieldset><legend>Services</legend><ul>
 								<li>
 									<label>'.getLabel('lbl_analytics_account').'</label>
-									<div><input type="text" name="details[analytics_account]" value="'.htmlspecialchars($arr['analytics_account']).'" /></div>
+									<div><input type="text" name="details[analytics_account]" value="'.strEscapeHTML($arr['analytics_account']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_facebook').'</label>
-									<div><input type="text" name="details[facebook]" value="'.htmlspecialchars($arr['facebook']).'" /></div>
+									<div><input type="text" name="details[facebook]" value="'.strEscapeHTML($arr['facebook']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_twitter').'</label>
-									<div><input type="text" name="details[twitter]" value="'.htmlspecialchars($arr['twitter']).'" /></div>
+									<div><input type="text" name="details[twitter]" value="'.strEscapeHTML($arr['twitter']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_youtube').'</label>
-									<div><input type="text" name="details[youtube]" value="'.htmlspecialchars($arr['youtube']).'" /></div>
+									<div><input type="text" name="details[youtube]" value="'.strEscapeHTML($arr['youtube']).'" /></div>
 								</li>
 								<li>
 									<label></label>
@@ -189,7 +190,7 @@ class cms_details extends base_module {
 										foreach (($arr_custom ?: [[]]) as $value) {
 											
 											$unique = uniqid('array_');
-											$arr_sorter[] = ['value' => '<input type="text" name="details_custom['.$unique.'][name]" value="'.htmlspecialchars($value['name']).'" title="'.getLabel('lbl_name').'" /><input type="text" name="details_custom['.$unique.'][value]" value="'.htmlspecialchars($value['value']).'" />'];
+											$arr_sorter[] = ['value' => '<input type="text" name="details_custom['.$unique.'][name]" value="'.strEscapeHTML($value['name']).'" title="'.getLabel('lbl_name').'" /><input type="text" name="details_custom['.$unique.'][value]" value="'.strEscapeHTML($value['value']).'" />'];
 										}
 										
 										$return .= cms_general::createSorter($arr_sorter, false);
@@ -219,7 +220,7 @@ class cms_details extends base_module {
 										
 										foreach (($arr_hosts ?: [[]]) as $arr_host) {
 											
-											$arr_sorter[] = ['value' => '<input type="text" name="details_hosts[]" value="'.htmlspecialchars($arr_host['name']).'" />'];
+											$arr_sorter[] = ['value' => '<input type="text" name="details_hosts[]" value="'.strEscapeHTML($arr_host['name']).'" />'];
 										}
 										
 										$return .= cms_general::createSorter($arr_sorter, false);
@@ -230,15 +231,15 @@ class cms_details extends base_module {
 							<fieldset><legend>Mail</legend><ul>
 								<li>
 									<label>'.getLabel('lbl_email_1100cc').'</label>
-									<div><input type="text" name="details[email_1100cc]" value="'.htmlspecialchars($arr['email_1100cc']).'" /></div>
+									<div><input type="text" name="details[email_1100cc]" value="'.strEscapeHTML($arr['email_1100cc']).'" /></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_email_1100cc_host').'</label>
-									<div><input type="text" name="details[email_1100cc_host]" value="'.htmlspecialchars($arr['email_1100cc_host']).'" /><span>(e.g. imap.gmail.com:993/imap/ssl)</span></div>
+									<div><input type="text" name="details[email_1100cc_host]" value="'.strEscapeHTML($arr['email_1100cc_host']).'" /><span>(e.g. imap.gmail.com:993/imap/ssl)</span></div>
 								</li>
 								<li>
 									<label>'.getLabel('lbl_email_1100cc_password').'</label>
-									<div><input type="password" name="details[email_1100cc_password]" value="'.htmlspecialchars($arr['email_1100cc_password']).'" /></div>
+									<div><input type="password" name="details[email_1100cc_password]" value="'.strEscapeHTML($arr['email_1100cc_password']).'" /></div>
 								</li>
 							</ul></fieldset>
 						
@@ -254,6 +255,10 @@ class cms_details extends base_module {
 								<li>
 									<label>'.getLabel('lbl_logging').'</label>
 									<div><input type="checkbox" name="details[logging]" value="1"'.($arr['logging'] ? ' checked="checked"' : '').' /></div>
+								</li>
+								<li>
+									<label>'.getLabel('lbl_request_throttle').'</label>
+									<div><input type="checkbox" name="details[throttle]" value="1"'.($arr['throttle'] ? ' checked="checked"' : '').' /></div>
 								</li>
 								<li>
 									<label>HTTPS</label>
@@ -293,13 +298,13 @@ class cms_details extends base_module {
 												
 												$unique = uniqid('array_');
 												$arr_sorter[] = ['value' => 
-													'<input type="text" name="details_servers['.$unique.'][host_name]" value="'.htmlspecialchars($value['host_name']).'" title="'.getLabel('lbl_server_host').'" />
+													'<input type="text" name="details_servers['.$unique.'][host_name]" value="'.strEscapeHTML($value['host_name']).'" title="'.getLabel('lbl_server_host').'" />
 													<select name="details_servers['.$unique.'][host_type]">'.cms_general::createDropdown(self::getServerTypes(), $value['host_type'], false, 'label').'</select>
-													<input type="text" name="details_servers['.$unique.'][host_port]" value="'.htmlspecialchars($value['host_port']).'" title="'.getLabel('lbl_server_host_port').'" />
+													<input type="text" name="details_servers['.$unique.'][host_port]" value="'.strEscapeHTML($value['host_port']).'" title="'.getLabel('lbl_server_host_port').'" />
 													<select name="details_servers['.$unique.'][login_type]">'.cms_general::createDropdown(self::getServerLoginTypes(), $value['login_type'], false, 'label').'</select>
-													<input type="text" name="details_servers['.$unique.'][login_name]" value="'.htmlspecialchars($value['login_name']).'" title="'.getLabel('lbl_login').'" />
-													<textarea name="details_servers['.$unique.'][passkey]" title="'.getLabel('lbl_passkey').'">'.htmlspecialchars($value['passkey']).'</textarea>
-													<input type="text" name="details_servers['.$unique.'][extra]" value="'.htmlspecialchars($value['extra']).'" title="'.getLabel('lbl_extra').'" />'
+													<input type="text" name="details_servers['.$unique.'][login_name]" value="'.strEscapeHTML($value['login_name']).'" title="'.getLabel('lbl_login').'" />
+													<textarea name="details_servers['.$unique.'][passkey]" title="'.getLabel('lbl_passkey').'">'.strEscapeHTML($value['passkey']).'</textarea>
+													<input type="text" name="details_servers['.$unique.'][extra]" value="'.strEscapeHTML($value['extra']).'" title="'.getLabel('lbl_extra').'" />'
 												];
 											}
 										}
@@ -338,7 +343,7 @@ class cms_details extends base_module {
 											}
 										}
 										
-										$return .= '<textarea name="script">'.htmlspecialchars($str_script).'</textarea>
+										$return .= '<textarea name="script">'.strEscapeHTML($str_script).'</textarea>
 									</div>
 								</li>
 							</ul></fieldset>
@@ -364,7 +369,7 @@ class cms_details extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_icon').'</label>
-						<div>'.cms_general::createFileBrowser().(isPath(DIR_ROOT_SITE.'css/image.png') ? '<img src="'.BASE_URL_HOME.'css/image.png" />' : '').'</div>
+						<div>'.cms_general::createFileBrowser().(isPath(DIR_ROOT_SITE.'css/image.png') ? '<img src="'.URL_BASE_HOME.'css/image.png" />' : '').'</div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_theme').'</label>
@@ -388,9 +393,9 @@ class cms_details extends base_module {
 								];
 							}
 							
-							$str_theme = json_encode($arr_theme, JSON_PRETTY_PRINT);
+							$str_theme = value2JSON($arr_theme, JSON_PRETTY_PRINT);
 							
-							$return .= '<textarea name="theme">'.htmlspecialchars($str_theme).'</textarea>
+							$return .= '<textarea name="theme">'.strEscapeHTML($str_theme).'</textarea>
 						</div>
 					</li>
 					<li>
@@ -408,7 +413,7 @@ class cms_details extends base_module {
 								}
 							}
 							
-							$return .= '<textarea name="style">'.htmlspecialchars($str_style).'</textarea>
+							$return .= '<textarea name="style">'.strEscapeHTML($str_style).'</textarea>
 						</div>
 					</li>
 				</ul></fieldset>
@@ -485,7 +490,7 @@ class cms_details extends base_module {
 			
 			$arr_update_details = [
 				'name', 'address', 'address_nr', 'zipcode', 'city', 'country', 'tel', 'fax', 'bank', 'bank_nr', 'email', 'title', 'description', 'head_tags', 'html', 'email_header', 'email_footer', 'analytics_account', 'facebook', 'twitter', 'youtube',
-				'email_1100cc', 'email_1100cc_host', 'email_1100cc_password', 'caching', 'caching_external', 'logging', 'https', 'show_system_errors', 'show_404', 'use_servers'
+				'email_1100cc', 'email_1100cc_host', 'email_1100cc_password', 'caching', 'caching_external', 'logging', 'throttle', 'https', 'show_system_errors', 'show_404', 'use_servers'
 			];
 			
 			foreach ($arr_update_details as $key => $value) {
@@ -500,7 +505,7 @@ class cms_details extends base_module {
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_SITE_DETAILS')."
 					(
 						name, address, address_nr, zipcode, city, country, tel, fax, bank, bank_nr, email, title, description, head_tags, html, email_header, email_footer, analytics_account, facebook, twitter, youtube,
-						email_1100cc, email_1100cc_host, email_1100cc_password, caching, caching_external, logging, https, show_system_errors, show_404, use_servers
+						email_1100cc, email_1100cc_host, email_1100cc_password, caching, caching_external, logging, throttle, https, show_system_errors, show_404, use_servers
 					)
 						VALUES
 					(
@@ -531,6 +536,7 @@ class cms_details extends base_module {
 						".DBFunctions::escapeAs($_POST['details']['caching'], DBFunctions::TYPE_BOOLEAN).",
 						".DBFunctions::escapeAs($_POST['details']['caching_external'], DBFunctions::TYPE_BOOLEAN).",
 						".DBFunctions::escapeAs($_POST['details']['logging'], DBFunctions::TYPE_BOOLEAN).",
+						".DBFunctions::escapeAs($_POST['details']['throttle'], DBFunctions::TYPE_BOOLEAN).",
 						".DBFunctions::escapeAs($_POST['details']['https'], DBFunctions::TYPE_BOOLEAN).",
 						".DBFunctions::escapeAs($_POST['details']['show_system_errors'], DBFunctions::TYPE_BOOLEAN).",
 						".DBFunctions::escapeAs($_POST['details']['show_404'], DBFunctions::TYPE_BOOLEAN).",
@@ -613,7 +619,7 @@ class cms_details extends base_module {
 							(
 								'".DBFunctions::strEscape($arr_server['host_name'])."',
 								'".DBFunctions::strEscape($arr_server['host_type'])."',
-								'".DBFunctions::strEscape($arr_server['host_port'])."',
+								".(int)$arr_server['host_port'].",
 								'".DBFunctions::strEscape($arr_server['login_type'])."',
 								'".DBFunctions::strEscape($arr_server['login_name'])."',
 								'".DBFunctions::strEscape($arr_server['passkey'])."',
@@ -641,7 +647,7 @@ class cms_details extends base_module {
 			}
 		
 			$str_theme = json_decode($_POST['theme'], true);
-			$str_theme = json_encode($str_theme, JSON_PRETTY_PRINT);
+			$str_theme = value2JSON($str_theme, JSON_PRETTY_PRINT);
 			
 			$handle = fopen(DIR_ROOT.DIR_HOME.'css/theme.json', 'w');
 			fwrite($handle, $str_theme);
@@ -669,7 +675,7 @@ class cms_details extends base_module {
 
 		$arr = [];
 		
-		$arr[] = ['id' => 'file', 'label' => getLabel('lbl_server_file')];
+		$arr[] = ['id' => 'file', 'label' => getLabel('lbl_static_server_file')];
 
 		return $arr;
 	}
@@ -840,61 +846,38 @@ class cms_details extends base_module {
 		}
 	}
 	
-	public static function syncServerFiles($options) {
+	public static function clearStaticServerFiles($options) {
 		
 		$arr_servers = self::getSiteDetailsServers();
 		
+		if (!$arr_servers['file']) {
+			return false;
+		}
+		
 		foreach ($arr_servers['file'] as $arr_server) {
 			
-			if ($arr_server['login_type'] == 'ssh') {
-									
-				$key_path = tempnam(Settings::get('path_temporary'), '1100CC');
-				$key_file = fopen($key_path, 'w');
-				fwrite($key_file, $arr_server['passkey']);
-				fclose($key_file);
-				chmod($key_path, 0600);
-				
-				$ssh_connect_options = "-o 'BatchMode yes' -o 'StrictHostKeyChecking no' -q".($arr_server['host_port'] ? " -p ".escapeshellarg($arr_server['host_port']) : "")." -i '".$key_path."'";
-				$ssh_connect_location = escapeshellarg($arr_server['login_name']).'@'.escapeshellarg($arr_server['host_name']);
-							
-				foreach (Settings::get('arr_server_files_paths') as $source_path => $remote_path) {
-					
-					$ssh_connect_path = escapeshellarg($arr_server['extra'].DIR_HOME.$remote_path);
-					
-					/*
-					Source and target group have to be the same.
-					Creates path to target directory => sync directories with source group intact (--group)
-					*/
-					
-					$command = "
-						ssh ".$ssh_connect_options." ".$ssh_connect_location." \"mkdir -p ".$ssh_connect_path."\" \
-						2>&1 && \
-						rsync \
-							--verbose \
-							--delete \
-							--copy-links \
-							--recursive \
-							--log-format='Action: %o %n' \
-							--stats \
-							--group \
-							-e \"ssh ".$ssh_connect_options."\" \
-							".DIR_ROOT.$source_path." \
-							".$ssh_connect_location.":".$ssh_connect_path." \
-						2>&1
-					";
-
-					exec($command, $output, $return);
-
-					if ($return) {
-						error('cms_details::syncServerFiles execution error: '.$return, TROUBLE_ERROR, LOG_BOTH, print_r($output, true));
-					}
-				}
-				
-				unlink($key_path);
+			if (!$arr_server['host_name']) {
+				return;
+			}
+			
+			$str_path = DIR_SITE_STORAGE.'command';
+			$str_url = SERVER_PROTOCOL.$arr_server['host_name'].'/command';
+			
+			FileStore::storeFile($str_path, 'clear');
+			
+			$data = new FileGet($str_url);
+			$str_result = $data->get();
+						
+			unlink($str_path);
+			
+			if (trim($str_result) == 'success') {
+				return true;
+			} else {
+				error(__METHOD__.' ERROR: '.($str_result ?: $data->getError()), TROUBLE_ERROR, LOG_BOTH, print_r($output, true));
 			}
 		}
 	}
-	
+
 	public static function cleanCache($arr_options) {
 		
 		if (stream_resolve_include_path(DIR_ROOT_CACHE.DIR_HOME)) {
@@ -930,8 +913,71 @@ class cms_details extends base_module {
 			error(getLabel('msg_missing_information'));
 		}
 
-		$service = new WebService('0.0.0.0', $arr_options['port']);
-
+		$service = new WebService('0.0.0.0', $arr_options['port'], getLabel('https', 'D', true));
+		$service->verbose = (bool)$arr_options['verbose'];
+		
+		$arr_web_service_details = getModuleConfiguration('webServiceProperties');
+				
+		foreach($arr_web_service_details as $module => $classes) {
+			foreach($classes as $class => $arr_options) {
+											
+				$task = new $class();
+				$task->init();
+				
+				$service->addTask($task);
+			}
+		}
+		
 		$service->init();
+	}
+	
+	public static function checkWebService() {
+		
+		$arr_job = cms_jobs::getJob('cms_details', 'runWebService');
+		
+		if ($arr_job && $arr_job['process_id']) {
+			
+			$server_name_webservice = Settings::get('server_name_webservice');
+			$server_name_webservice = ($server_name_webservice !== null ? $server_name_webservice : 'ws');
+			$server_name_webservice = ($server_name_webservice ? $server_name_webservice.'.' : '');
+			
+			$arr_job['host'] = $server_name_webservice.SERVER_NAME;
+			$arr_job['port_local'] = (int)$arr_job['port'];
+			$arr_job['port'] = (SERVER_PROTOCOL == 'https://' ? (int)$arr_job['port']+1 : (int)$arr_job['port']);
+			
+			return $arr_job;
+		} else {
+			return false;
+		}		
+	}
+	
+	public static function setWebServiceActiveUser($user_id, $passkey) {
+		
+		$arr_job = self::checkWebService();
+		
+		if ($arr_job) {
+			
+			$arr_passkey = WebServiceUser::setPasskey($user_id, $passkey);
+			WebServiceUser::usePasskey($user_id);
+			
+			return ['host' => $arr_job['host'], 'port' => $arr_job['port'], 'port_local' => $arr_job['port_local']];
+		}
+	}
+	
+	public static function isWebServiceActiveUser($user_id) {
+		
+		$arr_job = self::checkWebService();
+		
+		if (!$arr_job) {
+			return false;
+		}
+		
+		$passkey = WebServiceUser::usePasskey($user_id);
+		
+		if ($passkey) {
+			return ['host' => $arr_job['host'], 'port' => $arr_job['port'], 'port_local' => $arr_job['port_local'], 'passkey' => $passkey];
+		} else {
+			return false;
+		}
 	}
 }

@@ -16,10 +16,12 @@ To create a new site/application in the 1100CC installation, do the following:
 1. The directory `./APP/SITE` contains the default files and directories for a new site/application, copy and rename this folder to the name of your site/application.
 1. Copy and rename the directory `./APP/SETTINGS/SITE` to your new site/application name.
 1. Copy and rename the directory `./APP/STORAGE/SITE` to your new site/application name.
+1. Copy and rename the directory `./SAFE/SITE` to your new site/application name.
 1. From now on ?SITE? refers to your site/application's name.
 1. Add an alias (or multiple aliases) to `./APP/alias` that links a host to your site/application: e.g. `yourhost.com ?SITE?` and/or `sub.yourhost.com ?SITE?`
-1. Add the appropriate databases for both the HOME and CMS of your new ?SITE?, see [database SITE](SETUP.md#database-site).
-1. Edit the `./APP/SETTINGS/?SITE?/settings.php` to configure the database passwords, and to override any default settings if required.
+1. Add the appropriate databases for both the CMS and HOME of your new ?SITE?, see [database SITE](SETUP.md#database-site).
+1. Add the database passwords for the CMS and HOME users to `./SAFE/?SITE?/database_cms.pass` and `./SAFE/?SITE?/database_home.pass` respectively.
+1. Edit the `./APP/SETTINGS/?SITE?/settings.php` to configure or override any default settings if required.
 1. Go to the CMS by adding cms. to your SITE's host e.g. `cms.yourhost.com`, and start building! See the [1100CC Guides](https://lab1100.com/1100cc/guides) on how to get started.
  
 ## Server
@@ -71,6 +73,8 @@ When your Linux distrubiton applies SELinux:
 * zip
 * xmlrpc
 * libapache2-mod
+* intl
+* bcmath
 
 ### Database
 
@@ -111,10 +115,10 @@ CREATE DATABASE ?SITE?_home CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 Grant the MySQL users their HOME and a CMS privileges:
 
 ```sql
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON ?SITE?_home.* TO 1100CC_cms@localhost;
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES, SHOW VIEW, EXECUTE ON ?SITE?_home.* TO 1100CC_cms@localhost;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ?SITE?_home.* TO 1100CC_home@localhost;
 
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON ?SITE?_cms.* TO 1100CC_cms@localhost;
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES, SHOW VIEW, EXECUTE ON ?SITE?_cms.* TO 1100CC_cms@localhost;
 GRANT SELECT ON ?SITE?_cms.* TO 1100CC_home@localhost;
 ```
 
@@ -228,5 +232,3 @@ cd /var/1100CC/PROGRAMS
 ```
 
 When a program is compiled successfully, the path to the program in `/var/1100CC/PROGRAMS/RUN` is returned and is ready to be used by 1100CC.
-
-

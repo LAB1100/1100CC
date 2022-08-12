@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class intf_pages extends pages {
 	
 		$directory_id = directories::getRootDirectory();
 	
-		$return .= '<div class="section pages"><h1 id="x:intf_pages:page-0"><span>'.self::$label.'</span><input type="button" class="data add popup page_add" value="add" /></h1>
+		$return = '<div class="section pages"><h1 id="x:intf_pages:page-0"><span>'.self::$label.'</span><input type="button" class="data add popup page_add" value="add" /></h1>
 		<div>';
 			
 			$parent_options = directories::createDirectoriesDropdown(directories::getDirectories(), $directory_id);
@@ -456,11 +456,11 @@ class intf_pages extends pages {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel("lbl_title").'</label>
-						<div><input type="text" name="title" value="'.htmlspecialchars($arr['title']).'" /></div>
+						<div><input type="text" name="title" value="'.strEscapeHTML($arr['title']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel("lbl_name").'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr['name']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel("lbl_directory").'</label>
@@ -468,7 +468,7 @@ class intf_pages extends pages {
 					</li>
 					<li>
 						<label>URL</label>
-						<div><input type="text" name="url" value="'.htmlspecialchars($arr['url']).'" /></div>
+						<div><input type="text" name="url" value="'.strEscapeHTML($arr['url']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel("lbl_master_page").'</label>
@@ -511,19 +511,22 @@ class intf_pages extends pages {
 				$this->html .= '<input name="html_modules" type="hidden" value="" />
 			</form>';
 			
-			$this->validate = '{"title": "required", "directory": "required", "master_page": {"required": "function() {'.
-							'if (!$(\'[name=\"url\"]\').val()) {'.
-								'return $(\'[name=\"template_select\"]:selected\').val() < 1'.
-							'} else {'.
-								'return false;'.
-							'}}'.
-						'"}, "template_select": {"required": "function() {'.
-							'if (!$(\'[name=\"url\"]\').val()) {'.
-								'return $(\'[name=\"master_page\"]\').val() < 1'.
-							'} else {'.
-								'return false;'.
-							'}}'.
-						'"}}';
+			$this->validate = ['title' => 'required', 'directory' => 'required',
+				'master_page' => ['required' => 'function() {'.
+					'if (!$(\'[name="url"]\').val()) {'.
+						'return $(\'[name="template_select"]:selected\').val() < 1'.
+					'} else {'.
+						'return false;'.
+					'}}'
+				],
+				'template_select' => ['required' => 'function() {'.
+					'if (!$(\'[name="url"]\').val()) {'.
+						'return $(\'[name="master_page"]\').val() < 1'.
+					'} else {'.
+						'return false;'.
+					'}}'
+				]
+			];
 		}
 		
 		if ($method == "popup_shortcuts") {

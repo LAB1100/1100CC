@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -68,11 +68,14 @@ class cms_language extends base_module {
 		}
 	
 		$res = DB::query("SELECT l.* FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." l
-			".($host_name ? "LEFT JOIN ".DB::getTable('TABLE_CMS_LANGUAGE_HOSTS')." lh ON (lh.lang_code = l.lang_code AND
-				CASE
-					WHEN LEFT(lh.host_name, 1) = ':' THEN ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($host_name)."'", "SUBSTRING(lh.host_name FROM 2)")."
-					ELSE lh.host_name = '".DBFunctions::strEscape($host_name)."'
-				END
+			".($host_name ? "LEFT JOIN ".DB::getTable('TABLE_CMS_LANGUAGE_HOSTS')." lh ON (lh.lang_code = l.lang_code AND (
+					(
+						lh.host_name = '".DBFunctions::strEscape($host_name)."'
+					) OR (
+						lh.host_name LIKE ':%'
+						AND ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($host_name)."'", "SUBSTRING(lh.host_name FROM 2)")."
+					)
+				)
 			)
 			" : "")."
 			ORDER BY ".($host_name ? "CASE WHEN lh.host_name IS NOT NULL THEN 1 ELSE 0 END DESC, " : "")."is_default DESC

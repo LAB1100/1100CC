@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -11,13 +11,12 @@ function MapScroller(element, options) {
 	var elm = $(element),
 	obj = this,
 	settings = $.extend({
-		default_zoom: 4,
+		default_zoom: false,
 		default_center: {x: 0.5, y: 0.5}, // xy percentage or latlong
-		origin: {x: 0, y: 0, latitude: 0, longitude: 0}, // xy coorditnates or latlong
+		origin: {x: 0.5, y: 0.5, latitude: 0, longitude: 0}, // xy percentage or latlong coordinates
 		center_pointer: true,
 		arr_levels: [],
 		pos_view_frame: {top: 0, right: 0, bottom: 0, left: 0}, // pixels or percentage
-		centered_level_tiles: true,
 		show_zoom_levels: true,
 		attribution: '',
 		tile_path: '{s}.domain.tld/tile-{z}-{x}-{y}.png',
@@ -34,12 +33,14 @@ function MapScroller(element, options) {
 	elm_paint = false,
 	elm_controls = false,
 	elm_zoomer = false,
-	level_settings = [],
+	arr_levels = [],
 	pos_elm = {width: 0, height: 0, x: 0, y: 0, frame: {width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0}},
 	pos_offset = {},
 	pos_center = {},
+	pos_origin = {},
 	pos_zoom = false,
 	pos_view_frame = {},
+	pos_render = {},
 	obj_elm_map_content = {},
 	obj_tiles = {},
 	interval_tiles = false,
@@ -60,9 +61,17 @@ function MapScroller(element, options) {
 		drawControls();
 					
 		for (var i = 0; i < settings.arr_levels.length; i++) {
-			obj.addZoom(settings.arr_levels[i]);
+			
+			const arr_level = settings.arr_levels[i];
+			
+			if (arr_level.level == null) {
+				arr_level.level = (i + 1);
+			}
+			
+			obj.addZoom(arr_level);
 		}
-					
+		
+		obj.setOrigin(settings.origin);
 		obj.setPosition(0, 0);
 		
 		obj.setZoom(settings.default_zoom, settings.default_center, settings.pos_view_frame);
@@ -111,24 +120,44 @@ function MapScroller(element, options) {
 	
 	var addListeners = function() {
 		
-		var in_touch = false;
+		var in_event = false;
 		var pinch = false;
 		var has_moved = false;
 		
 		elm_con.on('mousedown.scroller touchstart.scroller', function(e) {
-
+			
+			var func_prevent_drag = false;
+			
 			if (POSITION.isTouch()) {
 				
-				pinch = POSITION.getPinch(e);
-				
-				if (in_touch) { // Touchstart can be triggered multiple times
+				if (e.type == 'mousedown') {
 					return;
 				}
 				
-				in_touch = true;
+				pinch = POSITION.getPinch(e);
+				
+				if (in_event) { // Touchstart can be triggered multiple times, prevent everything default for additional touches
+					
+					e.preventDefault();
+					return;
+				}
+
+				func_prevent_drag = function(e2) {
+					
+					e2.preventDefault(); // Prevent document drag
+				};
+				
+				document.addEventListener('touchmove', func_prevent_drag, {passive: false});
+			} else {
+
+				e.preventDefault(); // Prevent document drag
+				
+				if (in_event) {
+					return;
+				}
 			}
 			
-			e.preventDefault(); // Prevent document drag, and on touchstart do not trigger mousedown and zoom
+			in_event = true;
 			
 			SCRIPTER.triggerEvent(elm[0].closest('[tabindex]'), 'focus');
 		
@@ -177,29 +206,37 @@ function MapScroller(element, options) {
 				if (has_moved) {
 					SCRIPTER.triggerEvent(elm, 'movingstop');
 					elm.removeClass('moving');
-				} else {
-					if (in_touch) {
-						SCRIPTER.triggerEvent(elm_target, 'click');
-					}
 				}
 				
 				doMove(false);
 				stopTiling();
 				
-				in_touch = false;
-
+				in_event = false;
+				
+				if (POSITION.isTouch()) {
+					document.removeEventListener('touchmove', func_prevent_drag, {passive: false});
+				}
 				$(document).off('mousemove.scroller touchmove.scroller mouseup.scroller touchend.scroller');
 			});
-		})
-		.on('click', function(e) {
+		});
+		
+		elm_con[0].addEventListener('click', function(e) {
 			
 			if (has_moved) { // Allow click or not
 				e.stopPropagation();
 			}
-		})
-		.on('wheel', function(e) {
+		});
+		
+		elm_con[0].addEventListener('dblclick', function(e) {
 			
-			var delta = e.originalEvent.deltaY;
+			var pos_xy = obj.getMousePositionToCenter();
+			
+			obj.setZoom(cur_zoom+1, pos_xy);
+		});
+		
+		elm_con[0].addEventListener('wheel', function(e) {
+			
+			var delta = e.deltaY;
 			
 			if (settings.center_pointer) {
 
@@ -219,12 +256,6 @@ function MapScroller(element, options) {
 			e.preventDefault();
 			
 			SCRIPTER.triggerEvent(elm[0].closest('[tabindex]'), 'focus');
-		})
-		.on('dblclick', function(e) {
-			
-			var pos_xy = obj.getMousePositionToCenter();
-			
-			obj.setZoom(cur_zoom+1, pos_xy);
 		});
 		
 		resize_sensor = new ResizeSensor(elm[0], function() {
@@ -237,6 +268,14 @@ function MapScroller(element, options) {
 		
 		pos_elm.width = elm[0].clientWidth;
 		pos_elm.height = elm[0].clientHeight;
+		
+		pos_render.width = pos_elm.width;
+		pos_render.height = pos_elm.height;
+		if (elm[0].dataset.resolution) {
+			pos_render.width = Math.ceil(elm[0].dataset.width * (elm[0].dataset.resolution / 2.54));
+			pos_render.height = Math.ceil(elm[0].dataset.height * (elm[0].dataset.resolution / 2.54));
+		}
+		pos_render.resolution = (pos_render.width / pos_elm.width);
 		
 		pos_elm.frame.width = pos_elm.width;
 		pos_elm.frame.height = pos_elm.height;
@@ -264,6 +303,17 @@ function MapScroller(element, options) {
 			pos_elm.frame.height -= (pos_elm.frame.top + pos_elm.frame.bottom);
 		}
 	};
+	
+	this.setOrigin = function(pos_origin_new) {
+		
+		if (pos_origin_new.north_east) {
+			pos_origin = {latitude: 0, longitude: pos_origin_new.north_east.longitude - pos_origin_new.south_west.longitude};
+		} else if (pos_origin_new.longitude != null) {
+			pos_origin = {latitude: 0, longitude: pos_origin_new.longitude};
+		} else {
+			pos_origin = {x: pos_origin_new.x, y: pos_origin_new.y};
+		}
+	};
 			
 	var addZoomerLevel = function() {
 		
@@ -276,12 +326,12 @@ function MapScroller(element, options) {
 	var setZoomerLevel = function() {
 	
 		elm_zoomer.children().removeClass('active');
-		elm_zoomer.children('span:eq('+(level_settings.length - cur_zoom+1)+')').addClass('active');
+		elm_zoomer.children('span:eq('+(arr_levels.length - cur_zoom+1)+')').addClass('active');
 	};
 					
 	this.addZoom = function(obj_level) {
 	
-		level_settings.push(obj_level);
+		arr_levels.push(obj_level);
 		
 		if (settings.show_zoom_levels) {
 			addZoomerLevel();
@@ -297,21 +347,27 @@ function MapScroller(element, options) {
 			setWindow();
 		}
 		
-		if (typeof zoom_new == 'object') {
+		if (zoom_new === false) {
+			
+			var zoom_new = Math.ceil(arr_levels.length / 2);
+		} else if (typeof zoom_new == 'object') {
 			
 			if (zoom_new.scale) {
 				
 				var pixels = (40075000 / zoom_new.scale); // In meters
 				var zoom_new = 1;
-				var cur_diff = Math.abs(pixels - level_settings[0].width);
+				var cur_diff = Math.abs(pixels - arr_levels[0].width);
 				
-				for (var i = 0; i < level_settings.length; i++) {
-					var diff = Math.abs(pixels - level_settings[i].width);
+				for (var i = 0; i < arr_levels.length; i++) {
+					var diff = Math.abs(pixels - arr_levels[i].width);
 					if (diff < cur_diff) {
 						cur_diff = diff;
 						zoom_new = i+1;
 					}
 				}
+			} else if (zoom_new.level) { // Percentage
+				
+				var zoom_new = Math.max(1, Math.round(zoom_new.level / 100 * arr_levels.length));
 			} else {
 				
 				var zoom_check = obj.getBoundsZoom(zoom_new);
@@ -326,16 +382,16 @@ function MapScroller(element, options) {
 			}
 		}
 
-		if (zoom_new < 1 || zoom_new > level_settings.length) { // Zoom has reached maximum zoom, nothing to do
+		if (zoom_new < 1 || zoom_new > arr_levels.length) { // Zoom has reached maximum zoom, nothing to do
 			
 			return false;
 		}
 
 		pos_zoom = (pos_zoom_new ? pos_zoom_new : pos_zoom); // Reuse a possible earlier relative zoom position (in case of resizes)
-
+		
 		if (pos_zoom) {
 			
-			if (pos_zoom.latitude) {
+			if (pos_zoom.latitude != null) {
 				
 				pos_center = obj.plotPoint(pos_zoom.latitude, pos_zoom.longitude, zoom_new);
 			} else if (pos_zoom.north_east) {
@@ -358,8 +414,8 @@ function MapScroller(element, options) {
 			pos_center.x -= (pos_elm.frame.left - pos_elm.frame.right)/2;
 			pos_center.y -= (pos_elm.frame.top - pos_elm.frame.bottom)/2;
 		}
-		
-		var calc_zoom = (zoom_new > cur_zoom ? '+1' : (zoom_new < cur_zoom ? '-1' : false));
+
+		var calc_zoom = (zoom_new > cur_zoom ? '+'+(zoom_new - cur_zoom) : (zoom_new < cur_zoom ? '-'+(cur_zoom - zoom_new) : '+0'));
 		cur_zoom = zoom_new;
 		
 		pos_offset = {x: false, y: false, width: false, height: false, sizing: {}};
@@ -495,7 +551,15 @@ function MapScroller(element, options) {
 	
 	this.getPosition = function() {
 		
-		return {x: pos_elm.x, y: pos_elm.y, origin: settings.origin, view: {width: pos_elm.width, height: pos_elm.height}, size: {width: (pos_offset.sizing.width ? pos_offset.sizing.width : obj.levelVars().width), height: (pos_offset.sizing.height ? pos_offset.sizing.height : obj.levelVars().height)}, offset: {x: (pos_offset.x ? pos_offset.x : 0), y: (pos_offset.y ? pos_offset.y : 0)}};
+		const arr_level =  obj.levelVars();
+		
+		return {
+			x: pos_elm.x, y: pos_elm.y, origin: pos_origin, level: arr_level.level,
+			view: {width: pos_elm.width, height: pos_elm.height},
+			render: {width: pos_render.width, height: pos_render.height, resolution: pos_render.resolution},
+			size: {width: (pos_offset.sizing.width ? pos_offset.sizing.width : arr_level.width), height: (pos_offset.sizing.height ? pos_offset.sizing.height : arr_level.height)},
+			offset: {x: (pos_offset.x ? pos_offset.x : 0), y: (pos_offset.y ? pos_offset.y : 0)},
+		};
 	};
 	
 	this.getMousePosition = function(test) {
@@ -597,23 +661,25 @@ function MapScroller(element, options) {
 		obj_tiles.total = false;
 		obj_tiles.count_loading = false;
 		obj_tiles.extra = 1;
-		obj_tiles.wr = obj_level.width/obj_level.tile_width; // Width range (full)
-		if (settings.centered_level_tiles) {
-			obj_tiles.w = Math.ceil(obj_tiles.wr / 2) * 2; // Width range (rounded)
-			obj_tiles.wd =  obj_level.tile_width-Math.round(((obj_tiles.w * obj_level.tile_width) - obj_level.width) / 2); // Width range (leftover)
+		
+		obj_tiles.count_width_range = Math.ceil((obj_level.width / obj_level.tile_width) / 2) * 2; // Width range (rounded)
+		var xy_origin = false;
+		if (pos_origin.longitude != null) {
+			xy_origin = obj.plotPoint(0, obj.parseLongitude(pos_origin.longitude - 180, true), null, true);
+		} else if (pos_origin.x != null) {
+			xy_origin = pos_origin.origin;
+		}
+		if (xy_origin && xy_origin.x > 0) {
+			obj_tiles.count_width_range_origin = Math.floor(xy_origin.x / obj_level.tile_width);
+			obj_tiles.width_range_surplus = Math.floor(xy_origin.x % obj_level.tile_width); // Width range (leftover)
+			obj_tiles.count_width_range++; // Add extra divided tile
 		} else {
-			obj_tiles.w = Math.ceil(obj_tiles.wr); // Width range (rounded)
-			obj_tiles.wd =  obj_level.tile_width-Math.round((obj_tiles.w * obj_level.tile_width) - obj_level.width); // Width range (leftover)
+			obj_tiles.count_width_range_origin = 0;
+			obj_tiles.width_range_surplus = Math.floor(obj_level.width % obj_level.tile_width); // Width range (leftover)
 		}
 		
-		obj_tiles.hr = obj_level.height/obj_level.tile_height;
-		if (settings.centered_level_tiles) {
-			obj_tiles.h = Math.ceil(obj_tiles.hr / 2) * 2;
-			obj_tiles.hd =  obj_level.tile_height - Math.round(((obj_tiles.h * obj_level.tile_height) - obj_level.height) / 2);
-		} else {
-			obj_tiles.h = Math.ceil(obj_tiles.hr);
-			obj_tiles.hd =  obj_level.tile_height - Math.round((obj_tiles.h * obj_level.tile_height) - obj_level.height);
-		}
+		obj_tiles.count_height_range = Math.ceil((obj_level.height / obj_level.tile_height) / 2) * 2;
+		obj_tiles.height_range_surplus = Math.floor(obj_level.height % obj_level.tile_height); // Height range (leftover)
 		
 		var count_sub_domain = 0;
 		var length_sub_domain = settings.tile_subdomain_range.length;
@@ -690,26 +756,29 @@ function MapScroller(element, options) {
 		var pos_x_elm = pos_elm.x + (pos_elm.width/2); // Correct x from center to left
 		var pos_y_elm = pos_elm.y + (pos_elm.height/2); // Correct y from center to top
 					
-		if (settings.centered_level_tiles) {
-			var y_start = Math.max(Math.floor((-pos_y_elm-obj_tiles.hd)/obj_level.tile_height)+1-obj_tiles.extra, 0);
-			var height_start = (((y_start > 1 ? (y_start-1)*obj_level.tile_height : 0)+(y_start > 0 ? obj_tiles.hd : 0))/obj_level.height)*100;
-			var y_end = Math.min(Math.ceil((-pos_y_elm-obj_tiles.hd+pos_elm.height)/obj_level.tile_height)+1+obj_tiles.extra, obj_tiles.h);
-			var x_start = Math.max(Math.floor((-pos_x_elm-obj_tiles.wd)/obj_level.tile_width)+1-obj_tiles.extra, 0);
-			var width_start = (((x_start > 1 ? (x_start-1)*obj_level.tile_width : 0)+(x_start > 0 ? obj_tiles.wd : 0))/obj_level.width)*100;
-			var x_end = Math.min(Math.ceil((-pos_x_elm-obj_tiles.wd+pos_elm.width)/obj_level.tile_width)+1+obj_tiles.extra, obj_tiles.w);
-		} else {
-			var y_start = Math.max(Math.floor((-pos_y_elm)/obj_level.tile_height)-obj_tiles.extra, 0);
-			var height_start = ((y_start*obj_level.tile_height)/obj_level.height)*100;
-			var y_end = Math.min(Math.ceil((-pos_y_elm+pos_elm.height)/obj_level.tile_height)+obj_tiles.extra, obj_tiles.h);
-			var x_start = Math.max(Math.floor(-pos_x_elm/obj_level.tile_width)-obj_tiles.extra, 0);
-			var width_start = ((x_start*obj_level.tile_width)/obj_level.width)*100;
-			var x_end = Math.min(Math.ceil(-pos_x_elm+pos_elm.width/obj_level.tile_width)+obj_tiles.extra, obj_tiles.w);
+		var y_start = Math.max(Math.floor(-pos_y_elm / obj_level.tile_height) + 1-obj_tiles.extra, 0);
+		var height_start = 0;
+		if (y_start > 0) {
+			height_start = (obj_tiles.height_range_surplus ? (obj_level.tile_height - obj_tiles.height_range_surplus) : obj_level.tile_height);
+			if (y_start > 1) {
+				height_start += ((y_start-1) * obj_level.tile_height);
+			}
 		}
+		var y_end = Math.min(Math.ceil((-pos_y_elm + pos_elm.height) / obj_level.tile_height) + 1+obj_tiles.extra, obj_tiles.count_height_range);
+		const num_y_max = (obj_tiles.count_height_range - 1);
 		
-		var offset_width = (pos_offset.width ? 1+(pos_offset.width/(obj_level.width-pos_offset.width)) : 1);
-		var offset_height = (pos_offset.height ? 1+(pos_offset.height/(obj_level.height-pos_offset.height)) : 1);
-		var offset_x = (pos_offset.x ? (pos_offset.x/obj_level.width)*100 : 0);
-		var offset_y = (pos_offset.y ? (pos_offset.y/obj_level.height)*100 : 0);
+		var x_start = Math.max(Math.floor(-pos_x_elm / obj_level.tile_width) + 1-obj_tiles.extra, 0);
+		var width_start = 0;
+		if (x_start > 0) {
+			width_start = (obj_tiles.width_range_surplus ? (obj_level.tile_width - obj_tiles.width_range_surplus) : obj_level.tile_width);
+			if (x_start > 1) {
+				width_start += ((x_start-1) * obj_level.tile_width);
+			}
+		}
+		var x_end = Math.min(Math.ceil((-pos_x_elm + pos_elm.width) / obj_level.tile_width) + 1+obj_tiles.extra, obj_tiles.count_width_range);
+
+		var offset_x = pos_offset.x;
+		var offset_y = pos_offset.y;
 		var size_width = (pos_offset.sizing.width ? pos_offset.sizing.width : obj_level.width);
 		var size_height = (pos_offset.sizing.height ? pos_offset.sizing.height : obj_level.height);
 
@@ -718,43 +787,81 @@ function MapScroller(element, options) {
 		var cur_height = height_start;
 		
 		if (obj_tiles.total === false) {
-			obj_tiles.total = (x_start-x_end)*(y_start-y_end);
+			obj_tiles.total = (x_start-x_end) * (y_start-y_end);
 			obj_tiles.count_loading = obj_tiles.total;
 		}
+		
+		var z_level = obj_level.level;
 
 		for (var y = y_start; y < y_end; y++) {
 			
-			if ((settings.centered_level_tiles && (y == 0 || y == obj_tiles.h-1)) || y == obj_tiles.h-1) {
-				var height = (obj_tiles.hd/obj_level.height)*100;
+			if (obj_tiles.height_range_surplus && (y == 0 || y == num_y_max)) {
+				var height = (x == 0 ? obj_level.tile_height - obj_tiles.height_range_surplus : obj_tiles.height_range_surplus);
 			} else {
-				var height = ((obj_level.tile_height)/obj_level.height)*100;
+				var height = obj_level.tile_height;
 			}
 			
 			var cur_width = width_start;
 						
 			for (var x = x_start; x < x_end; x++) {
 				
-				if ((settings.centered_level_tiles && (x == 0 || x == obj_tiles.w-1)) || x == obj_tiles.w-1) {
-					var width = (obj_tiles.wd/obj_level.width)*100;
+				if (obj_tiles.width_range_surplus && (x == 0 || x == obj_tiles.count_width_range-1)) {
+					var width = (x == 0 ? obj_level.tile_width - obj_tiles.width_range_surplus : obj_tiles.width_range_surplus);
+					var width_mask = obj_level.tile_width - width;
 				} else {
-					var width = (obj_level.tile_width/obj_level.width)*100;
+					var width = obj_level.tile_width;
+					var width_mask = 0;
 				}
 				
 				arr_tiles_active[x+'_'+y] = true;	
 				if (!obj_tiles.drawn[x+'_'+y]) {
-				
-					var elm = $('<img />');
-					obj_tiles.drawn[x+'_'+y] = elm;
+
+					var x_get = x;
+					if (obj_tiles.count_width_range_origin) {
+						
+						x_get = x_get + obj_tiles.count_width_range_origin;
+						var count_width_range_real = obj_tiles.count_width_range - 1;
+						
+						if (x_get >= count_width_range_real) {
+							x_get = x_get - count_width_range_real;
+						} else if (x_get < 0) {
+							x_get = x_get + count_width_range_real;
+						}
+					}
 					
-					var tile_path = settings.tile_path.replace('{z}', cur_zoom).replace('{x}', x).replace('{y}', y).replace('{s}', settings.tile_subdomain_range[obj_tiles.getSubDomain(x)]);
-					elm[0].setAttribute('src', tile_path);
-					elm[0].setAttribute('style', 'opacity: 0; width:'+(width*offset_width)/100*size_width+'px; height:'+(height*offset_height)/100*size_height+'px; left: '+((cur_width-offset_x)*offset_width)/100*size_width+'px; top: '+((cur_height-offset_y)*offset_height)/100*size_height+'px;');
+					const tile_path = settings.tile_path
+						.replace('{z}', z_level)
+						.replace('{x}', x_get)
+						.replace('{y}', y)
+						.replace('{-y}', (num_y_max - y))
+						.replace('{s}', settings.tile_subdomain_range[obj_tiles.getSubDomain(x)]);
 					
-					elm.on('load', function(e) {
+					if (width_mask) {
+						
+						var elm_container = document.createElement('div');
+						elm_container.classList.add('img');
+						var elm_image = document.createElement('img');
+						elm_container.appendChild(elm_image);
+						
+						elm_image.setAttribute('src', tile_path);
+						elm_image.setAttribute('style', 'opacity: 0; width:'+(width + width_mask)+'px; height:'+(height)+'px; '+(x == 0 ? 'right' : 'left')+': 0px; top: 0px;');
+						elm_container.setAttribute('style', 'width:'+(width)+'px; height:'+(height)+'px; transform: translate('+(cur_width - offset_x)+'px, '+(cur_height - offset_y)+'px);');
+					} else {
+						
+						var elm_container = document.createElement('img');
+						elm_image = elm_container;
+						
+						elm_image.setAttribute('src', tile_path);
+						elm_image.setAttribute('style', 'opacity: 0; width:'+(width)+'px; height:'+(height)+'px; transform: translate('+(cur_width - offset_x)+'px, '+(cur_height - offset_y)+'px);');
+					}
+					
+					obj_tiles.drawn[x+'_'+y] = elm_container;
+					
+					elm_image.addEventListener('load', function(e) {
 						
 						if (cur_map[0] == obj_elm_map_content.elm_loading[0]) { // Check if tile is still part of the active map content
 							
-							var elm = this;
+							var elm = e.target;
 							
 							new TWEEN.Tween({opacity: 0})
 								.to({opacity: 1}, timeout_tile_animation)
@@ -770,42 +877,37 @@ function MapScroller(element, options) {
 						}
 					});
 					
-					cur_map[0].appendChild(elm[0]);
+					cur_map[0].appendChild(elm_container);
 				}
 				
-				cur_width = cur_width+width;
+				cur_width = cur_width + width;
 			}
-			cur_height = cur_height+height;
+			cur_height = cur_height + height;
 		}
 		
 		for (var key in obj_tiles.drawn) {
 			
 			if (!arr_tiles_active[key] && obj_tiles.drawn[key]) {
 				
-				cur_map[0].removeChild(obj_tiles.drawn[key][0]);
+				cur_map[0].removeChild(obj_tiles.drawn[key]);
 				obj_tiles.drawn[key] = false;
 				obj_tiles.count_loading--;
 			}
 		}
 	}
 	
-	this.plotPoint = function(latitude, longitude, zoom) {
+	this.plotPoint = function(latitude, longitude, zoom, has_origin) {
 		
 		// Mercator projection
 		
-		// Scale and shift from center earth
-		var x = (obj.levelVars(zoom).width * (180 + parseFloat(longitude)) / 360);
-		
-		if (x > obj.levelVars(zoom).width) {
-			x = x % obj.levelVars(zoom).width;
-		} else if (x < 0) {
-			x = obj.levelVars(zoom).width - (x % obj.levelVars(zoom).width);
-		}
+		var longitude = (!has_origin ? obj.parseLongitude(longitude) : longitude);
 		
 		var max_latitude = 85.0511287798;
-		var latitude = Math.max(Math.min(max_latitude, latitude), -max_latitude);
-
-		latitude = parseFloat(latitude) * Math.PI / 180; // Convert from degrees to radians
+		var latitude = Math.max(Math.min(max_latitude, (!has_origin ? obj.parseLatitude(latitude) : latitude)), -max_latitude);
+		latitude = latitude * Math.PI / 180; // Convert from degrees to radians
+		
+		// Scale and shift from center earth
+		var x = (obj.levelVars(zoom).width * (180 + longitude) / 360);
 
 		var y = Math.log(Math.tan((latitude/2) + (Math.PI/4))); // Do the Mercator projection (w/ equator of 2pi units)
 
@@ -813,10 +915,26 @@ function MapScroller(element, options) {
 
 		return {x: x, y: y};
 	};
+
+	this.parseLatitude = function(latitude, has_origin) {
+		
+		var latitude = (!has_origin ? parseFloat(latitude) - pos_origin.latitude : latitude);
+		latitude = (latitude > 90 ? latitude - 180 : (latitude < -90 ? latitude + 180 : latitude));
+		
+		return latitude;
+	};
+	
+	this.parseLongitude = function(longitude, has_origin) {
+		
+		var longitude = (!has_origin ? parseFloat(longitude) - pos_origin.longitude : longitude);
+		longitude = (longitude > 180 ? longitude - 360 : (longitude < -180 ? longitude + 360 : longitude));
+		
+		return longitude;
+	};
 	
 	this.getPoint = function(x, y, zoom) {
 
-		var longitude = (360*x-180*obj.levelVars(zoom).width)/obj.levelVars(zoom).width;
+		var longitude = ((360*x-180*obj.levelVars(zoom).width) / obj.levelVars(zoom).width) + pos_origin.longitude;
 
 		var latitude = -(2*Math.PI*y -Math.PI*obj.levelVars(zoom).height)/obj.levelVars(zoom).height;
 
@@ -854,10 +972,10 @@ function MapScroller(element, options) {
 		return zoom;
 	};
 							
-	this.levelVars = function(zoom) {
+	this.levelVars = function(num_zoom) {
 		
-		var level = (typeof zoom != 'undefined' ? zoom : cur_zoom)-1;
-		var obj_level = level_settings[level];
+		const num_index = (num_zoom != null ? num_zoom : cur_zoom)-1;
+		const obj_level = arr_levels[num_index];
 		
 		if (obj_level && obj_level.auto) {
 			

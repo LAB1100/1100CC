@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -99,6 +99,7 @@ class ImageResize {
 			case 'gif': imagegif($this->img, $this->dst); break;
 			case 'jpeg': imagejpeg($this->img, $this->dst); break;
 			case 'png': imagepng($this->img, $this->dst); break;
+			case 'webp': imagewebp($this->img, $this->dst); break;
 		}
 		
 		imagedestroy($this->img);
@@ -108,15 +109,18 @@ class ImageResize {
 	
 	public static function isSupportedImageFormat($type) {
 		
-		$supported_format = [];
 		$types = imagetypes();
-		if ($types & IMG_GIF) $supported_format[IMAGETYPE_GIF] = IMAGETYPE_GIF;
-		if ($types & IMG_JPG) $supported_format[IMAGETYPE_JPEG] = IMAGETYPE_JPEG;
-		if ($types & IMG_PNG) $supported_format[IMAGETYPE_PNG] = IMAGETYPE_PNG;
-		if ($types & IMG_WBMP) $supported_format[IMAGETYPE_WBMP] = IMAGETYPE_WBMP;
-		if ($types & IMG_XPM) $supported_format[IMAGETYPE_XBM] = IMAGETYPE_XBM;
 		
-		return $supported_format[$type];
+		$arr_supported = [
+			IMAGETYPE_GIF => ($types & IMG_GIF),
+			IMAGETYPE_JPEG => ($types & IMG_JPG),
+			IMAGETYPE_PNG => ($types & IMG_PNG),
+			IMAGETYPE_WBMP => ($types & IMG_WBMP),
+			IMAGETYPE_XBM => ($types & IMG_XPM),
+			IMAGETYPE_WEBP => ($types & IMG_WEBP)
+		];
+
+		return $arr_supported[$type];
 	}
 	
 	public static function isAnimation($file) {

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -49,9 +49,8 @@ class intf_apis extends apis {
 		
 		if (!$arr_hosts) {
 			
-			$msg = getLabel('msg_no', 'L', true);
-			
 			Labels::setVariable('name', getLabel('lbl_server_hosts'));
+			$msg = getLabel('msg_no', 'L', true);
 			
 			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
 		} else {
@@ -89,9 +88,8 @@ class intf_apis extends apis {
 		
 		if (!$arr_apis) {
 			
-			$msg = getLabel('msg_no', 'L', true);
-			
 			Labels::setVariable('name', getLabel('lbl_apis'));
+			$msg = getLabel('msg_no', 'L', true);
 			
 			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
 		} else {
@@ -117,7 +115,7 @@ class intf_apis extends apis {
 							<td>'.$arr_api['name'].'</td>
 							<td>'.$arr_api['request_limit_ip'].' / '.$str_limit_time.'</td>
 							<td>'.$arr_api['request_limit_global'].' / '.$str_limit_time.'</td>
-							<td>'.($arr_api['documentation_url'] ? '<a href="'.htmlspecialchars($arr_api['documentation_url']).'" target="_blank">'.htmlspecialchars($arr_api['documentation_url']).'</a>' : '<span class="icon" data-category="status">'.getIcon('min').'</span>').'</td>
+							<td>'.($arr_api['documentation_url'] ? '<a href="'.strEscapeHTML($arr_api['documentation_url']).'" target="_blank">'.strEscapeHTML($arr_api['documentation_url']).'</a>' : '<span class="icon" data-category="status">'.getIcon('min').'</span>').'</td>
 							<td><input type="button" class="data edit popup edit_api" value="edit" /><input type="button" class="data del msg del_api" value="del" /></td>
 						</tr>';
 					}
@@ -219,7 +217,7 @@ class intf_apis extends apis {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_api['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_api['name']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user_group').'</label>
@@ -247,7 +245,7 @@ class intf_apis extends apis {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_documentation').'</label>
-						<div><input type="text" name="documentation_url" value="'.htmlspecialchars($arr_api['documentation_url']).'" /></div>
+						<div><input type="text" name="documentation_url" value="'.strEscapeHTML($arr_api['documentation_url']).'" /></div>
 					</li>
 				</ul></fieldset>
 			</form>';

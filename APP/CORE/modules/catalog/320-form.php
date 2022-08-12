@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class form extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select>';
+		$return = '<select>';
 		$return .= cms_general::createDropdown(cms_forms::getForms());
 		$return .= '</select>';
 		
@@ -39,8 +39,8 @@ class form extends base_module {
 		
 		$return .= '</form>';
 			
-		SiteEndVars::addScript("$(document).ready(function() {
-			$('[id=f\\\:form\\\:post-".$arr_form_set['details']['id']."]').data('rules', ".json_encode($this->validate).");	
+		SiteEndVars::addScript("$(document).on('documentloaded', function() {
+			setElementData($('[id=f\\\:form\\\:post-".$arr_form_set['details']['id']."]'), 'rules', ".value2JSON($this->validate).");
 		})");
 									
 		return $return;
@@ -49,8 +49,6 @@ class form extends base_module {
 	public static function css() {
 	
 		$return = '.form form > div + fieldset { margin-top: 10px; }
-					.form li.field_surname span.input-split > span:first-child { width: 25%; }
-					.form li.field_surname span.input-split > span:first-child + span { width: 75%; }
 					.form li.field_address span.input-split > span:first-child { width: 60%; }
 					.form li.field_address span.input-split > span:first-child + span { width: 25%; }
 					.form li.field_address span.input-split > span:first-child + span + span { width: 15%; }';
@@ -70,7 +68,12 @@ class form extends base_module {
 		// QUERY
 		if ($method == "post") {
 
-			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORM_SUBMISSIONS')." (form_id, date, log_user_id) VALUES (".$this->arr_variables.", NOW(), ".Log::addToUserDB().")");
+			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORM_SUBMISSIONS')."
+				(form_id, date, log_user_id)
+					VALUES
+				(".(int)$this->arr_variables.", NOW(), ".Log::addToUserDB().")
+			");
+			
 			$submission_id = DB::lastInsertID();
 			
 			cms_form_submissions::handleFormSubmission($submission_id, $_POST['field']);
@@ -79,7 +82,7 @@ class form extends base_module {
 			
 			if ($arr_form['send_email']) {
 				
-				Labels::setVariable('url', BASE_URL_CMS.'cms_form_submissions/'.$submission_id);
+				Labels::setVariable('url', URL_BASE_CMS.'cms_form_submissions/'.$submission_id);
 				
 				$mail = new Mail();
 				$mail->to(($arr_form['email'] ?: getLabel('email', 'D')));
@@ -117,13 +120,13 @@ class form extends base_module {
 		
 		foreach ((array)$arr_form_set['fields'] as $value) {
 						
-			$return .= '<li class="'.$value['field_details']['type'].'"><label>'.htmlspecialchars(Labels::parseTextVariables($value['field_details']['label'])).'</label>';
+			$return .= '<li class="'.$value['field_details']['type'].'"><label>'.strEscapeHTML(Labels::parseTextVariables($value['field_details']['label'])).'</label>';
 				
 			if ($value['field_details']['type'] == 'check' || $value['field_details']['type'] == 'choice') {
 				
 				$return .= '<ul class="select">';
 					foreach(($value['field_details']['field_sub_table'] ? cms_forms::getFieldSubTableValues($value['field_details']['field_sub_table']) : $value['field_subs']) as $value_sub) {
-						$return .= '<li><label><input type="'.($value['field_details']['type'] == 'choice' ? 'radio' : 'checkbox').'" name="field['.$value['field_details']['field_id'].'][]" value="'.$value_sub['field_sub_id'].'" /><span>'.htmlspecialchars(Labels::parseTextVariables($value_sub['field_sub_label'])).'</span></label></li>';
+						$return .= '<li><label><input type="'.($value['field_details']['type'] == 'choice' ? 'radio' : 'checkbox').'" name="field['.$value['field_details']['field_id'].'][]" value="'.$value_sub['field_sub_id'].'" /><span>'.strEscapeHTML(Labels::parseTextVariables($value_sub['field_sub_label'])).'</span></label></li>';
 					}
 					$return .= '</ul>';
 			} else if ($value['field_details']['type'] == 'choice_dropdown') {
@@ -133,7 +136,7 @@ class form extends base_module {
 						$return .= '<option value=""></option>';
 					}
 					foreach(($value['field_details']['field_sub_table'] ? cms_forms::getFieldSubTableValues($value['field_details']['field_sub_table']) : $value['field_subs']) as $value_sub) {
-						$return .= '<option value="'.$value_sub['field_sub_id'].'">'.htmlspecialchars(Labels::parseTextVariables($value_sub['field_sub_label'])).'</option>';
+						$return .= '<option value="'.$value_sub['field_sub_id'].'">'.strEscapeHTML(Labels::parseTextVariables($value_sub['field_sub_label'])).'</option>';
 					}
 					$return .= '</select>';
 			} else if ($value['field_details']['type'] == 'text') {
@@ -142,9 +145,6 @@ class form extends base_module {
 			} else if ($value['field_details']['type'] == 'field_date') {
 												
 				$return .= '<input type="text" class="datepicker" name="field['.$value['field_details']['field_id'].'][]" value="" />';
-			} else if ($value['field_details']['type'] == 'field_surname') {
-												
-				$return .= '<span class="input-split"><span><input type="text" name="field['.$value['field_details']['field_id'].'][0]" title="'.getLabel('lbl_name_insertion').'" value="" /></span><span><input type="text" name="field['.$value['field_details']['field_id'].'][1]" value="" /></span></span>';
 			} else if ($value['field_details']['type'] == 'field_address') {
 												
 				$return .= '<span class="input-split"><span><input type="text" name="field['.$value['field_details']['field_id'].'][0]" value="" /></span><span><input type="text" name="field['.$value['field_details']['field_id'].'][1]" title="'.getLabel('lbl_address_number').'" value="" /></span><span><input type="text" name="field['.$value['field_details']['field_id'].'][2]" title="'.getLabel('lbl_address_number_affix').'" value="" /></span></span>';
@@ -161,9 +161,7 @@ class form extends base_module {
 				$this->validate['field['.$value['field_details']['field_id'].'][1]']['digits'] = true;
 			}
 			if ($value['field_details']['required']) {
-				if ($value['field_details']['type'] == 'field_surname') {
-					$this->validate['field['.$value['field_details']['field_id'].'][1]']['required'] = true;
-				} else if ($value['field_details']['type'] == 'field_address') {
+				if ($value['field_details']['type'] == 'field_address') {
 					$this->validate['field['.$value['field_details']['field_id'].'][0]']['required'] = true;
 					$this->validate['field['.$value['field_details']['field_id'].'][1]']['required'] = true;
 				} else {
@@ -171,7 +169,7 @@ class form extends base_module {
 				}
 			}
 		}
-		$return .= '<li><label></label><div><input type="submit" value="Ok" class="invalid" /><input type="submit" value="'.($value['field_details']['label_button'] ? htmlspecialchars(Labels::parseTextVariables($value['field_details']['label_button'])) : getLabel('lbl_send')).'" /><input type="submit" value="Ok" class="invalid" /></div></li>
+		$return .= '<li><label></label><div><input type="submit" value="Ok" class="invalid" /><input type="submit" value="'.($value['field_details']['label_button'] ? strEscapeHTML(Labels::parseTextVariables($value['field_details']['label_button'])) : getLabel('lbl_send')).'" /><input type="submit" value="Ok" class="invalid" /></div></li>
 			</ul></fieldset>';
 					
 		return $return;

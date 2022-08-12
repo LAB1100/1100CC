@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -14,19 +14,19 @@ DB::setTable('TABLE_SLIDER_SLIDES', DB::$database_home.'.def_slider_slides');
 class cms_sliders extends base_module {
 
 	public static function moduleProperties() {
-		static::$label = getLabel('ttl_sliders');
+		static::$label = getLabel('lbl_sliders');
 		static::$parent_label = getLabel('ttl_site');
 	}
 
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_sliders:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_sliders:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
 		<div class="sliders">';
 		
 			$return .= '<div id="tabs-sliders">
 				<ul>
-					<li><a href="#tab-sliders">'.getLabel("ttl_sliders").'</a></li>
-					<li><a href="#tab-slides">'.getLabel("ttl_slides").'</a><span><input id="x:cms_sliders:new-0" type="button" class="data add popup add_slide" value="add" /></span></li>
+					<li><a href="#tab-sliders">'.getLabel('lbl_sliders').'</a></li>
+					<li><a href="#tab-slides">'.getLabel('lbl_slides').'</a><span><input id="x:cms_sliders:new-0" type="button" class="data add popup add_slide" value="add" /></span></li>
 				</ul>
 				<div id="tab-sliders">
 				
@@ -75,10 +75,10 @@ class cms_sliders extends base_module {
 			
 		if ($res->getRowCount() == 0) {
 			
-			$return .= '<p class="info">'.getLabel('msg_no_sliders').'</p>';
+			$return = '<p class="info">'.getLabel('msg_no_sliders').'</p>';
 		} else {
 		
-			$return .= '<table class="list">
+			$return = '<table class="list">
 				<thead>
 					<tr>
 						<th class="max"><span>'.getLabel('lbl_name').'</span></th>
@@ -108,7 +108,7 @@ class cms_sliders extends base_module {
 						$return .= '<tr id="x:cms_sliders:slider_id-'.$arr_row['id'].'">
 							<td>'.$arr_row['name'].'</td>
 							<td><span class="info"><span class="icon" title="'.($arr_paths ? implode('<br />', $arr_paths) : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.count($arr_paths).'</span></span></td>
-							<td><span class="info"><span class="icon" title="'.htmlspecialchars($arr_row['slider_slides'] ?: getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.(int)$arr_row['count_slider_slides'].'</span></span></td>
+							<td><span class="info"><span class="icon" title="'.strEscapeHTML($arr_row['slider_slides'] ?: getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.(int)$arr_row['count_slider_slides'].'</span></span></td>
 							<td>'.($arr_row['timeout']/1000).' '.getLabel('unit_seconds').'</td>
 							<td>'.self::getSliderEffects($arr_row['effect']).'</td>
 							<td>'.($arr_row['speed']/1000).' '.getLabel('unit_seconds').'</td>
@@ -124,7 +124,7 @@ class cms_sliders extends base_module {
 	
 	private static function contentTabSlides() {
 					
-		$return .= '<table id="d:cms_sliders:data_slides-0" class="display">
+		$return = '<table id="d:cms_sliders:data_slides-0" class="display">
 			<thead>
 				<tr>
 					<th class="max" data-sort="asc-0"><span>'.getlabel('lbl_name').'</span></th>
@@ -132,7 +132,11 @@ class cms_sliders extends base_module {
 					<th class="disable-sort"></th>
 				</tr>
 			</thead>
-			<tbody></tbody>
+			<tbody>
+				<tr>
+					<td colspan="3" class="empty">'.getLabel('msg_loading_server_data').'</td>
+				</tr>
+			</tbody>
 		</table>';
 
 		return $return;
@@ -147,7 +151,7 @@ class cms_sliders extends base_module {
 	
 	public static function js() {
 	
-		$return .= "SCRIPTER.dynamic('#frm-slider', function(elm_scripter) {
+		$return = "SCRIPTER.dynamic('#frm-slider', function(elm_scripter) {
 		
 			elm_scripter.on('click', '[id^=y\\\:cms_sliders\\\:get_type_option]', function() {
 				
@@ -172,37 +176,42 @@ class cms_sliders extends base_module {
 		// POPUP
 		
 		if ($method == "edit" || $method == "add") {
-		
-			if ((int)$id) {				
+			
+			$arr_slider_set = [];
+			
+			if ((int)$id) {
+							
 				$arr_slider_set = self::getSliderSet($id);				
-				$mode = "update";
+				$mode = 'update';
 			} else {
-				$mode = "insert";
+				
+				$mode = 'insert';
 			}
 			
+			$arr_slider_self = ($arr_slider_set['slider'] ?? []);
 			$arr_effects = self::getSliderEffects();
-			
+
 			$this->html = '<form id="frm-slider" data-method="'.$mode.'">						
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_slider_set['slider']['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_slider_self['name']).'"></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_duration').'</label>
-						<div><input type="range" min="0.5" max="10" step="0.5" /><input type="number" name="timeout" value="'.(((int)$arr_slider_set['slider']['timeout']/1000) ?: 2).'" /><label>'.getLabel('unit_seconds').'</label></div>
+						<div><input type="range" min="0.5" max="10" step="0.5" /><input type="number" name="timeout" value="'.(((int)$arr_slider_self['timeout']/1000) ?: 2).'" /><label>'.getLabel('unit_seconds').'</label></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_transition_effect').'</label>
-						<div><select name="effect">'.cms_general::createDropdown($arr_effects, $arr_slider_set['slider']['effect']).'</select></div>
+						<div><select name="effect">'.cms_general::createDropdown($arr_effects, $arr_slider_self['effect']).'</select></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_transition_speed').'</label>
-						<div><input type="range" min="0.2" max="4" step="0.2" /><input type="number" name="speed" value="'.(((int)$arr_slider_set['slider']['speed']/1000) ?: 1).'" /><label>'.getLabel('unit_seconds').'</label></div>						
+						<div><input type="range" min="0.2" max="4" step="0.2" /><input type="number" name="speed" value="'.(((int)$arr_slider_self['speed']/1000) ?: 1).'" /><label>'.getLabel('unit_seconds').'</label></div>						
 					</li>
 					<li>
 						<label></label>
-						<div><input type="button" class="data del" value="del" title="'.getLabel('inf_remove_empty_fields').'" /><input id="y:cms_sliders:get_type_option-slide" type="button" class="data add" value="'.getLabel('lbl_slide').'" /><input id="y:cms_sliders:get_type_option-media" type="button" class="data add" value="'.getLabel("lbl_media").'" /></div>
+						<div><input type="button" class="data del" value="del" title="'.getLabel('inf_remove_empty_fields').'" /><input id="y:cms_sliders:get_type_option-slide" type="button" class="data add" value="'.getLabel('lbl_slide').'" /><input id="y:cms_sliders:get_type_option-media" type="button" class="data add" value="'.getLabel('lbl_media').'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_slides').'</label>
@@ -223,25 +232,27 @@ class cms_sliders extends base_module {
 				</ul></fieldset>							
 			</form>';
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		if ($method == "edit_slide" || $method == "add_slide") {
 			
-			if ($method == "edit_slide" && (int)$id) {
+			$arr = [];
+			
+			if ($method == 'edit_slide' && (int)$id) {
 			
 				$arr = self::getSlides($id);
 
-				$mode = "update_slide";
+				$mode = 'update_slide';
 			} else {
-				$mode = "insert_slide";
+				$mode = 'insert_slide';
 			}
 					
 			$this->html = '<form id="frm-slide" data-method="'.$mode.'">
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr['name']).'"></div>
 					</li>
 					<li class="content">
 						<label>'.getLabel('lbl_content').'</label>
@@ -250,7 +261,7 @@ class cms_sliders extends base_module {
 				</ul></fieldset>
 			</form>';
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		// POPUP INTERACT
@@ -284,7 +295,7 @@ class cms_sliders extends base_module {
 				$arr_data['id'] = 'x:cms_sliders:slide-'.$arr_row['id'];
 				
 				$arr_data[] = $arr_row['name'];
-				$arr_data[] = '<span class="info"><span class="icon" title="'.htmlspecialchars($arr_row['sliders']).'">'.getIcon('info').'</span><span>'.$arr_row['count_sliders'].'</span></span>';
+				$arr_data[] = '<span class="info"><span class="icon" title="'.strEscapeHTML($arr_row['sliders']).'">'.getIcon('info').'</span><span>'.$arr_row['count_sliders'].'</span></span>';
 				$arr_data[] = '<input type="button" class="data edit popup edit_slide" value="edit" /><input type="button" class="data del msg del_slide" value="del" />';
 				
 				$arr_datatable['output']['data'][] = $arr_data;
@@ -351,10 +362,15 @@ class cms_sliders extends base_module {
 
 		if ($method == "del" && (int)$id) {
 		
-			$res = DB::query("DELETE sldr.*, sldl.*
-					FROM ".DB::getTable('TABLE_SLIDERS')." sldr
-					LEFT JOIN ".DB::getTable('TABLE_SLIDER_SLIDE_LINK')." sldl ON (sldl.slider_id = sldr.id)
-				WHERE sldr.id = ".(int)$id."
+			$res = DB::queryMulti("
+				DELETE
+						FROM ".DB::getTable('TABLE_SLIDER_SLIDE_LINK')." sldl
+					WHERE sldl.slider_id = ".(int)$id."
+				;
+				DELETE
+						FROM ".DB::getTable('TABLE_SLIDERS')." sldr
+					WHERE sldr.id = ".(int)$id."
+				;
 			");
 			
 			$this->msg = true;
@@ -362,8 +378,11 @@ class cms_sliders extends base_module {
 			
 		if($method == "insert_slide") {
 			
-			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_SLIDER_SLIDES')." (name, body)
-											VALUES ('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['body'])."')");
+			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_SLIDER_SLIDES')."
+				(name, body)
+					VALUES
+				('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['body'])."')
+			");
 				
 			$this->refresh_table = true;
 			$this->msg = true;
@@ -383,10 +402,15 @@ class cms_sliders extends base_module {
 
 		if ($method == "del_slide" && (int)$id) {
 		
-			$res = DB::query("DELETE slds.*, sldl.*
-					FROM ".DB::getTable('TABLE_SLIDER_SLIDES')." slds
-					LEFT JOIN ".DB::getTable('TABLE_SLIDER_SLIDE_LINK')." sldl ON (sldl.slider_slide_id = slds.id)
-				WHERE slds.id = ".(int)$id."
+			$res = DB::queryMulti("
+				DELETE
+						FROM ".DB::getTable('TABLE_SLIDER_SLIDE_LINK')." sldl
+					WHERE sldl.slider_slide_id = ".(int)$id."
+				;				
+				DELETE
+						FROM ".DB::getTable('TABLE_SLIDER_SLIDES')." slds
+					WHERE slds.id = ".(int)$id."
+				;
 			");
 			
 			$this->msg = true;
@@ -406,7 +430,7 @@ class cms_sliders extends base_module {
 	
 	private static function createTypeOption($value = [], $type = false) {
 		
-		if ($type == "media" || $value["media_internal_tag_id"]) {
+		if ($type == 'media' || $value['media_internal_tag_id']) {
 			
 			$arr_tags = cms_media::getMediaTags();
 			$return = '<li><span><span class="icon">'.getIcon('updown').'</span></span><div><select name="slide[]">'.cms_general::createDropdown($arr_tags, $value['media_internal_tag_id'], true).'</select><input type="hidden" name="slide_type[]" value="media" /><label>'.getLabel("lbl_media").'</label></div></li>';
@@ -424,11 +448,13 @@ class cms_sliders extends base_module {
 		
 		$arr = [];
 
-		$res = DB::query("SELECT sldr.*
-				FROM ".DB::getTable("TABLE_SLIDERS")." sldr
-			".($slider ? "WHERE sldr.id = ".(int)$slider."" : "")."");
+		$res = DB::query("SELECT
+			sldr.*
+				FROM ".DB::getTable('TABLE_SLIDERS')." sldr
+			".($slider ? "WHERE sldr.id = ".(int)$slider."" : "")."
+		");
 
-		while($row = $res->fetchAssoc()) {
+		while ($row = $res->fetchAssoc()) {
 			$arr[] = $row;
 		}
 
@@ -439,12 +465,13 @@ class cms_sliders extends base_module {
 	
 		$arr = [];
 		
-		$res = DB::query("SELECT slds.*
-								FROM ".DB::getTable("TABLE_SLIDER_SLIDES")." AS slds
-								".((int)$slide ? "WHERE slds.id = ".$slide."" : "")."
+		$res = DB::query("SELECT
+			slds.*
+				FROM ".DB::getTable('TABLE_SLIDER_SLIDES')." AS slds
+			".((int)$slide ? "WHERE slds.id = ".$slide."" : "")."
 		");
 								
-		while($row = $res->fetchAssoc()) {
+		while ($row = $res->fetchAssoc()) {
 			$arr[] = $row;
 		}		
 
@@ -457,14 +484,14 @@ class cms_sliders extends base_module {
 		
 		$res = DB::query("SELECT
 			sldr.*, slds.id AS slide_id, slds.name AS slide_name, slds.body, sldl.slider_slide_id, sldl.media_internal_tag_id
-				FROM ".DB::getTable("TABLE_SLIDERS")." sldr
-				LEFT JOIN ".DB::getTable("TABLE_SLIDER_SLIDE_LINK")." sldl ON (sldl.slider_id = sldr.id)
-				LEFT JOIN ".DB::getTable("TABLE_SLIDER_SLIDES")." slds ON (slds.id = sldl.slider_slide_id)
+				FROM ".DB::getTable('TABLE_SLIDERS')." sldr
+				LEFT JOIN ".DB::getTable('TABLE_SLIDER_SLIDE_LINK')." sldl ON (sldl.slider_id = sldr.id)
+				LEFT JOIN ".DB::getTable('TABLE_SLIDER_SLIDES')." slds ON (slds.id = sldl.slider_slide_id)
 			WHERE sldr.id = ".(int)$slider."
 			ORDER BY sldl.sort
 		");
 					
-		while($row = $res->fetchAssoc()) {
+		while ($row = $res->fetchAssoc()) {
 			
 			$arr['slider'] = $row;
 			$arr['slides'][] = $row;

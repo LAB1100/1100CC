@@ -2,14 +2,15 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 DB::setTable('TABLE_LOG', DB::$database_cms.'.site_log');
 DB::setTable('TABLE_LOG_USERS', DB::$database_cms.'.site_log_users');
-DB::setTable('TABLE_LOG_REQUESTS', DB::$database_home.'.site_log_requests');
+DB::setTable('TABLE_LOG_REQUESTS_ACCESS', DB::$database_home.'.site_log_requests_access');
+DB::setTable('TABLE_LOG_REQUESTS_THROTTLE', DB::$database_home.'.site_log_requests_throttle');
 
 class cms_log extends base_module {
 
@@ -67,7 +68,7 @@ class cms_log extends base_module {
 						
 						$return .= '<tr id="x:cms_log:log_id-'.$arr_record['id'].'" class="type-'.$arr_record['type'].' popup" data-method="log_info">
 							<td>'.$arr_record['label'].'</td>
-							<td>'.htmlspecialchars($arr_record['msg']).'</td>
+							<td>'.strEscapeHTML($arr_record['msg']).'</td>
 							<td>'.date('d-m-\'y H:i', strtotime($arr_record['date'])).'</td>
 							<td>';
 								if ($arr_record['user']) {
@@ -97,7 +98,7 @@ class cms_log extends base_module {
 
 	public function contents() {
 
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 			<div class="cms_log">';
 		
 			$return .= '<div class="options">
@@ -180,11 +181,11 @@ class cms_log extends base_module {
 					</li>
 					<li>
 						<dt>'.getLabel('lbl_message').'</dt>
-						<dd><pre>'.htmlspecialchars($row['msg']).'</pre></dd>
+						<dd><pre>'.strEscapeHTML($row['msg']).'</pre></dd>
 					</li>
 					'.($row['debug'] ? '<li>
 						<dt>Debug</dt>
-						<dd><pre>'.htmlspecialchars($row['debug']).'</pre></dd>
+						<dd><pre>'.strEscapeHTML($row['debug']).'</pre></dd>
 					</li>' : '').'
 					'.($row['url'] ? '<li>
 						<dt>URL</dt>
@@ -226,7 +227,7 @@ class cms_log extends base_module {
 				$arr_data['attr']['data-method'] = 'log_info';
 				
 				$arr_data[] = $arr_row['label'];
-				$arr_data[] = '<pre>'.htmlspecialchars($arr_row['msg']).'</pre>';
+				$arr_data[] = '<pre>'.strEscapeHTML($arr_row['msg']).'</pre>';
 				$arr_data[] = date('d-m-Y H:i:s', strtotime($arr_row['date']));
 				if ($arr_row['ip']) {
 					
@@ -367,9 +368,14 @@ class cms_log extends base_module {
 			return;
 		}
 
-		$res = DB::query("
-			DELETE FROM ".DB::getTable('TABLE_LOG_REQUESTS')."
+		$res = DB::queryMulti("
+			DELETE FROM ".DB::getTable('TABLE_LOG_REQUESTS_ACCESS')."
 				WHERE type != '' AND date < (NOW() - ".DBFunctions::interval(((int)$arr_options['age_amount'] * (int)$arr_options['age_unit']), 'MINUTE').")
+			;
+			DELETE FROM ".DB::getTable('TABLE_LOG_REQUESTS_THROTTLE')."
+				WHERE date < (NOW() - ".DBFunctions::interval(((int)$arr_options['age_amount'] * (int)$arr_options['age_unit']), 'MINUTE').")
+					AND state != ".Log::IP_STATE_BLOCKED."
+			;
 		");
 	}
 }

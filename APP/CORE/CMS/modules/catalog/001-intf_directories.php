@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class intf_directories extends directories {
 		
 	public function contents() {
 	
-		$return .= '<div class="section directories">
+		$return = '<div class="section directories">
 			<h1 id="x:intf_directories:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup directory_add" value="add" /></h1>
 			<div>';
 			
@@ -208,11 +208,11 @@ class intf_directories extends directories {
 					if (($mode == "directory_insert" && $root) || ($mode == "directory_update" && $arr_row['id'] != $root)) {
 							$this->html .= '<li>
 								<label>'.getLabel('lbl_title').'</label>
-								<div><input type="text" name="title" value="'.htmlspecialchars($arr_row['title']).'"></div>
+								<div><input type="text" name="title" value="'.strEscapeHTML($arr_row['title']).'"></div>
 							</li>
 							<li>
 								<label>'.getLabel('lbl_name').'</label>
-								<div><input type="text" name="name" value="'.htmlspecialchars($arr_row['name']).'"></div>
+								<div><input type="text" name="name" value="'.strEscapeHTML($arr_row['name']).'"></div>
 							</li>
 							<li>
 								<label>'.getLabel('lbl_directory').'</label>
@@ -253,9 +253,9 @@ class intf_directories extends directories {
 			</form>';
 			
 			if (($mode == "directory_insert" && $root) || ($mode == "directory_update" && $arr_row['id'] != $root)) {
-				$this->validate = '{"title": "required", "parent": "required"}';
+				$this->validate = ['title' => 'required', 'parent' => 'required'];
 			} else {
-				$this->validate = '{}';
+				$this->validate = [];
 			}
 		}
 		

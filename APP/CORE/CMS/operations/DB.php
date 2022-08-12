@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -75,7 +75,7 @@ abstract class DBBase {
 	
 	public static function getTable($identifier) {
 	
-		$name = (static::$arr_override_tables[$identifier] ?: (static::$arr_tables[$identifier] ?: $identifier));
+		$name = (static::$arr_override_tables[$identifier] ?? (static::$arr_tables[$identifier] ?? $identifier));
 		
 		$name = str_replace('"', '', $name); // Remove a possible previous getTable parsing
 		$arr_database_table = explode('.', $name);
@@ -100,7 +100,7 @@ abstract class DBBase {
 	
 	public static function getTableName($identifier) {
 	
-		$name = (static::$arr_override_tables[$identifier] ?: (static::$arr_tables[$identifier] ?: $identifier));
+		$name = (static::$arr_override_tables[$identifier] ?? (static::$arr_tables[$identifier] ?? $identifier));
 
 		return $name;
 	}
@@ -122,7 +122,7 @@ abstract class DBBase {
 		foreach (array_merge(static::$arr_tables, static::$arr_override_tables) as $identifier => $name) {
 			
 			$database_table = explode('.', $name);
-			$table = ($database_table[1] ?: $database_table[0]);
+			$table = ($database_table[1] ?? $database_table[0]);
 			$database = (count($database_table) > 1 ? $database_table[0] : static::$database_home);
 			$arr_database_tables[$database][$table] = $table;
 		}
@@ -131,6 +131,8 @@ abstract class DBBase {
 	}
 	
 	public static function setConnectionDetails($host, $user, $password, $level = false, $database = false) {
+		
+		$password = Settings::getSafeText($password);
 		
 		$level = ($level ?: static::CONNECT_HOME);
 				
@@ -150,7 +152,7 @@ abstract class DBBase {
 	
 	public static function setConnectionAlias($alias, $database) {
 		
-		if (!static::$arr_database_level_connection[$database]) {
+		if (!isset(static::$arr_database_level_connection[$database])) {
 			static::$arr_database_level_connection[$database] = [];
 		}
 		
@@ -161,7 +163,7 @@ abstract class DBBase {
 		
 		foreach (static::$arr_database_level_connection_details as $database => $arr_level_connection_details) {
 
-			if (static::$arr_database_level_connection[$database][static::$connection_level]) {
+			if (!empty(static::$arr_database_level_connection[$database][static::$connection_level])) {
 				continue;
 			}
 			
@@ -222,9 +224,11 @@ abstract class DBBase {
 	public static function setDatabase($database = false) {
 		
 		static::$database_selected = $database;
-		static::$connection_database = (static::$arr_database_level_connection[$database] ? $database : false);
+		static::$connection_database = (isset(static::$arr_database_level_connection[$database]) ? $database : false);
 		
-		return static::$connection_active = static::$arr_database_level_connection[static::$connection_database][static::$connection_level];
+		static::$connection_active = (static::$arr_database_level_connection[static::$connection_database][static::$connection_level] ?? false);
+		
+		return static::$connection_active;
 	}
 	
 	abstract public static function query($q);
@@ -282,6 +286,10 @@ abstract class DBBase {
 		
 		if (!$identifier) {
 			
+			if (!isset(static::$arr_connection_status[static::$connection_database])) {
+				return false;
+			}
+			
 			$arr_connection_status = static::$arr_connection_status[static::$connection_database];
 			
 			$identifier = $arr_connection_status['transaction'];
@@ -310,7 +318,6 @@ abstract class DBBase {
 		}
 				
 		$msg = $e->getMessage();
-		$code = TROUBLE_DATABASE;
 		$debug = static::$last_query;
 		
 		$msg_client = static::getErrorMessage($e->getCode());
@@ -319,7 +326,7 @@ abstract class DBBase {
 			msg($msg_client, Trouble::label(TROUBLE_ERROR), LOG_CLIENT, false, Trouble::type(TROUBLE_NOTICE));
 		}
 
-		error($msg, $code, LOG_BOTH, $debug, $e);
+		error($msg, TROUBLE_DATABASE, LOG_BOTH, $debug, $e);
 	}
 	
 	abstract public static function getErrorMessage($code);
@@ -420,7 +427,10 @@ abstract class DBFunctionsBase {
 	const TYPE_FLOAT = 5;
 	
 	const CAST_TYPE_INTEGER = false;
+	const CAST_TYPE_DECIMAL = false;
 	const CAST_TYPE_STRING = false;
+	const CAST_TYPE_BOOLEAN = false;
+	const CAST_TYPE_BINARY = false;
 	
 	protected static $count_sql_index = 0;
 	
@@ -457,14 +467,7 @@ abstract class DBFunctionsBase {
 	
 	abstract public static function unescapeAs($value, $what);
 			
-	public static function castAs($value, $what) {
-		
-		if (!$what) {
-			return $value;
-		}
-		
-		return 'CAST('.$value.' AS '.$what.')';
-	}
+	abstract public static function castAs($value, $what, $length = false);
 		
 	abstract public static function sqlImplode($expression, $separator = ', ', $clause = false);
 	
@@ -557,9 +560,11 @@ abstract class DBFunctionsBase {
 		return "CREATE INDEX ".$identifier." ON ".$table." (".$sql_index.")";
 	}
 	
-	abstract public static function onConflict($key, $values);
+	abstract public static function onConflict($key, $arr_values, $sql_other = false);
 	
 	abstract public static function interval($amount, $unit, $field = false);
+	
+	abstract public static function timeDifference($unit, $field_start, $field_end);
 	
 	abstract public static function regexpMatch($sql, $expression, $flags = false);
 	
@@ -592,7 +597,7 @@ abstract class DBFunctionsBase {
 	
 	public static function str2Search($str) {
 		
-		$str = str_replace(['%', '_'], ['\%', '\_'], $str);
+		$str = str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $str);
 		$str = str_replace(['[*]', '[*1]', '[*2]', '[*3]'], ['%', '_', '__', '___'], $str);
 		
 		return static::strEscape($str);
@@ -639,9 +644,10 @@ abstract class DBFunctionsBase {
 							0 AS status,
 							".$arr_table['delete'][1]." AS id
 								FROM ".$arr_table['delete'][0]."
-							WHERE
-								".($arr_table['value'] ? $arr_table['delete'][1]." AND" : "")."
-								NOT EXISTS (SELECT TRUE
+							WHERE TRUE
+								".($arr_table['clause_not_empty'] ? "AND (".$arr_table['delete'][1]." IS NOT NULL AND ".$arr_table['delete'][1]." != '')" : "")."
+								".($arr_table['clause'] ? "AND (".$arr_table['clause'].")" : "")."
+								AND NOT EXISTS (SELECT TRUE
 									FROM ".$arr_table['test'][0]." cleanup_test
 									WHERE cleanup_test.".$arr_table['test'][1]." = ".$arr_table['delete'][1]."
 								)
@@ -670,6 +676,8 @@ abstract class DBFunctionsBase {
 				
 				do {
 					
+					DB::startTransaction('cleanup_tables');
+					
 					if ($nr_limit) {
 						
 						DB::query("UPDATE cleanup_cache
@@ -691,10 +699,12 @@ abstract class DBFunctionsBase {
 						");
 					}
 					
+					DB::commitTransaction('cleanup_tables');
+					
 					$go = ($nr_limit && $nr_rows_affected ? true : false);
 				} while ($go);
 				
-				$arr_msg[] = 'Deleted '.nr2String($total).' rows using '.$arr_table['delete'][0].'.'.$arr_table['delete'][1].'.';
+				$arr_msg[] = 'Deleted '.num2String($total).' rows using '.$arr_table['delete'][0].'.'.$arr_table['delete'][1].'.';
 			
 				$stmt->close();
 			}

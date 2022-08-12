@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -22,6 +22,8 @@ class cms_general extends base_module {
 			var labeler = ".(int)$_SESSION['CUR_USER']['labeler'].";
 		");
 	}
+	
+	const OPTION_GROUP_SEPARATOR = ' ||| ';
 		
 	public static function css() {
 	
@@ -38,7 +40,7 @@ class cms_general extends base_module {
 				var labeler = false,
 				IS_CMS = ".(int)IS_CMS.",
 				DIR_CMS = '".DIR_CMS."',
-				BASE_URL_HOME = '".BASE_URL_HOME."';
+				URL_BASE_HOME = '".URL_BASE_HOME."';
 				
 				$(document).on('documentloaded ajaxloaded', function() {
 					if (labeler) {
@@ -120,7 +122,7 @@ class cms_general extends base_module {
 			
 			if ($value && $value['selected']) {
 				
-				$arr_code = FormatBBCode::getCode('url_attr');
+				$arr_code = FormatTags::getCode('url_attr');
 				preg_match($arr_code[0], $value['selected'], $arr_matches);
 				
 				if ($arr_matches) {
@@ -129,7 +131,7 @@ class cms_general extends base_module {
 					$str_text = $arr_matches[2];
 				} else {
 					
-					$arr_code = FormatBBCode::getCode('url');
+					$arr_code = FormatTags::getCode('url');
 					preg_match($arr_code[0], $value['selected'], $arr_matches);
 					
 					if ($arr_matches) {
@@ -147,11 +149,11 @@ class cms_general extends base_module {
 				<fieldset><legend>'.getLabel('lbl_create').' Link</legend><ul>
 					<li>
 						<label>'.getLabel('lbl_url').'</label>
-						<div><input type="text" name="url" value="'.htmlspecialchars($str_url).'" /></div>
+						<div><input type="text" name="url" value="'.strEscapeHTML($str_url).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_text').'</label>
-						<div><input type="text" name="text" value="'.htmlspecialchars($str_text).'" /><label>'.getLabel('lbl_optional').'</label></div>
+						<div><input type="text" name="text" value="'.strEscapeHTML($str_text).'" /><label>'.getLabel('lbl_optional').'</label></div>
 					</li>
 				</ul></fieldset>
 			</form>';
@@ -166,7 +168,7 @@ class cms_general extends base_module {
 			
 			if ($value && $value['selected']) {
 				
-				$arr_code = FormatBBCode::getCode('quote');
+				$arr_code = FormatTags::getCode('quote');
 				preg_match($arr_code[0], $value['selected'], $arr_matches);
 				
 				if ($arr_matches) {
@@ -182,11 +184,11 @@ class cms_general extends base_module {
 				<fieldset><legend>'.getLabel('lbl_create').' Quote</legend><ul>
 					<li>
 						<label>'.getLabel('lbl_citation').'</label>
-						<div><input type="text" name="cite" value="'.htmlspecialchars($str_cite).'" /><label>'.getLabel('lbl_optional').'</label></div>
+						<div><input type="text" name="cite" value="'.strEscapeHTML($str_cite).'" /><label>'.getLabel('lbl_optional').'</label></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_text').'</label>
-						<div><input type="text" name="text" value="'.htmlspecialchars($str_text).'" /></div>
+						<div><input type="text" name="text" value="'.strEscapeHTML($str_text).'" /></div>
 					</li>
 				</ul></fieldset>
 			</form>';
@@ -256,7 +258,7 @@ class cms_general extends base_module {
 			
 			$style = (!$value['style'] ? 'body' : $value['style']);
 			
-			$this->html = self::createIframeDynamic($value['html'], (!$value['external'] ? '<link href="'.BASE_URL_HOME.'combine/css/" rel="stylesheet" type="text/css" />' : ''), 'back mod '.$style, 'preview');
+			$this->html = self::createIframeDynamic($value['html'], (!$value['external'] ? '<link href="'.URL_BASE_HOME.'combine/css/" rel="stylesheet" type="text/css" />' : ''), 'back mod '.$style, 'preview');
 		}
 		
 		if ($method == "editor") {
@@ -345,6 +347,8 @@ class cms_general extends base_module {
 		$sub = false;
 		$new_sub = false;
 		
+		$return = '';
+		
 		foreach ($arr_modules as $key => $value) {
 			
 			if ($value['label']) {
@@ -428,21 +432,35 @@ class cms_general extends base_module {
 		return ($unit ? $arr[$unit] : $arr);
 	}
 	
-	public static function createDropdown($arr, $selected = false, $empty = false, $label_column = 'name', $id_column = 'id') {
+	public static function createDropdown($arr, $selected = false, $empty = false, $label_column = 'name', $id_column = 'id', $arr_options = []) {
+		
+		$is_strict = ($arr_options['strict'] ?? false);
 
-		$return .= ($empty ? '<option value="">'.(is_string($empty) ? $empty : '').'</option>' : '');
-		$selected = (is_array($selected) ? $selected : [($selected ?: false)]); // Support for multiple select
+		$return = ($empty ? '<option value="">'.(is_string($empty) ? $empty : '').'</option>' : '');
+		
+		// Support for multiple select
+		if (!is_array($selected)) {
+			
+			if (!$is_strict) {
+				$selected = ($selected ?: '');
+			}
+			
+			$selected = [$selected];
+		}
+		$label_column = ($label_column ?? 'name');
+		$id_column = ($id_column ?? 'id');
+		
 		$arr_group = [];
 
 		foreach ($arr as $arr_option) {
 			
-			$label = $arr_option[$label_column];
+			$str_label = $arr_option[$label_column];
 			
-			if (strpos($label, ' | ') !== false) {
+			if (strpos($str_label, static::OPTION_GROUP_SEPARATOR) !== false) {
 				
-				$label = explode(' | ', $label);
-				$arr_option[$label_column] = $label[1];
-				$arr_group[$label[0]][] = $arr_option;
+				$str_label = explode(static::OPTION_GROUP_SEPARATOR, $str_label);
+				$arr_option[$label_column] = $str_label[1];
+				$arr_group[$str_label[0]][] = $arr_option;
 			} else {
 				
 				$arr_attr = [];
@@ -453,13 +471,13 @@ class cms_general extends base_module {
 					}
 				}
 				
-				$return .= '<option value="'.htmlspecialchars($arr_option[$id_column]).'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').(in_array($arr_option[$id_column], $selected) ? ' selected="selected"' : '').'>'.htmlspecialchars($label).'</option>';
+				$return .= '<option value="'.strEscapeHTML($arr_option[$id_column]).'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').(in_array($arr_option[$id_column], $selected, $is_strict) ? ' selected="selected"' : '').'>'.Labels::addContainer(strEscapeHTML($str_label)).'</option>';
 			}
 		}
 		
 		foreach ($arr_group as $group => $arr) {
 			
-			$return .= '<optgroup label="'.htmlspecialchars($group).'">'
+			$return .= '<optgroup label="'.Labels::addContainer(strEscapeHTML($group)).'">'
 				.self::createDropdown($arr, $selected, false, $label_column, $id_column)
 			.'</optgroup>';
 		}
@@ -468,18 +486,22 @@ class cms_general extends base_module {
 	}
 	
 	public static function createSelector($arr, $name, $selected = [], $label_column = 'name', $id_column = 'id') {
-
+		
+		$return = '';
+		
 		foreach ($arr as $arr_option) {
-			$return .= '<label'.($arr_option['title'] ? ' title="'.htmlspecialchars($arr_option['title']).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><span>'.$arr_option[$label_column].'</span></label>';
+			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
 		}
 		
 		return $return;
 	}
 	
 	public static function createSelectorRadio($arr, $name, $selected = false, $label_column = 'name', $id_column = 'id') {
-
+		
+		$return = '';
+		
 		foreach ($arr as $arr_option) {
-			$return .= '<label'.($arr_option['title'] ? ' title="'.htmlspecialchars($arr_option['title']).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><span>'.$arr_option[$label_column].'</span></label>';
+			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
 		}
 		
 		return $return;
@@ -487,13 +509,13 @@ class cms_general extends base_module {
 	
 	public static function createSelectorList($arr, $name, $selected = [], $label_column = 'name', $id_column = 'id') {
 		
-		$return .= '<ul class="select">';
+		$return = '<ul class="select">';
 		
 		foreach ($arr as $arr_option) {
 			
 			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
 			
-			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><div>'.$arr_option[$label_column].'</div></label></li>';
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
 		}
 		
 		$return .= '</ul>';
@@ -503,13 +525,13 @@ class cms_general extends base_module {
 	
 	public static function createSelectorRadioList($arr, $name, $selected = false, $label_column = 'name', $id_column = 'id') {
 		
-		$return .= '<ul class="select">';
+		$return = '<ul class="select">';
 		
 		foreach ($arr as $arr_option) {
 			
 			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
 			
-			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><div>'.$arr_option[$label_column].'</div></label></li>';
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
 		}
 		
 		$return .= '</ul>';
@@ -521,7 +543,7 @@ class cms_general extends base_module {
 		
 		$date = ($date && $date != '0000-00-00 00:00:00' ? $date : time());
 		$date = (is_string($date) ? strtotime($date) : $date);
-		$name = ($name ? $name : 'date');
+		$name = ($name ?: 'date');
 		
 		return '<div class="hide-edit'.($hide ? ' hide' : '').'"><input type="text" class="date datepicker" name="'.$name.'" value="'.date('d-m-Y', $date).'" /><input type="text" class="date-time" name="'.$name.'_t" value="'.date('H:i', $date).'" /></div><span class="icon" title="'.getLabel('inf_edit_date').'">'.getIcon('date').'</span>';
 	}
@@ -529,8 +551,9 @@ class cms_general extends base_module {
 	public static function createFileBrowser($multi = false, $name = 'file') {
 		
 		$name_file = ($multi ? $name.'[]' : $name);
-				
-		return '<div class="input filebrowse"><div class="select"><input type="file" name="'.$name_file.'"'.($multi ? ' multiple="multiple"' : '').' /><label><span></span><input type="text" name="'.$name.'" /></label></div>'.($multi ? '<ul></ul>' : '').'<progress value="0" max="100"></progress></div>'; // Also include a input with type="text" and name="..." to make it 'visible' for normal POSTED data iteration
+		$num_size_limit = FileStore::getSizeLimitClient(FileStore::STORE_FILE);
+		
+		return '<div class="input filebrowse"><div class="select"><input type="file" name="'.$name_file.'" data-size="'.$num_size_limit.'"'.($multi ? ' multiple="multiple"' : '').' /><label><span></span><input type="text" name="'.$name.'" placeholder="'.getLabel('lbl_size_max').': '.bytes2String($num_size_limit).'" /></label></div>'.($multi ? '<ul></ul>' : '').'<progress value="0" max="100"></progress></div>'; // Also include a input with type="text" and name="..." to make it 'visible' for normal POSTED data iteration
 	}
 	
 	public static function createImageSelector($value, $name = 'img') {
@@ -542,20 +565,34 @@ class cms_general extends base_module {
 		
 		$str_tags = '';
 		foreach ($arr_tags as $key => $value) {
-			$str_tags .= '<li><span><input type="hidden" name="'.$name.'['.$key.']" value="'.$key.'"/>'.$value.'</span><span class="handler"></span></li>';
+			$str_tags .= '<li><span><input type="hidden" name="'.$name.'['.$key.']" value="'.$key.'"/>'.Labels::addContainer($value).'</span><span class="handler"></span></li>';
 		}
 		
 		return '<input type="hidden" name="'.$name.'" value=""'.($id_value ? ' id="'.$id_value.'"' : '').' /><div class="autocomplete tags'.($arr_options['list'] ? ' list' : '').'"><input type="hidden" name="'.$name.'" value="" /><ul>'.$str_tags.'</ul></div><input type="search" class="autocomplete multi" id="'.$id.'" value=""'.($arr_options['delay'] ? ' data-delay="'.$arr_options['delay'].'"' : '').($arr_options['order'] ? ' data-order="1"' : '').' />';
 	}
 	
+	public static function createRegularExpressionEditor($arr_regex, $name = '', $do_switch = false, $arr_options = []) {
+		
+		$name = ($name ?: 'regex');
+		
+		$str_info = ($arr_options['info'] ?: getLabel('inf_regular_expression_replace'));
+		$html_enable = '';
+		
+		if ($do_switch) {
+			$html_enable = '<label title="'.strEscapeHTML($str_info).'"><input type="checkbox" name="'.$name.'[enable]" value="1"'.($arr_regex['enable'] ? ' checked="checked"' : '').' /><span>(.*)</span></label>';
+		}
+		
+		return '<div class="input regex"'.(!$do_switch ? ' title="'.strEscapeHTML($str_info).'"' : '').'><span></span><input type="text" name="'.$name.'[pattern]" placeholder="'.getLabel('lbl_match').'" value="'.strEscapeHTML($arr_regex['pattern']).'" /><span></span><input type="text" name="'.$name.'[flags]" value="'.strEscapeHTML($arr_regex['flags']).'" /><span></span><input type="text" name="'.$name.'[template]" placeholder="'.getLabel('lbl_replace').'" value="'.strEscapeHTML($arr_regex['template']).'" />'.$html_enable.'</div>';
+	}
+	
 	public static function createIframeDynamic($body, $head = false, $body_class = false, $class = false) {
 		
-		return '<iframe src="javascript:\'\';" data-body="'.parseBody($body, ['function' => 'htmlspecialchars']).'"'.($head ? ' data-head="'.htmlspecialchars($head).'"' : '').($body_class ? ' data-body-class="'.$body_class.'"' : '').($class ? ' class="'.$class.'"' : '').'></iframe>';
+		return '<iframe src="about:blank" data-body="'.parseBody($body, ['function' => 'strEscapeHTML']).'"'.($head ? ' data-head="'.strEscapeHTML($head).'"' : '').($body_class ? ' data-body-class="'.$body_class.'"' : '').($class ? ' class="'.$class.'"' : '').'></iframe>';
 	}
 	
 	public static function createSorter($arr_rows, $handle = false, $reverse = false, $arr_options = []) {
 		
-		$return .= '<ul class="sorter'.($reverse ? ' reverse' : '').($arr_options['full'] ? ' full' : '').'"'.($arr_options['auto_add'] ? ' data-sorter_auto_add="1"' : '').'>';
+		$return = '<ul class="sorter'.($reverse ? ' reverse' : '').($arr_options['full'] ? ' full' : '').'"'.($arr_options['auto_add'] ? ' data-sorter_auto_add="1"' : '').'>';
 		
 		$html_handle = '<span class="icon">'.getIcon('updown').'</span>';
 		
@@ -587,10 +624,10 @@ class cms_general extends base_module {
 			$arr_options_data[] = 'data-filter="'.$arr_options['filter'].'"';
 		}
 		if ($arr_options['filter_settings']) {
-			$arr_options_data[] = 'data-filter_settings="'.htmlspecialchars($arr_options['filter_settings']).'"';
+			$arr_options_data[] = 'data-filter_settings="'.strEscapeHTML($arr_options['filter_settings']).'"';
 		}
-		if ($arr_options['filter_search']) {
-			$arr_options_data[] = 'data-filter_search="'.htmlspecialchars($arr_options['filter_search']).'"';
+		if ($arr_options['search_settings']) {
+			$arr_options_data[] = 'data-search_settings="'.strEscapeHTML($arr_options['search_settings']).'"';
 		}
 		if ($arr_options['order']) {
 			$arr_options_data[] = 'data-order="'.($arr_options['order'] == true ? 'y:cms_general:order_datatable-0' : $arr_options['order']).'"';
@@ -638,8 +675,10 @@ class cms_general extends base_module {
 		$sql_where_default = ($sql_where_default ? "WHERE ".$sql_where_default : "");
 		$sql_where = $sql_where_default;
 		
-		if ($_POST['search'] != '')	{
-			
+		$str_search = $_POST['search'];
+		
+		if ($str_search != '')	{
+
 			if ($sql_where == '') {
 				$sql_where = "WHERE (";
 			} else {
@@ -652,7 +691,20 @@ class cms_general extends base_module {
 					continue;
 				}
 				
-				$sql_where .= $arr_sql_columns_search[$i]." LIKE '%".DBFunctions::strEscape($_POST['search'])."%' OR ";
+				$sql_column = $arr_sql_columns_search[$i];
+				$str_search_use = $str_search;
+				
+				if (is_array($sql_column)) {
+					
+					$arr_column = $sql_column;
+					$sql_column = $arr_column['field'];
+					
+					if ($arr_column['json']) {
+						$str_search_use = substr(value2JSON($str_search_use), 1, -1);
+					}
+				}
+				
+				$sql_where .= $sql_column." LIKE '%".DBFunctions::str2Search($str_search_use)."%' OR ";
 			}
 			
 			$sql_where = substr_replace($sql_where, '', -3);
@@ -661,7 +713,10 @@ class cms_general extends base_module {
 		
 		for ($i = 0; $i < count($arr_sql_columns); $i++) {
 			
-			if ($_POST['search_column_'.$i] == true && $_POST['searching_column_'.$i] != '') {
+			$do_search = ($_POST['search_column_'.$i] ?? null);
+			$str_search = ($_POST['searching_column_'.$i] ?? null);
+			
+			if ($do_search == true && $str_search != '') {
 				
 				if ($sql_where == '') {
 					$sql_where = "WHERE ";
@@ -669,13 +724,26 @@ class cms_general extends base_module {
 					$sql_where .= " AND ";
 				}
 				
-				$sql_where .= $arr_sql_columns[$i]." LIKE '%".DBFunctions::strEscape($_POST['searching_column_'.$i])."%' ";
+				$sql_column = $arr_sql_columns[$i];
+				$str_search_use = $str_search;
+				
+				if (is_array($sql_column)) {
+					
+					$arr_column = $sql_column;
+					$sql_column = $arr_column['field'];
+					
+					if ($arr_column['json']) {
+						$str_search_use = substr(value2JSON($str_search_use), 1, -1);
+					}
+				}
+				
+				$sql_where .= $sql_column." LIKE '%".DBFunctions::str2Search($str_search_use)."%' ";
 			}
 		}
-				
+		
 		$sql_body = ($sql_body ?: $sql_table);
 		$sql_index_body = ($sql_index_body ?: $sql_index);
-								 
+		
 		$result = DB::query("SELECT
 			".implode(", ", array_filter($arr_sql_columns_as))."
 				FROM ".$sql_body."
@@ -710,7 +778,6 @@ class cms_general extends base_module {
 		}
 		
 		$arr_output = [
-			'echo' => intval($_POST['echo']),
 			'total_records' => $nr_total,
 			'total_records_filtered' => $nr_total_filtered,
 			'data' => []
@@ -841,17 +908,28 @@ class cms_general extends base_module {
 			
 	public static function editBody($body, $name = 'body', $arr_options = []) {
 		
-		if ($arr_options['data']) {
+		$str_attributes = '';
+		$str_menu = '';
+		
+		if (!empty($arr_options['data'])) {
 			
 			$arr_options_data = [];
 			
 			foreach ($arr_options['data'] as $str_attribute => $str_value) {
-				$arr_options_data[] = 'data-'.$str_attribute.'="'.htmlspecialchars($str_value).'"';
+				$arr_options_data[] = 'data-'.$str_attribute.'="'.strEscapeHTML($str_value).'"';
 			}
 			
 			$str_attributes = implode(' ', $arr_options_data);
 		}
 		
-		return '<textarea name="'.$name.'" class="editor body-content'.($arr_options['inline'] ? ' inline' : '').($arr_options['external'] ? ' external' : '').($arr_options['class'] ? ' '.$arr_options['class'] : '').'"'.($str_attributes ? ' '.$str_attributes : '').'>'.htmlspecialchars($body).'</textarea>';			
+		if (!empty($arr_options['menu'])) {
+			
+			$str_menu = '<menu>'.$arr_options['menu'].'</menu>';
+		}
+		
+		return '<textarea name="'.$name.'" class="editor body-content'.($arr_options['inline'] ? ' inline' : '').($arr_options['external'] ? ' external' : '').($arr_options['class'] ? ' '.$arr_options['class'] : '').'"'.($str_attributes ? ' '.$str_attributes : '').'>'
+			.strEscapeHTML($body)
+		.'</textarea>'
+		.$str_menu;			
 	}
 }

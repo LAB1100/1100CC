@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -30,7 +30,7 @@ class cms_blog_posts extends base_module {
 
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_blog_posts:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup blog_post_add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_blog_posts:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup blog_post_add" value="add" /></h1>
 		<div class="blog_posts">';
 
 			$return .= '<table class="display" id="d:cms_blog_posts:blog_posts_data-0">
@@ -66,9 +66,10 @@ class cms_blog_posts extends base_module {
 		$return = '#frm-blog_post input[name=title] { width: 250px; }
 					#frm-blog_post textarea[name=abstract] { width: 400px; height: 50px; }
 					#frm-blog_post .icon[id*=get_pingback_box] { cursor: pointer; }
-					#frm-blog_post .icon[id*=get_pingback_box] + div { display: inline-block; margin-left: 4px; }
+					#frm-blog_post .icon[id*=get_pingback_box] + div { display: inline-block; vertical-align:middle; margin-left: 5px; }
 					#frm-blog_post ul#pingbacklist { }
 					#frm-blog_post ul#pingbacklist li { display: block; padding: 1px 0px;}
+					#frm-blog_post ul#pingbacklist li > input + a { margin-left: 4px; }
 					#frm-blog_post ul#pingbacklist li a.inactive { color: #cccccc; }
 					#frm-blog_post ul#pingbacklist li a.double { color: #be0000; }';
 		
@@ -115,7 +116,7 @@ class cms_blog_posts extends base_module {
 				$mode = "blog_post_insert";
 			}
 														
-			$this->html = '<form id="frm-blog_post" data-method="'.$mode.'">
+			$this->html = '<form id="frm-blog_post" data-method="'.$mode.'" data-lock="1">
 				<fieldset><ul>
 					<li>
 						<label></label>
@@ -140,7 +141,7 @@ class cms_blog_posts extends base_module {
 					$this->html .= '</li>
 					<li>
 						<label>'.getLabel('lbl_title').'</label>
-						<div><input type="text" name="title" value="'.htmlspecialchars($arr_row['title']).'"></div>
+						<div><input type="text" name="title" value="'.strEscapeHTML($arr_row['title']).'"></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_date').'</label>
@@ -152,7 +153,7 @@ class cms_blog_posts extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_abstract').'</label>
-						<div><textarea name="abstract">'.htmlspecialchars($arr_row['abstract']).'</textarea></div>
+						<div><textarea name="abstract">'.strEscapeHTML($arr_row['abstract']).'</textarea></div>
 					</li>
 					<li>
 						<label title="'.getLabel('inf_preview_paragraphs').'"">¶</label>
@@ -205,12 +206,23 @@ class cms_blog_posts extends base_module {
 			}
 			
 			$this->html = '<ul id="pingbacklist">';
-				
-				libxml_use_internal_errors(true);
+
 				$doc = new DOMDocument();
 				$doc->strictErrorChecking = false;
-				$doc->loadHTML(Labels::printLabels(parseBody($value)));
-				$count = 0;
+				
+				$cur_format = Response::getFormat();
+				Response::setFormat(Response::OUTPUT_XML | Response::RENDER_HTML);
+					
+				try {
+
+					$doc->loadHTML(Response::parse(parseBody($value)));
+				} catch (Exception $e) {
+					
+				}
+				
+				Response::setFormat($cur_format); // Restore output format
+				
+				$num_count = 0;
 				
 				foreach($doc->getElementsByTagName('a') as $link) {
 					
@@ -223,9 +235,9 @@ class cms_blog_posts extends base_module {
 						$inactive = true;
 					}
 					
-					$this->html .= '<li><input type="checkbox" name="pingback-url[]" value="'.$link->getAttribute('href').'"'.($double == false && $inactive == false ? ' checked="checked"' : '').($inactive == true ? ' disabled="disabled"' : '').' /> <a href="'.$link->getAttribute('href').'" target="_blank" class="'.($double == true ? 'double' : '').($inactive == true ? 'inactive' : '').'">'.rawurldecode($link->getAttribute('href')).'</a></li>';
+					$this->html .= '<li><input type="checkbox" name="pingback-url[]" value="'.$link->getAttribute('href').'"'.($double == false && $inactive == false ? ' checked="checked"' : '').($inactive == true ? ' disabled="disabled"' : '').' /><a href="'.$link->getAttribute('href').'" target="_blank" class="'.($double == true ? 'double' : '').($inactive == true ? 'inactive' : '').'">'.rawurldecode($link->getAttribute('href')).'</a></li>';
 					
-					$count++;
+					$num_count++;
 				}
 				
 				if (!$link) {
@@ -277,9 +289,9 @@ class cms_blog_posts extends base_module {
 				$arr_data[] = '<span class="icon" data-category="status">'.getIcon((DBFunctions::unescapeAs($arr_row['draft'], DBFunctions::TYPE_BOOLEAN) ? 'min' : 'tick')).'</span>';
 				$arr_data[] = $arr_row['title'];
 				
-				if ($arr_row['cms_user_name'] === null) {
+				if (!isset($arr_row['cms_user_name'])) {
 				
-					if (!$arr_cms_users_core[$arr_row['cms_user_id']]) {
+					if (!isset($arr_cms_users_core[$arr_row['cms_user_id']])) {
 						
 						$arr_user = cms_users::getCMSUsers($arr_row['cms_user_id'], true);
 						$arr_cms_users_core[$arr_row['cms_user_id']] = $arr_user['name'];
@@ -417,13 +429,15 @@ class cms_blog_posts extends base_module {
 		$arr_link = self::findMainBlog($blog);
 
 		foreach ($arr_pings as $value) {
+			
 			$to = $value;
+			
 			if ($arr_link['shortcut']) {
 				$from = pages::getShortcutUrl($arr_link);
 			} else {
 				$from = pages::getModUrl($arr_link);
 			}
-			$from .= $blog_post_id.'/'.str_replace(' ', '-', htmlspecialchars($title));
+			$from .= $blog_post_id.'/'.str_replace(' ', '-', strEscapeHTML($title));
 
 			$server = PingbackUtility::getPingbackServerURL($to);
 
@@ -470,7 +484,7 @@ class cms_blog_posts extends base_module {
 		return $arr_row[0];
 	}
 	
-	public static function getBlogPosts($blog = 0, $limit = 0, $tag = false, $start = 0) {
+	public static function getBlogPosts($blog = 0, $num_limit = 0, $tag = false, $num_start = 0) {
 	
 		$arr = [];
 		
@@ -492,7 +506,7 @@ class cms_blog_posts extends base_module {
 				".($tag ? "AND tsel.name = '".DBFunctions::strEscape($tag)."'" : "")."
 			GROUP BY bp.id, cu.id
 			ORDER BY bp.date DESC
-			".($start || $limit ? "LIMIT ".$limit." OFFSET ".$start : "")."
+			".($num_start || $num_limit ? "LIMIT ".(int)$num_limit." OFFSET ".(int)$num_start : "")."
 		");
 		
 		$arr_cms_users_core = [];
@@ -544,6 +558,10 @@ class cms_blog_posts extends base_module {
 		");
 						
 		$arr_row = $res->fetchAssoc();
+		
+		if (!$arr_row) {
+			return [];
+		}
 		
 		if ($arr_row['cms_user_name'] === null) {
 			

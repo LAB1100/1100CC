@@ -2,23 +2,25 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class Response {
 		
-	const OUTPUT_HTML = 1;
+	const OUTPUT_XML = 1;
 	const OUTPUT_JSON = 2;
-	const OUTPUT_TEXT = 4;
+	const OUTPUT_JSONP = 4 + 2;
+	const OUTPUT_TEXT = 8;
 	
-	const RENDER_HTML = 8;
-	const RENDER_LINKED_DATA = 16;
+	const RENDER_HTML = 16;
+	const RENDER_XML = 32;
+	const RENDER_LINKED_DATA = 64;
 	
-	const PARSE_PRETTY = 32;
+	const PARSE_PRETTY = 128;
 	
-	public static $show_updates = false;
+	private static $do_output_updates = null; // true, null, false
 	
 	private static $object = false;
 	
@@ -27,12 +29,24 @@ class Response {
 	private static $str_stream_close = '';
 	private static $response_sent = 0;
 	private static $disable_encoding = false;
-	private static $format = self::OUTPUT_HTML | self::RENDER_HTML;
+	private static $format = self::OUTPUT_XML | self::RENDER_HTML;
+	private static $arr_headers = [];
 	
 	private static $arr_parse_callbacks = [];
 	private static $arr_parse_delays = [];
 	private static $arr_parse_post_identifiers = [];
 	private static $arr_parse_post_options = [];
+	private static $do_clear_parse = false;
+	
+	public static function setOutputUpdates(?bool $do_output = true) {
+		
+		self::$do_output_updates = $do_output;
+	}
+	
+	public static function isSent() {
+		
+		return (static::$buffer_sent || self::$stream_sent ? true : false);
+	}
 	
 	public static function getObject() {
 		
@@ -43,14 +57,18 @@ class Response {
 		return self::$object;
 	}
 	
-	public static function getStream($open = ' ', $close = ' ') {
+	public static function getStream($str_open = ' ', $str_close = ' ') {
 		
-		return '['.$open.'[STREAM]'.$close.']';
+		return '['.$str_open.'[STREAM]'.$str_close.']';
 	}
 	
 	public static function openStream($index, $dynamic) {
+		
+		if (!self::$buffer_sent && !self::$stream_sent) {
+			static::sendHeaders();
+		}
 			
-		if (self::$format & self::OUTPUT_HTML) {
+		if (bitHasMode(self::$format, self::OUTPUT_XML)) {
 			
 			if (is_callable($index)) {
 				
@@ -101,7 +119,7 @@ class Response {
 				$str = $str_close.$str;
 			}
 
-			if (SiteStartVars::getRequestState() == 'iframe') {
+			if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_DOWNLOAD) {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
 					header('Content-Type: text/html;charset=utf-8');
@@ -111,7 +129,7 @@ class Response {
 			} else {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
-					header('Content-Type: '.(self::$format & self::RENDER_LINKED_DATA ? 'application/ld+json' : 'application/json').';charset=utf-8');
+					header('Content-Type: '.(bitHasMode(self::$format, self::RENDER_LINKED_DATA) ? 'application/ld+json' : 'application/json').';charset=utf-8');
 				}
 			}
 		}
@@ -159,10 +177,14 @@ class Response {
 	public static function stop($index, $dynamic) {
 					
 		self::$response_sent++;
-	
-		if (self::$format & self::OUTPUT_HTML) {
+		
+		if (!self::$buffer_sent && !self::$stream_sent) {
+			static::sendHeaders();
+		}
+		
+		if (bitHasMode(self::$format, self::OUTPUT_XML)) {
 							
-			if (!self::$stream_sent) {
+			if (!self::$buffer_sent && !self::$stream_sent) {
 				
 				header('Content-Type: text/html;charset=utf-8');
 			}
@@ -172,7 +194,7 @@ class Response {
 				$index = $index();
 			}
 			
-			if (Mediator::$shutdown == 'hard') {
+			if ((Mediator::getShutdown() & Mediator::SHUTDOWN_HARD)) {
 				
 				$str = self::encode($index);
 				
@@ -182,12 +204,12 @@ class Response {
 				}
 			} else {
 				
-				$str = self::parse($index, (self::$response_sent > 1 || Mediator::$shutdown ? false : true)); // Also prevent errors originating from parsing functions
+				$str = self::parse($index, (self::$response_sent > 1 || ((Mediator::getShutdown() & (Mediator::SHUTDOWN_INIT_UNDETERMINED | Mediator::SHUTDOWN_INIT_SYSTEM)) ? false : true))); // Also prevent errors originating from parsing functions
 				$str = self::output($str);
 				
 				if (self::$stream_sent) {
 					
-					if (Mediator::$shutdown == 'soft') {
+					if ((Mediator::getShutdown() & (Mediator::SHUTDOWN_SILENT | MEDIATOR::SHUTDOWN_SOFT))) {
 						
 						$str = self::$str_stream_close.$str;
 					} else {
@@ -207,7 +229,7 @@ class Response {
 				$dynamic = $dynamic();
 			}
 			
-			if (Mediator::$shutdown == 'hard') {
+			if ((Mediator::getShutdown() & Mediator::SHUTDOWN_HARD)) {
 
 				$str = self::encode($dynamic);
 				
@@ -219,12 +241,12 @@ class Response {
 				}
 			} else {
 				
-				$str = self::parse($dynamic, (self::$response_sent > 1 || Mediator::$shutdown ? false : true)); // Also prevent errors originating from parsing functions
+				$str = self::parse($dynamic, (self::$response_sent > 1 || ((Mediator::getShutdown() & (Mediator::SHUTDOWN_INIT_UNDETERMINED | Mediator::SHUTDOWN_INIT_SYSTEM)) ? false : true))); // Also prevent errors originating from parsing functions
 				$str = self::output($str);
 				
 				if (self::$stream_sent) {
 					
-					if (Mediator::$shutdown == 'soft') {
+					if ((Mediator::getShutdown() & (Mediator::SHUTDOWN_SILENT | MEDIATOR::SHUTDOWN_SOFT))) {
 						
 						$str_open = rtrim(substr(self::$str_stream_close, 0, -1));
 						$str_close = ltrim(substr($str, 1));
@@ -240,7 +262,7 @@ class Response {
 				}
 			}
 			
-			if (SiteStartVars::getRequestState() == 'iframe') {
+			if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_DOWNLOAD) {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
 					header('Content-Type: text/html;charset=utf-8');
@@ -250,44 +272,52 @@ class Response {
 			} else {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
-					header('Content-Type: '.(self::$format & self::RENDER_LINKED_DATA ? 'application/ld+json' : 'application/json').';charset=utf-8');
+					header('Content-Type: '.(bitHasMode(self::$format, self::RENDER_LINKED_DATA) ? 'application/ld+json' : 'application/json').';charset=utf-8');
 				}
 				
-				echo $str;
+				if (bitHasMode(self::$format, self::OUTPUT_JSONP) && !empty($_REQUEST['callback'])) {
+					echo $_REQUEST['callback'].'('.$str.')';
+				} else {
+					echo $str;
+				}
 			}
 		}
 		
-		if (!Mediator::$shutdown) { // Check if already in shutdown cyclus, otherwise start it
+		if (!Mediator::getShutdown()) { // Check if already in shutdown cyclus, otherwise start it
 			exit;
 		}
 	}
 	
 	public static function update($response = false) {
 
-		if (self::$format & self::OUTPUT_HTML) {
-			if (!self::$show_updates || !$response) {
+		if (bitHasMode(self::$format, self::OUTPUT_XML)) {
+			if (!self::$do_output_updates || !$response) {
 				return;
 			}
 		} else {
-			if (!self::$show_updates && $response) { // Do allow for buffer and client status checks
+			if (self::$do_output_updates === null && $response) { // Does allow for buffer and client status checks
+				return;
+			} else if (self::$do_output_updates === false) {
 				return;
 			}
 		}
-					
+		
+		$str_buffer = false;
+		
 		if (!self::$buffer_sent) {
 
 			$str_buffer = str_pad('', 4096, ' ');
 			
 			$request_state = SiteStartVars::getRequestState();
 
-			if ($request_state == 'command' || $request_state == 'iframe') {
+			if ($request_state == SiteStartVars::REQUEST_COMMAND || $request_state == SiteStartVars::REQUEST_DOWNLOAD) {
 
 				$str_buffer = '[PROCESS]'.$str_buffer.'[-PROCESS]';
 
 				header('Content-Type: text/plain;charset=utf-8');
 			} else {
 				
-				header('Content-Type: '.(self::$format & self::RENDER_LINKED_DATA ? 'application/ld+json' : 'application/json').';charset=utf-8');
+				header('Content-Type: '.(bitHasMode(self::$format, self::RENDER_LINKED_DATA) ? 'application/ld+json' : 'application/json').';charset=utf-8');
 			}
 			
 			self::$buffer_sent = true;
@@ -317,19 +347,19 @@ class Response {
 	
 	public static function encode($value) {
 		
-		if (!$value || self::$disable_encoding || ((self::$format & self::OUTPUT_HTML || self::$format & self::OUTPUT_TEXT) && is_string($value))) {
+		if (!$value || self::$disable_encoding || (bitHasMode(self::$format, self::OUTPUT_XML, self::OUTPUT_TEXT) && is_string($value))) {
 			return $value;
 		}
 		
-		$is_object = (is_object($value) || is_array($value));
+		$is_string = is_string($value);
 		
-		if (self::$format & self::PARSE_PRETTY) {
-			$str = json_encode($value, JSON_PRETTY_PRINT);
+		if (bitHasMode(self::$format, self::PARSE_PRETTY)) {
+			$str = value2JSON($value, JSON_PRETTY_PRINT);
 		} else {
-			$str = json_encode($value);
+			$str = value2JSON($value);
 		}
 		
-		if (!$is_object) { // In case $value is not an object/array, remove the ""
+		if ($is_string) { // In case $value is not an e.g. object/array, but a string, remove the added ""
 			$str = substr($str, 1, -1);
 		}
 		
@@ -348,11 +378,11 @@ class Response {
 	
 	public static function decode($str, $is_object = false) {
 		
-		if (!$str || self::$disable_encoding || self::$format & self::OUTPUT_HTML || self::$format & self::OUTPUT_TEXT) {
+		if (!$str || self::$disable_encoding || bitHasMode(self::$format, self::OUTPUT_XML, self::OUTPUT_TEXT)) {
 			return $str;
 		}
 		
-		if (!$is_object) { // In case $str is not an object/array, add ""
+		if (!$is_object) { // In case $str is not an object/array, but a string, add ""
 			$str = '"'.$str.'"';
 		}
 		
@@ -407,7 +437,7 @@ class Response {
 			}
 		}
 		
-		// $identifier = hash('md5', serialize($arr_options));
+		// $identifier = value2Hash($arr_options);
 		
 		$id = self::$arr_parse_post_identifiers[$identifier];
 		
@@ -423,6 +453,11 @@ class Response {
 		} else {
 			return ['open' => '[PARSE+]['.$id.']', 'close' => '[-PARSE+]'];
 		}
+	}
+	
+	public static function setAutoClearParse($do = false) { // Auto-clear Parse Delays when used
+		
+		self::$do_clear_parse = $do;
 	}
 	
 	private static function clearParse() {
@@ -450,6 +485,10 @@ class Response {
 		}
 		
 		$value = self::parsePost($value);
+		
+		if (bitHasMode(self::$format, self::RENDER_XML)) {
+			$value = strEscapeXMLEntities($value);
+		}
 		
 		return $value;
 	}
@@ -484,15 +523,26 @@ class Response {
 		if (strpos($value, '[PARSE]') === false) {
 			return $value;
 		}
+		
+		/*
+		\[PARSE\]\[(\d+)\]((?:(?!\[-?PARSE\]).)*)\[-PARSE\] => Slow but readable
+		\[PARSE\]\[(\d+)\]((?>(?:(?>[^\[]+)|\[(?!-?PARSE\]))*))\[-PARSE\] => Fast but more complex
+		\[PARSE\]\[(\d+)\]([^\[]*(?:(?:\[(?!-?PARSE\]))[^\[]*)*)\[-PARSE\] => Fast but complex
+		*/
 					
-		$value = preg_replace_callback('/\[PARSE\]\[(\d+)\]((?:(?!\[-?PARSE\]).)*)\[-PARSE\]/', function($arr_match) {
-
-			$arr_settings = self::$arr_parse_delays[$arr_match[1]];
+		$value = preg_replace_callback('/\[PARSE\]\[(\d+)\]((?>(?:(?>[^\[]+)|\[(?!-?PARSE\]))*))\[-PARSE\]/', function($arr_match) {
+			
+			$parse_id = $arr_match[1];
+			$arr_settings = self::$arr_parse_delays[$parse_id];
 			
 			if (!$arr_settings) {
 				return '';
 			}
 			
+			if (self::$do_clear_parse) {
+				self::$arr_parse_delays[$parse_id] = null;
+			}
+
 			$function = $arr_settings['function'];
 			
 			if (isset($arr_settings['str'])) {
@@ -527,8 +577,14 @@ class Response {
 			return $value;
 		}
 		
-		$value = preg_replace_callback('/\[PARSE\+\]\[(\d+)\]((?:(?!\[-?PARSE\+\]).)*)\[-PARSE\+\]/', function($arr_match) {
-
+		/*
+		\[PARSE\+\]\[(\d+)\]((?:(?!\[-?PARSE\+\]).)*)\[-PARSE\+\] => Slow but readable
+		\[PARSE\+\]\[(\d+)\]((?>(?:(?>[^\[]+)|\[(?!-?PARSE\+\]))*))\[-PARSE\+\] => Fast but more complex
+		\[PARSE\+\]\[(\d+)\]([^\[]*(?:(?:\[(?!-?PARSE\+\]))[^\[]*)*)\[-PARSE\+\] => Fast but complex
+		*/
+		
+		$value = preg_replace_callback('/\[PARSE\+\]\[(\d+)\]((?>(?:(?>[^\[]+)|\[(?!-?PARSE\+\]))*))\[-PARSE\+\]/', function($arr_match) {
+			
 			$arr_options = self::$arr_parse_post_options[($arr_match[1] - 1)];
 			$str = self::decode($arr_match[2]);
 			
@@ -536,8 +592,8 @@ class Response {
 				
 				$str = strip_tags($str);
 				
-				if (self::$format & self::RENDER_HTML) {
-					$str = htmlspecialchars($str);
+				if (bitHasMode(self::$format, self::RENDER_HTML)) {
+					$str = strEscapeHTML($str);
 				}
 			}
 			if ($arr_options['case']) {
@@ -633,7 +689,23 @@ class Response {
 		return $value;
 	}
 	
-	public static function sendHeader($file, $download = true, $arr_headers = []) {
+	public static function addHeaders($arr_headers) {
+		
+		if (is_array($arr_headers)) {
+			static::$arr_headers = array_merge(static::$arr_headers, $arr_headers);
+		} else {
+			static::$arr_headers[] = $arr_headers;
+		}
+	}
+	
+	public static function sendHeaders() {
+	
+		foreach (static::$arr_headers as $header) {
+			header($header);
+		}
+	}
+	
+	public static function sendFileHeaders($file, $download = true, $arr_headers = []) {
 		
 		if ($file) {
 			
@@ -642,28 +714,32 @@ class Response {
 			} catch (Exception $e) {
 				$is_file = false;
 			}
-			$size = ($is_file ? filesize($file) : mb_strlen($file, '8bit'));
+			$num_size = ($is_file ? filesize($file) : mb_strlen($file, '8bit'));
 			
 			$filename = (!is_bool($download) ? $download : basename($file));
 			
-			if ($size) {
+			if ($num_size) {
 				
 				$finfo = new finfo(FILEINFO_MIME_TYPE);
 				
 				if ($is_file) {
 					
 					$type = $finfo->file($file);
+					
+					if ($type == 'text/plain') {
+						$type = (FileStore::getExtensionMIMEType(FileStore::getFilenameExtension($filename)) ?: $type);
+					}
 				} else {
 					
 					$type = FileStore::getExtensionMIMEType(FileStore::getFilenameExtension($filename));
 					
 					if (!$type) {
-						$finfo->buffer($file);
+						$type = $finfo->buffer($file);
 					}
 				}
 
 				header('Content-Type: '.$type);
-				header('Content-Length: '.$size);
+				header('Content-Length: '.$num_size);
 			}
 		} else {
 			
@@ -684,7 +760,7 @@ class Response {
 			header('Content-Type: '.$type);
 		}
 		
-		if ($download && (!$file || $file && $size)) {
+		if ($download && (!$file || $file && $num_size)) {
 
 			header('Content-Disposition: attachment; filename='.$filename);
 		}
@@ -702,7 +778,8 @@ class Response {
 				exit;
 			}, function() use ($url) {
 				
-				if (SiteStartVars::getRequestState() == 'api') {
+				if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_API) {
+					
 					header('Location: '.$url);
 					exit;
 				}

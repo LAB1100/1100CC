@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -36,7 +36,7 @@ class cms_admin extends base_module {
 	
 	public function contents() {
 
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div class="cms_admin">';
 		
 			$arr_backup_details = self::getModuleBackupDetails();
@@ -59,7 +59,6 @@ class cms_admin extends base_module {
 				<ul>
 					<li><a href="#">'.getLabel('lbl_backup').'</a></li>
 					<li><a href="#">'.getLabel('lbl_restore').'</a></li>
-					'.($_SESSION['CORE'] ? '<li><a href="#">'.getLabel('lbl_download').' 1100CC</a></li>' : '').'
 					'.($_SESSION['CORE'] ? '<li><a href="#">'.getLabel('lbl_update').' 1100CC</a></li>' : '').'
 				</ul>
 				
@@ -68,7 +67,7 @@ class cms_admin extends base_module {
 					<form id="f:cms_admin:backup-0">
 						
 						<div class="options">'
-							.'<select name="backup[]" multiple="multiple">'.cms_general::createDropdown($arr_backup_selector).'</select>'
+							.'<select name="backup[]" multiple="multiple"'.($arr_backup_selector ? ' size="'.count($arr_backup_selector).'"' : '').'>'.cms_general::createDropdown($arr_backup_selector).'</select>'
 						.'</div>
 						
 						<menu><input title="'.getLabel('inf_backup_download').'" name="download" type="submit" value="'.getLabel('lbl_download').'" /><input type="submit" value="'.getLabel('lbl_save').'" /></menu>
@@ -98,7 +97,7 @@ class cms_admin extends base_module {
 						</div>
 							
 						'.($_SESSION['CORE'] ? '<div>
-							<form id="f:cms_admin:upload_database-0">
+							<form id="f:cms_admin:upload_package-0">
 							
 								<div class="options">
 									'.cms_general::createFileBrowser().'
@@ -113,21 +112,6 @@ class cms_admin extends base_module {
 				</div>';
 				
 				if ($_SESSION['CORE']) {
-					
-					$return .= '<div>
-					
-						<form id="f:cms_admin:dump-0">
-							
-							<div class="options">'
-								.'<label><input type="checkbox" name="obfuscate[full]" value="1" /><span>'.getLabel('lbl_obfuscate').'</span></label>'
-								.'<label><input type="checkbox" name="obfuscate[classes]" value="1" /><span>'.getLabel('lbl_obfuscate').' [classes]</span></label>'
-								.'<label><input type="checkbox" name="storage_include" value="1" /><span>'.getLabel('lbl_storage').'</span></label>'
-							.'</div>
-							
-							<menu><input type="submit" value="'.getLabel('lbl_download').'" /></menu>
-						</form>
-						
-					</div>';
 					
 					$return .= '<div class="update">
 						
@@ -170,7 +154,7 @@ class cms_admin extends base_module {
 		
 		$arr_backup_files_filtered = [];
 		
-		foreach(($arr_backup_files ?: []) as $key => $value) {
+		foreach (($arr_backup_files ?: []) as $key => $value) {
 			$arr_backup_files_filtered[$key] = ['id' => $key, 'name' => $arr_backup_details[$key]['label']];
 		}
 		
@@ -183,7 +167,7 @@ class cms_admin extends base_module {
 		
 		$arr_backup_files_filtered_date = [];
 		
-		foreach(($arr_backup_files[$name] ?: []) as $key => $value) {
+		foreach (($arr_backup_files[$name] ?? []) as $key => $value) {
 			$arr_backup_files_filtered_date[$key] = ['id' => $key, 'name' => date('d-m-Y', strtotime($key))];
 		}
 		
@@ -196,7 +180,7 @@ class cms_admin extends base_module {
 		
 		$arr_backup_files_filtered_time = [];
 		
-		foreach(($arr_backup_files[$name][$date] ?: []) as $key => $value) {
+		foreach (($arr_backup_files[$name][$date] ?? []) as $key => $value) {
 			$arr_backup_files_filtered_time[$value] = ['id' => $value, 'name' => $key];
 		}
 
@@ -233,13 +217,17 @@ class cms_admin extends base_module {
 		// INTERACT
 		
 		
-		if ($method == 'upload_database' && $_SESSION['CORE']) {
+		if ($method == 'upload_package' && $_SESSION['CORE']) {
 			
 			if (!$_FILES['file']) {
 				error(getLabel('msg_missing_information'));
 			}
 			
-			self::uploadSQL($_FILES['file']['tmp_name']);
+			timeLimit(500);
+			
+			self::uploadPackage($_FILES['file']['tmp_name']);
+			
+			msg('1100CC data package (upload) has successfully been processed.');
 			
 			$this->msg = true;
 		}
@@ -275,6 +263,8 @@ class cms_admin extends base_module {
 			}
 		
 			if (!$do_download || ($do_download && $_POST['get-download'])) {
+				
+				timeLimit(false);
 
 				self::runBackup($arr_backup_identifiers, $do_download);
 			
@@ -346,26 +336,22 @@ class cms_admin extends base_module {
 				return false;
 			}
 			
-			self::uploadSQL($_POST['file']);
+			timeLimit(500);
+			
+			self::uploadPackage($_POST['file']);
+			
+			msg('1100CC data package (restore) has successfully been processed.');
 			
 			$this->msg = true;
 		}
-		
-		if ($method == "dump" && $_SESSION['CORE']) {
 				
-			if ($_POST['get-download']) {
-
-				self::runDump(['obfuscate' => $_POST['obfuscate'], 'storage_include' => (int)$_POST['storage_include']]);
-				
-				exit;
-			}
-			
-			$this->download = true;
-		}
-		
 		if ($method == "update" && $_SESSION['CORE']) {
-							
+			
+			timeLimit(false);
+			
 			self::runUpdate();
+			
+			msg('1100CC has successfully been updated.');
 			
 			$this->msg = true;
 			$this->html = $this->contentTabUpdate();
@@ -397,7 +383,7 @@ class cms_admin extends base_module {
 					continue;
 				}
 				
-				$arr_backup_details[$database] = ['label' => getLabel('lbl_unknown').' - '.$database, 'database' => $database, 'tables' => $arr_tables,  'download' => false];
+				$arr_backup_details[$database] = ['label' => getLabel('lbl_unknown').' - '.$database, 'database' => $database, 'tables' => $arr_tables, 'download' => false];
 			}
 		}
 
@@ -460,7 +446,7 @@ class cms_admin extends base_module {
 			$res = DB::query("SELECT
 				TABLE_NAME AS name
 					FROM information_schema.TABLES
-				WHERE TABLE_SCHEMA = '".$database."'
+				WHERE TABLE_SCHEMA = '".DBFunctions::strEscape($database)."'
 			");
 			
 			while ($arr_row = $res->fetchAssoc()) {
@@ -472,7 +458,7 @@ class cms_admin extends base_module {
 			
 				$path = DIR_SITE_STORAGE.DIR_BACKUP.'database-'.$identifier.'-'.time().'.zip';
 			
-				self::createSQL($arr_database_tables, false, $path);
+				self::createPackage(['sql' => ['database_tables' => $arr_database_tables]], $path);
 				
 				$arr_database_tables = [];
 			}
@@ -480,14 +466,20 @@ class cms_admin extends base_module {
 		
 		if ($download) { // Download all databases together (when applicable)
 			
-			self::createSQL($arr_database_tables);
+			$arr_file = self::createPackage(['sql' => ['database_tables' => $arr_database_tables]]);
+						
+			FileStore::readFile($arr_file['path'], $arr_file['filename'], true);
 		}
 	}
 	
-	public static function createSQL($arr_database_tables, $target_id = false, $path = false) {
+	public static function createPackage($arr, $str_path = false) {
 		
-		/*
-		$arr_database_tables = [
+		/*$arr = [
+			'sql' => ['database_tables' => [], 'target_id' => null],
+			'files' => []
+		];
+
+		database_tables = [
 			DATABASE:TO_DATABASE => [
 				['name' => DB::getTable('TABLE'), 'create' => bool, 'truncate' => bool, 'field' => 'from_id', 'on' => [
 					['to_id', DB::getTable('TABLE'), 'with_id']
@@ -496,15 +488,46 @@ class cms_admin extends base_module {
 		];
 		*/
 		
-		$archive = new FileArchive($path);
+		$archive = new FileArchive($str_path);
+				
+		$str_sql = 'NA';
+		$str_files = 'NA';
 		
+		if ($arr['sql']) {
+			
+			self::addPackageSql($archive, $arr['sql'], true);
+			
+			$str_sql = implode('-', array_keys($arr['sql']['database_tables'])).'-'.(int)$arr['sql']['target_id'];
+		}
+		
+		if ($arr['files']) {
+			
+			self::addPackageFiles($archive, $arr['files'], true);
+			
+			$str_files = count($arr['files']);
+		}
+		
+		$str_filename = 'package-sql-'.$str_sql.'-package-files-'.$str_files.'.1100CC';
+		$str_path = $archive->get();
+			
+		return ['path' => $str_path, 'filename' => $str_filename];
+	}
+	
+	public static function addPackageSql($archive, $arr_sql, $do_updates = false) {
+		
+		$arr_sql_database_tables = ($arr_sql['database_tables'] ?: []);
+		$sql_target_id = $arr_sql['target_id'];
+		$sql_target_id = ($sql_target_id === false ? null : $sql_target_id);
+
 		$path_dump = tempnam(Settings::get('path_temporary'), '1100CC');
 		
 		$arr_filenames = [];
-		
-		timeLimit(300);
+				
+		if ($do_updates) {
+			status('Storing: '.num2String(count($arr_sql_database_tables)).' databases.');
+		}
 
-		foreach ($arr_database_tables as $database => $arr_tables) {
+		foreach ($arr_sql_database_tables as $database => $arr_tables) {
 			
 			$arr_database = explode(':', $database);
 			$database_from = $arr_database[0];
@@ -518,8 +541,8 @@ class cms_admin extends base_module {
 					TABLE_NAME AS name,
 					TABLE_TYPE AS type
 						FROM information_schema.TABLES
-					WHERE TABLE_SCHEMA = '".$database_from."'
-						AND TABLE_NAME = '".($arr_table_name[1] ?: $arr_table_name[0])."'
+					WHERE TABLE_SCHEMA = '".DBFunctions::strEscape($database_from)."'
+						AND TABLE_NAME = '".DBFunctions::strEscape(($arr_table_name[1] ?: $arr_table_name[0]))."'
 				");
 				
 				$arr_sql_table = $res->fetchAssoc();
@@ -536,6 +559,14 @@ class cms_admin extends base_module {
 				$sql_table_name = DB::getTable($table_name); // Parse for processing
 				$sql_table_name_print = DB::getTable($table_name_to);
 				
+				DB::setDatabase($database_from);
+				
+				if (DB::ENGINE_IS_MYSQL) {
+					DB::query('USE '.$database_from);
+				} else {
+					DB::query('SET search_path TO '.$database_from);
+				}
+				
 				if ($arr_table['create']) {
 						
 					$return = 'DROP '.($arr_sql_table['type'] == 'VIEW' ? 'VIEW' : 'TABLE').' IF EXISTS '.$sql_table_name_print.";\n\n";
@@ -550,8 +581,6 @@ class cms_admin extends base_module {
 				}
 							
 				if ($arr_sql_table['type'] != 'VIEW') {
-						
-					DB::setDatabase($database_from);
 
 					$sql = 'SELECT DISTINCT table_0.* FROM '.$sql_table_name.' AS table_0';
 
@@ -569,9 +598,9 @@ class cms_admin extends base_module {
 						}
 					}
 					
-					if ($target_id !== false) {
+					if ($sql_target_id !== null) {
 						
-						$sql .= ' WHERE table_'.($count-1).'.'.$arr_on_prev[2].' = '.(int)$target_id;
+						$sql .= ' WHERE table_'.($count-1).'.'.$arr_on_prev[2].' = '.(int)$sql_target_id;
 					}
 					
 					$res = DB::query($sql);
@@ -645,9 +674,9 @@ class cms_admin extends base_module {
 					}
 					
 					$res->freeResult();
-					
-					DB::setDatabase();
 				}
+				
+				DB::setDatabase();
 
 				fclose($file_dump);
 
@@ -662,212 +691,129 @@ class cms_admin extends base_module {
 					$arr_filenames[$filename] = 1;
 				}
 
-				$archive->add([$filename => $path_dump]);
+				$archive->add(['sql/'.$filename => $path_dump]);
+				
+				if ($do_updates) {
+					status('Table stored: '.$filename.'.');
+				}
 			}
-		}
-		
-		if (!$path) {
-			
-			$archive->read('databases-'.implode('-', array_keys($arr_database_tables)).'-'.(int)$target_id.'.zip');
 		}
 	}
 	
-	public static function uploadSQL($path) {
+	public static function addPackageFiles($archive, $arr_files, $do_updates = false) {
+		
+		$arr_files_collect = [];
+		
+		$num_total = count($arr_files);
+		$num_count = 0;
+		
+		if ($do_updates) {
+			status('Storing: '.num2String($num_total).' files.');
+		}
+		
+		foreach ($arr_files as $path_file) {
+			
+			$path_source = DIR_ROOT_STORAGE.DIR_HOME.$path_file;
+			
+			if (!isPath($path_source)) {
+				continue;
+			}
+			
+			$arr_files_collect['files/'.$path_file] = $path_source;
+			
+			$num_count++;
+			
+			if ($do_updates && ($num_count % 10) == 0) {
+				status('Files stored: '.num2String($num_count).' of '.num2String($num_total).'.');
+			}
+		}
+		
+		$archive->add($arr_files_collect);
+	}
+	
+	public static function uploadPackage($path) {
 		
 		$zip = new ZipArchive();
 		
 		$zip->open($path);
-
+		
 		for ($i = 0; $i < $zip->numFiles; $i++) {
 			
 			$entry = $zip->getNameIndex($i);
 			
 			$arr_entry = explode('/', $entry);
 			
-			$database = $arr_entry[0];
-			
-			DB::setDatabase($database);
-			
-			$file = fopen('zip://'.$path.'#'.$entry, 'r');
-
-			$sql = '';
-			$count = 0;
-			$arr_row = [];
-			
-			DB::startTransaction('cms_admin_sql');
-			
-			while (!feof($file)) {
+			if ($arr_entry[0] == 'sql') {
 				
-				$arr_row[] = fgets($file);
+				$database = $arr_entry[1];
 				
-				// Match the end of the query defined by a ';'
-				if (preg_match('/;\s*$/iS', end($arr_row))) {
+				self::uploadPackageSql($database, 'zip://'.$path.'#'.$entry);
+			} else if ($arr_entry[0] == 'files') {
 				
-					$sql .= trim(implode('', $arr_row));
-			
-					$arr_row = [];
-					$count++;
-					
-					if ($count > 1000) {
-						
-						DB::queryMulti($sql);
-						
-						$sql = '';
-						$count = 0;
-					}
-				}
-			}
-			
-			if ($sql) {
+				$path_file = implode('/', array_slice($arr_entry, 1));
 				
-				DB::queryMulti($sql);
-			}
-			
-			DB::commitTransaction('cms_admin_sql');
-
-			DB::setDatabase();
-			
-			fclose($file);
-		}
-	}
-		
-	private static function runDump($arr_options = []) {
-
-		$archive = new FileArchive();
-		$dump = new PhpDump();
-		
-		$dump->removecomments = true;
-		if ($arr_options['obfuscate']) {
-			$dump->obfuscateclass = true;
-			$dump->obfuscatefunction = true;
-			$dump->obfuscatevariable = true;
-			$dump->addPredefinedObject(['JSON']);
-			$dump->addPredefinedClassVariable(['firstChild', 'lastChild', 'parentNode', 'strictErrorChecking', 'length']); // DOMDocument not showing properties bug
-		}
-		$dump->init();
-		
-		$arr_php = [];
-		$arr_module_files = [];
-		
-		foreach ([SiteStartVars::$modules, getModules(DIR_HOME)] as $arr_modules) {
-			
-			foreach ($arr_modules as $class => $value) {
-				
-				$arr_module_files[$class] = $value['file'];
+				self::uploadPackageFile($path_file, 'zip://'.$path.'#'.$entry);
 			}
 		}
-		
-		timeLimit(120);
-		
-		$arr_folders = ['CORE', SITE_NAME];
-		if ($arr_options['storage_include']) {
-			$arr_folders[] = DIR_STORAGE.SITE_NAME;
-		}
-		
-		foreach ($arr_folders as $core_site_storage) {
-
-			$dir = DIR_ROOT.$core_site_storage.'/';
-			$dir_it = new RecursiveDirectoryIterator($dir);
-			$it = new RecursiveIteratorIterator($dir_it);
-
-			foreach ($it as $file) {
-				
-				if (!$file->isFile()) {
-					continue;
-				}
-				
-				$file_path = $file->getPathname();
-				$zip_path = $core_site_storage.'/'.substr($file_path, strlen($dir));
-				
-				if ($file->getExtension() != 'php') {
-					$archive->add([$zip_path => $file_path]);
-				} else {
-
-					$do_add = false;
-					
-					// Only add from modules and catalog folder when used
-					if ((self::inDir($file->getPath(), $dir.DIR_MODULES) || self::inDir($file->getPath(), $dir.DIR_CMS.DIR_MODULES)) && !self::inDir($file->getPath(), DIR_MODULES.DIR_MODULES_ABSTRACT)) {
-
-						$class = array_search($file->getFilename(), $arr_module_files);
-						if ($class) {
-							$dump->addPredefinedClass($class);
-							$do_add = true;
-						}
-					} else {
-						$do_add = true;
-					}
-					
-					if ($do_add) {
-						$arr_php[$zip_path] = $file_path;
-					}
-				}
-			}
-		}
-		
-		// Pre-run to find all classes and functions
-		if ($arr_options['obfuscate']) {
-			
-			foreach ($arr_php as $zip_path => $file_path) {
-				
-				$dir_name = self::dirName($file_path).'/';
-				
-				if ($arr_options['obfuscate']['classes'] && $dir_name != DIR_CLASSES) {
-					continue;
-				}
-
-				$dump->prerun($file_path);
-			}
-			
-			$dump->obfuscateclass = false;
-			$dump->obfuscatefunction = false;
-			$dump->obfuscatevariable = false;
-		}
-		
-		$dump->resetUsedClasses();
-		
-		// Start dump
-		$arr_php_classes = [];
-		
-		foreach ($arr_php as $zip_path => $file_path) {
-		
-			$dir_name = self::dirName($file_path).'/';
-
-			if ($dir_name == DIR_CLASSES || $dir_name == DIR_MODULES_ABSTRACT) {
-				$arr_php_classes[$zip_path] = $file_path;
-				continue;
-			}
-
-			$content = $dump->trash($file_path);
-			
-			$archive->add([$zip_path => $content]);
-		}
-		
-		// Only add from classes and base folder when used
-		$used = true;
-		while ($used) {
-		
-			$used = false;
-			
-			foreach ($arr_php_classes as $zip_path => $file_path) {
-			
-				$class = basename($file_path, '.php');
-				
-				if ($dump->isUsedClass($class) && $class != 'PhpDump') {
-
-					$zip_path_new = ($dump->returnClass($class) ? dirname($zip_path).'/'.$dump->returnClass($class).'.php' : $zip_path);
-					$content = $dump->trash($file_path);
-					
-					$archive->add([$zip_path_new => $content]);
-					
-					$used = true;
-					unset($arr_php_classes[$zip_path]);
-				}
-			}
-		}
-		
-		$archive->read('dump-'.SITE_NAME.'-'.date('dmY-His').'.zip');
 	}
 	
+	public static function uploadPackageSql($database, $str_resource) {
+		
+		DB::setDatabase($database);
+		
+		if (DB::ENGINE_IS_MYSQL) {
+			DB::query('USE '.$database);
+		} else {
+			DB::query('SET search_path TO '.$database);
+		}
+		
+		$file = fopen($str_resource, 'r');
+
+		$sql = '';
+		$count = 0;
+		$arr_row = [];
+				
+		DB::startTransaction('cms_admin_sql');
+		
+		while (!feof($file)) {
+			
+			$arr_row[] = fgets($file);
+			
+			// Match the end of the query defined by a ';'
+			if (preg_match('/;\s*$/iS', end($arr_row))) {
+			
+				$sql .= trim(implode('', $arr_row));
+		
+				$arr_row = [];
+				$count++;
+				
+				if ($count > 1000) {
+					
+					DB::queryMulti($sql);
+					
+					$sql = '';
+					$count = 0;
+				}
+			}
+		}
+		
+		if ($sql) {
+			
+			DB::queryMulti($sql);
+		}
+		
+		DB::commitTransaction('cms_admin_sql');
+
+		DB::setDatabase();
+		
+		fclose($file);
+	}
+	
+	public static function uploadPackageFile($path, $str_resource) {
+		
+		FileStore::storeFile(DIR_ROOT_STORAGE.DIR_HOME.$path, file_get_contents($str_resource));
+	}
+		
 	private static function runUpdate() {
 		
 		$path_update = DIR_ROOT_SETTINGS.DIR_HOME.self::$path_update;
@@ -876,9 +822,7 @@ class cms_admin extends base_module {
 				
 			error(getLabel('msg_not_available'));
 		}
-		
-		set_time_limit(0);
-		
+				
 		try {
 			
 			require($path_update);		
@@ -887,25 +831,6 @@ class cms_admin extends base_module {
 			error('1100CC Update Failed', 0, LOG_BOTH, false, $e);
 		}
 		
-		msg('1100CC Successfully Updated');
-		
 		unlink($path_update);
-	}
-	
-	private static function inDir($path, $dir) {
-
-		return (strpos(rtrim(self::fixPath($path), '/'), rtrim(self::fixPath($dir), '/')) !== false);
-	}
-	
-	private static function dirName($path) {
-	
-		$arr_path = explode('/', self::fixPath($path));
-			
-		return $arr_path[count($arr_path)-2];
-	}
-	
-	private static function fixPath($path) {
-		
-		return str_replace('\\', '/', $path);
 	}
 }

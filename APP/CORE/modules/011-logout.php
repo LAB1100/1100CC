@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -22,6 +22,8 @@ class logout extends base_module {
 	}
 
 	public function contents() {
+		
+		$return = '';
 	
 		if ($_SESSION['USER_ID']) {
 		
@@ -32,8 +34,8 @@ class logout extends base_module {
 				$unread_count = messaging::getUnreadMessages();
 			}
 			
-			$domain = htmlspecialchars(($_SESSION['CUR_USER'][DB::getTableName('VIEW_USER_PARENT')]['parent_name'] ?: $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_GROUPS')]['name']));
-			$name = htmlspecialchars($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name']);
+			$domain = strEscapeHTML(($_SESSION['CUR_USER'][DB::getTableName('VIEW_USER_PARENT')]['parent_name'] ?: $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_GROUPS')]['name']));
+			$name = strEscapeHTML($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name']);
 
 			$return .= '<ul>';
 			$return .= '<li class="info"><div><span title="'.$domain.'">'.$domain.'</span><span title="'.$name.'">'.$name.'</span></div></li>';

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -52,7 +52,7 @@ class DB extends DBBase {
 				case 1040:
 				case 1203:
 				case 2002:
-					if (SiteStartVars::getRequestState() == 'index') {
+					if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX) {
 						error('Too many users. Please press the refresh button in your browser to retry.');
 					} else {
 						error('The server load is very high at the moment.');
@@ -353,7 +353,9 @@ class DBResult extends DBResultBase {
 class DBFunctions extends DBFunctionsBase {
 	
 	const CAST_TYPE_INTEGER = 'INTEGER';
+	const CAST_TYPE_DECIMAL = 'DECIMAL';
 	const CAST_TYPE_STRING = 'VARCHAR';
+	const CAST_TYPE_BOOLEAN = 'BOOLEAN';
 	const CAST_TYPE_BINARY = 'BYTEA';
 			
 	public static function strEscape($str) {
@@ -383,12 +385,27 @@ class DBFunctions extends DBFunctionsBase {
 			case static::TYPE_BOOLEAN:
 				$value = ($value === 't' ? true : false);
 				break;
+			case static::TYPE_INTEGER:
+				$value = (int)$value;
+				break;
+			case static::TYPE_FLOAT:
+				$value = (float)$value;
+				break;
 			case static::TYPE_BINARY:
 				$value = ($value ? hex2bin(substr($value, 2)) : ''); // Remove \x;
 				break;
 		}
 		
 		return $value;
+	}
+	
+	public static function castAs($value, $what, $length = false) {
+		
+		if (!$what) {
+			return $value;
+		}
+		
+		return 'CAST('.$value.' AS '.$what.')';
 	}
 						
 	public static function sqlImplode($expression, $separator = ', ', $clause = false) {
@@ -442,6 +459,30 @@ class DBFunctions extends DBFunctionsBase {
 		return $sql;
 	}
 	
+	public static function timeDifference($unit, $field_start, $field_end) {
+		
+		$sql_adjust = '';
+		
+		switch ($unit) {
+			case 'MICROSECOND':
+				$sql_adjust = ' * 1000 * 1000';
+				break;
+			case 'MILLISECOND':
+				$sql_adjust = ' * 1000';
+				break;
+			case 'SECOND':
+				$sql_adjust = '';
+				break;
+			case 'MINUTE':
+				$sql_adjust = ' / 60';
+				break;
+		}
+		
+		$sql = 'EXTRACT(EPOCH FROM ('.$field_end.' - '.$field_start.'))'.$sql_adjust;
+		
+		return $sql;
+	}
+	
 	public static function regexpMatch($sql, $expression, $flags = false) {
 		
 		return $sql.' ~ \''.$expression.'\'';
@@ -464,12 +505,23 @@ class DBFunctions extends DBFunctionsBase {
 
 		DB::query('DECLARE "'.$identifier.'_cursor" NO SCROLL CURSOR FOR ('.$q.')');
 		
-		$res = pg_prepare(DB::$connection_active, $identifier, 'FETCH NEXT FROM "'.$identifier.'_cursor"');
+		/*$res = pg_prepare(DB::$connection_active, $identifier, 'FETCH NEXT FROM "'.$identifier.'_cursor"');
+		$arr_parameters = [];
+
+		while ($arr_row = pg_fetch_row(pg_execute(DB::$connection_active, $identifier, $arr_parameters))) {
+				
+			yield $arr_row;
+		}*/
+		
+		$res = pg_prepare(DB::$connection_active, $identifier, 'FETCH FORWARD 1000 FROM "'.$identifier.'_cursor"');
 		$arr_parameters = [];
 		
-		while ($arr_row = pg_fetch_row(pg_execute(DB::$connection_active, $identifier, $arr_parameters))) {
+		while ($res = pg_execute(DB::$connection_active, $identifier, $arr_parameters)) {
 			
-			yield $arr_row;
+			while ($arr_row = pg_fetch_row($res)) {
+				
+				yield $arr_row;
+			}
 		}
 		
 		DB::query('DEALLOCATE "'.$identifier.'"');

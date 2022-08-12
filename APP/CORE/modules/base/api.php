@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -19,7 +19,7 @@ abstract class api extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select name="api_id">'.cms_general::createDropdown(apis::getAPIs()).'</select>';
+		$return = '<select name="api_id">'.cms_general::createDropdown(apis::getAPIs()).'</select>';
 		
 		return $return;
 	}
@@ -78,7 +78,7 @@ abstract class api extends base_module {
 						<tr>
 							<th title="'.getLabel('lbl_enabled').'">E</th>
 							'.($this->mode == 'child-child' ? '<th>'.getLabel('lbl_user').'</th>' : '').'
-							<th class="max">'.getLabel('lbl_name').'</th>
+							<th class="max" data-sort="asc-0">'.getLabel('lbl_name').'</th>
 							<th class="limit">'.getLabel('lbl_identifier').'</th>
 							<th class="limit">'.getLabel('lbl_passkey').' (secret)</th>
 							<th class="disable-sort">'.getLabel('lbl_users').'</th>
@@ -101,7 +101,7 @@ abstract class api extends base_module {
 						<tr>
 							<th title="'.getLabel('lbl_enabled').'">E</th>
 							'.($this->mode == 'child-child' ? '<th>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user').'</th>' : '').'
-							'.($this->mode == 'child-child' ? '<th class="max">'.getLabel('lbl_api_client').' - '.getLabel('lbl_name').'</th>' : '<th class="max">'.getLabel('lbl_api_client').'</th>').'
+							<th class="max" data-sort="asc-0">'.($this->mode == 'child-child' ? getLabel('lbl_api_client').' - '.getLabel('lbl_name') : getLabel('lbl_api_client')).'</th>
 							'.($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child' ? '<th>'.getLabel('lbl_user').'</th>' : '').'
 							<th class="limit">'.getLabel('lbl_passkey').' (token)</th>
 							<th>'.getLabel('lbl_date_start').'</th>
@@ -124,7 +124,7 @@ abstract class api extends base_module {
 	
 	private function createAddClient() {
 	
-		$return .= '<form id="f:'.static::class.':add_client-0" class="options">
+		$return = '<form id="f:'.static::class.':add_client-0" class="options">
 			<menu>
 				<input type="submit" value="'.getLabel('lbl_add').' '.getLabel('lbl_api_client').'" />
 			</menu>
@@ -135,14 +135,16 @@ abstract class api extends base_module {
 		
 	private function createFormClient($client_id = 0) {
 		
-		if ($client_id) {		
+		$arr_client = [];
+		
+		if ($client_id) {
 			
 			$this->checkValidClientId($client_id);
 					
 			$arr_client = apis::getClient($client_id);
 		}
 						
-		$return .= '<div class="options fieldsets"><div>
+		$return = '<div class="options fieldsets"><div>
 			<fieldset><legend>'.getLabel('lbl_api_client').'</legend><ul>
 				<li>
 					<label>'.getLabel('lbl_active').'</label>
@@ -156,7 +158,7 @@ abstract class api extends base_module {
 				}
 				$return .= '<li>
 					<label>'.getLabel('lbl_name').'</label>
-					<div><input type="text" name="name" value="'.htmlspecialchars($arr_client['name']).'" /></div>
+					<div><input type="text" name="name" value="'.strEscapeHTML($arr_client['name']).'" /></div>
 				</li>
 				<li>
 					<label>'.getLabel('lbl_valid_period').'</label>
@@ -192,7 +194,7 @@ abstract class api extends base_module {
 			$str_time_amount = '∞';	
 		}	
 		
-		$return = '<h2>'.($this->mode == 'child-child' ? htmlspecialchars($arr_client['user_name']).' - ' : '').htmlspecialchars($arr_client['name']).'</h2>';
+		$return = '<h2>'.($this->mode == 'child-child' ? strEscapeHTML($arr_client['user_name']).' - ' : '').strEscapeHTML($arr_client['name']).'</h2>';
 
 		$return .= '<div class="record"><dl>
 			<li>
@@ -201,11 +203,11 @@ abstract class api extends base_module {
 			</li>
 			<li>
 				<dt>'.getLabel('lbl_identifier').'</dt>
-				<dd><pre>'.htmlspecialchars($arr_client['id']).'</pre></dd>
+				<dd><pre>'.strEscapeHTML($arr_client['id']).'</pre></dd>
 			</li>
 			<li>
 				<dt>'.getLabel('lbl_passkey').' (secret)</dt>
-				<dd><pre>'.htmlspecialchars($arr_client['secret']).'</pre></dd>
+				<dd><pre>'.strEscapeHTML($arr_client['secret']).'</pre></dd>
 			</li>
 		</dl></div>';
 		
@@ -216,6 +218,8 @@ abstract class api extends base_module {
 		
 		$this->checkValidClientId($client_id);
 		
+		$arr_client_user = [];
+		
 		if ($user_id) {
 			
 			$this->checkValidUserId(false, $user_id);
@@ -224,7 +228,7 @@ abstract class api extends base_module {
 			
 		$arr_client = apis::getClient($client_id);
 		
-		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == 'child-child' ? htmlspecialchars($arr_client['user_name']).' - ' : '').htmlspecialchars($arr_client['name']).'</h2>
+		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == 'child-child' ? strEscapeHTML($arr_client['user_name']).' - ' : '').strEscapeHTML($arr_client['name']).'</h2>
 		
 		<div class="options">
 			
@@ -275,13 +279,13 @@ abstract class api extends base_module {
 		
 		$arr_client_user = apis::getClientUser($client_id, $user_id);
 		
-		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == 'child-child' ? htmlspecialchars($arr_client_user['client_user_name']).' - ' : '').htmlspecialchars($arr_client_user['client_name']).'</h2>';
+		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == 'child-child' ? strEscapeHTML($arr_client_user['client_user_name']).' - ' : '').strEscapeHTML($arr_client_user['client_name']).'</h2>';
 			
 		$return .= '<div class="record"><dl>';
 			if ($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child') {
 				$return .= '<li>
 					<dt>'.getLabel('lbl_user').'</dt>
-					<dd>'.htmlspecialchars($arr_client_user['user_name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client_user['user_name']).'</dd>
 				</li>';
 			}
 			$return .= '<li>
@@ -294,7 +298,7 @@ abstract class api extends base_module {
 			</li>
 			<li>
 				<dt>'.getLabel('lbl_passkey').' (token)</dt>
-				<dd><pre>'.htmlspecialchars($arr_client_user['token']).'</pre></dd>
+				<dd><pre>'.strEscapeHTML($arr_client_user['token']).'</pre></dd>
 			</li>
 		</dl></div>';
 		
@@ -823,7 +827,7 @@ abstract class api extends base_module {
 			$sql_user = "ac_u.id != ".$_SESSION['USER_ID'];
 		}
 
-		$check = DB::query("SELECT ac.id
+		$res_check = DB::query("SELECT ac.id
 				FROM ".DB::getTable('SITE_API_CLIENTS')." ac
 				LEFT JOIN ".DB::getTable('TABLE_USERS')." ac_u ON (ac_u.id = ac.user_id)
 			WHERE ac.id IN (".$sql_in.")
@@ -834,7 +838,7 @@ abstract class api extends base_module {
 				)
 		");
 		
-		if ($check->getRowCount()) {
+		if ($res_check->getRowCount()) {
 			error(getLabel('msg_not_allowed'));
 		}	
 	}
@@ -844,16 +848,16 @@ abstract class api extends base_module {
 		if ($client_user_id) {
 			
 			if ($this->mode == 'parent-parent' || $this->mode == 'parent-user' || $this->mode == 'parent-child') {
-				$check = ($client_user_id == $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']);
+				$is_valid = ($client_user_id == $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']);
 			} else if ($this->mode == 'root-child') {
-				$check = ($client_user_id == 0);
+				$is_valid = ($client_user_id == 0);
 			} else if ($this->mode == 'child-child') {
-				$check = user_management::checkUserIds($client_user_id, $_SESSION['USER_ID'], 'parent');
+				$is_valid = user_management::checkUserIds($client_user_id, $_SESSION['USER_ID'], 'parent');
 			} else {
-				$check = ($client_user_id == $_SESSION['USER_ID']);
+				$is_valid = ($client_user_id == $_SESSION['USER_ID']);
 			}
 			
-			if (!$check) {
+			if (!$is_valid) {
 				error(getLabel('msg_not_allowed'));
 			}
 		} else {
@@ -861,16 +865,16 @@ abstract class api extends base_module {
 			foreach ((array)$client_user_user_id as $user_id) {
 				
 				if ($this->mode == 'parent-parent') {
-					$check = ($user_id == $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']);
+					$is_valid = ($user_id == $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']);
 				} else if ($this->mode == 'parent-child') {
-					$check = user_management::checkUserIds($user_id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'], 'parent');
+					$is_valid = user_management::checkUserIds($user_id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'], 'parent');
 				} else if ($this->mode == 'user-child' || $this->mode == 'child-child') {
-					$check = user_management::checkUserIds($user_id, $_SESSION['USER_ID'], 'parent');
+					$is_valid = user_management::checkUserIds($user_id, $_SESSION['USER_ID'], 'parent');
 				} else {
-					$check = ($user_id == $_SESSION['USER_ID']);
+					$is_valid = ($user_id == $_SESSION['USER_ID']);
 				}
 				
-				if (!$check) {
+				if (!$is_valid) {
 					error(getLabel('msg_not_allowed'));
 				}
 			}

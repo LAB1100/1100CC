@@ -2,14 +2,14 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class HomeLogin {
 	
-	static public function index() {
+	public static function index() {
 		
 		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER']);
 		
@@ -18,7 +18,7 @@ class HomeLogin {
 			unset($_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID']);
 			
 			Response::location(SiteStartVars::getBasePath(1, false));
-		} else if ($_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID'] && !isset($_POST['login_ww']) && !isset($_POST['login_user'])) {
+		} else if (!empty($_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID']) && !isset($_POST['login_user']) && !isset($_POST['login_ww'])) {
 					
 			self::updateLogin();
 		} else if (SiteStartVars::$user_group && isset($_POST['login_user']) && isset($_POST['login_ww'])) {
@@ -30,7 +30,7 @@ class HomeLogin {
 		}
 	}
 	
-	static public function API($token) {
+	public static function API($token) {
 		
 		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER']);
 		
@@ -57,6 +57,8 @@ class HomeLogin {
 				if (!$arr_api_client_user['date_valid'] || strtotime($arr_api_client_user['date_valid']) > time()) {
 				
 					$user = self::checkUser($arr_api_client_user['user_id']);
+					
+					return $arr_api_client_user;
 				} else {
 				
 					error(getLabel('msg_access_denied').' The token is expired.', TROUBLE_ACCESS_DENIED, LOG_CLIENT);
@@ -71,23 +73,25 @@ class HomeLogin {
 			
 			error(getLabel('msg_access_denied'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
 		}
+		
+		return false;
 	}
 			
-	static private function toLogin($error = false) {
+	private static function toLogin($error = false) {
 		
 		$arr_page = pages::getPages(SiteStartVars::$login_dir['page_fallback_id']);
 
 		if (SiteStartVars::$dir['path'] != SiteStartVars::$login_dir['path'] || SiteStartVars::$page['name'] != $arr_page['name']) {
 		
 			if (!$error) {
-				$_SESSION['RETURN_TO'] = ($_SERVER['PATH_VIRTUAL'] ?: $_SERVER['PATH_INFO']);
+				$_SESSION['RETURN_TO'] = (!empty($_SERVER['PATH_VIRTUAL']) ? $_SERVER['PATH_VIRTUAL'] : $_SERVER['PATH_INFO']);
 			}
 			
-			Response::location(BASE_URL.ltrim(SiteStartVars::$login_dir['path'], '/').(SiteStartVars::$login_dir['path'] ? '/' : '').$arr_page['name'].'.p'.($error ? '/LOGIN_INCORRECT' : ''));
+			Response::location(URL_BASE.ltrim(SiteStartVars::$login_dir['path'], '/').(SiteStartVars::$login_dir['path'] ? '/' : '').$arr_page['name'].'.p'.($error ? '/LOGIN_INCORRECT' : ''));
 		}
 	}
 		
-	static private function updateLogin() {
+	private static function updateLogin() {
 		
 		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID'], true);
 		
@@ -120,9 +124,12 @@ class HomeLogin {
 		}
 	}
 		
-	static private function checkLogin($username, $password) {
+	private static function checkLogin($username, $password) {
 	
 		SiteStartVars::checkCookieSupport();
+		
+		$username = (is_string($username) ? $username : '');
+		$password = (is_string($password) ? $password : '');
 		
 		$check = Log::checkRequest('login_home', $username, 10, ['identifier' => 5, 'ip' => 25, 'ip_block' => 100, 'global' => 300]);
 		
@@ -183,7 +190,7 @@ class HomeLogin {
 		}
 	}
 	
-	static private function checkUser($user_id) {
+	private static function checkUser($user_id) {
 	
 		$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_USERS')."
 			WHERE enabled = TRUE

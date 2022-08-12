@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class images extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select name="tag_id">';
+		$return = '<select name="tag_id">';
 		$return .= cms_general::createDropdown(cms_media::getMediaTags());
 		$return .= '</select>';
 		$return .= '<select name="columns">';
@@ -32,13 +32,14 @@ class images extends base_module {
 		
 		$arr_media = cms_media::getMedia(false, $this->arr_variables['tag_id']);
 		
-		$return .= '<div class="album" data-lazyload="1"><table>';
+		$return = '<div class="album" data-lazyload="1"><table>';
 			
 			$count = 0;
+			$num_columns = ($this->arr_variables['columns'] ?? 1);
 			
 			foreach ($arr_media as $arr_element) {
 				
-				if (!($count % $this->arr_variables['columns'])) {
+				if (!($count % $num_columns)) {
 					$return .= '<tr>';
 				}
 				
@@ -49,13 +50,13 @@ class images extends base_module {
 
 				$count++;
 				
-				if (!($count % $this->arr_variables['columns'])) {
+				if (!($count % $num_columns)) {
 					
 					$return .= '</tr>';
 				}
 			}
 			
-			if (($count % $this->arr_variables['columns'])) {
+			if (($count % $num_columns)) {
 				$return .= '</tr>';
 			}
 			
@@ -66,7 +67,7 @@ class images extends base_module {
 	
 	public static function css() {
 		
-		$return .= '.images { }
+		$return = '.images { }
 			.images > .album > table { width: 100%; border-spacing: 10px 10px; }
 			.images > .album > table td { vertical-align: top; text-align: center; }
 			.images > .album > table td img[data-original] { background-color: #f5f5f5; width: 100%; height: 150px; }
@@ -78,7 +79,7 @@ class images extends base_module {
 	
 	public static function js() {
 	
-		$return .= "";
+		$return = "";
 		
 		return $return;
 	}

@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -48,9 +48,20 @@ $(document).on('click', 'img.enlarge', function() {
 		return false;
 	}
 	
-	var str_url = LOCATION.getOriginalUrl(this.getAttribute('src'));
+	const elm_source = this;
 	
-	new Overlay(document.body, '<img src="'+str_url+'" />', {sizing: 'fit-width'});
+	const str_url = LOCATION.getOriginalUrl(elm_source.getAttribute('src'));
+	const elm_img = document.createElement('img');
+
+	elm_img.src = str_url;
+	if (elm_source.dataset.native_width) {
+		elm_img.width = elm_source.dataset.native_width;
+	}
+	if (elm_source.dataset.native_height) {
+		elm_img.height = elm_source.dataset.native_height;
+	}
+	
+	new Overlay(document.body, elm_img, {sizing: 'fit-width'});
 }).on('click', '[id^=y\\\:cms_general\\\:set_language-]', function() {
 	
 	$(this).quickCommand();

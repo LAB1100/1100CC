@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,15 +16,15 @@ class intf_api_authentication extends apis {
 
 	public function contents() {
 		
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div>';
 		
 			$arr_apis = self::getAPIs();
 
 			if (!$arr_apis) {
-				$msg = getLabel('msg_no', 'L', true);
-				
+
 				Labels::setVariable('name', getLabel('lbl_apis'));
+				$msg = getLabel('msg_no', 'L', true);
 				
 				$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
 			} else {
@@ -111,7 +111,7 @@ class intf_api_authentication extends apis {
 	
 	public static function js() {
 	
-		$return .= "SCRIPTER.static('#mod-intf_api_authentication', function(elm_scripter) {
+		$return = "SCRIPTER.static('#mod-intf_api_authentication', function(elm_scripter) {
 		
 			elm_scripter.on('change', 'form input', function() {
 			
@@ -175,7 +175,11 @@ class intf_api_authentication extends apis {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_client['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_client['name']).'" /></div>
+					</li>
+					<li>
+						<label>'.getLabel('lbl_request_limit').'</label>
+						<div>'.cms_general::createSelectorRadio([['id' => '0', 'name' => getLabel('lbl_yes')], ['id' => '1', 'name' => getLabel('lbl_no')]], 'request_limit_disable', ($arr_client['request_limit_disable'] ? '1' : '0')).'</div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_valid_period').'</label>
@@ -195,7 +199,7 @@ class intf_api_authentication extends apis {
 			
 			$this->html = $return;
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		if (($method == "edit_client_user" || $method == "add_client_user") && $id) {
@@ -232,15 +236,15 @@ class intf_api_authentication extends apis {
 				<div class="record"><dl>
 					<li>
 						<dt>'.getLabel('lbl_api').'</dt>
-						<dd>'.htmlspecialchars($arr_client['api_name']).'</dd>
+						<dd>'.strEscapeHTML($arr_client['api_name']).'</dd>
 					</li>
 					<li>
 						<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user').'</dt>
-						<dd>'.htmlspecialchars($arr_client['user_name']).'</dd>
+						<dd>'.strEscapeHTML($arr_client['user_name']).'</dd>
 					</li>
 					<li>
 						<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_name').'</dt>
-						<dd>'.htmlspecialchars($arr_client['name']).'</dd>
+						<dd>'.strEscapeHTML($arr_client['name']).'</dd>
 					</li>
 				</dl></div>
 				
@@ -275,7 +279,7 @@ class intf_api_authentication extends apis {
 			
 			$this->html = $return;
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		if ($method == "view_client") {
@@ -293,15 +297,19 @@ class intf_api_authentication extends apis {
 			$this->html = '<div class="record"><dl>
 				<li>
 					<dt>'.getLabel('lbl_api').'</dt>
-					<dd>'.htmlspecialchars($arr_client['api_name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client['api_name']).'</dd>
 				</li>
 				<li>
 					<dt>'.getLabel('lbl_user').'</dt>
-					<dd>'.htmlspecialchars($arr_client['user_name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client['user_name']).'</dd>
 				</li>
 				<li>
 					<dt>'.getLabel('lbl_name').'</dt>
-					<dd>'.htmlspecialchars($arr_client['name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client['name']).'</dd>
+				</li>
+				<li>
+					<dt>'.getLabel('lbl_request_limit').'</dt>
+					<dd>'.($arr_client['request_limit_disable'] ? getLabel('lbl_no') : getLabel('lbl_yes')).'</dd>
 				</li>
 				<li>
 					<dt>'.getLabel('lbl_valid_period').'</dt>
@@ -312,11 +320,11 @@ class intf_api_authentication extends apis {
 			<dl>
 				<li>
 					<dt>'.getLabel('lbl_identifier').'</dt>
-					<dd><pre>'.htmlspecialchars($arr_client['id']).'</pre></dd>
+					<dd><pre>'.strEscapeHTML($arr_client['id']).'</pre></dd>
 				</li>
 				<li>
 					<dt>'.getLabel('lbl_passkey').' (secret)</dt>
-					<dd><pre>'.htmlspecialchars($arr_client['secret']).'</pre></dd>
+					<dd><pre>'.strEscapeHTML($arr_client['secret']).'</pre></dd>
 				</li>
 			</dl></div>';
 		}
@@ -330,22 +338,22 @@ class intf_api_authentication extends apis {
 			$this->html = '<div class="record"><dl>
 				<li>
 					<dt>'.getLabel('lbl_api').'</dt>
-					<dd>'.htmlspecialchars($arr_client_user['api_name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client_user['api_name']).'</dd>
 				</li>
 				<li>
 					<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user').'</dt>
-					<dd>'.htmlspecialchars($arr_client_user['client_user_name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client_user['client_user_name']).'</dd>
 				</li>
 				<li>
 					<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_name').'</dt>
-					<dd>'.htmlspecialchars($arr_client_user['client_name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client_user['client_name']).'</dd>
 				</li>
 			</dl>
 			<hr />
 			<dl>
 				<li>
 					<dt>'.getLabel('lbl_user').'</dt>
-					<dd>'.htmlspecialchars($arr_client_user['user_name']).'</dd>
+					<dd>'.strEscapeHTML($arr_client_user['user_name']).'</dd>
 				</li>
 				<li>
 					<dt>'.getLabel('lbl_date_start').'</dt>
@@ -360,7 +368,7 @@ class intf_api_authentication extends apis {
 			<dl>
 				<li>
 					<dt>'.getLabel('lbl_passkey').' (token)</dt>
-					<dd><pre>'.htmlspecialchars($arr_client_user['token']).'</pre></dd>
+					<dd><pre>'.strEscapeHTML($arr_client_user['token']).'</pre></dd>
 				</li>
 			</dl></div>';
 		}

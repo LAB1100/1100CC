@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -20,7 +20,7 @@ class cms_dashboards extends base_module {
 
 	public function contents() {
 		
-		$return .= '<div class="section">
+		$return = '<div class="section">
 			<h1 id="x:cms_dashboards:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup dashboard_add" value="add" /></h1>
 			<div>';
 
@@ -196,7 +196,7 @@ class cms_dashboards extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>Name</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($row['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($row['name']).'"></div>
 					</li>
 					<li>
 						<label>Directory</label>
@@ -214,7 +214,7 @@ class cms_dashboards extends base_module {
 					
 			</form>';
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		// POPUP INTERACT

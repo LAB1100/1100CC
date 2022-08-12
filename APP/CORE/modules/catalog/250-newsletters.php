@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -51,7 +51,7 @@ class newsletters extends base_module {
 			$arr_newsletter = cms_newsletters::getNewsletters($this->arr_query[0]);
 			
 			$return .= '<div class="content">';
-			$return .= '<h1>'.htmlspecialchars(Labels::parseTextVariables($arr_newsletter['title'])).'</h1>';
+			$return .= '<h1>'.strEscapeHTML(Labels::parseTextVariables($arr_newsletter['title'])).'</h1>';
 			$return .= cms_general::createIframeDynamic($arr_newsletter['body']);
 			//$return .= '<div class="body">'.parseBody($arr_newsletter["body"]).'</div>';
 			$return .= '</div>';

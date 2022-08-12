@@ -1,381 +1,407 @@
 CREATE TABLE `data_blog_post_comments` (
-  `id` int(11) NOT NULL,
-  `blog_post_id` int(11) NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `blog_post_id` int NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `added` datetime NOT NULL,
-  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `log_user_id` int(11) NOT NULL
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `log_user_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_blog_post_xrefs` (
-  `id` int(11) NOT NULL,
-  `direction` varchar(3) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `direction` varchar(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `added` datetime NOT NULL,
-  `source` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `blog_post_id` int(11) NOT NULL,
-  `title` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `excerpt` mediumtext COLLATE utf8mb4_unicode_ci
+  `source` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `blog_post_id` int NOT NULL,
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `excerpt` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_dashboard_widgets` (
-  `dashboard_id` int(11) NOT NULL,
-  `module_id` int(11) NOT NULL,
-  `method` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `x` tinyint(4) DEFAULT NULL,
-  `y` tinyint(4) DEFAULT NULL,
+  `dashboard_id` int NOT NULL,
+  `module_id` int NOT NULL,
+  `method` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` int NOT NULL,
+  `x` tinyint DEFAULT NULL,
+  `y` tinyint DEFAULT NULL,
   `min` tinyint(1) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_email_addresses` (
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_email_addresses_bounces` (
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `failed` tinyint(1) NOT NULL,
-  `count` tinyint(4) NOT NULL,
+  `count` tinyint NOT NULL,
   `date_postponed` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_email_addresses_opt_out` (
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_form_submissions` (
-  `id` int(11) NOT NULL,
-  `form_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `form_id` int NOT NULL,
   `date` datetime NOT NULL,
-  `log_user_id` int(11) NOT NULL,
-  `remark` mediumtext COLLATE utf8mb4_unicode_ci
+  `log_user_id` int NOT NULL,
+  `remark` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_form_submission_field_input` (
-  `form_submission_id` int(11) NOT NULL,
-  `field_id` int(11) NOT NULL,
-  `value` varchar(5000) COLLATE utf8mb4_unicode_ci NOT NULL
+  `form_submission_id` int NOT NULL,
+  `field_id` int NOT NULL,
+  `value` varchar(5000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_form_submission_field_sub_input` (
-  `form_submission_id` int(11) NOT NULL,
-  `field_id` int(11) NOT NULL,
-  `field_sub_id` int(11) NOT NULL,
-  `value` int(11) NOT NULL
+  `form_submission_id` int NOT NULL,
+  `field_id` int NOT NULL,
+  `field_sub_id` int NOT NULL,
+  `value` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_form_submission_internal_tags` (
-  `form_submission_id` int(11) NOT NULL,
-  `tag_id` int(11) NOT NULL
+  `form_submission_id` int NOT NULL,
+  `tag_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_messaging_conversations` (
-  `id` int(11) NOT NULL,
-  `name` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `subject` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subject` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_messaging_conversation_last_seen` (
-  `conversation_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `conversation_id` int NOT NULL,
+  `user_id` int NOT NULL,
   `date` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_messaging_conversation_messages` (
-  `id` int(11) NOT NULL,
-  `conversation_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `conversation_id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `date` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_messaging_conversation_participants` (
-  `conversation_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL DEFAULT '0',
-  `user_group_id` int(11) NOT NULL DEFAULT '0',
+  `conversation_id` int NOT NULL,
+  `user_id` int NOT NULL DEFAULT '0',
+  `user_group_id` int NOT NULL DEFAULT '0',
   `is_owner` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `data_poll_set_option_votes` (
-  `poll_set_option_id` int(11) NOT NULL,
-  `log_user_id` int(11) NOT NULL
+  `poll_set_option_id` int NOT NULL,
+  `log_user_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_blogs` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_blog_posts` (
-  `id` int(11) NOT NULL,
-  `title` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `cms_user_id` int(11) NOT NULL,
-  `abstract` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `cms_user_id` int NOT NULL,
+  `abstract` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `date` datetime NOT NULL,
-  `para_preview` tinyint(4) NOT NULL,
+  `para_preview` tinyint NOT NULL,
   `draft` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_blog_post_link` (
-  `blog_id` int(11) NOT NULL,
-  `blog_post_id` int(11) NOT NULL
+  `blog_id` int NOT NULL,
+  `blog_post_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_blog_post_tags` (
-  `blog_post_id` int(11) NOT NULL,
-  `tag_id` int(11) NOT NULL
+  `blog_post_id` int NOT NULL,
+  `tag_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_calendar_events` (
-  `id` int(11) NOT NULL,
+  `id` int NOT NULL,
   `date` datetime NOT NULL,
   `date_end` datetime NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `color` varchar(6) COLLATE utf8mb4_unicode_ci NOT NULL
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `color` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_calendar_event_relations` (
-  `calendar_event_id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `calendar_event_id` int NOT NULL,
+  `user_id` int NOT NULL,
   `user_children` tinyint(1) NOT NULL,
-  `user_group_id` int(11) NOT NULL,
+  `user_group_id` int NOT NULL,
   `cms_group` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_calendar_event_reminders` (
-  `calendar_event_id` int(11) NOT NULL,
-  `amount` int(11) NOT NULL,
-  `unit` int(11) NOT NULL,
+  `calendar_event_id` int NOT NULL,
+  `amount` int NOT NULL,
+  `unit` int NOT NULL,
   `executed` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_custom_content` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `style` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `script` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `style` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `script` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_custom_content_tags` (
-  `custom_content_id` int(11) NOT NULL,
-  `tag_id` int(11) NOT NULL
+  `custom_content_id` int NOT NULL,
+  `tag_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_dashboards` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `directory_id` int(11) NOT NULL,
-  `columns` tinyint(4) NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `directory_id` int NOT NULL,
+  `columns` tinyint NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_dashboard_widgets` (
-  `dashboard_id` int(11) NOT NULL,
-  `module_id` int(11) NOT NULL,
-  `method` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `x` tinyint(4) NOT NULL,
-  `y` tinyint(4) NOT NULL,
+  `dashboard_id` int NOT NULL,
+  `module_id` int NOT NULL,
+  `method` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `x` tinyint NOT NULL,
+  `y` tinyint NOT NULL,
   `min` tinyint(1) NOT NULL,
   `locked` tinyint(1) NOT NULL,
   `linked` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `def_documentations` (
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_documentation_sections` (
+  `id` int NOT NULL,
+  `name` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `documentation_id` int NOT NULL,
+  `parent_section_id` int NOT NULL,
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `date_created` datetime NOT NULL,
+  `date_updated` datetime NOT NULL,
+  `publish` tinyint(1) NOT NULL,
+  `sort` tinyint DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE `def_forms` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `text` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `script` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `label_button` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `text` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `script` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `label_button` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `send_email` tinyint(1) NOT NULL,
-  `response` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `redirect_page_id` int(11) NOT NULL
+  `response` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `redirect_page_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_form_fields` (
-  `id` int(11) NOT NULL,
-  `form_id` int(11) NOT NULL,
-  `label` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `field_sub_table` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `form_id` int NOT NULL,
+  `label` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `field_sub_table` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `required` tinyint(1) NOT NULL,
-  `sort` tinyint(4) NOT NULL
+  `sort` tinyint NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_form_field_sub` (
-  `id` int(11) NOT NULL,
-  `field_id` int(11) NOT NULL,
-  `label` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sort` tinyint(4) NOT NULL
+  `id` int NOT NULL,
+  `field_id` int NOT NULL,
+  `label` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sort` tinyint NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_media` (
-  `id` int(11) NOT NULL,
-  `label` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `directory` varchar(250) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `filename` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `type` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `size` int(11) NOT NULL
+  `id` int NOT NULL,
+  `label` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `directory` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `filename` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `size` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_media_internal_tags` (
-  `media_id` int(11) NOT NULL,
-  `tag_id` int(11) NOT NULL
+  `media_id` int NOT NULL,
+  `tag_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_newsletters` (
-  `id` int(11) NOT NULL,
-  `title` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `date` datetime NOT NULL,
   `draft` tinyint(1) NOT NULL,
-  `recipients` int(11) NOT NULL,
-  `bounces` int(11) NOT NULL DEFAULT '0',
-  `opt_out` int(11) NOT NULL DEFAULT '0'
+  `recipients` int NOT NULL,
+  `bounces` int NOT NULL DEFAULT '0',
+  `opt_out` int NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_newsletters_templates` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_object_interaction_objects` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `img` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `shape` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `class` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `redirect_page_id` int(11) NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `shape` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `class` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `redirect_page_id` int NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_object_interaction_object_link` (
-  `object_interaction_object_id` int(11) NOT NULL,
-  `object_interaction_stage_id` int(11) NOT NULL,
+  `object_interaction_object_id` int NOT NULL,
+  `object_interaction_stage_id` int NOT NULL,
   `pos_y` decimal(7,4) NOT NULL,
   `pos_x` decimal(7,4) NOT NULL,
-  `sort` tinyint(4) NOT NULL,
+  `sort` tinyint NOT NULL,
   `width` decimal(7,4) NOT NULL,
-  `effect` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `effect_hover` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `script` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `script_hover` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `style` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `style_hover` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL
+  `effect` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `effect_hover` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `script` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `script_hover` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `style` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `style_hover` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_object_interaction_stages` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `img` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `view_x` decimal(4,2) NOT NULL,
   `view_y` decimal(4,2) NOT NULL,
   `height_full` tinyint(1) NOT NULL,
   `zoom_auto` tinyint(1) NOT NULL,
-  `zoom_min` tinyint(4) NOT NULL,
-  `zoom_max` tinyint(4) NOT NULL,
-  `zoom_levels` tinyint(4) NOT NULL,
-  `zoom_level_default` tinyint(4) NOT NULL,
-  `script` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL
+  `zoom_min` tinyint NOT NULL,
+  `zoom_max` tinyint NOT NULL,
+  `zoom_levels` tinyint NOT NULL,
+  `zoom_level_default` tinyint NOT NULL,
+  `script` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_polls` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_poll_sets` (
-  `id` int(11) NOT NULL,
-  `label` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `label` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `enabled` tinyint(1) NOT NULL,
   `date` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_poll_set_link` (
-  `poll_id` int(11) NOT NULL,
-  `poll_set_id` int(11) NOT NULL
+  `poll_id` int NOT NULL,
+  `poll_set_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_poll_set_options` (
-  `id` int(11) NOT NULL,
-  `poll_set_id` int(11) NOT NULL,
-  `label` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sort` int(11) NOT NULL
+  `id` int NOT NULL,
+  `poll_set_id` int NOT NULL,
+  `label` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sort` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_projects` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
-  `url` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `img` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `description` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `url` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `img` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `date` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_sliders` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `timeout` int(11) NOT NULL,
-  `speed` int(11) NOT NULL,
-  `effect` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `timeout` int NOT NULL,
+  `speed` int NOT NULL,
+  `effect` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_slider_slides` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `body` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_slider_slide_link` (
-  `slider_id` int(11) NOT NULL,
-  `slider_slide_id` int(11) NOT NULL,
-  `media_internal_tag_id` int(11) NOT NULL,
-  `sort` int(11) NOT NULL
+  `slider_id` int NOT NULL,
+  `slider_slide_id` int NOT NULL,
+  `media_internal_tag_id` int NOT NULL,
+  `sort` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `def_tags` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `site_cache_files` (
-  `filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
+  `filename` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `site_log_requests` (
-  `id` int(11) NOT NULL,
-  `type` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+CREATE TABLE `site_log_requests_access` (
+  `id` int NOT NULL,
+  `type` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `ip` varbinary(16) NOT NULL,
   `ip_block` varbinary(16) NOT NULL,
   `date` datetime NOT NULL,
-  `identifier` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
+  `identifier` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL
+) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `site_log_requests_throttle` (
+  `ip` varbinary(16) NOT NULL,
+  `date` datetime(3) NOT NULL,
+  `heat` float NOT NULL,
+  `state` tinyint NOT NULL
 ) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `site_user_labels` (
-  `identifier` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `lang_code` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `label` longtext COLLATE utf8mb4_unicode_ci NOT NULL
+  `identifier` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `lang_code` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_id` int NOT NULL,
+  `label` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `user_details` (
-  `user_id` int(11) NOT NULL,
-  `parent_id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `surname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `street` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `streetnr` varchar(5) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `photo` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL
+  `user_id` int NOT NULL,
+  `parent_id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `surname` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `street` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `streetnr` varchar(5) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `photo` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `user_preferences_messaging` (
-  `user_id` int(11) NOT NULL,
+  `user_id` int NOT NULL,
   `notify_email` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -468,6 +494,13 @@ ALTER TABLE `def_dashboards`
 ALTER TABLE `def_dashboard_widgets`
   ADD PRIMARY KEY (`dashboard_id`,`module_id`,`method`);
 
+ALTER TABLE `def_documentations`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `def_documentation_sections`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `documentation_id` (`documentation_id`);
+
 ALTER TABLE `def_forms`
   ADD PRIMARY KEY (`id`);
 
@@ -534,10 +567,13 @@ ALTER TABLE `def_tags`
 ALTER TABLE `site_cache_files`
   ADD PRIMARY KEY (`filename`);
 
-ALTER TABLE `site_log_requests`
+ALTER TABLE `site_log_requests_access`
   ADD PRIMARY KEY (`id`),
   ADD KEY `identifier` (`type`,`date`,`identifier`) USING BTREE,
   ADD KEY `ip` (`type`,`date`,`ip_block`,`ip`) USING BTREE;
+
+ALTER TABLE `site_log_requests_throttle`
+  ADD PRIMARY KEY (`ip`);
 
 ALTER TABLE `site_user_labels`
   ADD PRIMARY KEY (`identifier`,`lang_code`,`user_id`);
@@ -551,79 +587,85 @@ ALTER TABLE `user_preferences_messaging`
 
 
 ALTER TABLE `data_blog_post_comments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `data_blog_post_xrefs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `data_form_submissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `data_messaging_conversations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `data_messaging_conversation_messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_blogs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_blog_posts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_calendar_events`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_custom_content`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_dashboards`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `def_documentations`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `def_documentation_sections`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_forms`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_form_fields`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_form_field_sub`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_media`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_newsletters`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_newsletters_templates`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_object_interaction_objects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_object_interaction_stages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_polls`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_poll_sets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_poll_set_options`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_projects`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_sliders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_slider_slides`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_tags`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
-ALTER TABLE `site_log_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `site_log_requests_access`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;

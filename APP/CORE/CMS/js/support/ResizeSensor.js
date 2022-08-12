@@ -1,231 +1,178 @@
 /**
+ * 1100CC - web application framework.
+ * Copyright (C) 2022 LAB1100.
+ *
+ * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
+ */
+
+/**
  * Copyright Marc J. Schmidt. See the LICENSE file at the top-level
  * directory of this distribution and at
  * https://github.com/marcj/css-element-queries/blob/master/LICENSE.
  */
-;
-(function (root, factory) {
-    if (typeof define === "function" && define.amd) {
-        define(factory);
-    } else if (typeof exports === "object") {
-        module.exports = factory();
-    } else {
-        root.ResizeSensor = factory();
-    }
-}(this, function () {
 
-    //Make sure it does not throw in a SSR (Server Side Rendering) situation
-    if (typeof window === "undefined") {
-        return null;
-    }
-    // Only used for the dirty checking, so the event callback count is limted to max 1 call per fps per sensor.
-    // In combination with the event based resize sensor this saves cpu time, because the sensor is too fast and
-    // would generate too many unnecessary events.
-    var requestAnimationFrame = window.requestAnimationFrame ||
-        window.mozRequestAnimationFrame ||
-        window.webkitRequestAnimationFrame ||
-        function (fn) {
-            return window.setTimeout(fn, 20);
-        };
+function ResizeSensor(elm, callback, elm_insert) {
+	
+	function EventQueue() {
+		
+		var arr_q = [];
+		
+		this.add = function(call) {
+			arr_q.push(call);
+		};
 
-    /**
-     * Iterate over each of the provided element(s).
-     *
-     * @param {HTMLElement|HTMLElement[]} elements
-     * @param {Function}                  callback
-     */
-    function forEachElement(elements, callback){
-        var elementsType = Object.prototype.toString.call(elements);
-        var isCollectionTyped = ('[object Array]' === elementsType
-            || ('[object NodeList]' === elementsType)
-            || ('[object HTMLCollection]' === elementsType)
-            || ('[object Object]' === elementsType)
-            || ('undefined' !== typeof jQuery && elements instanceof jQuery) //jquery
-            || ('undefined' !== typeof Elements && elements instanceof Elements) //mootools
-        );
-        var i = 0, j = elements.length;
-        if (isCollectionTyped) {
-            for (; i < j; i++) {
-                callback(elements[i]);
-            }
-        } else {
-            callback(elements);
-        }
-    }
-
-    /**
-     * Class for dimension change detection.
-     *
-     * @param {Element|Element[]|Elements|jQuery} element
-     * @param {Function} callback
-     *
-     * @constructor
-     */
-    var ResizeSensor = function(element, callback, elm_insert) {
-        /**
-         *
-         * @constructor
-         */
-        function EventQueue() {
-            var q = [];
-            this.add = function(ev) {
-                q.push(ev);
-            };
-
-            var i, j;
-            this.call = function() {
-                for (i = 0, j = q.length; i < j; i++) {
-                    q[i].call();
-                }
-            };
-
-            this.remove = function(ev) {
-                var newQueue = [];
-                for(i = 0, j = q.length; i < j; i++) {
-                    if(q[i] !== ev) newQueue.push(q[i]);
-                }
-                q = newQueue;
-            }
-
-            this.length = function() {
-                return q.length;
-            }
-        }
-
-        /**
-         * @param {HTMLElement} element
-         * @param {String}      prop
-         * @returns {String|Number}
-         */
-        function getComputedStyle(element, prop) {
-            if (element.currentStyle) {
-                return element.currentStyle[prop];
-            } else if (window.getComputedStyle) {
-                return window.getComputedStyle(element, null).getPropertyValue(prop);
-            } else {
-                return element.style[prop];
-            }
-        }
-
-        /**
-         *
-         * @param {HTMLElement} element
-         * @param {Function}    resized
-         */
-        function attachResizeEvent(element, resized) {
-            if (!element.resizedAttached) {
-                element.resizedAttached = new EventQueue();
-                element.resizedAttached.add(resized);
-            } else if (element.resizedAttached) {
-                element.resizedAttached.add(resized);
-                return;
-            }
-
-            element.resizeSensor = document.createElement('div');
-            element.resizeSensor.className = 'resize-sensor';
-            var style = 'position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; z-index: -1; visibility: hidden;';
-            var styleChild = 'position: absolute; left: 0; top: 0; transition: 0s;';
-
-            element.resizeSensor.style.cssText = style;
-            element.resizeSensor.innerHTML =
-                '<div class="resize-sensor-expand" style="' + style + '">' +
-                    '<div style="' + styleChild + '"></div>' +
-                '</div>' +
-                '<div class="resize-sensor-shrink" style="' + style + '">' +
-                    '<div style="' + styleChild + ' width: 200%; height: 200%"></div>' +
-                '</div>';
-            if (elm_insert) {
-				element.insertBefore(element.resizeSensor, elm_insert);
-			} else {
-				element.appendChild(element.resizeSensor);
+		this.call = function() {
+			
+			for (let i = 0, j = arr_q.length; i < j; i++) {
+				arr_q[i].call();
 			}
+		};
 
-            if (getComputedStyle(element, 'position') == 'static') {
-                element.style.position = 'relative';
-            }
+		this.remove = function(call) {
+			
+			const arr_q_new = [];
+			
+			for (let i = 0, j = arr_q.length; i < j; i++) {
+				if (arr_q[i] !== call) {
+					arr_q_new.push(arr_q[i]);
+				}
+			}
+			
+			arr_q = arr_q_new;
+		};
 
-            var expand = element.resizeSensor.childNodes[0];
-            var expandChild = expand.childNodes[0];
-            var shrink = element.resizeSensor.childNodes[1];
-            var dirty, rafId, newWidth, newHeight;
-            var lastWidth = element.offsetWidth;
-            var lastHeight = element.offsetHeight;
+		this.length = function() {
+			return arr_q.length;
+		};
+	}
 
-            var reset = function() {
-                expandChild.style.width = '100000px';
-                expandChild.style.height = '100000px';
+	function getComputedStyle(elm, str_property) {
+		
+		if (elm.currentStyle) {
+			return elm.currentStyle[str_property];
+		} else if (window.getComputedStyle) {
+			return window.getComputedStyle(elm, null).getPropertyValue(str_property);
+		} else {
+			return elm.style[str_property];
+		}
+	}
+			
+	var elm = getElement(elm);
+	
+	var SELF = this;
+	
+	if (!elm.resizesensor) {
+		
+		elm.resizesensor = SELF;
+		
+		this.queue = new EventQueue();
+		this.queue.add(callback);
+	} else {
+		
+		elm.resizesensor.queue.add(callback);
+		
+		return elm.resizesensor;
+	}
 
-                expand.scrollLeft = 100000;
-                expand.scrollTop = 100000;
+	this.element = document.createElement('div');
+	this.element.className = 'resize-sensor';
+	const str_style = 'position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; z-index: -1; visibility: hidden;';
+	const str_style_child = 'position: absolute; left: 0; top: 0; transition: 0s;';
 
-                shrink.scrollLeft = 100000;
-                shrink.scrollTop = 100000;
-            };
+	this.element.style.cssText = str_style;
+	this.element.innerHTML =
+		'<div class="resize-sensor-expand" style="'+str_style+'">'
+			+'<div style="'+str_style_child+'"></div>'
+		+'</div>'
+		+'<div class="resize-sensor-shrink" style="' + str_style+'">'
+			+'<div style="'+str_style_child+' width: 200%; height: 200%"></div>'
+		+'</div>'
+	;
+	
+	if (elm_insert) {
+		elm.insertBefore(this.element, elm_insert);
+	} else {
+		elm.appendChild(this.element);
+	}
 
-            reset();
+	if (getComputedStyle(elm, 'position') == 'static') {
+		elm.style.position = 'relative';
+	}
 
-            var onResized = function() {
-                rafId = 0;
+	const elm_expand = this.element.childNodes[0];
+	const elm_expand_child = elm_expand.childNodes[0];
+	const elm_shrink = this.element.childNodes[1];
+	
+	var is_dirty = false;
+	var frame_id = 0;
+	var num_width_new = 0;
+	var num_height_new = 0;
+	var num_width = elm.offsetWidth;
+	var num_height = elm.offsetHeight;
 
-                if (!dirty) return;
+	this.reset = function() {
+		
+		elm_expand_child.style.width = '100000px';
+		elm_expand_child.style.height = '100000px';
 
-                lastWidth = newWidth;
-                lastHeight = newHeight;
+		elm_expand.scrollLeft = 100000;
+		elm_expand.scrollTop = 100000;
 
-                if (element.resizedAttached) {
-                    element.resizedAttached.call();
-                }
-            };
+		elm_shrink.scrollLeft = 100000;
+		elm_shrink.scrollTop = 100000;
+	};
 
-            var onScroll = function() {
-                newWidth = element.offsetWidth;
-                newHeight = element.offsetHeight;
-                dirty = newWidth != lastWidth || newHeight != lastHeight;
+	var func_resized = function() {
+		
+		frame_id = 0;
 
-                if (dirty && !rafId) {
-                    rafId = requestAnimationFrame(onResized);
-                }
+		if (!is_dirty) {
+			return;
+		}
 
-                reset();
-            };
+		num_width = num_width_new;
+		num_height = num_height_new;
 
-            var addEvent = function(el, name, cb) {
-                if (el.attachEvent) {
-                    el.attachEvent('on' + name, cb);
-                } else {
-                    el.addEventListener(name, cb);
-                }
-            };
+		if (SELF.queue) {
+		   SELF.queue.call();
+		}
+	};
 
-            addEvent(expand, 'scroll', onScroll);
-            addEvent(shrink, 'scroll', onScroll);
-        }
+	var func_scroll = function() {
+		
+		num_width_new = elm.offsetWidth;
+		num_height_new = elm.offsetHeight;
+		is_dirty = (num_width_new != num_width || num_height_new != num_height);
 
-        forEachElement(element, function(elem){
-            attachResizeEvent(elem, callback);
-        });
+		if (is_dirty && !frame_id) {
+			frame_id = window.requestAnimatorFrame(func_resized);
+		}
 
-        this.detach = function(ev) {
-            ResizeSensor.detach(element, ev);
-        };
-    };
+		SELF.reset();
+	};
+	
+	this.detach = function(func) {
+		
+		if (SELF.queue && typeof func == 'function') {
+			
+			SELF.queue.remove(func);
+			
+			if (SELF.queue.length()) {
+				return;
+			}
+		}
+		
+		if (SELF.element.parentNode) {
+			elm.removeChild(SELF.element);
+		}
+		
+		delete elm.resizesensor;
+	};
+	
+	SELF.reset();
 
-    ResizeSensor.detach = function(element, ev) {
-        forEachElement(element, function(elem){
-            if(elem.resizedAttached && typeof ev == "function"){
-                elem.resizedAttached.remove(ev);
-                if(elem.resizedAttached.length()) return;
-            }
-            if (elem.resizeSensor) {
-                if (elem.contains(elem.resizeSensor)) {
-                    elem.removeChild(elem.resizeSensor);
-                }
-                delete elem.resizeSensor;
-                delete elem.resizedAttached;
-            }
-        });
-    };
-
-    return ResizeSensor;
-
-}));
+	elm_expand.addEventListener('scroll', func_scroll);
+	elm_shrink.addEventListener('scroll', func_scroll);
+	
+	return this;
+}

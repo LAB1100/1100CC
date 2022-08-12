@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class account extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<input type="checkbox" name="allow_name" value="1" title="'.getLabel('lbl_allow').' '.getLabel('lbl_name').'" />';
+		$return = '<input type="checkbox" name="allow_name" value="1" title="'.getLabel('lbl_allow').' '.getLabel('lbl_name').'" />';
 		$return .= '<input type="checkbox" name="allow_uname" value="1" title="'.getLabel('lbl_allow').' '.getLabel('lbl_uname').'" />';
 		
 		return $return;
@@ -32,6 +32,8 @@ class account extends base_module {
 	}
 	
 	public function contents() {
+		
+		$return = '';
 	
 		if ($this->arr_query[0] == 'update') {
 		
@@ -114,9 +116,9 @@ class account extends base_module {
 				$arr_update['uname'] = $_POST['uname'];
 			}
 			
-			$url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'update/';
+			$str_url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'update/';
 									
-			$update_user = user_management::updateUser($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], true, $arr_update, $_POST['password'], $url);
+			$update_user = user_management::updateUser($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], true, $arr_update, $_POST['password'], $str_url);
 			
 			if ($_POST['lang_code']) {
 				
@@ -124,7 +126,7 @@ class account extends base_module {
 				
 				if ($arr_language['user']) {
 					
-					user_management::updateUserVal(['lang_code' => $_POST['lang_code']], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']);
+					user_management::updateUserValue(['lang_code' => $_POST['lang_code']], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']);
 				}
 			}
 			
@@ -136,9 +138,9 @@ class account extends base_module {
 		}
 	}
 	
-	public static function createLanguageMenu($arr_languages, $selected = "") {
+	public static function createLanguageMenu($arr_languages, $selected = '') {
 	
-		$return .= '<ul class="select">';
+		$return = '<ul class="select">';
 		
 			foreach($arr_languages as $lang_code => $arr_language) {	
 					

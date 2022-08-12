@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -93,7 +93,7 @@ class CombineJSCSS {
 			}
 		}
 				
-		Response::sendHeader($code, false, [
+		Response::sendFileHeaders($code, false, [
 			'Content-Type: '.($type == 'js' ? 'application/javascript': 'text/css'),
 			'ETag: "'.$ie_tag.'"',
 			'Cache-Control: max-age='.self::$cache_length,

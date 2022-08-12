@@ -2,14 +2,13 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class SiteEndVars {
 	
-	private static $arr_headers = [];
 	private static $arr_head_tags = [];
 	private static $arr_titles = [];
 	private static $arr_descriptions = [];
@@ -23,19 +22,11 @@ class SiteEndVars {
 	public static $arr_request_vars = [];
 	public static $arr_server_name_custom = [];
 	public static $arr_feedback = [];
+	
+	protected static $shortcut_mod_id = false;
+	protected static $str_shortcut_name = false;
+	protected static $is_root_shortcut = false;
 
-	public static function addHeader($header) {
-	
-		self::$arr_headers[] = $header;
-	}
-	
-	public static function getHeaders() {
-	
-		foreach (self::$arr_headers as $header) {
-			header($header);
-		}
-	}
-	
 	public static function addHeadTag($tag) {
 	
 		self::$arr_head_tags[] = $tag;
@@ -60,6 +51,8 @@ class SiteEndVars {
 	}
 		
 	public static function getHeadTags() {
+		
+		$return = '';
 	
 		foreach (self::$arr_head_tags as $tag) {
 			$return .= $tag;
@@ -78,10 +71,10 @@ class SiteEndVars {
 	
 	public static function getTitle() {
 
-		array_unshift(self::$arr_titles, getLabel('title', 'D'), SiteStartVars::$dir['title'], (SiteStartVars::$page_name ? SiteStartVars::$page['title'] : ''));
+		array_unshift(self::$arr_titles, getLabel('title', 'D'), (SiteStartVars::$dir ? SiteStartVars::$dir['title'] : ''), (SiteStartVars::$page_name ? SiteStartVars::$page['title'] : ''));
 		self::$arr_titles = array_filter(self::$arr_titles);
 		
-		return htmlspecialchars(Labels::parseTextVariables(implode(' | ', self::$arr_titles)));
+		return strEscapeHTML(Labels::parseTextVariables(implode(' | ', self::$arr_titles)));
 	}
 	
 	public static function addDescription($arr_descriptions) {
@@ -93,7 +86,7 @@ class SiteEndVars {
 				
 		self::$arr_descriptions = (self::$arr_descriptions ? Labels::parseTextVariables(implode(' ', array_unique(self::$arr_descriptions))) : getLabel('description', 'D'));
 		
-		return htmlspecialchars(self::$arr_descriptions);
+		return strEscapeHTML(self::$arr_descriptions);
 	}
 	
 	public static function addKeywords($keywords) {
@@ -160,6 +153,22 @@ class SiteEndVars {
 		return $image;
 	}
 	
+	public static function getIcons() {
+		
+		$str_image = static::getImage();
+
+		$html = '';
+		
+		foreach ([16, 32, 96, 128, 196] as $num_size) {
+			$html .= '<link rel="icon" type="image/png" href="'.SiteStartVars::getCacheUrl('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
+		}
+		foreach ([57, 60, 72, 76, 114, 120, 144, 152] as $num_size) {
+			$html .= '<link rel="apple-touch-icon" href="'.SiteStartVars::getCacheUrl('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
+		}
+		
+		return $html;
+	}
+	
 	public static function setTheme($arr_theme) {
 	
 		self::$arr_theme += $arr_theme;
@@ -195,6 +204,13 @@ class SiteEndVars {
 		return self::$arr_feedback;
 	}
 	
+	public static function setShortcut($mod_id, $str_name, $is_root) {
+		
+		static::$shortcut_mod_id = $mod_id;
+		static::$str_shortcut_name = $str_name;
+		static::$is_root_shortcut = $is_root;
+	}
+	
 	public static function setModVariables($mod_id = false, $arr_var_names = [], $overwrite = true) {
 		
 		if ($overwrite) {
@@ -215,13 +231,23 @@ class SiteEndVars {
 		}
 	}
 	
-	public static function getLocationVariables() {
+	public static function getLocationVariables($is_canonical = true) {
 		
 		$arr = [];
 		
+		if (!self::$arr_request_vars) {
+			return $arr;
+		}
+				
 		ksort(self::$arr_request_vars);
 		
-		$cur_mod_id = false;
+		if (static::$shortcut_mod_id && isset(self::$arr_request_vars[static::$shortcut_mod_id]) && !$is_canonical) { // Start with the shortcut variables
+			
+			$arr_var_names = self::$arr_request_vars[static::$shortcut_mod_id];
+			unset(self::$arr_request_vars[static::$shortcut_mod_id]);
+			
+			self::$arr_request_vars = [static::$shortcut_mod_id => $arr_var_names] + self::$arr_request_vars;
+		}
 		
 		foreach (self::$arr_request_vars as $mod_id => $arr_var_names) {
 			
@@ -229,7 +255,7 @@ class SiteEndVars {
 				continue;
 			}
 			
-			if ($mod_id) {
+			if ($mod_id && (!static::$shortcut_mod_id || static::$shortcut_mod_id != $mod_id || $is_canonical)) {
 				$arr[] = $mod_id.'.m';
 			}
 			
@@ -254,25 +280,33 @@ class SiteEndVars {
 				
 				$cur_var_name = $var_name;
 			}
-			
-			$cur_mod_id = $mod_id;
 		}
 
 		return $arr;
 	}
 	
-	public static function getLocation($rel = true, $canonical = false) {
+	public static function getLocation($rel = true, $is_canonical = false) {
 		
 		$location = SiteStartVars::getBasePath(0, $rel);
 		
-		$arr_location_vars = self::getLocationVariables();
+		$arr_location_vars = self::getLocationVariables($is_canonical);
 		
 		if ($arr_location_vars) {
 			
-			$location .= SiteStartVars::$page['name'].'.p/'.implode('/', $arr_location_vars);
+			if (static::$shortcut_mod_id && !$is_canonical) {
+				
+				if (static::$is_root_shortcut) {
+					$location = (!$rel ? URL_BASE_HOME : '/').static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
+				} else {
+					$location .= static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
+				}
+			} else {
+			
+				$location .= SiteStartVars::$page['name'].'.p/'.implode('/', $arr_location_vars);
+			}
 		} else {
 
-			if (!(SiteStartVars::$dir['root'] && SiteStartVars::$dir['page_index_id'] == SiteStartVars::$page['id']) || ($canonical || (SiteStartVars::$page_name && SiteStartVars::$page_kind == '.c' && SiteStartVars::$page_name != 'commands'))) { // Show page name when it is not the root page, or when it is explicitly requested (canonical or in command)
+			if (!(SiteStartVars::$dir['root'] && SiteStartVars::$dir['page_index_id'] == SiteStartVars::$page['id']) || ($is_canonical || (SiteStartVars::$page_name && SiteStartVars::$page_kind == '.c' && SiteStartVars::$page_name != 'commands'))) { // Show page name when it is not the root page, or when it is explicitly requested (canonical or in command)
 				$location .= SiteStartVars::$page['name'];
 			}
 		}

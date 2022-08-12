@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -11,80 +11,98 @@ class WebService extends WebSocketServer {
 
 	protected static $class_user = 'WebServiceUser';
 	
-	protected $arr_services = [];
+	protected $arr_tasks = [];
 		
-	public function __construct($addr, $port) {
+	public function __construct($addr, $port, $use_ssl = false) {
+	
+		parent::__construct($addr, $port, $use_ssl, 1048576); // 1MB... overkill for an echo server, but potentially plausible for other applications.
+	}
+	
+	public function addTask($task) {
 		
-		$arr_web_service_details = getModuleConfiguration('webServiceProperties');
-
-		foreach($arr_web_service_details as $module => $classes) {
-			foreach($classes as $class => $arr_options) {
-											
-				$obj_service = new $class();
-				$obj_service->init();
+		$this->arr_tasks[$task::$name] = $task;
+	}
+	
+	public function init() {
+		
+		if (!$this->arr_tasks) {
+			error('Web Service: No tasks available');
+		}
+		
+		parent::init();
+	}
+	
+	protected function process($user, $str_data) {
+		
+		$arr_data = json_decode($str_data, true);
+		
+		if (!is_array($arr_data['arr_tasks'])) {
+			return;
+		}
+		
+		foreach ($arr_data['arr_tasks'] as $str_task => $arr_task) {
+			
+			$task = $this->arr_tasks[$str_task];
+			
+			if (isset($arr_task['arr_options'])) {
 				
-				if ($arr_options['passkey']) {
-					$obj_service->use_passkey = true;
-				}
-				
-				$this->arr_services[$obj_service->name] = $obj_service;
+				$user->addTaskOptions($str_task, $arr_task['arr_options']); // Register
+			}
+			
+			if (!is_array($arr_task['arr_data'])) {
+				continue;
+			}
+			
+			$task->setActiveUser($user);
+			
+			if ($user->is_owner) {
+	
+				$task->setData($arr_task['arr_data']);
+			} else {
+					
+				$task->setUserData($arr_task['arr_data']);
 			}
 		}
-		
-		if (!$this->arr_services) {
-			error('Web Service: No services available');
-		}
-		
-		parent::__construct($addr, $port, 1048576); // 1MB... overkill for an echo server, but potentially plausible for other applications.
 	}
 	
 	protected function check() {
 
-		foreach ($this->arr_services as $service => $obj_service) {
+		foreach ($this->arr_tasks as $str_task => $task) {
 			
-			if ($obj_service->check()) {
+			if (!$task->check()) {
+				continue;
+			}
 				
-				$class_user = static::$class_user;
+			$class_user = static::$class_user;
+			
+			foreach ($class_user::getTaskUsers($str_task) as $user) {
 				
-				foreach ($class_user::getServiceUsers($service) as $user) {
-					
-					$arr_options = $user->getServiceOptions($service);
-					$obj_service->setOptions(($obj_service->use_passkey ? $user->passkey : 0), $arr_options);
-					
-					$obj_service->ready();
-					
-					$data = $obj_service->get();
-					
-					if ($data) {
-						$this->send($user, json_encode($data));
-					}
+				$task->setActiveUser($user);
+				
+				$task->readyUserData();
+				
+				$data = $task->getUserData();
+				
+				if ($data) {
+					$this->send($user, value2JSON([$str_task => $data]));
 				}
+			}
+			
+			$task->resetUserData(); // Reset task information
+			
+			foreach ($class_user::getTaskOwnerUsers($str_task) as $user) {
 				
-				$obj_service->reset(); // Reset service information
+				$task->setActiveUser($user);
+				
+				$data = $task->getData();
+
+				if ($data) {
+					$this->send($user, value2JSON([$str_task => $data]));
+				}
 			}
 		}
 	}
-	
-	protected function process($user, $data) {
 		
-		$arr_data = json_decode($data, true);
-		
-		foreach ((array)$arr_data['arr_services'] as $service => $arr_service) {
-			
-			if (isset($arr_service['arr_options'])) {
-				
-				$user->addService($service, $arr_service['arr_options']);
-			}
-			
-			foreach ((array)$arr_service['arr_data'] as $data) {
-				
-				$obj_service = $this->arr_services[$service];
-				
-				$obj_service->set(($obj_service->use_passkey ? $user->passkey : 0), $data);
-			}
-		}
-	}
-	
 	protected function connected($user) {
 		
 	}

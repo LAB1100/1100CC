@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,7 @@ class blog_preview extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return .= '<select name="type">'
+		$return = '<select name="type">'
 			.'<option value="preview">Preview Posts</option>'
 			.'<option value="titles">Post Titles</option>'
 			.'<option value="comments">Post Comments</option>'
@@ -37,7 +37,7 @@ class blog_preview extends base_module {
 	
 	public function contents() {
 
-		$return .= '<div class="blog '.$this->arr_variables['type'].'">';
+		$return = '<div class="blog '.$this->arr_variables['type'].'">';
 		
 		$blog_id = ($this->arr_variables['id'] ?: 0);
 		
@@ -61,30 +61,30 @@ class blog_preview extends base_module {
 				
 				$next_prev .= '<a class="prev" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'go/'.$this->arr_variables['limit'].'"><span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span><span>'.getLabel('lbl_previous').'</span></a>';
 				
-				$return .= '<div class="nextprev">'.$next_prev.'</div>';
+				$return .= '<nav class="nextprev">'.$next_prev.'</nav>';
 			}
 		} else if ($this->arr_variables['type'] == 'titles') {
 		
-			$return .= '<h1>'.($this->arr_variables['id'] ? htmlspecialchars(Labels::parseTextVariables($arr_blog_options['name'])) : getLabel('ttl_posts')).'</h1>'
+			$return .= '<h1>'.($this->arr_variables['id'] ? strEscapeHTML(Labels::parseTextVariables($arr_blog_options['name'])) : getLabel('ttl_posts')).'</h1>'
 			.'<ul>';
 			
 				foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], $this->arr_variables['limit'], false, 0) as $row) {
 					
 					$title = Labels::parseTextVariables($row['title']);
-					$return .= '<li><a title="'.htmlspecialchars($title).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['id'].'/'.str2URL($title).'"><span></span><span>'.htmlspecialchars($title).'</span></a></li>';
+					$return .= '<li><a title="'.strEscapeHTML($title).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['id'].'/'.str2URL($title).'"><span></span><span>'.strEscapeHTML($title).'</span></a></li>';
 				}
 				
 			$return .= '</ul>';
 		} else if ($this->arr_variables['type'] == 'comments') {
 		
-			$return .= '<h1>'.($this->arr_variables['id'] ? htmlspecialchars(Labels::parseTextVariables($arr_blog_options['name'])).' ' : '').getLabel('ttl_comments').'</h1>'
+			$return .= '<h1>'.($this->arr_variables['id'] ? strEscapeHTML(Labels::parseTextVariables($arr_blog_options['name'])).' ' : '').getLabel('ttl_comments').'</h1>'
 			.'<ul>';
 			
 				foreach (cms_blog_post_comments::getBlogComments($arr_blog_options['id'], $this->arr_variables['limit']) as $row) {
 					
-					$return .= '<li><a title="'.htmlspecialchars($row['name']).' on '.date('d-m-y H:i', strtotime($row['added'])).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['blog_post_id'].'/'.str2URL(Labels::parseTextVariables($row['blog_post_title'])).'#'.$row['id'].'">
+					$return .= '<li><a title="'.strEscapeHTML($row['name']).' on '.date('d-m-y H:i', strtotime($row['added'])).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['blog_post_id'].'/'.str2URL(Labels::parseTextVariables($row['blog_post_title'])).'#'.$row['id'].'">
 						<span></span>
-						<span><span>'.htmlspecialchars($row['name']).':</span><span>'.htmlspecialchars($row['body']).'</span></span></a>
+						<span><span>'.strEscapeHTML($row['name']).':</span><span>'.strEscapeHTML($row['body']).'</span></span></a>
 					</li>';
 				}
 				

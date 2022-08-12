@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -11,8 +11,10 @@
 	
 	define('SITE_NAME', strtolower($_SERVER['SITE_NAME'])); // Custom environment variable
 	define('IS_CMS', ($_SERVER['IF_CMS_PATH'] ? 1 : 0)); // Custom environment variable
-	define('STATE', ($_SERVER['STATE'] ?: 'production')); // Custom environment variable
-	define('MESSAGE', $_SERVER['MESSAGE']); // Custom environment variable
+	define('STATE_PRODUCTION', 0);
+	define('STATE_DEVELOPMENT', 1);
+	define('STATE', (isset($_SERVER['STATE']) && ($_SERVER['STATE'] == 'development' || $_SERVER['STATE'] == STATE_DEVELOPMENT) ? STATE_DEVELOPMENT : STATE_PRODUCTION)); // Custom environment variable
+	define('MESSAGE', ($_SERVER['MESSAGE'] ?? '')); // Custom environment variable
 	define('DIR_STORAGE', 'STORAGE/');
 	define('DIR_CACHE', 'CACHE/');
 	define('DIR_SETTINGS', 'SETTINGS/');
@@ -29,7 +31,7 @@
 	define('DIR_ROOT_STORAGE', DIR_ROOT.DIR_STORAGE);
 	define('DIR_ROOT_CACHE', DIR_ROOT.DIR_CACHE);
 	define('DIR_ROOT_SETTINGS', DIR_ROOT.DIR_SETTINGS);
-	if (!$_SERVER['DOCUMENT_ROOT']) {
+	if (empty($_SERVER['DOCUMENT_ROOT'])) {
 		$_SERVER['DOCUMENT_ROOT'] = DIR_ROOT;
 	}
 	
@@ -37,6 +39,7 @@
 	$dir_parent = array_slice($dir_parent, 0, -2);
 	$dir_parent = implode('/', $dir_parent).'/';
 	define('DIR_SAFE', $dir_parent.'SAFE/');
+	define('DIR_SAFE_SITE', DIR_SAFE.SITE_NAME.'/');
 	define('DIR_PROGRAMS', $dir_parent.'PROGRAMS/');
 	define('DIR_PROGRAMS_RUN', DIR_PROGRAMS.'RUN/');
 
@@ -54,6 +57,8 @@
 	define('DIR_CSS', 'css/');
 	define('DIR_JS', 'js/');
 	define('DIR_INFO', 'info/');
+	
+	spl_autoload_register('autoLoadClass');
 
 	define('SERVER_NAME_SUB', strtolower($_SERVER['SERVER_NAME_SUB'])); // Custom environment variable
 	define('SERVER_NAME_CUSTOM', strtolower($_SERVER['SERVER_NAME_CUSTOM'])); // Custom environment variable
@@ -74,7 +79,7 @@
 	$str_database = 'mysql';
 	
 	if (isPath($path_database)) {
-		$str_database = trim(file_get_contents($path_database));
+		$str_database = readText($path_database);
 	}
 	
 	if ($str_database == 'postgresql') {
@@ -91,11 +96,15 @@
 	DB::$database_cms = SITE_NAME.'_cms';
 	DB::$database_home = SITE_NAME.'_home';
 	
-	Settings::set('path_temporary', sys_get_temp_dir().'/1100CC'.(STATE == 'development' ? '_development' : '').'/'.DIR_HOME);
+	Settings::set('path_temporary', sys_get_temp_dir().'/1100CC/'.DIR_HOME);
 	Settings::set('chmod_file', 0660);
 	Settings::set('chmod_directory', 02775);
 	
 	// SITE settings
+	
+	if (!isPath($path_settings)) {
+		exit('1100CC');
+	}
 	
 	require($path_settings);
 	
@@ -105,12 +114,12 @@
 	
 	// Applied settings
 	
-	define('SERVER_PROTOCOL', ($_SERVER['HTTPS'] || ($_SERVER['HTTP_X_FORWARDED_PROTO'] && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') ? 'https' : 'http').'://'); // Custom environment variable
+	define('SERVER_PROTOCOL', (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') ? 'https' : 'http').'://'); // Custom environment variable
 	
-	define('BASE_URL', SERVER_PROTOCOL.SERVER_NAME.'/');
-	define('BASE_URL_HOME', SERVER_PROTOCOL.SERVER_NAME_HOME.'/');
-	define('BASE_URL_CMS', SERVER_PROTOCOL.SERVER_NAME_CMS.'/');
+	define('URL_BASE', SERVER_PROTOCOL.SERVER_NAME.'/');
+	define('URL_BASE_HOME', SERVER_PROTOCOL.SERVER_NAME_HOME.'/');
+	define('URL_BASE_CMS', SERVER_PROTOCOL.SERVER_NAME_CMS.'/');
 	
-	Response::$show_updates = ($_SERVER['HTTP_1100CC_STATUS'] ? true : false);
+	Response::setOutputUpdates(!empty($_SERVER['HTTP_1100CC_STATUS']) ? true : null);
 
 	FileStore::makeDirectoryTree(Settings::get('path_temporary'));

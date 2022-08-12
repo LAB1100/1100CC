@@ -4,8 +4,11 @@
 .mapscroller > .draw > .background { position: absolute; width: 100%; height: 100%; background-color: #f8f8f9; }
 .mapscroller > .draw > .background > img { position: absolute; width: 100%; height: 100%; }
 .mapscroller > .draw > .map { position: absolute; width: 100%; height: 100%; }
-.mapscroller > .draw > .map img { position: absolute; max-width: none !important; max-height: none !important; }
-.mapscroller > .draw > .map div { position: absolute; width: 100%; height: 100%; top: 0px; left: 0px; }
+.mapscroller > .draw > .map img { max-width: none !important; max-height: none !important; }
+.mapscroller > .draw > .map img,
+.mapscroller > .draw > .map .img { position: absolute; }
+.mapscroller > .draw > .map .img { overflow: hidden; }
+.mapscroller > .draw > .map div:not(.img) { position: absolute; width: 100%; height: 100%; top: 0px; left: 0px; }
 .mapscroller > .draw > .paint { position: absolute; left: 0px; top: 0px; }
 .mapscroller > .draw > .paint > svg,
 .mapscroller > .draw > .paint > .canvas { width: 100%; height: 100%; position: absolute; }

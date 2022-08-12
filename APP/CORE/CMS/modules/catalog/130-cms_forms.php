@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -29,7 +29,7 @@ class cms_forms extends base_module {
 
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_forms:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_forms:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
 		<div class="forms">';
 
 			$res = DB::query("SELECT f.*,
@@ -85,7 +85,7 @@ class cms_forms extends base_module {
 								<td>'.$arr_row['name'].'</td>
 								<td>'.(DBFunctions::unescapeAs($arr_row['send_email'], DBFunctions::TYPE_BOOLEAN) ? ($arr_row['email'] ?: getLabel('email', 'D')) : getLabel('lbl_none')).'</td>
 								<td><span class="info"><span class="icon" title="'.($arr_paths ? implode('<br />', $arr_paths) : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.count($arr_paths).'</span></span></td>
-								<td><span class="info"><span class="icon" title="'.(htmlspecialchars($arr_row['fields']) ?: getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.(int)$arr_row['count_fields'].'</span></span></td>
+								<td><span class="info"><span class="icon" title="'.(strEscapeHTML($arr_row['fields']) ?: getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.(int)$arr_row['count_fields'].'</span></span></td>
 								<td><input type="button" class="data edit popup edit" value="edit" /><input type="button" class="data del msg del" value="del" /></td>
 							</tr>';
 						}
@@ -164,11 +164,11 @@ class cms_forms extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_form_set['details']['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_form_set['details']['name']).'"></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_text').'</label>
-						<div><textarea name="text">'.htmlspecialchars($arr_form_set['details']['text']).'</textarea></div>
+						<div><textarea name="text">'.strEscapeHTML($arr_form_set['details']['text']).'</textarea></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_script').'</label>
@@ -176,7 +176,7 @@ class cms_forms extends base_module {
 					</li>	
 					<li>
 						<label>'.getLabel('lbl_types').'</label>
-						<div><input type="button" id="y:cms_forms:get_field_option-field" class="data add" value="'.getLabel('lbl_field').'" /><input type="button" id="y:cms_forms:get_field_option-text" class="data add" value="'.getLabel('lbl_text').'" /><input type="button" id="y:cms_forms:get_field_option-check" class="data add" value="'.getLabel("lbl_check").'" /><input type="button" id="y:cms_forms:get_field_option-choice" class="data add" value="'.getLabel("lbl_choice").'" /><input type="button" id="y:cms_forms:get_field_option-choice_dropdown" class="data add" value="'.getLabel("lbl_choice_dropdown").'" /><input type="button" id="y:cms_forms:get_field_option-field_date" class="data add" value="'.getLabel("lbl_field_date").'" /><input type="button" id="y:cms_forms:get_field_option-field_email" class="data add" value="'.getLabel("lbl_field_email").'" /><input type="button" id="y:cms_forms:get_field_option-field_surname" class="data add" value="'.getLabel("lbl_field_surname").'" /><input type="button" id="y:cms_forms:get_field_option-field_address" class="data add" value="'.getLabel("lbl_field_address").'" /><input type="button" class="data del" title="'.getLabel("inf_remove_empty_fields").'" value="del" /></div>
+						<div><input type="button" id="y:cms_forms:get_field_option-field" class="data add" value="'.getLabel('lbl_field').'" /><input type="button" id="y:cms_forms:get_field_option-text" class="data add" value="'.getLabel('lbl_text').'" /><input type="button" id="y:cms_forms:get_field_option-check" class="data add" value="'.getLabel("lbl_check").'" /><input type="button" id="y:cms_forms:get_field_option-choice" class="data add" value="'.getLabel("lbl_choice").'" /><input type="button" id="y:cms_forms:get_field_option-choice_dropdown" class="data add" value="'.getLabel("lbl_choice_dropdown").'" /><input type="button" id="y:cms_forms:get_field_option-field_date" class="data add" value="'.getLabel("lbl_field_date").'" /><input type="button" id="y:cms_forms:get_field_option-field_email" class="data add" value="'.getLabel("lbl_field_email").'" /><input type="button" id="y:cms_forms:get_field_option-field_address" class="data add" value="'.getLabel("lbl_field_address").'" /><input type="button" class="data del" title="'.getLabel("inf_remove_empty_fields").'" value="del" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_fields').'</label>
@@ -192,11 +192,11 @@ class cms_forms extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_button').'</label>
-						<div><input type="text" name="label_button" value="'.htmlspecialchars($arr_form_set['details']['label_button']).'" placeholder="'.getLabel('lbl_send').'"></div>
+						<div><input type="text" name="label_button" value="'.strEscapeHTML($arr_form_set['details']['label_button']).'" placeholder="'.getLabel('lbl_send').'"></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_response').'</label>
-						<div><textarea name="response" placeholder="'.getLabel('msg_form_submitted').'">'.htmlspecialchars($arr_form_set['details']['response']).'</textarea></div>
+						<div><textarea name="response" placeholder="'.getLabel('msg_form_submitted').'">'.strEscapeHTML($arr_form_set['details']['response']).'</textarea></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_redirect_page').'</label>
@@ -354,7 +354,7 @@ class cms_forms extends base_module {
 			return self::$arr_field_sub_tables;
 		}
 
-		foreach ((SiteStartVars::$cms_modules ?: SiteStartVars::$modules) as $module => $value) {
+		foreach ((SiteStartVars::$arr_cms_modules ?: SiteStartVars::$arr_modules) as $module => $value) {
 			if (method_exists($module, 'formFieldSubTable')) {
 				self::$arr_field_sub_tables = array_merge(self::$arr_field_sub_tables, $module::formFieldSubTable());
 			}

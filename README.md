@@ -67,7 +67,7 @@ Apart from a [LAMP](https://en.wikipedia.org/wiki/LAMP_(software_bundle)) server
 
 #### Database
 
-1100CC supports MySQL (5.7), MariaDB (10.2+), and PostgreSQL (10+). 1100CC defaults to using MySQL. 1100CC applies its own database abstraction layer using native [database extensions](http://php.net/manual/en/refs.database.php) with beneficial support for asynchronous calls to the database.
+1100CC supports MySQL (5.7+), MariaDB (10.2+), and PostgreSQL (10+). 1100CC defaults to using MySQL. 1100CC applies its own database abstraction layer using native [database extensions](http://php.net/manual/en/refs.database.php) with beneficial support for asynchronous calls to the database.
 
 #### Webserver
 

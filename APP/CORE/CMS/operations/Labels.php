@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -20,7 +20,7 @@ class Labels {
 		
 		$identifier = strtolower($identifier);
 		$code = '['.$type.']('.$identifier.')';
-		if (!self::$arr_labels[$code]) {
+		if (!isset(self::$arr_labels[$code])) {
 			self::$arr_identifiers[$type][$identifier] = $code;
 		}
 		self::$arr_labels_last[$code] = $code;
@@ -50,7 +50,7 @@ class Labels {
 		return $value;
 	}
 	
-	public static function doPrintLabels($text, $encode = false) {
+	public static function doPrintLabels($str_text, $encode = false) {
 
 		if (self::$arr_labels || self::$arr_identifiers) {
 			
@@ -63,13 +63,13 @@ class Labels {
 				self::$arr_identifiers = [];
 				
 				$arr = [];
-				if ($arr_identifiers['L']) {
+				if (isset($arr_identifiers['L'])) {
 					$arr['L'] = cms_labels::getLabels(array_keys($arr_identifiers['L']));
 				}
-				if ($arr_identifiers['D']) {
+				if (isset($arr_identifiers['D'])) {
 					$arr['D'] = cms_details::getSiteDetails(array_keys($arr_identifiers['D']));
 				}
-				if ($arr_identifiers['C']) {
+				if (isset($arr_identifiers['C'])) {
 					$arr['C'] = cms_details::getSiteDetailsCustom(array_keys($arr_identifiers['C']));
 				}
 
@@ -105,9 +105,9 @@ class Labels {
 			
 			$func_parse = function($arr_match) use ($encode) {
 
-				$str = self::$arr_labels['['.$arr_match[1].']('.$arr_match[2].')'];
+				$str = (self::$arr_labels['['.$arr_match[1].']('.$arr_match[2].')'] ?? null);
 				
-				if (!$str && !isset($str)) { // Return original but 'broken' tag when not defined
+				if ($str === null) { // Return original but 'broken' tag when not defined
 					$str = '['.$arr_match[1].']{'.$arr_match[2].'}';
 				} else {
 					
@@ -123,12 +123,14 @@ class Labels {
 				return $str;
 			};
 			
-			//$text = preg_replace_callback('/%5B([LDC])%5D%28((?:[A-Za-z0-9_\-]|%20)+)%29/', $func_parse, $text); // Url encoded tags
+			//$str_text = preg_replace_callback('/%5B([LDC])%5D%28((?:[A-Za-z0-9_\-]|%20)+)%29/', $func_parse, $text); // Url encoded tags
 			
-			$text = preg_replace_callback('/\[([LDC])\]\(([A-Za-z0-9_\- ]+)\)/', $func_parse, $text);
+			$str_text = preg_replace_callback('/\[([LDC])\]\(([A-Za-z0-9_\- ]+)\)/', $func_parse, $str_text);
 		}
 		
-		return $text;
+		$str_text = static::clearContainers($str_text);
+		
+		return $str_text;
 	}
 	
 	public static function override($identifier, $type, $value) {
@@ -161,7 +163,7 @@ class Labels {
 	
 	public static function getSystemLabel($value) {
 		
-		$str = self::$arr_system_labels[$value];
+		$str = (self::$arr_system_labels[$value] ?? $value);
 		
 		$str = preg_replace('/\[([A-Z])\]\{([A-Za-z0-9_\- ]+)\}/', '[\1][\2]', $str); // Turn 'broken' tags {} to unlocked [] to be parsed
 		$str = self::parseTextVariables($str);
@@ -179,12 +181,21 @@ class Labels {
 		
 		self::$arr_vars[$var] = $str;
 	}
+	
+	public static function getVariable($var) {
+		
+		return self::$arr_vars[$var];
+	}
 			
 	public static function parseTextVariables($str, $print_labels = false, $print_variables = true) {
 		
-		// Parse language blocks
-		$str = self::parseLanguage($str);
+		if (!$str) {
+			return (string)$str; // Possible '0'
+		}
 		
+		// Parse blocks
+		$str = self::parseContainers($str);
+
 		// Parse variables
 		$func_parse = function($arr_match) use ($print_labels, $print_variables) {
 			
@@ -193,7 +204,7 @@ class Labels {
 				$str = self::getLabel($arr_match[2], $arr_match[1], $print_labels);
 			} else if ($arr_match[1] == 'V') {
 				
-				$str_parsed = self::$arr_vars[$arr_match[2]];
+				$str_parsed = (self::$arr_vars[$arr_match[2]] ?? '');
 				
 				if ($str_parsed === false) {
 					
@@ -227,104 +238,16 @@ class Labels {
 		return $str;
 	}
 	
-	public static function parseLanguage($str) {
-					
-		$pos = 0;
+	public static function parseContainers($str) {
 		
-		while (true) {
-			
-			$pos = strpos($str, '[[', $pos);
-			
-			if ($pos === false) {
-				return $str;
-			}
-			
-			$pos_end = strpos($str, ']]', $pos);
-			
-			if (!$pos_end) {
-				return $str;
-			}
-			
-			$str_check = substr($str, $pos+2 , $pos_end - ($pos+2));
-			
-			if ($str_check === strtoupper($str_check)) { // System tags are uppercase
-				break;
-			} else {
-				$pos += 2;
-			}
-		}
-		
-		$language = strtoupper(SiteStartVars::$language);
-		$len = strlen($language);
-		
-		/*
-		preg_match('/\[\['.$language.'\]\](?:<br\s?\/?>)?(?:<\/p>)?(((?!(?:<p>)?\[\[).)*)/si', $str, $arr_match);
-		
-		if ($arr_match[0]) {
-			
-			$str = $arr_match[1];
-		}
-		*/
-		
-		$pos_start = strpos($str, '[['.$language.']]', $pos);
-		
-		if ($pos_start !== false) { // Language is present, extract the language-tagged text
-			
-			$pos_start = $pos_start+$len+4;
-			
-			$pos_start_clean = strpos($str, '</p>', $pos_start);
-			
-			if ($pos_start_clean) {
-				$pos_start = $pos_start_clean+4;
-			}
-			
-			$pos_end = strpos($str, '[[', $pos_start);
-			
-			if ($pos_end) {
-				
-				$str = substr($str, $pos_start, $pos_end - $pos_start);
-				
-				$pos_end_clean = strrpos($str, '<p>');
-				
-				if ($pos_end_clean) {
-					$str = substr($str, 0, $pos_end_clean);
-				}
-			} else {
-				
-				$str = substr($str, $pos_start);
-			}
-		} else { // Language is not present, keep possible untagged text and remove other languages
-			
-			$str = substr($str, 0, $pos);
-			
-			$pos_end_clean = strrpos($str, '<p>');
-				
-			if ($pos_end_clean) {
-				$str = substr($str, 0, $pos_end_clean);
-			}
-		}
-		
-		$str = trim($str); // Remove possible new line or other empty characters
-		
-		return $str;
-	}
-			
-	public static function addLanguageTags($what = null) {
-		
-		if ($what === true) {
-			return '[LANG]';
-		} else if ($what === false) {
-			return '[/LANG]';
-		} else {
-			return '[LANG]'.$what.'[/LANG]';
-		}
-	}
+		// Parse content that use single tags [[..]], e.g. language blocks
 
-	public static function parseLanguageTags($str) {
-
-		$pos_end = strpos($str, '[/LANG]'); // Find and move to first closing tag
+		$pos_end = strpos($str, '[/LABEL]'); // Find and move to first closing tag
 		
 		if ($pos_end === false) {
+			
+			$str = self::parseLanguage($str);
+			
 			return $str;
 		}
 
@@ -332,18 +255,131 @@ class Labels {
 			
 			$len = strlen($str);
 			
-			$pos_start = strrpos($str, '[LANG]', $pos_end-$len); // Lookup first leading opening tag
+			$pos_start = strrpos($str, '[LABEL]', $pos_end-$len); // Lookup first leading opening tag
 			
-			$str_parse = substr($str, $pos_start+6, $pos_end-($pos_start+6));
+			$str_parse = substr($str, $pos_start+7, $pos_end-($pos_start+7));
 			
 			$str_parse = self::parseLanguage($str_parse);
 			
-			$str = substr_replace($str, $str_parse, $pos_start, ($pos_end-$pos_start)+7);
+			$str = substr_replace($str, $str_parse, $pos_start, ($pos_end-$pos_start)+7+1);
 			
-			$pos_end = strpos($str, '[/LANG]', $pos_start);
+			$pos_end = strpos($str, '[/LABEL]', $pos_start);
 		}
 		
 		return $str;
+	}
+	
+	public static function parseLanguage($str) {
+		
+		if (!$str) {
+			return $str;
+		}
+				
+		$num_pos = static::checkLanguageTag($str);
+		
+		if ($num_pos === false) {
+			return $str;
+		}
+						
+		if (strpos($str, '</p>') !== false) { // Replace possible <p>[[XX]]</p>
+			
+			$str = preg_replace('/<p>\s*(\[\[[A-Z]+\]\])\s*<\/p>/', '$1', $str);
+		}
+				
+		$str_language = strtoupper(SiteStartVars::$language);
+		
+		$num_pos_start = strpos($str, '[['.$str_language.']]', $num_pos);
+		
+		if ($num_pos_start !== false) { // Language is present, extract the language-tagged text
+			
+			$num_pos_start = $num_pos_start+strlen($str_language)+4;
+						
+			$num_pos_end = strpos($str, '[[', $num_pos_start);
+			
+			if ($num_pos_end) {
+				
+				$str = substr($str, $num_pos_start, $num_pos_end - $num_pos_start);
+			} else {
+				
+				$str = substr($str, $num_pos_start);
+			}
+		} else { // Language is not present, remove all, keep default
+			
+			$str = substr($str, 0, $num_pos);
+		}
+		
+		$str = trim($str); // Remove possible new line or other empty characters
+		
+		return $str;
+	}
+	
+	public static function checkLanguageTag($str) {
+		
+		$num_pos = 0;
+		
+		while (true) {
+		
+			$num_pos = strpos($str, '[[', $num_pos);
+			
+			if ($num_pos === false) {
+				return false;
+			}
+			
+			$num_pos_end = strpos($str, ']]', $num_pos);
+			
+			if (!$num_pos_end) {
+				return false;
+			}
+			
+			$str_check = substr($str, $num_pos+2 , $num_pos_end - ($num_pos+2));
+			
+			if ($str_check === strtoupper($str_check)) { // System tags are uppercase
+				break;
+			} else {
+				$num_pos += 2;
+			}
+		}
+		
+		return $num_pos;
+	}
+			
+	public static function addContainer($str, $test = true) {
+		
+		// Non-parsed containers are removed at Response output
+
+		if ($test) {
+			
+			$num_pos = strpos($str, '[[');
+			
+			if ($num_pos === false) {
+				return $str;
+			}
+
+			$num_pos = strpos($str, ']]', $num_pos + 2);
+			
+			if ($num_pos === false) {
+				return $str;
+			}
+		}
+		
+		return '[LABEL]'.$str.'[/LABEL]';
+	}
+	public static function addContainerOpen() {
+		
+		return '[LABEL]';
+	}
+	public static function addContainerClose() {
+		
+		return '[/LABEL]';
+	}
+	
+	public static function clearContainers($str) {
+		
+		if (strpos($str, 'LABEL]') === false) {
+			return $str;
+		}
+		
+		return str_replace(['[LABEL]', '[/LABEL]', '[\/LABEL]'], '', $str);
 	}
 	
 	public static function getServerVariable($str) {
@@ -388,8 +424,23 @@ class Labels {
 				}
 				
 				break;
+			case 'language':	
+				$str = SiteStartVars::$language;
+				break;
+			case 'url_site':
+				$str = URL_BASE;
+				break;
+			case 'protocol':
+				$str = SERVER_PROTOCOL;
+				break;
+			case 'domain_site':
+				$str = SERVER_NAME_SITE_NAME;
+				break;
+			case 'domain':
+				$str = SERVER_NAME;
+				break;
 			default:
-				$str = constant($str);
+				$str = $str;
 		}
 		
 		return $str;

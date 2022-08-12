@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -74,9 +74,9 @@ class intf_uris extends uris {
 				
 				$arr_id = explode('_', $id);
 				$uri_translator_id = (int)$arr_id[0];
-				$identifier = base64_decode($arr_id[1]);
+				$str_identifier = base64_decode($arr_id[1]);
 				
-				$arr_uri = self::getURI($uri_translator_id, $identifier);
+				$arr_uri = self::getURI($uri_translator_id, $str_identifier, true);
 				$mode = 'update_uri';
 			}
 								
@@ -99,20 +99,18 @@ class intf_uris extends uris {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_identifier').'</label>
-						<div><input type="text" name="identifier" value="'.htmlspecialchars($arr_uri['identifier']).'" /></div>
+						<div><input type="text" name="identifier" value="'.strEscapeHTML($arr_uri['identifier']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_url').'</label>
-						<div><input type="text" name="url" value="'.htmlspecialchars($arr_uri['url']).'" /></div>
+						<div><input type="text" name="url" value="'.strEscapeHTML($arr_uri['url']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_remark').'</label>
-						<div><textarea name="remark">'.htmlspecialchars($arr_uri['remark']).'</textarea></div>
+						<div><textarea name="remark">'.strEscapeHTML($arr_uri['remark']).'</textarea></div>
 					</li>
 				</ul></fieldset>
 			</form>';
-			
-			$this->validate = ['identifier' => 'required'];
 		}
 		
 		// DATATABLE
@@ -173,7 +171,24 @@ class intf_uris extends uris {
 				}
 			}
 			
-			$identifier = str2URL($_POST['identifier']);
+			$str_identifier = $_POST['identifier'];
+			
+			if (substr($str_identifier, 0, 1) == ':') {
+				
+				$str_identifier = substr($str_identifier, 1);
+				
+				// Make sure the pattern is not erroneous
+				try {
+					preg_replace('<'.$str_identifier.'>', $str_url, 'TEST');
+				} catch (Exception $e) {
+					$str_identifier = preg_quote($str_identifier);
+				}
+				
+				$str_identifier = ':'.$str_identifier;
+			} else {
+			
+				$str_identifier = str2URL($str_identifier, '/');
+			}
 		}
 
 		if ($method == "insert_uri") {
@@ -183,7 +198,7 @@ class intf_uris extends uris {
 					VALUES
 				(
 					".(int)$_POST['uri_translator_id'].",
-					'".DBFunctions::strEscape($identifier)."',
+					'".DBFunctions::strEscape($str_identifier)."',
 					'".DBFunctions::strEscape($str_url)."',
 					'".DBFunctions::strEscape($_POST['remark'])."',
 					'".DBFunctions::strEscape($_POST['service'])."'
@@ -198,19 +213,19 @@ class intf_uris extends uris {
 			
 			$arr_id = explode('_', $id);
 			$uri_translator_id = (int)$arr_id[0];
-			$cur_identifier = base64_decode($arr_id[1]);
+			$str_cur_identifier = base64_decode($arr_id[1]);
 		}
 		
 		if ($method == "update_uri" && $id) {
 						
 			$res = DB::query("UPDATE ".DB::getTable('SITE_URIS')." SET
 						uri_translator_id = ".(int)$_POST['uri_translator_id'].",
-						identifier = '".DBFunctions::strEscape($identifier)."',
+						identifier = '".DBFunctions::strEscape($str_identifier)."',
 						url = '".DBFunctions::strEscape($str_url)."',
 						remark = '".DBFunctions::strEscape($_POST['remark'])."',
 						service = '".DBFunctions::strEscape($_POST['service'])."'
 				WHERE uri_translator_id = ".(int)$uri_translator_id."
-					AND identifier = '".DBFunctions::strEscape($cur_identifier)."'
+					AND identifier = '".DBFunctions::strEscape($str_cur_identifier)."'
 			");
 								
 			$this->refresh_table = true;
@@ -221,7 +236,7 @@ class intf_uris extends uris {
 						
 			$res = DB::query("DELETE FROM ".DB::getTable('SITE_URIS')."
 				WHERE uri_translator_id = ".(int)$uri_translator_id."
-					AND identifier = '".DBFunctions::strEscape($cur_identifier)."'
+					AND identifier = '".DBFunctions::strEscape($str_cur_identifier)."'
 			");
 			
 			$this->msg = true;

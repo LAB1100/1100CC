@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -23,7 +23,7 @@ class cms_object_interaction extends base_module {
 	
 	public function contents() {
 		
-		$return .= '<div class="section"><h1><span>'.self::$label.'</span><input type="button" class="data add popup" id="y:cms_object_interaction:add_stage-0" value="add" /></h1>
+		$return = '<div class="section"><h1><span>'.self::$label.'</span><input type="button" class="data add popup" id="y:cms_object_interaction:add_stage-0" value="add" /></h1>
 		<div class="object_interaction">';
 		
 		$return .= '<div class="tabs">
@@ -93,7 +93,7 @@ class cms_object_interaction extends base_module {
 						$return .= '<tr id="x:cms_object_interaction:stage_id-'.$row['id'].'">
 							<td>'.$row['name'].'</td>
 							<td><span class="info"><span class="icon" title="'.($paths ? implode("<br />", $paths) : getLabel("inf_none")).'">'.getIcon('info').'</span><span>'.count($paths).'</span></span></td>
-							<td><span class="info"><span class="icon" title="'.htmlspecialchars($row['stage_objects'] ?: getLabel("inf_none")).'">'.getIcon('info').'</span><span>'.(int)$row['count_stage_objects'].'</span></span></td>
+							<td><span class="info"><span class="icon" title="'.strEscapeHTML($row['stage_objects'] ?: getLabel("inf_none")).'">'.getIcon('info').'</span><span>'.(int)$row['count_stage_objects'].'</span></span></td>
 							<td><input type="button" class="data edit popup edit_stage" value="edit" /><input type="button" class="data del msg del_stage" value="del" /></td>
 						</tr>';
 					}
@@ -135,7 +135,7 @@ class cms_object_interaction extends base_module {
 					while ($row = $res->fetchAssoc()) {
 						$return .= '<tr id="x:cms_object_interaction:object_id-'.$row['id'].'">
 							<td>'.$row['name'].'</td>
-							<td><span class="info"><span class="icon" title="'.htmlspecialchars($row['stages']).'">'.getIcon('info').'</span><span>'.(int)$row['count_stages'].'</span></span></td>
+							<td><span class="info"><span class="icon" title="'.strEscapeHTML($row['stages']).'">'.getIcon('info').'</span><span>'.(int)$row['count_stages'].'</span></span></td>
 							<td><input type="button" class="data edit popup edit_object" value="edit" /><input type="button" class="data del msg del_object" value="del" /></td>
 						</tr>';
 					}
@@ -148,7 +148,7 @@ class cms_object_interaction extends base_module {
 	
 	private static function createStageObject($arr_stage_object, $arr_object) {
 		
-		$str_json = json_encode($arr_stage_object);
+		$str_json = value2JSON($arr_stage_object);
 		
 		if ($arr_object['img']) {
 			$value_hotspot = '<img class="hotspot" src="'.$arr_object['img'].'" title="'.$arr_object['name'].'" />';
@@ -158,7 +158,7 @@ class cms_object_interaction extends base_module {
 		
 		return '<div class="object" id="x:cms_object_interaction:stage_object-0">
 			<div class="handle"></div>
-			<input type="hidden" value="'.htmlspecialchars($str_json).'" name="objects[details][]" />
+			<input type="hidden" value="'.strEscapeHTML($str_json).'" name="objects[details][]" />
 			<input type="hidden" value="'.$arr_object['width'].'" name="objects[width][]" />
 			<input type="hidden" value="'.($arr_object['pos_x'] ? $arr_object['pos_x'].'_'.$arr_object['pos_y'] : '').'" name="objects[pos][]" />
 			'.$value_hotspot.'
@@ -348,11 +348,11 @@ class cms_object_interaction extends base_module {
 				<table>
 					<tr>
 						<td>'.getLabel("lbl_name").'</td>
-						<td><input type="text" name="name" value="'.htmlspecialchars($arr['stage']['name']).'"></td>
+						<td><input type="text" name="name" value="'.strEscapeHTML($arr['stage']['name']).'"></td>
 					</tr>
 					<tr>
 						<td>'.getLabel("lbl_description").'</td>
-						<td><textarea name="description">'.htmlspecialchars($arr['stage']['description']).'</textarea></td>
+						<td><textarea name="description">'.strEscapeHTML($arr['stage']['description']).'</textarea></td>
 					</tr>
 					<tr>
 						<td>'.getLabel("lbl_image").'</td>
@@ -393,7 +393,7 @@ class cms_object_interaction extends base_module {
 				</table>
 				</form>';
 			
-			$this->validate = '{"name": "required", "img": "required"}';
+			$this->validate = ['name' => 'required', 'img' => 'required'];
 		}
 		
 		if ($method == "add_object" || $method == "edit_object") {
@@ -412,7 +412,7 @@ class cms_object_interaction extends base_module {
 				<table>
 					<tr>
 						<td>'.getLabel("lbl_name").'</td>
-						<td><input type="text" name="name" value="'.htmlspecialchars($row["name"]).'"></td>
+						<td><input type="text" name="name" value="'.strEscapeHTML($row["name"]).'"></td>
 					</tr>
 					<tr>
 						<td>'.getLabel("lbl_hotspot").'</td>
@@ -441,7 +441,7 @@ class cms_object_interaction extends base_module {
 				</table>
 				</form>';
 				
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		// POPUP INTERACT
@@ -640,8 +640,8 @@ class cms_object_interaction extends base_module {
 				".(float)$value_pos[1].",
 				".$sort.",
 				".(float)$value_width.",
-				'".DBFunctions::strEscape(($value['effect'] ? json_encode($value['effect']) : ''))."',
-				'".DBFunctions::strEscape(($value['effect_hover'] ? json_encode($value['effect_hover']) : ''))."',
+				'".DBFunctions::strEscape(($value['effect'] ? value2JSON($value['effect']) : ''))."',
+				'".DBFunctions::strEscape(($value['effect_hover'] ? value2JSON($value['effect_hover']) : ''))."',
 				'".DBFunctions::strEscape($value['script'])."',
 				'".DBFunctions::strEscape($value['script_hover'])."',
 				'".DBFunctions::strEscape($value['style'])."',

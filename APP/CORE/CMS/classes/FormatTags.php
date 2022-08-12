@@ -2,17 +2,17 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-class FormatBBCode {
+class FormatTags {
 	
-	private static $arr_codes = [];
-	private static $arr_codes_special = [];
+	protected static $arr_codes = [];
+	protected static $arr_codes_special = [];
 
-	static public function parse($text) {
+	public static function parse($text) {
 		
 		// Quotes
 		$text = self::formatQuotes($text);
@@ -32,7 +32,7 @@ class FormatBBCode {
 		return $text;
 	}
 	
-	static public function init() {
+	public static function init() {
 				
 		self::$arr_codes = [
 			// [h=1]Heading[/h]
@@ -103,8 +103,8 @@ class FormatBBCode {
 			// [imgw=200]http://www/image.gif[/imgw]
 			'imgw' => [
 				'/\[imgw(?:=([0-9]+))?\]([^\s\'"<>]+(\.(jpg|jpeg|gif|png)))\[\/imgw\]/si', 
-				function($matches) {
-					return '<img src="'.$matches[2].'"'.($matches[1] ? ' width="'.$matches[1].'"' : '').'" class="enlarge" alt="" />';
+				function($arr_matches) {
+					return '<img src="'.$arr_matches[2].'"'.($arr_matches[1] ? ' width="'.$arr_matches[1].'"' : '').'" class="enlarge" alt="" />';
 				}
 			],
 
@@ -117,18 +117,18 @@ class FormatBBCode {
 			// [url=http://www.example.com]Text[/url]
 			'url_attr' => [
 				'/\[url=([^<>"\s]+?)\](.+?)\[\/url\]/si', 
-				function($matches) {
-					$str_first = substr($matches[1], 0, 1);
-					return '<a href="'.$matches[1].'"'.(($str_first != '/' && $str_first != '#') || substr($matches[1], 0, 2) == '//' ? ' target="_blank"' : '').'>'.$matches[2].'</a>';
+				function($arr_matches) {
+					$str_first = substr($arr_matches[1], 0, 1);
+					return '<a href="'.$arr_matches[1].'"'.(($str_first != '/' && $str_first != '#') || substr($arr_matches[1], 0, 2) == '//' ? ' target="_blank"' : '').'>'.$arr_matches[2].'</a>';
 				}
 			],
 
 			// [url]http://www.example.com[/url]
 			'url' => [
 				'/\[url\]([^<>"\s]+?)\[\/url\]/i', 
-				function($matches) {
-					$str_first = substr($matches[1], 0, 1);
-					return '<a href="'.$matches[1].'"'.(($str_first != '/' && $str_first != '#') || substr($matches[1], 0, 2) == '//' ? ' target="_blank"' : '').'>'.$matches[1].'</a>';
+				function($arr_matches) {
+					$str_first = substr($arr_matches[1], 0, 1);
+					return '<a href="'.$arr_matches[1].'"'.(($str_first != '/' && $str_first != '#') || substr($arr_matches[1], 0, 2) == '//' ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
 				}
 			],
 
@@ -147,16 +147,16 @@ class FormatBBCode {
 			// [abbr=For Your Information]FYI[/abbr]
 			'abbr' => [
 				'/\[abbr=(.+?)\](.+?)\[\/abbr\]/si', 
-				function($matches) {
-					return '<abbr title="'.htmlspecialchars($matches[1]).'">'.$matches[2].'</abbr>';
+				function($arr_matches) {
+					return '<abbr title="'.strEscapeHTML($arr_matches[1]).'">'.$arr_matches[2].'</abbr>';
 				}
 			],
 			
 			// [acronym=Laughing Out Loud]LOL[/acronym]
 			'acronym' => [
 				'/\[acronym=(.+?)\](.+?)\[\/acronym\]/si', 
-				function($matches) {
-					return '<acronym title="'.htmlspecialchars($matches[1]).'">'.$matches[2].'</acronym>';
+				function($arr_matches) {
+					return '<acronym title="'.strEscapeHTML($arr_matches[1]).'">'.$arr_matches[2].'</acronym>';
 				}
 			],
 			
@@ -201,17 +201,17 @@ class FormatBBCode {
 			
 			// URLs
 			'url_raw' => [
-				'/(?<=\A|[^=\]\'"a-z0-9])((http|ftp|https|ftps|irc):\/\/(?:[-a-z0-9@:%_+~#?&\/=]|(?:\.+[-a-z0-9@:%_+~#?&\/=]))+)/i', 
-				function($matches) {
-					return '<a href="'.$matches[1].'"'.(!strpos($matches[1], SERVER_NAME) ? ' target="_blank"' : '').'>'.$matches[1].'</a>';
+				'/(?<=\A|[^=\]>\'"a-z0-9])((http|ftp|https|ftps|irc):\/\/(?:[-a-z0-9@:%_+~#?&\/=]|(?:\.+[-a-z0-9@:%_+~#?&\/=]))+)/i', 
+				function($arr_matches) {
+					return '<a href="'.$arr_matches[1].'"'.(!strpos($arr_matches[1], SERVER_NAME) ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
 				}
 			],
 			
-			// [icon=name:categroy]
+			// [icon=name:category]
 			'icon' => [
-				'/\[icon=([^\s\'"<>:]+)(?::([^\s\'"<>]+))?\]/i', 
-				function($matches) {
-					return '<span class="icon"'.($matches[2] ? ' data-category="'.$matches[2].'"' : '').'>'.getIcon($matches[1]).'</span>';
+				'/\[icon=([^\s\'"<>:]+?)(?::([^\s\'"<>]+?))?\]/i', 
+				function($arr_matches) {
+					return '<span class="icon" data-name="'.$arr_matches[1].'"'.($arr_matches[2] ? ' data-category="'.$arr_matches[2].'"' : '').'>'.getIcon($arr_matches[1]).'</span>';
 				}
 			]
 		];
@@ -220,18 +220,20 @@ class FormatBBCode {
 			//[quote=Author]Text[/quote]
 			'quote' => [
 				'/\[quote(?:=(.+?))?\]\s*([\s\S]+?)\s*\[\/quote\]\s*/i',
-				'<blockquote><cite>\1</cite><p>\2</p></blockquote>'
+				'<blockquote><header>\1</header>\2</blockquote>'
 			],
 			'url_raw_all' => [
-				'/(?<=\A|[^=\]\'"a-z0-9])((http|ftp|https|ftps|irc):\/\/[^<>\s]+)/i',
-				function($matches) {
-					return '<a href="'.$matches[1].'"'.(!strpos($matches[1], SERVER_NAME) ? ' target="_blank"' : '').'>'.$matches[1].'</a>';
+				'/(?<=\A|[^=\]>\'"a-z0-9])((http|ftp|https|ftps|irc):\/\/[^<>\s]+)/i',
+				function($arr_matches) {
+					return '<a href="'.$arr_matches[1].'"'.(!strpos($arr_matches[1], SERVER_NAME) ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
 				}
 			]
 		];
 	}
 	
-	static private function formatQuotes($s) {
+	protected static function formatQuotes($s) {
+		
+		$old_s = null;
 
 		while ($old_s != $s) {
 			
@@ -261,7 +263,7 @@ class FormatBBCode {
 		return $s;
 	}
 	
-	static public function formatUrls($s) {
+	public static function formatUrls($s) {
 		
 		$arr_code = self::$arr_codes_special['url_raw_all'];
 		$s = preg_replace_callback($arr_code[0], $arr_code[1], $s);
@@ -269,19 +271,19 @@ class FormatBBCode {
 		return $s;
 	}
 	
-	static public function addCode($name, $code, $return) {
+	public static function addCode($name, $code, $return) {
 		
 		self::$arr_codes[$name] = [$code, $return];
 	}
 	
-	static public function getCode($name) {
+	public static function getCode($name) {
 		
 		$arr_code = (self::$arr_codes[$name] ?: self::$arr_codes_special[$name]);
 
 		return $arr_code;
 	}
 	
-	static public function addParagraphs($body) {
+	public static function addParagraphs($body) {
 
 		// use \n for newline on all systems
 		$body = str_replace(["\r\n", "\r"], "\n", $body); 
@@ -290,15 +292,22 @@ class FormatBBCode {
 		return $body;
 	}
 	
-	static public function extractParagraphs($body, $max_p = 2) {
+	public static function extractParagraphs($body, $max_p = 2) {
 	
 		preg_match("/^(.*?\n{2,}){0,".$max_p ."}/si", $body, $extract);
 		$body = ($extract[0] ? trim($extract[0]) : $body); // if single line return body.
 		
 		return $body;
 	}
+	
+	public static function strip($text) {
 		
-	static private function strLastPos($haystack, $needle, $offset = 0) {
+		$text = preg_replace('/\[.*?\]/s', '', $text);
+		
+		return $text;
+	}
+		
+	protected static function strLastPos($haystack, $needle, $offset = 0) {
 		
 		$len_needle = strlen($needle);
 		$pos_end = $offset - $len_needle;
@@ -317,4 +326,4 @@ class FormatBBCode {
 		return ($pos_end >= 0 ? $pos_end : false);
 	}
 }
-FormatBBCode::init();
+FormatTags::init();

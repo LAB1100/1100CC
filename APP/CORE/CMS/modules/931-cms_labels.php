@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -22,7 +22,7 @@ class cms_labels extends base_module {
 	
 	public function contents() {
 	
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div class="labels">';
 
 			$return .= '<div id="tabs-labels">
@@ -133,7 +133,7 @@ class cms_labels extends base_module {
 								foreach ($arr_language as $lang_code => $arr_row) {
 									
 									$return .= '<div>
-										<textarea name="lang_code['.$lang_code.']" class="body-content '.$lang_code.'">'.htmlspecialchars($arr_label[$lang_code]).'</textarea><span id="y:cms_general:preview-'.$lang_code.'" class="icon" title="'.getLabel('inf_preview').'">'.getIcon('view').'</span>
+										<textarea name="lang_code['.$lang_code.']" class="body-content '.$lang_code.'">'.strEscapeHTML($arr_label[$lang_code]).'</textarea><span id="y:cms_general:preview-'.$lang_code.'" class="icon" title="'.getLabel('inf_preview').'">'.getIcon('view').'</span>
 									</div>';
 								}
 								
@@ -146,7 +146,7 @@ class cms_labels extends base_module {
 							
 							$return .= '<tr>
 								<td><span>'.$arr_row['label'].'</span></td>
-								<td><textarea name="lang_code['.$lang_code.']">'.htmlspecialchars($arr_label[$lang_code]).'</textarea></td>
+								<td><textarea name="lang_code['.$lang_code.']">'.strEscapeHTML($arr_label[$lang_code]).'</textarea></td>
 							</tr>';
 						}
 					}
@@ -226,14 +226,14 @@ class cms_labels extends base_module {
 				<fieldset><ul>
 					<li>
 						<label>Identifier</label>
-						<div><input type="text" name="identifier" value="'.htmlspecialchars($arr_label['identifier']).'"></div>
+						<div><input type="text" name="identifier" value="'.strEscapeHTML($arr_label['identifier']).'"></div>
 					</li>';
 
 					foreach ($arr_lang as $lang_code => $row) {
 						
 						$this->html .= '<li>
 							<label><span>'.$row['label'].'</span></label>
-							<div><textarea name="lang_code['.$lang_code.']">'.htmlspecialchars($arr_label[$lang_code]).'</textarea></div>
+							<div><textarea name="lang_code['.$lang_code.']">'.strEscapeHTML($arr_label[$lang_code]).'</textarea></div>
 						</li>';
 					}
 				$this->html .= '</ul></fieldset>		
@@ -337,7 +337,7 @@ class cms_labels extends base_module {
 				
 				for ($i = 1; $i < $nr_columns; $i++) {
 					
-					$arr_data[] = htmlspecialchars($arr_row[$i]);
+					$arr_data[] = strEscapeHTML($arr_row[$i]);
 				}
 				
 				if (($id != 'select' && $id != 'core') || ($id == 'core' && $_SESSION['CORE'])) {
@@ -654,7 +654,7 @@ class cms_labels extends base_module {
 		
 		// User labels
 		
-		if (!IS_CMS && $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'] && $arr_labels) {
+		if (!IS_CMS && !empty($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']) && $arr_labels) {
 			
 			$user_id = ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] ?: $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']);
 			

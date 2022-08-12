@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -28,7 +28,7 @@ class cms_custom_content extends base_module {
 		
 	public function contents() {
 		
-		$return .= '<div class="section"><h1 id="x:cms_custom_content:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_custom_content:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add" value="add" /></h1>
 		<div class="custom_content">
 		
 			<table class="display" id="d:cms_custom_content:data-0">
@@ -104,11 +104,11 @@ class cms_custom_content extends base_module {
 				$arr_tags = [];
 			}
 														
-			$this->html = '<form id="frm-custom_content" data-method="'.$mode.'">
+			$this->html = '<form id="frm-custom_content" data-method="'.$mode.'" data-lock="1">
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.htmlspecialchars($arr_row['name']).'"></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_row['name']).'"></div>
 					</li>
 					<li class="content">
 						<label>'.getLabel('lbl_body').'</label>
@@ -124,7 +124,7 @@ class cms_custom_content extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_description').'</label>
-						<div><textarea name="description">'.htmlspecialchars($arr_row['description']).'</textarea></div>
+						<div><textarea name="description">'.strEscapeHTML($arr_row['description']).'</textarea></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_tags').'</label>
@@ -133,7 +133,7 @@ class cms_custom_content extends base_module {
 				</ul></fieldset>
 			</form>';
 			
-			$this->validate = '{"name": "required"}';
+			$this->validate = ['name' => 'required'];
 		}
 		
 		// POPUP INTERACT

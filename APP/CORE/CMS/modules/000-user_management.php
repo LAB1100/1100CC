@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2019 LAB1100.
+ * Copyright (C) 2022 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -12,19 +12,22 @@ DB::setTable('TABLE_USER_ACCOUNT_KEY', DB::$database_cms.'.user_account_key');
 DB::setTable('TABLE_USER_WEBSERVICE_KEY', DB::$database_cms.'.user_webservice_key');
 
 class user_management extends base_module {
+	
+	const MAIL_ACCOUNT = 1;
+	const MAIL_ACCOUNT_PASSWORD = 2;
 
 	public static function moduleProperties() {
 		static::$label = false;
 		static::$parent_label = false;
 	}
 
-	public static function addUser($enabled, $arr_user, $password = false, $account_mail = false) {
+	public static function addUser($is_enabled, $arr_user, $str_password = false, $mail_account = false) {
 
 		if (!$arr_user['name'] || !$arr_user['uname'] || !(int)$arr_user['group_id'] || !filter_var($arr_user['email'], FILTER_VALIDATE_EMAIL)) {
 			error(getLabel('msg_missing_information'));
 		}
 	
-		$password = ($password ?: generateRandomString(10));
+		$str_password = ($str_password ?: generateRandomString(10));
 		
 		DB::setConnection(DB::CONNECT_CMS);
 		
@@ -33,7 +36,7 @@ class user_management extends base_module {
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_USERS')."
 				(enabled, name, uname, passhash, group_id, email, parent_id)
 					VALUES
-				(".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN).", '".DBFunctions::strEscape($arr_user['name'])."', '".DBFunctions::strEscape($arr_user['uname'])."', '".DBFunctions::strEscape(generateHash($password))."', ".(int)$arr_user['group_id'].", '".DBFunctions::strEscape($arr_user['email'])."', ".(int)$arr_user['parent_id'].")
+				(".DBFunctions::escapeAs($is_enabled, DBFunctions::TYPE_BOOLEAN).", '".DBFunctions::strEscape($arr_user['name'])."', '".DBFunctions::strEscape($arr_user['uname'])."', '".DBFunctions::strEscape(generateHash($str_password))."', ".(int)$arr_user['group_id'].", '".DBFunctions::strEscape($arr_user['email'])."', ".(int)$arr_user['parent_id'].")
 			");
 		} catch (Exception $e) {
 			
@@ -42,15 +45,15 @@ class user_management extends base_module {
 		
 		$id = DB::lastInsertID();
 		
-		$use_confirmation = ($account_mail && is_string($account_mail));
+		$use_confirmation = ($mail_account && is_string($mail_account)); // Send a confirmation email with a specific confirmation link
 		
 		try {
 			
-			if ($account_mail) {
+			if ($mail_account) {
 				
 				$key = generateRandomString(20);
 				
-				$res = DB::query("INSERT INTO ".DB::getTable("TABLE_USER_ACCOUNT_KEY")."
+				$res = DB::query("INSERT INTO ".DB::getTable('TABLE_USER_ACCOUNT_KEY')."
 					(user_id, passkey)
 						VALUES
 					(".(int)$id.", '".DBFunctions::strEscape($key)."')
@@ -58,11 +61,11 @@ class user_management extends base_module {
 				
 				if ($use_confirmation) {
 					
-					if (!$enabled) {
+					if (!$is_enabled) {
 						
-						self::sendConfirmationMail('account', $id, $account_mail);
+						self::sendMailConfirmation('account', $id, $mail_account);
 					}
-				} else if ($enabled) {
+				} else if ($is_enabled) {
 					
 					self::sendMailAccount($id, true);
 				}
@@ -83,10 +86,10 @@ class user_management extends base_module {
 		
 		DB::setConnection();
 
-		return ['id' => $id, 'password' => $password];
+		return ['id' => $id, 'password' => $str_password];
 	}
 	
-	public static function updateUser($id, $enabled, $arr_user = false, $password = false, $account_mail = false) {
+	public static function updateUser($id, $is_enabled, $arr_user = false, $str_password = false, $mail_account = false) {
 	
 		if (!(int)$id || ($arr_user['email'] && !filter_var($arr_user['email'], FILTER_VALIDATE_EMAIL))) {
 			error(getLabel('msg_missing_information'));
@@ -102,19 +105,19 @@ class user_management extends base_module {
 		}
 		$row = $res->fetchAssoc();
 		
-		$use_confirmation = ($account_mail && is_string($account_mail));
+		$use_confirmation = ($mail_account && is_string($mail_account)); // Send a confirmation email with a specific confirmation link
 		
 		DB::setConnection(DB::CONNECT_CMS);
 		
 		try {
 			
 			$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')." SET
-					enabled = ".DBFunctions::escapeAs($enabled, DBFunctions::TYPE_BOOLEAN)."
+					enabled = ".DBFunctions::escapeAs($is_enabled, DBFunctions::TYPE_BOOLEAN)."
 					".($arr_user['name'] ? ", name = '".DBFunctions::strEscape($arr_user['name'])."'" : "")."
 					".($arr_user['uname'] ? ", uname = '".DBFunctions::strEscape($arr_user['uname'])."'" : "")."
 					".($arr_user['email'] && !$use_confirmation ? ", email = '".DBFunctions::strEscape($arr_user['email'])."'" : "")."
 					".($arr_user['parent_id'] ? ", parent_id = ".(int)$arr_user['parent_id']."" : "")."
-					".($password ? ", passhash = '".DBFunctions::strEscape(generateHash($password))."'" : "")."
+					".($str_password ? ", passhash = '".DBFunctions::strEscape(generateHash($str_password))."'" : "")."
 				WHERE id = ".(int)$id."
 			");
 		} catch (Exception $e) {
@@ -125,7 +128,7 @@ class user_management extends base_module {
 		$debug = print_r($arr_user, true);
 		msg(self::getUserTag($id), 'USER UPDATE', LOG_SYSTEM, $debug);
 																
-		if ($account_mail) {
+		if ($mail_account) {
 			
 			if ($use_confirmation) {
 				
@@ -140,11 +143,11 @@ class user_management extends base_module {
 						".DBFunctions::onConflict('user_id', ['passkey', 'email_new'])."
 					");
 														
-					self::sendConfirmationMail('update', $id, $account_mail);
+					self::sendMailConfirmation('update', $id, $mail_account);
 				}
-			} else if ($enabled) {
+			} else if ($is_enabled) {
 				
-				if ($password) {
+				if ($mail_account == static::MAIL_ACCOUNT_PASSWORD) {
 					
 					$key = generateRandomString(20);
 					
@@ -238,7 +241,7 @@ class user_management extends base_module {
 		
 		DB::setConnection();
 							
-		self::sendConfirmationMail('recover', $user_id, $recover_confirmation_mail_url);
+		self::sendMailConfirmation('recover', $user_id, $recover_confirmation_mail_url);
 
 		return true;
 	}
@@ -257,14 +260,16 @@ class user_management extends base_module {
 		if (!$res->getRowCount()) {
 			error(getLabel('msg_missing_information'));
 		}
-		$row = $res->fetchAssoc();
+		$arr_row = $res->fetchAssoc();
 		
 		switch ($type) {
+			case 'check':
+				return true;
 			case 'account':
 				self::updateUser($id, true);
 				break;
 			case 'update':
-				self::updateUser($id, true, ['email' => $row['email_new']]);
+				self::updateUser($id, true, ['email' => $arr_row['email_new']]);
 				break;
 			case 'recover':
 				break;
@@ -283,7 +288,7 @@ class user_management extends base_module {
 		return true;
 	}
 	
-	public static function updateUserVal($arr_update, $id) {
+	public static function updateUserValue($arr_update, $id) {
 	
 		$arr_set = [];
 		foreach ($arr_update as $col => $val) {
@@ -293,7 +298,7 @@ class user_management extends base_module {
 		DB::setConnection(DB::CONNECT_CMS);
 
 		$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')." SET
-				".implode(",", $arr_set)."
+				".implode(',', $arr_set)."
 			WHERE id = ".(int)$id."");
 		
 		DB::setConnection();
@@ -433,6 +438,30 @@ class user_management extends base_module {
 		return $arr;
 	}
 	
+	public static function getUserAccount($user_id) {
+		
+		$res = DB::query("SELECT
+			u.name, u.uname, u.email, u.group_id, CASE
+				WHEN up.parent_name IS NOT NULL THEN up.parent_name
+				ELSE ug.name
+			END AS domain, uk.passkey, uk.email_new
+				FROM ".DB::getTable('TABLE_USERS')." u
+				LEFT JOIN ".DB::getTable('TABLE_USER_ACCOUNT_KEY')." uk ON (uk.user_id = u.id)
+				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
+				LEFT JOIN ".DB::getTable('VIEW_USER_PARENT')." up ON (up.id = u.parent_id)
+			WHERE u.id = ".(int)$user_id
+		);
+		
+		if (!$res->getRowCount()) {
+			
+			error('Invalid user ID.');
+		}
+		
+		$arr = $res->fetchAssoc();
+		
+		return $arr;
+	}
+	
 	public static function filterUsers($value, $arr_options = [], $limit = 20) {
 			
 		$arr = [];
@@ -509,105 +538,75 @@ class user_management extends base_module {
 			";
 		}
 	
-		$check = DB::query($query);
+		$res_check = DB::query($query);
 		
-		if ($check->getRowCount()) {
+		if ($res_check->getRowCount()) {
 			return false;
 		} else {
 			return true;
 		}
 	}
 	
-	protected static function sendConfirmationMail($type, $id, $base_url) {
+	protected static function sendMailConfirmation($type, $id, $str_url_base) {
+				
+		$arr = static::getUserAccount($id);	
 		
-		$res = DB::query("SELECT
-			u.name, u.uname, u.email, CASE
-				WHEN up.parent_name IS NOT NULL THEN up.parent_name
-				ELSE ug.name
-			END AS domain, uk.passkey, uk.email_new
-				FROM ".DB::getTable('TABLE_USERS')." u
-				LEFT JOIN ".DB::getTable('TABLE_USER_ACCOUNT_KEY')." uk ON (uk.user_id = u.id)
-				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
-				LEFT JOIN ".DB::getTable('VIEW_USER_PARENT')." up ON (up.id = u.parent_id)
-			WHERE u.id = ".(int)$id
-		);
-		
-		if (!$res->getRowCount()) {
-			error('Invalid user ID.');
-		}
-		
-		$arr = $res->fetchAssoc();	
-		
-		$url = $base_url.$id.'/'.$arr['passkey'];
+		$str_url = $str_url_base.$id.'/'.$arr['passkey'];
 		
 		Labels::setVariable('name', $arr['name']);
 		Labels::setVariable('domain', $arr['domain']);
-		Labels::setVariable('url', $url);
+		Labels::setVariable('url', $str_url);
 		
 		switch ($type) {
 			case 'account':
-				$subject = getLabel('mail_confirm_account_title');
-				$mail = getLabel('mail_confirm_account');
-				$msg = getLabel('msg_confirm_account_mail_sent');
-				$email = $arr['email'];
+				$str_subject = getLabel('mail_confirm_account_title');
+				$str_mail = getLabel('mail_confirm_account');
+				$str_msg = getLabel('msg_confirm_account_mail_sent');
+				$str_email = $arr['email'];
 				break;
 			case 'recover':
-				$subject = getLabel('mail_confirm_account_recover_title');
-				$mail = getLabel('mail_confirm_account_recover');
-				$msg = getLabel('msg_confirm_account_recover_mail_sent');
-				$email = $arr['email'];
+				$str_subject = getLabel('mail_confirm_account_recover_title');
+				$str_mail = getLabel('mail_confirm_account_recover');
+				$str_msg = getLabel('msg_confirm_account_recover_mail_sent');
+				$str_email = $arr['email'];
 				break;
 			case 'update':
-				$subject = getLabel('mail_confirm_account_update_title');
-				$mail = getLabel('mail_confirm_account_update');
-				$msg = getLabel('msg_confirm_account_update_mail_sent');
-				$email = $arr['email_new'];
+				$str_subject = getLabel('mail_confirm_account_update_title');
+				$str_mail = getLabel('mail_confirm_account_update');
+				$str_msg = getLabel('msg_confirm_account_update_mail_sent');
+				$str_email = $arr['email_new'];
 				break;
 		}
 		
-		$mail = new Mail($email, $subject, $mail);
+		$mail = new Mail($str_email, $str_subject, $str_mail);
 		$mail->send();
 		
-		msg($msg, 'MAIL');
+		msg($str_msg, 'MAIL');
 	}
 	
-	protected static function sendMailAccount($id, $new = false) {
-		
-		$res = DB::query("SELECT
-			u.name, u.uname, u.email, u.group_id, CASE
-				WHEN up.parent_name IS NOT NULL THEN up.parent_name
-				ELSE ug.name
-			END AS domain, uk.passkey
-				FROM ".DB::getTable('TABLE_USERS')." u
-				LEFT JOIN ".DB::getTable('TABLE_USER_ACCOUNT_KEY')." uk ON (uk.user_id = u.id)
-				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
-				LEFT JOIN ".DB::getTable('VIEW_USER_PARENT')." up ON (up.id = u.parent_id)
-			WHERE u.id = ".(int)$id
-		);
-		
-		if (!$res->getRowCount()) {
-			error('Invalid user ID.');
-		}
-		
-		$arr = $res->fetchAssoc();	
+	protected static function sendMailAccount($id, $is_new = false) {
+				
+		$arr = static::getUserAccount($id);	
 						
-		$subject = getLabel(($new ? 'mail_account_new_title' : 'mail_account_changed_title'));
+		$str_subject = getLabel(($is_new ? 'mail_account_new_title' : 'mail_account_changed_title'));
 		
 		Labels::setVariable('name', $arr['name']);
 		Labels::setVariable('domain', $arr['domain']);
 		Labels::setVariable('user_name', $arr['uname']);
 		
 		$arr_mod = pages::getClosestMod('login', 0, 0, $arr['group_id']);
+		
 		if ($arr['passkey']) { // Possibility to set password
-			$url = pages::getModUrl($arr_mod).'welcome/'.$id.'/'.$arr['passkey'];
+			$str_url = pages::getModUrl($arr_mod).'welcome/'.$id.'/'.$arr['passkey'];
 		} else {
-			$url = pages::getPageUrl($arr_mod);
+			$str_url = pages::getPageUrl($arr_mod);
 		}
-		Labels::setVariable('url', $url);
 		
-		$msg = getLabel(($new ? 'mail_account_new' : 'mail_account_changed')).getLabel('mail_account_login_url'.($arr['passkey'] ? '_expire' : ''));
+		Labels::setVariable('url', $str_url);
 		
-		$mail = new Mail($arr['email'], $subject, $msg);
+		$str_msg = getLabel(($is_new ? 'mail_account_new' : 'mail_account_changed')).getLabel('mail_account_login_url'.($arr['passkey'] ? '_expire' : ''));
+		
+		$mail = new Mail($arr['email'], $str_subject, $str_msg);
 		$mail->send();
 	}
 }
