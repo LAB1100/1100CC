@@ -12,7 +12,7 @@ DirectorySlash Off
 RewriteEngine On
 
 # Set server state to development or production (default)
-SetEnv STATE development
+#SetEnv STATE development
 #SetEnv MESSAGE '[L][msg_site_maintenance] [L][msg_site_read_only]'
 
 ################################################

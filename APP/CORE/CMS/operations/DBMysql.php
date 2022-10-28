@@ -393,6 +393,10 @@ class DBFunctions extends DBFunctionsBase {
 			
 	public static function strEscape($str) {
 		
+		if (!$str) {
+			return (string)$str;
+		}
+		
 		return DB::$connection_active->real_escape_string($str);
 	}
 	

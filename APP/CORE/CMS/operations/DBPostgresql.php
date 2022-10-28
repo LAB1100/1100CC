@@ -360,6 +360,10 @@ class DBFunctions extends DBFunctionsBase {
 			
 	public static function strEscape($str) {
 		
+		if (!$str) {
+			return (string)$str;
+		}
+		
 		return pg_escape_string(DB::$connection_active, $str);
 	}
 	
