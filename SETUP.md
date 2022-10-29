@@ -75,6 +75,7 @@ When your Linux distrubiton applies SELinux:
 * libapache2-mod
 * intl
 * bcmath
+* opcache
 
 ### Database
 
