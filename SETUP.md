@@ -127,6 +127,7 @@ Import the following SQL to their respective databases:
 * [1100CC.core_language.sql](setup/1100CC.core_language.sql) to the 1100CC CORE database.
 * [1100CC.core_labels.en.sql](setup/1100CC.core_labels.en.sql) to the 1100CC CORE database, and also other languages by their code ('nl'/'de') if needed.
 * [SITE_cms.sql](setup/SITE_cms.sql) to the SITE CMS database.
+* [SITE_cms.default.sql](setup/SITE_cms.default.sql) to the SITE CMS database.
 * [SITE_home.sql](setup/SITE_home.sql) to the SITE HOME database.
 
 #### PostgreSQL

@@ -79,7 +79,7 @@ class intf_cms_language extends cms_language {
 	
 	private static function contentTabCms() {
 					
-		$res = DB::query("SELECT lang_code, label, user, is_default FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." AS language ORDER BY lang_code");
+		$res = DB::query("SELECT lang_code, label, is_user_selectable, is_default FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." AS language ORDER BY lang_code");
 		
 		if ($res->getRowCount() == 0) {
 			$return .= '<section class="info">'.getLabel('msg_no_language').'</section>';
@@ -102,7 +102,7 @@ class intf_cms_language extends cms_language {
 						$return .= '<tr id="x:intf_cms_language:language_id-'.$row['lang_code'].'">
 							<td>'.$row['lang_code'].'</td>	
 							<td>'.$row['label'].'</td>	
-							<td><span class="icon" data-category="status">'.getIcon(($row['user'] ? 'tick' : 'min')).'</span></td>
+							<td><span class="icon" data-category="status">'.getIcon(($row['is_user_selectable'] ? 'tick' : 'min')).'</span></td>
 							<td><input type="radio" name="is_default_language" id="y:intf_cms_language:language_default-'.$row['lang_code'].'" value="'.$row['lang_code'].'"'.(($row['is_default'] == 1) ? ' checked="checked"':'').' /><label for="y:intf_cms_language:language_default-'.$row['lang_code'].'"></label></td>
 							<td><input type="button" class="data edit popup language_cms_edit" value="edit" /><input type="button" class="data del msg language_cms_del" value="del" /></td>
 						</tr>';
@@ -248,7 +248,7 @@ class intf_cms_language extends cms_language {
 						<ul>
 						<li>
 							<label>User Selectable</label>
-							<div><input type="checkbox" name="user" value="1"'.($row['user'] ? ' checked="checked"' : '').'" /></div>
+							<div><input type="checkbox" name="is_user_selectable" value="1"'.($row['is_user_selectable'] ? ' checked="checked"' : '').'" /></div>
 						</li>';
 					}
 				$this->html .= '</ul></fieldset>
@@ -281,13 +281,13 @@ class intf_cms_language extends cms_language {
 				(
 					lang_code,
 					label
-					".($method == 'language_cms_insert' ? ", user" : "")."
+					".($method == 'language_cms_insert' ? ", is_user_selectable" : "")."
 				)
 					VALUES
 				(
 					'".DBFunctions::strEscape($_POST['lang_code'])."',
 					'".DBFunctions::strEscape($_POST['label'])."'
-					".($method == 'language_cms_insert' ? ", ".(int)$_POST['user'] : "")."
+					".($method == 'language_cms_insert' ? ", ".(int)$_POST['is_user_selectable'] : "")."
 				)
 			");
 			
@@ -304,7 +304,7 @@ class intf_cms_language extends cms_language {
 			$res = DB::query("UPDATE ".DB::getTable(($method == 'language_cms_update' ? 'TABLE_CMS_LANGUAGE' : 'TABLE_CORE_LANGUAGE'))." SET
 					lang_code = '".DBFunctions::strEscape($_POST['lang_code'])."',
 					label = '".DBFunctions::strEscape($_POST['label'])."'
-					".($method == 'language_cms_update' ? ", user = ".(int)$_POST['user'] : "")."
+					".($method == 'language_cms_update' ? ", is_user_selectable = ".(int)$_POST['is_user_selectable'] : "")."
 				WHERE lang_code = '".DBFunctions::strEscape($id)."'
 			");
 			

@@ -49,7 +49,7 @@ class account extends base_module {
 			
 			foreach ($arr_languages as $lang_code => $arr_language) {
 				
-				if (!$arr_language['user']) {
+				if (!$arr_language['is_user_selectable']) {
 					unset($arr_languages[$lang_code]);
 				}
 			}
@@ -124,7 +124,7 @@ class account extends base_module {
 				
 				$arr_language = cms_language::getLanguage('cms', $_POST['lang_code']);
 				
-				if ($arr_language['user']) {
+				if ($arr_language['is_user_selectable']) {
 					
 					user_management::updateUserValue(['lang_code' => $_POST['lang_code']], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']);
 				}

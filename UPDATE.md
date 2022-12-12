@@ -121,3 +121,11 @@ CREATE TABLE `site_log_requests_throttle` (
 ALTER TABLE `site_log_requests_throttle`
   ADD PRIMARY KEY (`ip`);
 ```
+
+## VERSION 10.4*
+
+Run SQL queries in database ?SITE?_cms:
+
+```sql
+ALTER TABLE `cms_language` CHANGE `user` `is_user_selectable` TINYINT(1) NOT NULL;
+```

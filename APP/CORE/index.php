@@ -168,7 +168,7 @@
 			Log::logRequest($str_request_identifier);
 		}
 		
-		$JSON->authenticated = ($_SESSION['USER_ID'] ? true : false);
+		$JSON->authenticated = (isset($_SESSION) && $_SESSION['USER_ID'] ? true : false);
 		
 		SiteStartVars::setRequestVariables(($str_path_start ? array_slice($arr_path_info, 1) : []));
 

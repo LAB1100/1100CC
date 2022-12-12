@@ -705,7 +705,7 @@ abstract class api extends base_module {
 			
 			if ($this->mode == 'parent-parent') {
 				$arr_client_user['user_id'] = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'parent-child' || $this->mode == 'child-child' || $this->mode == 'user-child') {
+			} else if ($this->mode == 'parent-child' || $this->mode == 'child-child' || $this->mode == 'user-child' || $this->mode == 'root-child') {
 				if (!$arr_client_user['user_id']) {
 					error(getLabel('msg_missing_information'));
 				}
@@ -736,7 +736,7 @@ abstract class api extends base_module {
 			
 			if ($this->mode == 'parent-parent') {
 				$arr_client_user['user_id'] = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'parent-child' || $this->mode == 'child-child' || $this->mode == 'user-child') {
+			} else if ($this->mode == 'parent-child' || $this->mode == 'child-child' || $this->mode == 'user-child' || $this->mode == 'root-child') {
 				if (!$arr_client_user['user_id']) {
 					error(getLabel('msg_missing_information'));
 				}
@@ -868,6 +868,8 @@ abstract class api extends base_module {
 					$is_valid = ($user_id == $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']);
 				} else if ($this->mode == 'parent-child') {
 					$is_valid = user_management::checkUserIds($user_id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'], 'parent');
+				} else if ($this->mode == 'root-child') {
+					$is_valid = user_management::checkUserIds($user_id, 0, 'parent');
 				} else if ($this->mode == 'user-child' || $this->mode == 'child-child') {
 					$is_valid = user_management::checkUserIds($user_id, $_SESSION['USER_ID'], 'parent');
 				} else {

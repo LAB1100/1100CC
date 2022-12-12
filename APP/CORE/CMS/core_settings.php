@@ -103,7 +103,7 @@
 	// SITE settings
 	
 	if (!isPath($path_settings)) {
-		exit('1100CC');
+		exit('1100CC is missing settings.');
 	}
 	
 	require($path_settings);
