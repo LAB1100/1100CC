@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -37,7 +37,7 @@ class FileCache {
 		$this->url = (base64_decode($url, true) ? base64_decode($url) : $url);
 		$this->target = $target;
 		
-		$this->external_protocol = FileGet::getExternalProtocol($this->url);
+		$this->external_protocol = FileGet::getProtocolExternal($this->url);
 		
 		$this->create_archive = getLabel(($this->external_protocol ? 'caching_external' : 'caching'), 'D', true);
 		

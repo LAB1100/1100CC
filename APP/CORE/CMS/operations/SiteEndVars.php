@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -355,9 +355,9 @@ class SiteEndVars {
 	public static function checkServerName() {
 		
 		$server_name_custom = self::getServerNameCustom(true);
-		$server_protocol = (SiteStartVars::useHTTPS() && SERVER_PROTOCOL != 'https://' ? 'https://' : SERVER_PROTOCOL);
+		$server_protocol = (SiteStartVars::useHTTPS() && SERVER_SCHEME != 'https://' ? 'https://' : SERVER_SCHEME);
 		
-		if (SERVER_NAME_CUSTOM != $server_name_custom || $server_protocol != SERVER_PROTOCOL) {
+		if (SERVER_NAME_CUSTOM != $server_name_custom || $server_protocol != SERVER_SCHEME) {
 			
 			Response::location($server_protocol.SERVER_NAME_SUB.$server_name_custom.SERVER_NAME_1100CC.self::getLocation());
 		}

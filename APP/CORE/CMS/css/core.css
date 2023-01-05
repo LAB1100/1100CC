@@ -134,6 +134,7 @@ textarea:hover, .body-content:hover, select:hover, input[type=text]:hover, input
 textarea:focus, .body-content:focus-within, select:focus, input[type=text]:focus, input[type=password]:focus, input[type=search]:focus, input[type=date]:focus, input[type=number]:focus {
 	border: 1px solid #86bad9;
 	box-shadow: 0 0 3px 0 rgba(149, 200, 232, 0.6) inset; }
+textarea:disabled, .body-content:disabled, select:disabled, input[type=text]:disabled, input[type=password]:disabled, input[type=search]:disabled, input[type=date]:disabled, input[type=number]:disabled { }
 	
 input[type=radio], input[type=checkbox] {
 	border: 0px;
@@ -161,6 +162,8 @@ input[type=radio], input[type=checkbox] {
 	border-color: #2e2e2e; }
 *[type=button]:active, *[type=submit]:active {
 	border-color: #0096ff; }
+*[type=button]:disabled, *[type=submit]:disabled {
+	background-color: #a4a4a4; border-color: #a4a4a4; }
 *[type=button].selected, *[type=submit].selected { background-color: #ffffff; color: #000000; border-color: #e5e5e5; }
 *[type=submit].invalid { width: 0px !important; height: 0px !important; border: 0px !important; margin: 0px !important; padding: 0px !important; }
 
@@ -710,6 +713,11 @@ section.info > *:last-child { margin-bottom: 0px; }
 table .info > span { vertical-align: middle; }
 table .info > span.icon { cursor: pointer; }
 table .info > span + span { margin-left: 4px; }
+
+small.identifier { margin-left: 0.6em; font-size: 1rem; font-family: var(--font-mono) }
+small.identifier::before { content: "("; margin-right: 0.1em; }
+small.identifier::after { content: ")"; margin-left: 0.1em; }
+
 
 .fieldsets { margin: 8px 0px; }
 .fieldsets > div { margin: -6px !important; }

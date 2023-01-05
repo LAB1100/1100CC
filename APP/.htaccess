@@ -1,7 +1,7 @@
 
 ###
  # 1100CC - web application framework.
- # Copyright (C) 2022 LAB1100.
+ # Copyright (C) 2023 LAB1100.
  #
  # See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  ##
@@ -118,8 +118,3 @@ CGIPassAuth on
 # Allow compression
 AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
 AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml application/javascript application/json
-
-php_value max_input_vars 3000
-php_value post_max_size 50M
-php_value upload_max_filesize 50M
-#php_value memory_limit 1024M

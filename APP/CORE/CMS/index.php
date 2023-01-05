@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -12,23 +12,30 @@
 	ini_set('display_errors', 0);
 	ini_set('error_reporting', E_ALL);
 	
+	require('core_operations.php');
+	
 	$run_module = false;
 	$run_method = false;
+	$arr_run_options = [];
 	
 	if (isset($_SERVER['argv'])) { // External call, i.e. exec(): index.php 'SITE_NAME' 'SERVER_NAME_1100CC' 'SERVER_NAME_CUSTOM' 'SERVER_NAME_SUB' 'STATE' 'module' 'method'
 		
-		$_SERVER['SITE_NAME'] = $_SERVER['argv'][1];
-		$_SERVER['SERVER_NAME_1100CC'] = $_SERVER['argv'][2];
-		$_SERVER['SERVER_NAME_CUSTOM'] = $_SERVER['argv'][3];
-		$_SERVER['SERVER_NAME_SUB'] = $_SERVER['argv'][4];
-		$arr_state = explode(';', $_SERVER['argv'][5]);
-		$_SERVER['STATE'] = $arr_state[0];
-		$_SERVER['HTTPS'] = ($arr_state[1] == 'https' ? true : false);
+		$arr_signature = str2Array($_SERVER['argv'][1], ';');
+		$run_module = $_SERVER['argv'][2];
+		$run_method = $_SERVER['argv'][3];
+		if (!empty($_SERVER['argv'][4])) {
+			$arr_run_options = JSON2Value($_SERVER['argv'][4]);
+		}
+
+		$_SERVER['SITE_NAME'] = $arr_signature[0];
+		$_SERVER['SERVER_NAME_1100CC'] = ($arr_signature[1] ?? null);
+		$_SERVER['SERVER_NAME_CUSTOM'] = ($arr_signature[2] ?? null);
+		$_SERVER['SERVER_NAME_SUB'] = ($arr_signature[3] ?? null);
+		$_SERVER['SERVER_SCHEME'] = ($arr_signature[4] ?? null);
+		$_SERVER['STATE'] = ($arr_signature[5] ?? null);
+		
 		$_SERVER['PATH_INFO'] = '/';
 		$_SERVER['IF_CMS_PATH'] = true;
-		$run_module = $_SERVER['argv'][6];
-		$run_method = $_SERVER['argv'][7];
-		$arr_run_options = ($_SERVER['argv'][8] ? json_decode($_SERVER['argv'][8], true) : []);
 		
 	} else if (!isset($_SERVER['SITE_NAME'])) { // Cleanup server variables when applicable, depends on host
 		
@@ -39,7 +46,6 @@
 	
 	$_SERVER['DIR_INDEX'] = dirname(__FILE__);
 	
-	require('core_operations.php');
 	require('core_settings.php');
 	
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -49,12 +55,12 @@
 			$json = file_get_contents('php://input');
 			
 			if ($json) {
-				$arr = json_decode($json, true);
+				$arr = JSON2Value($json);
 				$_POST = $arr;
 			}
 		} else if (!empty($_POST['json'])) { // Posted data in serialized format, check for JSON data
 			
-			$arr = json_decode($_POST['json'], true);
+			$arr = JSON2Value($_POST['json']);
 			unset($_POST['json']);
 			
 			foreach ($arr as $key => $value) {
@@ -80,8 +86,8 @@
 		header('Content-Type: text/plain; charset=utf-8');
 		
 		if ($str_path_start == 'robots.txt') {
-			echo 'User-agent: *'.PHP_EOL;
-			echo 'Disallow: /'.PHP_EOL;
+			echo 'User-agent: *'.EOL_1100CC;
+			echo 'Disallow: /'.EOL_1100CC;
 		} else if ($str_path_start == 'version.txt') {
 			echo Labels::getServerVariable('version');
 		} else {
@@ -282,21 +288,27 @@
 				SiteStartVars::$arr_cms_vars[1] = $str_module;
 			}
 			
+			$str_mod_identifier = 'mod-'.$str_module;
+			
+			$JSON = Response::getObject();
+			
 			$class = new $str_module;
 			
 			$html_content = $class->contents();
 			
-			SiteEndVars::checkServerName();
+			if (isset($class->validate)) {
+				$JSON->validate[$str_mod_identifier] = $class->validate;
+			}
 			
-			$JSON = Response::getObject();
+			SiteEndVars::checkServerName();
+
 			$JSON->data_feedback = SiteEndVars::getFeedback();
 			$JSON = Log::addToObj($JSON);
 			if (Settings::get('timing') === true) {
 				$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
 			}
 			SiteEndVars::addScript("PARSE = function() {"
-				."var obj = JSON.parse(".value2JSON(value2JSON($JSON)).");"
-				."FEEDBACK.check(document.body, obj);"
+				."return JSON.parse(".value2JSON(value2JSON($JSON)).");"
 			."};");
 			
 			require('core_combine.php');
@@ -311,7 +323,7 @@
 				.'</div>
 				<div><span>version</span><span>'.Labels::getServerVariable('version').'</span></div>
 			</div>
-			<div class="cms-content" id="mod-'.$str_module.'">';
+			<div class="cms-content" id="'.$str_mod_identifier.'">';
 			
 				$html_body .= $html_content;
 			
@@ -327,9 +339,9 @@
 		$str_url_image = URL_BASE.ltrim($str_image, '/');
 		$html_icons = SiteEndVars::getIcons();
 
-		$html = '<!DOCTYPE html>'.PHP_EOL
-		.'<html lang="en">'.PHP_EOL
-			.'<head>'.PHP_EOL
+		$html = '<!DOCTYPE html>'.EOL_1100CC
+		.'<html lang="en">'.EOL_1100CC
+			.'<head>'.EOL_1100CC
 				.'<title>'.getLabel('title', 'D').' | 1100CC</title>'
 				.$html_icons
 				.'<meta property="og:image" content="'.$str_url_image.'" />'
@@ -349,8 +361,8 @@
 					.'</noscript>';
 				}
 	
-			$html .= PHP_EOL.'</head>'.PHP_EOL
-			.'<body>'.PHP_EOL
+			$html .= EOL_1100CC.'</head>'.EOL_1100CC
+			.'<body>'.EOL_1100CC
 				.'<div id="cms-header">';
 				
 					if ($str_path_start != 'login') {
@@ -379,7 +391,7 @@
 					.$html_body
 				.'</div>';
 				
-			$html .= PHP_EOL.'</body>'.PHP_EOL
+			$html .= EOL_1100CC.'</body>'.EOL_1100CC
 		.'</html>';
 		
 		if ($str_path_start != 'login') {

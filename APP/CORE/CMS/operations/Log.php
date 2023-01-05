@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -23,6 +23,8 @@ class Log {
 	private static $num_request_heat = false;
 	private static $num_request_state = 0;
 	private static $log_user_id = false;
+	private static $do_store_database = true;
+	private static $do_store_file = true;
 
 	public static function setMsg($msg) {
 	
@@ -121,29 +123,39 @@ class Log {
 		}
 
 		// Try logging to database when enabled
-		try {
+		
+		if (static::$do_store_database) {
 			
-			if (DB::isActive()) {
+			try {
 				
-				if (getLabel('logging', 'D', true)) {
-				
-					self::addToDBSQL();
+				if (DB::isActive()) {
+					
+					if (getLabel('logging', 'D', true)) {
+					
+						self::addToDBSQL();
+					}
+					
+					return;
 				}
+			} catch (Exception $e) {
 				
-				return;
+				static::$do_store_database = false;
+				Trouble::catchError($e);
 			}
-		} catch (Exception $e) {
-			
-			Trouble::catchError($e);
 		}
 		
 		// Try logging to disk when database is unavailable
-		try {
+		
+		if (static::$do_store_file) {
 			
-			self::addToDBFile();
-		} catch (Exception $e) {
-			
-			Trouble::catchError($e);
+			try {
+				
+				self::addToDBFile();
+			} catch (Exception $e) {
+				
+				static::$do_store_file = false;
+				Trouble::catchError($e);
+			}
 		}
 	}
 	
@@ -195,26 +207,26 @@ class Log {
 			return;
 		}
 		
-		$path = DIR_ROOT_STORAGE.DIR_HOME.DIR_CMS.DIR_PRIVATE;
-		FileStore::makeDirectoryTree($path);
-		$path .= 'log';
+		$str_path = DIR_ROOT_STORAGE.DIR_HOME.DIR_CMS.DIR_PRIVATE;
+		FileStore::makeDirectoryTree($str_path);
+		$str_path .= 'log';
 		
-		$file = fopen($path, 'a');
-		FileStore::setFilePermission($path);
+		$file = fopen($str_path, 'a');
+		FileStore::setFilePermission($str_path);
 		
 		if (flock($file, LOCK_EX)) {
 			
-			foreach (self::$arr_msg as $value) {
+			foreach (self::$arr_msg as $arr_value) {
 				
-				if ($value[2] == LOG_BOTH || $value[2] == LOG_SYSTEM) { // Suppressed?
+				if ($arr_value[2] == LOG_BOTH || $arr_value[2] == LOG_SYSTEM) { // Suppressed?
 					
-					$label = (is_array($value[1]) ? $value[1][0] : $value[1]);
+					$label = (is_array($arr_value[1]) ? $arr_value[1][0] : $arr_value[1]);
 					
-					fwrite($file, PHP_EOL.PHP_EOL
+					fwrite($file, EOL_1100CC.EOL_1100CC
 						.str_pad('', 6, '#')
-						.PHP_EOL.$label.': '.$value[0]
-						.PHP_EOL.$value[4].' at '.date('d-m-Y H:i:s').' by '.($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'] ?? '...')
-						.($value[3] ? PHP_EOL.PHP_EOL.$value[3] : '')
+						.EOL_1100CC.$label.': '.$arr_value[0]
+						.EOL_1100CC.$arr_value[4].' at '.date('d-m-Y H:i:s').' by '.($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'] ?? '...')
+						.($arr_value[3] ? EOL_1100CC.EOL_1100CC.$arr_value[3] : '')
 					);
 				}
 			}

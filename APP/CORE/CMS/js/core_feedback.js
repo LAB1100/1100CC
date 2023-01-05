@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -214,28 +214,39 @@ function Feedback() {
 		
 		if (data.store) {
 			
-			for (var key in data.store) {
-				arr_store[key] = data.store[key];
+			for (var variable in data.store) {
+				
+				obj.setFeedbackStore(variable, data.store[variable], elm);			
 			}
 		}
 		
 		if (data.broadcast) {
 			
-			if (PARSE) { // Document not officially loaded, wait before broadcast
-				
-				$(document).one('documentloaded', function() {
-					obj.setFeedback({broadcast: data.broadcast}, elm);
-				});
-			} else {
-				
-				for (var i = 0, len = arr_listeners.length; i < len; i++) {
-				
-					if (!arr_listeners[i]) {
-						continue;
-					}
-					
-					arr_listeners[i](data.broadcast, elm);
+			obj.sendFeedbackBroadcast(data.broadcast, elm);
+		}
+	};
+	
+	this.setFeedbackStore = function(variable, data, elm) {
+		
+		arr_store[variable] = data;		
+	};
+	
+	this.sendFeedbackBroadcast = function(data, elm) {
+		
+		if (PARSE) { // Document not officially loaded, wait before broadcast
+			
+			document.addEventListener("documentloaded", function(e) {
+				obj.sendFeedbackBroadcast(data, elm);
+			}, {once: true});
+		} else {
+			
+			for (let i = 0, len = arr_listeners.length; i < len; i++) {
+			
+				if (!arr_listeners[i]) {
+					continue;
 				}
+				
+				arr_listeners[i](data, elm);
 			}
 		}
 	};
@@ -440,7 +451,7 @@ var LOADER = new Loader();
 
 function WebService(host, port) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	this.host = host;
 	this.port = port;
@@ -589,7 +600,7 @@ function WebService(host, port) {
 
 function WebServices() {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var obj_webservices = {};
 	var obj_webservice_tasks = {};

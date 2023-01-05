@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -31,6 +31,8 @@ class contact_form extends base_module {
 				<li><label></label><div><input type="submit" value="Ok" class="invalid" /><input type="submit" value="'.getLabel('lbl_send').'" /><input type="submit" value="Ok" class="invalid" /></div></li>
 			</ul></fieldset>
 		</form>';
+		
+		$this->validate = ['name' => 'required', 'email' => 'required', 'body' => 'required'];
 				
 		return $return;
 	}
@@ -46,12 +48,7 @@ class contact_form extends base_module {
 	
 	public static function js() {
 	
-		$return = "SCRIPTER.static('.contact_form', function(elm_scripter) {
-			
-			var elm_form = elm_scripter.find('[id^=f\\\:contact_form\\\:form]');
-			
-			setElementData(elm_form, 'rules', {name: 'required', email: 'required', body: 'required'});
-		});";
+		$return = "";
 		
 		return $return;
 	}

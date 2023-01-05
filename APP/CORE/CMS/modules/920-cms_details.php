@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -643,7 +643,7 @@ class cms_details extends base_module {
 		if ($method == "update_appearance") {
 		
 			if ($_FILES['file']['size']) {
-				$file_upload = new FileStore($_FILES['file'], ['dir' => DIR_ROOT.DIR_HOME.'css/', 'filename' => 'image.png', 'overwrite' => true]);
+				$file_upload = new FileStore($_FILES['file'], ['directory' => DIR_ROOT.DIR_HOME.'css/', 'filename' => 'image.png', 'overwrite' => true]);
 			}
 		
 			$str_theme = json_decode($_POST['theme'], true);
@@ -861,7 +861,7 @@ class cms_details extends base_module {
 			}
 			
 			$str_path = DIR_SITE_STORAGE.'command';
-			$str_url = SERVER_PROTOCOL.$arr_server['host_name'].'/command';
+			$str_url = SERVER_SCHEME.$arr_server['host_name'].'/command';
 			
 			FileStore::storeFile($str_path, 'clear');
 			
@@ -871,9 +871,12 @@ class cms_details extends base_module {
 			unlink($str_path);
 			
 			if (trim($str_result) == 'success') {
+				
+				msg(__METHOD__.' SUCCESS.');
 				return true;
 			} else {
-				error(__METHOD__.' ERROR: '.($str_result ?: $data->getError()), TROUBLE_ERROR, LOG_BOTH, print_r($output, true));
+				
+				error(__METHOD__.' ERROR: '.($str_result ?: $data->getError()), TROUBLE_ERROR, LOG_BOTH, print_r($str_result, true));
 			}
 		}
 	}
@@ -943,7 +946,7 @@ class cms_details extends base_module {
 			
 			$arr_job['host'] = $server_name_webservice.SERVER_NAME;
 			$arr_job['port_local'] = (int)$arr_job['port'];
-			$arr_job['port'] = (SERVER_PROTOCOL == 'https://' ? (int)$arr_job['port']+1 : (int)$arr_job['port']);
+			$arr_job['port'] = (SERVER_SCHEME == 'https://' ? (int)$arr_job['port']+1 : (int)$arr_job['port']);
 			
 			return $arr_job;
 		} else {

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -17,8 +17,9 @@ class Response {
 	const RENDER_HTML = 16;
 	const RENDER_XML = 32;
 	const RENDER_LINKED_DATA = 64;
+	const RENDER_TEXT = 128;
 	
-	const PARSE_PRETTY = 128;
+	const PARSE_PRETTY = 256;
 	
 	private static $do_output_updates = null; // true, null, false
 	
@@ -37,6 +38,7 @@ class Response {
 	private static $arr_parse_post_identifiers = [];
 	private static $arr_parse_post_options = [];
 	private static $do_clear_parse = false;
+	private static $format_hold = null;
 	
 	public static function setOutputUpdates(?bool $do_output = true) {
 		
@@ -374,6 +376,18 @@ class Response {
 	public static function getFormat() {
 		
 		return self::$format;
+	}
+	
+	public static function holdFormat($do_hold = false) { // Store and release format
+		
+		if ($do_hold) {
+			
+			self::$format_hold = self::$format;
+		} else if (self::$format_hold !== null) {
+			
+			self::$format = self::$format_hold;
+			self::$format_hold = null;
+		}		
 	}
 	
 	public static function decode($str, $is_object = false) {

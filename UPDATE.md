@@ -122,7 +122,7 @@ ALTER TABLE `site_log_requests_throttle`
   ADD PRIMARY KEY (`ip`);
 ```
 
-## VERSION 10.4*
+## VERSION 10.5
 
 Run SQL queries in database ?SITE?_cms:
 

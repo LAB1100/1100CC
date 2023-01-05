@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -319,7 +319,7 @@ class cms_newsletters extends base_module {
 		
 		if ($method == "email_export") {
 		
-			if ($_POST['get-download']) {
+			if ($this->is_download) {
 			
 				$arr_email = self::getDatabaseEmailAddressesRaw();
 				
@@ -335,7 +335,8 @@ class cms_newsletters extends base_module {
 
 				die;
 			} else {
-				$this->download = true;
+				
+				$this->do_download = true;
 			}
 		}
 		
@@ -457,11 +458,8 @@ class cms_newsletters extends base_module {
 							
 		// QUERY
 			
-		if ($method == "insert" || $method == "update" || (is_array($method) && ($method["method"] == "insert" || $method["method"] == "update") && $method["confirmed"])) {
-		
-			$confirmed = (is_array($method) && $method['confirmed']);
-			$method = (is_array($method) ? $method['method'] : $method);
-						
+		if (($method == 'insert' || $method == 'update') && $this->is_confirm !== false) {
+								
 			if ($_POST['email_me']) {
 				
 				$arr_email = [$_SESSION['CUR_USER']['email']];
@@ -472,11 +470,11 @@ class cms_newsletters extends base_module {
 				$recipients = count($arr_email);
 			}
 			
-			if ($arr_email && !$_POST['email_me'] && !$confirmed) {
+			if ($arr_email && !$_POST['email_me'] && !$this->is_confirm) {
 				
 				Labels::setVariable('count', count($arr_email));
 				$this->html = getLabel('conf_newsletter_send');
-				$this->confirm = true;
+				$this->do_confirm = true;
 				return;
 			}
 
@@ -752,7 +750,7 @@ class cms_newsletters extends base_module {
 		
 		$arr_headers = ['X-Newsletter-ID' => $id];
 		
-		timeLimit(0);
+		timeLimit(false);
 		
 		$mail = new Mail();
 		$mail->to($arr_email, $arr_vars);

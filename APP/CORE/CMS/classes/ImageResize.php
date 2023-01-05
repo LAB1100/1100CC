@@ -2,104 +2,104 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
  
 class ImageResize {
 	
-	private $src;
-	private $src_width;
-	private $src_height;
-	private $src_type;
-	private $src_mime_type;
-	private $src_img;
+	protected $str_path_source;
+	protected $num_source_width;
+	protected $num_source_height;
+	protected $source_type;
+	protected $source_mime_type;
+	protected $source_img;
 	
-	private $dst;
-	private $img;
-	private $type;
-	private $width;
-	private $height;
+	protected $str_path_destination;
+	protected $str_type;
+	protected $num_width;
+	protected $num_height;
+	protected $img;
 
-	public function resize($src, $dst, $width, $height, $crop = 0) {
+	public function resize($str_path_source, $str_path_destination, $num_width, $num_height, $do_crop = false) {
 		
-		// $src = "path", $dst = "null, path, extension"
+		// $str_path_source = "path", $str_path_destination = "null, path, extension"
 					
-		$this->src = $src;
+		$this->str_path_source = $str_path_source;
 		
-		$arr_info = getimagesize($this->src);
+		$arr_info = getimagesize($this->str_path_source);
 		if (!$arr_info) {
 			return false;
 		}
 		
-		list ($this->src_width, $this->src_height, $this->src_type, $tmp1, $tmp2, $this->src_mime_type) = array_values($arr_info);
+		list ($this->num_source_width, $this->num_source_height, $this->source_type, $tmp1, $tmp2, $this->source_mime_type) = array_values($arr_info);
 		
-		if (!self::isSupportedImageFormat($this->src_type)) {
+		if (!self::isSupportedImageFormat($this->source_type)) {
 			return false;
 		}
 		
-		if ($this->src_type == IMAGETYPE_GIF) {
+		if ($this->source_type == IMAGETYPE_GIF) {
 			
-			if (self::isAnimation($this->src)) {
+			if (self::isAnimation($this->str_path_source)) {
 				return false;
 			}
 		}
 		
-		if ($dst) {
+		if ($str_path_destination) {
 			
-			$type = FileStore::getExtension($dst); // Extension
+			$str_type = FileStore::getExtension($str_path_destination); // Extension
 			
-			if ($type == FileStore::EXTENSION_UNKNOWN) { // Or only string i.e. png, jpeg
+			if ($str_type == FileStore::EXTENSION_UNKNOWN) { // Or only string i.e. png, jpeg
 				
-				$type = $dst;
-				$dst = null; // Output to memory
+				$str_type = $str_path_destination;
+				$str_path_destination = null; // Output to memory
 			}
 		} else {
 			
-			$type = FileStore::getExtension($src);
+			$str_type = FileStore::getExtension($this->str_path_source);
 		}
 		
-		$this->type = ($type == 'jpg' ? 'jpeg' : $type);
-		$this->dst = $dst;
+		$this->str_type = ($str_type == 'jpg' ? 'jpeg' : $str_type);
+		$this->str_path_destination = $str_path_destination;
 					
-		$this->src_img = imagecreatefromstring(file_get_contents($this->src));
+		$this->source_img = imagecreatefromstring(file_get_contents($this->str_path_source));
 		
 		// Resize
-		$this->width = ($width ?: $this->src_width);
-		$this->height = ($height ?: $this->src_height);
-		if ($this->src_width <= $this->width && $this->src_height <= $this->height) { // Abort if source's dimensions are bigger
+		$this->num_width = ($num_width ?: $this->num_source_width);
+		$this->num_height = ($num_height ?: $this->num_source_height);
+		if ($this->num_source_width <= $this->num_width && $this->num_source_height <= $this->num_height) { // Abort if source's dimensions are bigger
 			return false;
 		}
-		if ($crop) {
-			$ratio = max($this->width/$this->src_width, $this->height/$this->src_height);
-			$this->src_height = $this->height / $ratio;
-			$x = ($this->src_width - $this->width / $ratio) / 2;
-			$this->src_width = $this->width / $ratio;
+		if ($do_crop) {
+			$ratio = max($this->num_width/$this->num_source_width, $this->num_height/$this->num_source_height);
+			$this->num_source_height = $this->num_height / $ratio;
+			$num_x = ($this->num_source_width - $this->num_width / $ratio) / 2;
+			$this->num_source_width = $this->num_width / $ratio;
 		} else {
-			$ratio = min($this->width/$this->src_width, $this->height/$this->src_height);
-			$this->width = $this->src_width * $ratio;
-			$this->height = $this->src_height * $ratio;
-			$x = 0;
+			$ratio = min($this->num_width/$this->num_source_width, $this->num_height/$this->num_source_height);
+			$this->num_width = $this->num_source_width * $ratio;
+			$this->num_height = $this->num_source_height * $ratio;
+			$num_x = 0;
 		}
 
-		$this->img = imagecreatetruecolor($this->width, $this->height);
+		$this->img = imagecreatetruecolor($this->num_width, $this->num_height);
 
 		// Preserve transparency
-		if ($this->type == 'gif' || $this->type == 'png') {
+		if ($this->str_type == 'gif' || $this->str_type == 'png' || $this->str_type == 'webp') {
 			imagecolortransparent($this->img, imagecolorallocatealpha($this->img, 0, 0, 0, 127));
 			imagealphablending($this->img, false);
 			imagesavealpha($this->img, true);
 		}
 
-		imagecopyresampled($this->img, $this->src_img, 0, 0, $x, 0, $this->width, $this->height, $this->src_width, $this->src_height);
+		imagecopyresampled($this->img, $this->source_img, 0, 0, $num_x, 0, $this->num_width, $this->num_height, $this->num_source_width, $this->num_source_height);
 		
-		switch ($this->type) {
-			case 'bmp': imagewbmp($this->img, $this->dst); break;
-			case 'gif': imagegif($this->img, $this->dst); break;
-			case 'jpeg': imagejpeg($this->img, $this->dst); break;
-			case 'png': imagepng($this->img, $this->dst); break;
-			case 'webp': imagewebp($this->img, $this->dst); break;
+		switch ($this->str_type) {
+			case 'bmp': imagewbmp($this->img, $this->str_path_destination); break;
+			case 'gif': imagegif($this->img, $this->str_path_destination); break;
+			case 'jpeg': imagejpeg($this->img, $this->str_path_destination); break;
+			case 'png': imagepng($this->img, $this->str_path_destination); break;
+			case 'webp': imagewebp($this->img, $this->str_path_destination); break;
 		}
 		
 		imagedestroy($this->img);

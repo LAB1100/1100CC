@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,7 +16,20 @@
 	if (!empty($_POST['module'])) {
 
 		$class = new $_POST['module'];
-		$method = ($_POST['method'] && !empty($_POST['confirmed']) ? ['method' => $_POST['method'], 'confirmed' => true] : $_POST['method']);
+		$method = $_POST['method'];
+		
+		if ($method) {
+			
+			if (isset($_POST['is_confirm'])) {
+				$class->is_confirm = (bool)$_POST['is_confirm'];
+			}
+			if (isset($_POST['is_download'])) {
+				$class->is_download = (bool)$_POST['is_download'];
+			}
+			if (isset($_POST['is_discard'])) {
+				$class->is_discard = (bool)$_POST['is_discard'];
+			}
+		}
 		
 		$JSON->html =& $class->html;
 		
@@ -29,12 +42,13 @@
 		
 		SiteEndVars::checkServerName();
 		
-		$JSON->confirm = $class->confirm;
-		$JSON->download = $class->download;
+		$JSON->do_confirm = $class->do_confirm;
+		$JSON->do_download = $class->do_download;
 		$JSON->validate = $class->validate;
 		$JSON->data = $class->data;
 		$JSON->refresh_table = $class->refresh_table;
 		$JSON->reset_form = $class->reset_form;
+		
 		if ($class->msg) {
 			if ($class->msg !== true) {
 				Log::setMsg($class->msg);

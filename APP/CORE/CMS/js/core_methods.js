@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,7 +13,7 @@
 
 function Commands() {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	this.getContext = function(elm) {
 		
@@ -255,7 +255,7 @@ function Commands() {
 								
 								arr_rules = getElementData(elm_form, 'rules'); // The form's rules could have been updated
 								
-								if (name_submit != 'discard') {
+								if (name_submit != 'do_discard') {
 			
 									if (!elm_form.data('validator')) {
 											
@@ -275,7 +275,7 @@ function Commands() {
 									SCRIPTER.triggerEvent(elm_form, 'submit');
 								} else {
 									
-									if (name_submit == 'discard') {
+									if (name_submit == 'do_discard') {
 										FEEDBACK.stopContext(elm_popup);
 									}
 									
@@ -313,10 +313,15 @@ function Commands() {
 								var arr_request = {mod: mod_id, method: new_method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()};
 								
 								if (name_submit) {
-									arr_request[name_submit] = 1;
+									
+									if (name_submit == 'do_discard') {
+										arr_request['is_discard'] = 1;
+									} else {
+										arr_request[name_submit] = 1;
+									}
 								}
 								
-								var arr_request = SELF.prepare(elm_form, arr_request);
+								arr_request = SELF.prepare(elm_form, arr_request);
 								var call = false;
 								
 								FEEDBACK.request(elm_popup, elm_popup, $.ajax({
@@ -666,17 +671,22 @@ function Commands() {
 
 			SCRIPTER.triggerEvent(elm, 'ajaxsubmit');
 			
-			if (name_submit == 'discard') {
+			if (name_submit == 'do_discard') {
 				elm.find('input, select, textarea').prop('disabled', true);
 			}
 			
 			var arr_request = {mod: getModID(elm), method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()};
 			
 			if (name_submit) {
-				arr_request[name_submit] = 1;
+				
+				if (name_submit == 'do_discard') {
+					arr_request['is_discard'] = 1;
+				} else {
+					arr_request[name_submit] = 1;
+				}
 			}
 			
-			var arr_request = SELF.prepare(elm, arr_request);
+			arr_request = SELF.prepare(elm, arr_request);
 			var call = false;
 			
 			FEEDBACK.request(cur, elm, $.ajax({
@@ -725,7 +735,7 @@ function Commands() {
 			}));
 		};
 
-		if (name_submit != 'discard') {
+		if (name_submit != 'do_discard') {
 			
 			let arr_rules = getElementData(elm, 'rules'); // Always check, the form's rules could have been updated
 			arr_rules = (arr_rules ? arr_rules : {});
@@ -929,7 +939,13 @@ function Commands() {
 			var elm_container = getContainer(elm); // Originating element container
 		}
 		
-		if (json.confirm) {
+		if (call.is_discard) { // Cancel call to new parse from old parse
+			
+			delete call.is_discard;
+			return false;
+		}
+		
+		if (json.do_confirm) {
 			
 			if (!elm.closest('.mod').length) {
 				arr_settings.overlay = 'document';
@@ -948,7 +964,11 @@ function Commands() {
 
 			var elm_menu = $('<menu></menu>').appendTo(elm_popup);
 			
-			$('<input type="button" value="Ok" />').appendTo(elm_menu).on('click', function() {
+			const func_confirm = function(is_confirm) {
+				
+				if (!FEEDBACK.start(call.context)) {
+					return;
+				}
 				
 				try {
 					var arr_data = JSON.parse(call.data);
@@ -956,36 +976,54 @@ function Commands() {
 				
 				if (arr_data) { // JSON
 					
-					arr_data.confirmed = true;
+					arr_data.is_confirm = is_confirm;
+					arr_data.is_discard = !is_confirm;
 					
-					if (typeof json.confirm === 'object') {
+					if (typeof json.do_confirm === 'object') {
 						
-						$.extend(arr_data, json.confirm);
+						$.extend(arr_data, json.do_confirm);
 					}
 					
 					call.data = JSON.stringify(arr_data);
 				} else { // FormData
 					
-					call.data.append('confirmed', 1);
+					call.data.append('is_confirm', (is_confirm ? 1 : 0));
+					call.data.append('is_discard', (is_confirm ? 0 : 1));
 					
-					if (typeof json.confirm === 'object') {
+					if (typeof json.do_confirm === 'object') {
 						
-						for (var key in json.confirm) {
+						for (const key in json.do_confirm) {
 							
-							call.data.append('json['+key+']', (typeof json.confirm[key] === 'object' ? JSON.stringify(json.confirm[key]) : json.confirm[key]));
+							call.data.delete(key);
+							
+							const value = json.do_confirm[key];
+							
+							if (typeof value === 'object') {
+								call.data.append('json['+key+']', JSON.stringify(value));
+							} else {
+								call.data.append(key, value);
+							}
 						}
 					}
 				}
 				
-				if (!FEEDBACK.start(call.context)) {
-					return;
-				}
-				
+				call.is_discard = !is_confirm;
+
 				$.ajax(call);
+			};
+			
+			$('<input type="button" value="Ok" />').appendTo(elm_menu).on('click', function() {
+				
+				func_confirm(true);
 				
 				obj_overlay.close();
 			});
 			$('<input type="button" value="Cancel" />').appendTo(elm_menu).on('click', function() {
+				
+				FEEDBACK.stopContext(call.context);
+				
+				func_confirm(false);
+				
 				obj_overlay.close();
 			});
 			
@@ -1002,12 +1040,11 @@ function Commands() {
 			}
 				
 			return false;
-		} else if (json.download) {
+		} else if (json.do_download) {
 			
 			const elm_form = $('<form action="'+call.url+'" method="post"></form>');
 			
-			const elm_download = $('<input type="hidden" name="get-download" value="" />');			
-			elm_download.val(json.download === true ? '1' : json.download);
+			const elm_download = $('<input type="hidden" name="is_download" value="1" />');			
 			
 			elm_form.append(elm_download);
 			
@@ -1017,6 +1054,13 @@ function Commands() {
 			
 			if (arr_data) { // JSON
 				
+				if (typeof json.do_download === 'object') {
+						
+					$.extend(arr_data, json.do_download);
+					
+					call.data = JSON.stringify(arr_data);
+				}
+				
 				const elm_new = $('<input type="hidden" name="json" value="" />');
 				elm_new.val(call.data);
 				
@@ -1024,9 +1068,25 @@ function Commands() {
 			} else { // FormData
 				
 				const form_collect = new FormData(elm_form[0]);
+
+				if (typeof json.do_download === 'object') {
+					
+					for (const key in json.do_download) {
+						
+						call.data.delete(key);
+						
+						const value = json.do_download[key];
+						
+						if (typeof value === 'object') {
+							call.data.append('json['+key+']', JSON.stringify(value));
+						} else {
+							call.data.append(key, value);
+						}
+					}
+				}
 				
 				const arr_entries = call.data.entries();
-					
+				
 				for (let arr_entry = arr_entries.next(); !arr_entry.done; arr_entry = arr_entries.next()) {
 					
 					arr_entry = arr_entry.value;
@@ -1322,8 +1382,8 @@ function Commands() {
 	
 	this.Cacher = function(elm) {
 		
-		var PARENT = SELF;
-		var SELF = this;
+		const PARENT = SELF;
+		const SELF_CACHER = this;
 		
 		var elm = getElement(elm);
 		
@@ -1338,7 +1398,7 @@ function Commands() {
 		this.preload = function(arr_call, callback) {
 			
 			arr_preload_call = arr_call;
-			SELF.setPreloadCallback(callback);
+			SELF_CACHER.setPreloadCallback(callback);
 			
 			do_preload = true;
 			
@@ -1357,7 +1417,7 @@ function Commands() {
 				if (arr_preload_call[0][1]) {
 					
 					var identifier = elm.getAttribute('data-cache');
-					arr_preload_call[0][1](SELF.obj_cache[identifier]); // Callback
+					arr_preload_call[0][1](SELF_CACHER.obj_cache[identifier]); // Callback
 				}
 				arr_preload_call.shift();
 			}
@@ -1379,11 +1439,11 @@ function Commands() {
 			
 			var identifier = elm.getAttribute('data-cache');
 			
-			if (!SELF.obj_cache[identifier]) {
+			if (!SELF_CACHER.obj_cache[identifier]) {
 				
 				PARENT.setTarget(elm, function(data) {
 					
-					SELF.obj_cache[identifier] = data;
+					SELF_CACHER.obj_cache[identifier] = data;
 					
 					if (do_preload) {
 						
@@ -1399,18 +1459,18 @@ function Commands() {
 				});
 
 				if (command == 'quick') {
-					SELF.quickCommand(elm);
+					SELF_CACHER.quickCommand(elm);
 				} else if (command == 'popup') {
-					SELF.popupCommand(elm);
+					SELF_CACHER.popupCommand(elm);
 				} else if (command == 'message') {
-					SELF.messageCommand(elm);
+					SELF_CACHER.messageCommand(elm);
 				} else if (command == 'form') {
-					SELF.formCommand(elm);
+					SELF_CACHER.formCommand(elm);
 				}
 			} else {
 			
 				if (!do_preload) {
-					func.call(elm, SELF.obj_cache[identifier]);
+					func.call(elm, SELF_CACHER.obj_cache[identifier]);
 				}
 			}
 		};	
@@ -1452,7 +1512,7 @@ var COMMANDS = new Commands();
 
 function DataTable(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 	}, arr_options);

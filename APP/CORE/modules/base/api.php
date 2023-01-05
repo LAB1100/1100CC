@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,7 +13,16 @@ abstract class api extends base_module {
 		static::$parent_label = getLabel('lbl_api');
 	}
 	
+	const CLIENT_USERS_MODE_ROOT_CHILD = 1;
+	const CLIENT_USERS_MODE_CHILD_CHILD = 2;
+	const CLIENT_USERS_MODE_USER_USER = 3;
+	const CLIENT_USERS_MODE_USER_CHILD = 4;
+	const CLIENT_USERS_MODE_PARENT_PARENT = 5;
+	const CLIENT_USERS_MODE_PARENT_CHILD = 6;
+	const CLIENT_USERS_MODE_PARENT_USER = 7;
+	
 	protected $arr_api = [];
+	protected $mode = null;
 	abstract protected function contentsFormConfiguration();
 	abstract protected function processFormConfiguration();
 	
@@ -77,7 +86,7 @@ abstract class api extends base_module {
 					<thead> 
 						<tr>
 							<th title="'.getLabel('lbl_enabled').'">E</th>
-							'.($this->mode == 'child-child' ? '<th>'.getLabel('lbl_user').'</th>' : '').'
+							'.($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? '<th>'.getLabel('lbl_user').'</th>' : '').'
 							<th class="max" data-sort="asc-0">'.getLabel('lbl_name').'</th>
 							<th class="limit">'.getLabel('lbl_identifier').'</th>
 							<th class="limit">'.getLabel('lbl_passkey').' (secret)</th>
@@ -87,7 +96,7 @@ abstract class api extends base_module {
 					</thead>
 					<tbody>
 						<tr>
-							<td colspan="'.(7 - ($this->mode == 'child-child' ? 1 : 0)).'" class="empty">'.getLabel('msg_loading_server_data').'</td>
+							<td colspan="'.(7 - ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? 1 : 0)).'" class="empty">'.getLabel('msg_loading_server_data').'</td>
 						</tr>
 					</tbody>
 				</table>
@@ -100,9 +109,9 @@ abstract class api extends base_module {
 					<thead> 
 						<tr>
 							<th title="'.getLabel('lbl_enabled').'">E</th>
-							'.($this->mode == 'child-child' ? '<th>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user').'</th>' : '').'
-							<th class="max" data-sort="asc-0">'.($this->mode == 'child-child' ? getLabel('lbl_api_client').' - '.getLabel('lbl_name') : getLabel('lbl_api_client')).'</th>
-							'.($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child' ? '<th>'.getLabel('lbl_user').'</th>' : '').'
+							'.($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? '<th>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user').'</th>' : '').'
+							<th class="max" data-sort="asc-0">'.($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? getLabel('lbl_api_client').' - '.getLabel('lbl_name') : getLabel('lbl_api_client')).'</th>
+							'.(variableHasValue($this->mode, static::CLIENT_USERS_MODE_CHILD_CHILD, static::CLIENT_USERS_MODE_PARENT_CHILD, static::CLIENT_USERS_MODE_ROOT_CHILD) ? '<th>'.getLabel('lbl_user').'</th>' : '').'
 							<th class="limit">'.getLabel('lbl_passkey').' (token)</th>
 							<th>'.getLabel('lbl_date_start').'</th>
 							<th>'.getLabel('lbl_date_end').'</th>
@@ -111,7 +120,7 @@ abstract class api extends base_module {
 					</thead>
 					<tbody>
 						<tr>
-							<td colspan="'.(8 - ($this->mode == 'child-child' ? 1 : 0) - ($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child' ? 1 : 0)).'" class="empty">'.getLabel('msg_loading_server_data').'</td>
+							<td colspan="'.(8 - ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? 1 : 0) - (variableHasValue($this->mode, static::CLIENT_USERS_MODE_CHILD_CHILD, static::CLIENT_USERS_MODE_PARENT_CHILD, static::CLIENT_USERS_MODE_ROOT_CHILD) ? 1 : 0)).'" class="empty">'.getLabel('msg_loading_server_data').'</td>
 						</tr>
 					</tbody>
 				</table>
@@ -150,7 +159,7 @@ abstract class api extends base_module {
 					<label>'.getLabel('lbl_active').'</label>
 					<div>'.cms_general::createSelectorRadio([['id' => '1', 'name' => getLabel('lbl_active')], ['id' => '0', 'name' => getLabel('lbl_inactive')]], 'enabled', (!$client_id || $arr_client['enabled'])).'</div>
 				</li>';
-				if ($this->mode == 'child-child') {
+				if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 					$return .= '<li>
 						<label>'.getLabel('lbl_user').'</label>
 						<div><input type="hidden" name="user_id" value="'.$arr_client['user_id'].'" /><input type="text" id="y:'.static::class.':lookup_user_client-0" class="autocomplete" value="'.$arr_client['user_name'].'" /></div>
@@ -174,7 +183,7 @@ abstract class api extends base_module {
 		</div></div>
 		
 		<menu class="options">
-			<input type="submit" value="'.getLabel('lbl_save').' '.getLabel('lbl_api_client').'" /><input type="submit" name="discard" value="'.getLabel('lbl_cancel').'" />
+			<input type="submit" value="'.getLabel('lbl_save').' '.getLabel('lbl_api_client').'" /><input type="submit" name="do_discard" value="'.getLabel('lbl_cancel').'" />
 		</menu>';
 		
 		return $return;
@@ -194,7 +203,7 @@ abstract class api extends base_module {
 			$str_time_amount = '∞';	
 		}	
 		
-		$return = '<h2>'.($this->mode == 'child-child' ? strEscapeHTML($arr_client['user_name']).' - ' : '').strEscapeHTML($arr_client['name']).'</h2>';
+		$return = '<h2>'.($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? strEscapeHTML($arr_client['user_name']).' - ' : '').strEscapeHTML($arr_client['name']).'</h2>';
 
 		$return .= '<div class="record"><dl>
 			<li>
@@ -228,7 +237,7 @@ abstract class api extends base_module {
 			
 		$arr_client = apis::getClient($client_id);
 		
-		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == 'child-child' ? strEscapeHTML($arr_client['user_name']).' - ' : '').strEscapeHTML($arr_client['name']).'</h2>
+		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? strEscapeHTML($arr_client['user_name']).' - ' : '').strEscapeHTML($arr_client['name']).'</h2>
 		
 		<div class="options">
 			
@@ -239,7 +248,7 @@ abstract class api extends base_module {
 						<label>'.getLabel('lbl_active').'</label>
 						<div>'.cms_general::createSelectorRadio([['id' => '1', 'name' => getLabel('lbl_active')], ['id' => '0', 'name' => getLabel('lbl_inactive')]], 'enabled', (!$user_id || $arr_client_user['enabled'])).'</div>
 					</li>';
-					if ($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child') {
+					if (variableHasValue($this->mode, static::CLIENT_USERS_MODE_CHILD_CHILD, static::CLIENT_USERS_MODE_PARENT_CHILD, static::CLIENT_USERS_MODE_ROOT_CHILD)) {
 						$return .= '<li>
 							<label>'.getLabel('lbl_user').'</label>
 							<div><input type="hidden" name="user_id" value="'.$arr_client_user['user_id'].'" /><input type="text" id="y:'.static::class.':lookup_user_client_user-0" class="autocomplete" value="'.$arr_client_user['user_name'].'" /></div>
@@ -266,7 +275,7 @@ abstract class api extends base_module {
 		</div>
 		
 		<menu class="options">
-			<input type="submit" value="'.getLabel('lbl_save').' '.getLabel('lbl_user').'" /><input type="submit" name="discard" value="'.getLabel('lbl_cancel').'" />
+			<input type="submit" value="'.getLabel('lbl_save').' '.getLabel('lbl_user').'" /><input type="submit" name="do_discard" value="'.getLabel('lbl_cancel').'" />
 		</menu>';
 
 		return $return;
@@ -279,10 +288,10 @@ abstract class api extends base_module {
 		
 		$arr_client_user = apis::getClientUser($client_id, $user_id);
 		
-		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == 'child-child' ? strEscapeHTML($arr_client_user['client_user_name']).' - ' : '').strEscapeHTML($arr_client_user['client_name']).'</h2>';
+		$return = '<h2>'.getLabel('lbl_api_client').': '.($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? strEscapeHTML($arr_client_user['client_user_name']).' - ' : '').strEscapeHTML($arr_client_user['client_name']).'</h2>';
 			
 		$return .= '<div class="record"><dl>';
-			if ($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child') {
+			if (variableHasValue($this->mode, static::CLIENT_USERS_MODE_CHILD_CHILD, static::CLIENT_USERS_MODE_PARENT_CHILD, static::CLIENT_USERS_MODE_ROOT_CHILD)) {
 				$return .= '<li>
 					<dt>'.getLabel('lbl_user').'</dt>
 					<dd>'.strEscapeHTML($arr_client_user['user_name']).'</dd>
@@ -406,7 +415,7 @@ abstract class api extends base_module {
 			
 			if ($method == 'lookup_user_client') {
 				
-				if (!($this->mode == 'child-child')) {
+				if (!($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD)) {
 					return;
 				}
 				
@@ -417,7 +426,7 @@ abstract class api extends base_module {
 				$arr_settings['children_id'] = $_SESSION['USER_ID'];
 			} else {
 				
-				if (!($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child')) {
+				if (!($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD || $this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD)) {
 					return;
 				}
 				
@@ -433,9 +442,9 @@ abstract class api extends base_module {
 					}
 				}
 				
-				if ($this->mode == 'parent-child') {
+				if ($this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD) {
 					$arr_settings['children_id'] = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-				} else if ($this->mode == 'child-child') {
+				} else if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 					$arr_settings['children_id'] = $_SESSION['USER_ID'];
 				}
 			}
@@ -462,7 +471,7 @@ abstract class api extends base_module {
 			$arr_sql_columns_search = ['', 'user_name' => 'ac_u.name', 'ac.name', 'ac.id', 'ac.secret'];
 			$arr_sql_columns_as = ['ac.enabled', 'user_name' => 'ac_u.name AS user_name', 'ac.name', 'ac.id', 'ac.secret'];
 			
-			if (!($this->mode == 'child-child')) {
+			if (!($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD)) {
 				unset($arr_sql_columns['user_name'], $arr_sql_columns_search['user_name'], $arr_sql_columns_as['user_name']);
 			}
 			
@@ -475,11 +484,11 @@ abstract class api extends base_module {
 			
 			$sql_where = "ac.api_id = ".(int)$this->arr_api['id'];
 			
-			if ($this->mode == 'parent-parent' || $this->mode == 'parent-user' || $this->mode == 'parent-child') {
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT || $this->mode == static::CLIENT_USERS_MODE_PARENT_USER || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD) {
 				$sql_where .= " AND ac_u.id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'child-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 				$sql_where .= " AND ac_u.parent_id = ".$_SESSION['USER_ID'];
-			} else if ($this->mode == 'root-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 				$sql_where .= " AND ac_u.id IS NULL";
 			} else {
 				$sql_where .= " AND ac_u.id = ".$_SESSION['USER_ID'];
@@ -496,7 +505,7 @@ abstract class api extends base_module {
 				$arr_data['attr']['data-method'] = 'view_client';
 				
 				$arr_data[] = '<span class="icon" data-category="status">'.getIcon(($arr_row['enabled'] ? 'tick' : 'min')).'</span>';
-				if ($this->mode == 'child-child') {
+				if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 					$arr_data[] = $arr_row['user_name'];
 				}
 				$arr_data[] = $arr_row['name'];
@@ -519,10 +528,10 @@ abstract class api extends base_module {
 			$arr_sql_columns_search = ['', 'client_user_name' => 'ac_u.name', 'ac.name', 'user_name' => 'acu_u.name', 'acu.token', 'acu.date', 'acu.date_valid', 'ac.id'];
 			$arr_sql_columns_as = ['acu.enabled', 'client_user_name' => 'ac_u.name AS client_user_name', 'ac.name AS client_name', 'user_name' => 'acu_u.name AS user_name', 'acu.token', 'acu.date', 'acu.date_valid', 'acu.client_id', 'acu.user_id'];
 			
-			if (!($this->mode == 'child-child')) {
+			if (!($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD)) {
 				unset($arr_sql_columns['client_user_name'], $arr_sql_columns_search['client_user_name'], $arr_sql_columns_as['client_user_name']);
 			}
-			if (!($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child')) {
+			if (!($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD || $this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD)) {
 				unset($arr_sql_columns['user_name'], $arr_sql_columns_search['user_name'], $arr_sql_columns_as['user_name']);
 			}
 			
@@ -537,28 +546,28 @@ abstract class api extends base_module {
 			
 			$sql_where = "ac.api_id = ".(int)$this->arr_api['id'];
 			
-			if ($this->mode == 'parent-parent' || $this->mode == 'parent-user' || $this->mode == 'parent-child') {
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT || $this->mode == static::CLIENT_USERS_MODE_PARENT_USER || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD) {
 				$sql_where .= " AND ac_u.id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'child-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 				$sql_where .= " AND ac_u.parent_id = ".$_SESSION['USER_ID'];
-			} else if ($this->mode == 'root-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 				$sql_where .= " AND ac_u.id IS NULL";
 			} else {
 				$sql_where .= " AND ac_u.id = ".$_SESSION['USER_ID'];
 			}
 			
-			if ($this->mode == 'parent-parent') {
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT) {
 				$sql_where .= " AND acu_u.id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'user-child' || $this->mode == 'child-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_USER_CHILD || $this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 				$sql_where .= " AND acu_u.parent_id = ".$_SESSION['USER_ID'];
-			} else if ($this->mode == 'parent-user' || $this->mode == 'user-user') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_PARENT_USER || $this->mode == static::CLIENT_USERS_MODE_USER_USER) {
 				$sql_where .= " AND acu_u.id = ".$_SESSION['USER_ID'];
 			}
 			
 			// There could be CMS-administered user-parent changes
-			if ($this->mode == 'parent-user' || $this->mode == 'parent-child') {
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_USER || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD) {
 				$sql_where .= " AND acu_u.parent_id = ac_u.id";
-			} else if ($this->mode == 'root-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 				$sql_where .= " AND acu_u.parent_id = 0";
 			} else {
 				$sql_where .= " AND acu_u.id = ac_u.id";
@@ -575,11 +584,11 @@ abstract class api extends base_module {
 				$arr_data['attr']['data-method'] = 'view_client_user';
 				
 				$arr_data[] = '<span class="icon" data-category="status">'.getIcon(($arr_row['enabled'] ? 'tick' : 'min')).'</span>';
-				if ($this->mode == 'child-child') {
+				if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 					$arr_data[] = $arr_row['client_user_name'];
 				}
 				$arr_data[] = $arr_row['client_name'];
-				if ($this->mode == 'child-child' || $this->mode == 'parent-child' || $this->mode == 'root-child') {
+				if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD || $this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 					$arr_data[] = $arr_row['user_name'];
 				}
 				$arr_data[] = $arr_row['token'];
@@ -604,7 +613,7 @@ abstract class api extends base_module {
 			$this->msg = true;
 		}
 		
-		if (($method == "insert_client" || $method == "update_client") && $_POST['discard']) {
+		if (($method == "insert_client" || $method == "update_client") && $this->is_discard) {
 			
 			$this->setConfig();
 							
@@ -618,14 +627,14 @@ abstract class api extends base_module {
 			
 			$arr_client = $_POST;
 			
-			if ($this->mode == 'parent-parent' || $this->mode == 'parent-user' || $this->mode == 'parent-child') {
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT || $this->mode == static::CLIENT_USERS_MODE_PARENT_USER || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD) {
 				$arr_client['user_id'] = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'child-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 				if (!$arr_client['user_id']) {
 					error(getLabel('msg_missing_information'));
 				}
 				$this->checkValidUserId($arr_client['user_id']);
-			} else if ($this->mode == 'root-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 				$arr_client['user_id'] = 0;
 			} else {
 				$arr_client['user_id'] = $_SESSION['USER_ID'];
@@ -652,14 +661,14 @@ abstract class api extends base_module {
 			
 			$arr_client = $_POST;
 			
-			if ($this->mode == 'parent-parent' || $this->mode == 'parent-user' || $this->mode == 'parent-child') {
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT || $this->mode == static::CLIENT_USERS_MODE_PARENT_USER || $this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD) {
 				$arr_client['user_id'] = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'child-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 				if (!$arr_client['user_id']) {
 					error(getLabel('msg_missing_information'));
 				}
 				$this->checkValidUserId($arr_client['user_id']);
-			} else if ($this->mode == 'root-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 				$arr_client['user_id'] = 0;
 			} else {
 				$arr_client['user_id'] = $_SESSION['USER_ID'];
@@ -687,7 +696,7 @@ abstract class api extends base_module {
 			$this->msg = true;
 		}
 		
-		if (($method == "insert_client_user" || $method == "update_client_user") && $_POST['discard']) {
+		if (($method == "insert_client_user" || $method == "update_client_user") && $this->is_discard) {
 							
 			$this->html = '';
 			return;
@@ -702,10 +711,10 @@ abstract class api extends base_module {
 			$this->checkValidClientId($client_id);
 					
 			$arr_client_user = $_POST;
-			
-			if ($this->mode == 'parent-parent') {
+
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT) {
 				$arr_client_user['user_id'] = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'parent-child' || $this->mode == 'child-child' || $this->mode == 'user-child' || $this->mode == 'root-child') {
+			} else if (variableHasValue($this->mode, static::CLIENT_USERS_MODE_CHILD_CHILD, static::CLIENT_USERS_MODE_PARENT_CHILD, static::CLIENT_USERS_MODE_ROOT_CHILD, static::CLIENT_USERS_MODE_USER_CHILD)) {
 				if (!$arr_client_user['user_id']) {
 					error(getLabel('msg_missing_information'));
 				}
@@ -734,9 +743,9 @@ abstract class api extends base_module {
 			
 			$arr_client_user = $_POST;
 			
-			if ($this->mode == 'parent-parent') {
+			if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT) {
 				$arr_client_user['user_id'] = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-			} else if ($this->mode == 'parent-child' || $this->mode == 'child-child' || $this->mode == 'user-child' || $this->mode == 'root-child') {
+			} else if (variableHasValue($this->mode, static::CLIENT_USERS_MODE_CHILD_CHILD, static::CLIENT_USERS_MODE_PARENT_CHILD, static::CLIENT_USERS_MODE_ROOT_CHILD, static::CLIENT_USERS_MODE_USER_CHILD)) {
 				if (!$arr_client_user['user_id']) {
 					error(getLabel('msg_missing_information'));
 				}
@@ -785,30 +794,30 @@ abstract class api extends base_module {
 	protected function setConfig() {
 		
 		$this->arr_api = apis::getAPIs($this->arr_variables['api_id']);
-		
+
 		if (!$this->arr_api['clients_user_group_id']) {
 			if ($this->arr_api['client_users_user_group_id']) {
-				$this->mode = 'root-child';
+				$this->mode = static::CLIENT_USERS_MODE_ROOT_CHILD;
 			} else {
-				$this->mode = 'user-user';
+				$this->mode = static::CLIENT_USERS_MODE_USER_USER;
 			}
 		} else if ($_SESSION['CUR_USER'][DB::getTableName('VIEW_USER_PARENT')]['parent_group_id'] == $this->arr_api['clients_user_group_id']) {
 			if ($this->arr_api['client_users_user_group_id'] && $_SESSION['CUR_USER'][DB::getTableName('VIEW_USER_PARENT')]['parent_group_id'] == $this->arr_api['client_users_user_group_id']) {
-				$this->mode = 'parent-parent';
+				$this->mode = static::CLIENT_USERS_MODE_PARENT_PARENT;
 			} else {
-				$this->mode = 'parent-child';
+				$this->mode = static::CLIENT_USERS_MODE_PARENT_CHILD;
 			}
-			// $this->mode = 'parent-user';
+			//$this->mode = static::CLIENT_USERS_MODE_PARENT_USER;
 		} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['group_id'] == $this->arr_api['clients_user_group_id']) {
 			if ($this->arr_api['client_users_user_group_id'] && $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['group_id'] != $this->arr_api['client_users_user_group_id']) {
-				$this->mode = 'user-child';
+				$this->mode = static::CLIENT_USERS_MODE_USER_CHILD;
 			} else {
-				$this->mode = 'user-user';
+				$this->mode = static::CLIENT_USERS_MODE_USER_USER;
 			}
 		} else {
-			$this->mode = 'user-user';
+			$this->mode = static::CLIENT_USERS_MODE_USER_USER;
 		}
-		// $this->mode = 'child-child';
+		//$this->mode = static::CLIENT_USERS_MODE_CHILD_CHILD;
 	}
 	
 	protected function checkValidClientId($client_id) {
@@ -817,11 +826,11 @@ abstract class api extends base_module {
 			
 		$sql_in = "'".(is_array($client_id) ? implode("','", $client_id) : $client_id)."'";
 		
-		if ($this->mode == 'parent-parent' || $this->mode == 'parent-user' || $this->mode == 'parent-child') {
+		if (variableHasValue($this->mode, static::CLIENT_USERS_MODE_PARENT_PARENT, static::CLIENT_USERS_MODE_PARENT_USER, static::CLIENT_USERS_MODE_PARENT_CHILD)) {
 			$sql_user = "ac_u.id != ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
-		} else if ($this->mode == 'child-child') {
+		} else if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 			$sql_user = "ac_u.parent_id != ".$_SESSION['USER_ID'];
-		} else if ($this->mode == 'root-child') {
+		} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 			$sql_user = "ac_u.id IS NOT NULL";
 		} else {
 			$sql_user = "ac_u.id != ".$_SESSION['USER_ID'];
@@ -847,11 +856,11 @@ abstract class api extends base_module {
 		
 		if ($client_user_id) {
 			
-			if ($this->mode == 'parent-parent' || $this->mode == 'parent-user' || $this->mode == 'parent-child') {
+			if (variableHasValue($this->mode, static::CLIENT_USERS_MODE_PARENT_PARENT, static::CLIENT_USERS_MODE_PARENT_USER, static::CLIENT_USERS_MODE_PARENT_CHILD)) {
 				$is_valid = ($client_user_id == $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']);
-			} else if ($this->mode == 'root-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 				$is_valid = ($client_user_id == 0);
-			} else if ($this->mode == 'child-child') {
+			} else if ($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 				$is_valid = user_management::checkUserIds($client_user_id, $_SESSION['USER_ID'], 'parent');
 			} else {
 				$is_valid = ($client_user_id == $_SESSION['USER_ID']);
@@ -864,13 +873,13 @@ abstract class api extends base_module {
 			
 			foreach ((array)$client_user_user_id as $user_id) {
 				
-				if ($this->mode == 'parent-parent') {
+				if ($this->mode == static::CLIENT_USERS_MODE_PARENT_PARENT) {
 					$is_valid = ($user_id == $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']);
-				} else if ($this->mode == 'parent-child') {
+				} else if ($this->mode == static::CLIENT_USERS_MODE_PARENT_CHILD) {
 					$is_valid = user_management::checkUserIds($user_id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'], 'parent');
-				} else if ($this->mode == 'root-child') {
+				} else if ($this->mode == static::CLIENT_USERS_MODE_ROOT_CHILD) {
 					$is_valid = user_management::checkUserIds($user_id, 0, 'parent');
-				} else if ($this->mode == 'user-child' || $this->mode == 'child-child') {
+				} else if ($this->mode == static::CLIENT_USERS_MODE_USER_CHILD || $this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD) {
 					$is_valid = user_management::checkUserIds($user_id, $_SESSION['USER_ID'], 'parent');
 				} else {
 					$is_valid = ($user_id == $_SESSION['USER_ID']);

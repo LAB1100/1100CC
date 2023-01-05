@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -178,7 +178,7 @@ class user_management extends base_module {
 		
 		$msg = self::getUserTag($id);
 		
-		$arr_tables_info = user_groups::getUserGroupTables(0, $id, false);
+		$arr_tables_info = user_groups::getUserGroupTables(false, $id, false);
 		
 		DB::setConnection(DB::CONNECT_CMS);
 
@@ -212,18 +212,18 @@ class user_management extends base_module {
 		return $return;
 	}
 		
-	public static function recoverUser($uname, $user_group_id, $recover_confirmation_mail_url) {
+	public static function recoverUser($str_uname, $user_group_id, $recover_confirmation_mail_url) {
 
 		$res = DB::query("SELECT
 			u.*
 				FROM ".DB::getTable('TABLE_USERS')." u
-			WHERE u.uname = '".DBFunctions::strEscape($uname)."'
+			WHERE u.uname = '".DBFunctions::strEscape($str_uname)."'
 				AND u.group_id = ".(int)$user_group_id."
 				AND u.enabled = TRUE
 		");
 								
 		if (!$res->getRowCount()) {
-			error(getLabel('msg_missing_information'));
+			error(getLabel('msg_missing_information'), TROUBLE_ERROR, LOG_BOTH, $str_uname);
 		}
 		$row = $res->fetchAssoc();
 		$user_id = $row['id'];
@@ -288,11 +288,13 @@ class user_management extends base_module {
 		return true;
 	}
 	
-	public static function updateUserValue($arr_update, $id) {
+	public static function updateUserData($id, $arr_update) {
 	
 		$arr_set = [];
+		
 		foreach ($arr_update as $col => $val) {
-			$arr_set[] = DBFunctions::strEscape($col)."='".DBFunctions::strEscape($val)."'";
+			
+			$arr_set[] = DBFunctions::strEscape($col)." = '".DBFunctions::strEscape($val)."'";
 		}
 		
 		DB::setConnection(DB::CONNECT_CMS);
@@ -313,7 +315,7 @@ class user_management extends base_module {
 		}
 		
 		$arr_columns_info = user_groups::getUserGroupColumns(false, $id);
-		$arr_tables_info = user_groups::getUserGroupTables(0, $id, false);
+		$arr_tables_info = user_groups::getUserGroupTables(false, $id, false);
 
 		$arr_val = [];
 		foreach ($arr_columns_data as $key => $value) {
@@ -342,67 +344,56 @@ class user_management extends base_module {
 
 		foreach ($arr_val as $table => $arr_columns) {
 
-			if ($arr_tables_info[$table]) {
+			if (!$arr_tables_info[$table]) {
+				continue;
+			}
 
-				$arr_columns_sql = DBFunctions::arrEscape(array_keys($arr_columns));
-				$arr_values = DBFunctions::arrEscape($arr_columns);
+			$arr_columns_sql = DBFunctions::arrEscape(array_keys($arr_columns));
+			$arr_values = DBFunctions::arrEscape($arr_columns);
 			
-				if ($arr_tables_info[$table]['multi_target']) {
+			$sql_to_column = $arr_tables_info[$table]['to_column'];
+			$sql_get_column = $arr_tables_info[$table]['get_column'];
+			$sql_to_table = $arr_tables_info[$table]['to_table'];
+			
+			if ($arr_tables_info[$table]['multi_target']) {
 
-					$del = DB::query("DELETE
-							FROM ".$arr_tables_info[$table]['to_table']."
-						WHERE ".$arr_tables_info[$table]['to_column']." = ".(int)$id."
-					");
+				$has_data = !empty($arr_values[$sql_get_column]);
+				
+				if ($has_data) {
+				
+					$arr_values = $arr_values[$sql_get_column];
+					$arr_sql_values = [];
 					
-					if ($arr_values[$arr_tables_info[$table]['get_column']]) {
-					
-						$arr_values = $arr_values[$arr_tables_info[$table]['get_column']];
-
-						foreach($arr_values as $key => $value) {
-							$arr_values[$key] = '('.(int)$id.', '.$value.')';
-						}
+					foreach ($arr_values as $key => $value) {
 						
-						$res = DB::query("INSERT INTO ".$arr_tables_info[$table]['to_table']."
-							(".$arr_tables_info[$table]['to_column'].", ".$arr_tables_info[$table]['get_column'].")
-								VALUES 
-							".implode(",", $arr_values)
-						);
+						$arr_sql_values[$key] = '('.(int)$id.', '.$value.')';
 					}
-				} else {
-
-					// Check for update or insert
-					$check = DB::query("SELECT
-						".$arr_tables_info[$table]['to_column']."
-							FROM ".$arr_tables_info[$table]['to_table']."
-						WHERE ".$arr_tables_info[$table]['to_column']." = ".(int)$id."
+					
+					$res = DB::query("INSERT INTO ".$sql_to_table."
+						(".$sql_to_column.", ".$sql_get_column.")
+							VALUES 
+						".implode(',', $arr_sql_values)."
+						".DBFunctions::onConflict($sql_to_column.', '.$sql_get_column, false)."
 					");
-					
-					if ($check->getRowCount()) {
-					
-						$arr_update = [];
-						$count = count($arr_columns_sql);
-						
-						for ($i = 0; $i < $count; $i++) {
-							$arr_update[] = "\"".$arr_columns_sql[$i]."\" = '".$arr_values[$arr_columns_sql[$i]]."'";
-						}
-					
-						$res = DB::query("UPDATE ".$arr_tables_info[$table]['to_table']." SET
-								".implode(",", $arr_update)."
-							WHERE ".$arr_tables_info[$table]['to_column']." = ".(int)$id."
-						");
-					} else {
-					
-						$str_columns = '"'.implode('","', $arr_columns_sql).'"';
-						$str_values = implode("','", $arr_values);
-						
-						$res = DB::query("INSERT INTO ".$arr_tables_info[$table]['to_table']."
-							(".$arr_tables_info[$table]['to_column'].", ".$str_columns.")
-								VALUES
-							(".(int)$id.",
-							'".$str_values."')
-						");
-					}
 				}
+				
+				$del = DB::query("DELETE
+						FROM ".$sql_to_table."
+					WHERE ".$sql_to_column." = ".(int)$id."
+						".($has_data ? "AND ".$sql_get_column." NOT IN (".implode(',', $arr_values).")" : "")."
+				");
+			} else {
+
+				$str_columns = '"'.implode('","', $arr_columns_sql).'"';
+				$str_values = implode("','", $arr_values);
+				
+				$res = DB::query("INSERT INTO ".$sql_to_table."
+					(".$sql_to_column.", ".$str_columns.")
+						VALUES
+					(".(int)$id.",
+					'".$str_values."')
+					".DBFunctions::onConflict($sql_to_column, $arr_columns_sql)."
+				");
 			}
 		}
 		
@@ -411,7 +402,8 @@ class user_management extends base_module {
 	
 	public static function getUser($user_id) {
 	
-		$res = DB::query("SELECT *
+		$res = DB::query("SELECT
+				id, name, uname, email, lang_code, group_id
 			FROM ".DB::getTable('TABLE_USERS')."
 			WHERE id = ".(int)$user_id."	
 		");
@@ -425,8 +417,9 @@ class user_management extends base_module {
 	
 		$arr = [];
 
-		$res = DB::query("SELECT *
-				FROM ".DB::getTable('TABLE_USERS')."
+		$res = DB::query("SELECT
+				id, name, uname, email, lang_code, group_id
+			FROM ".DB::getTable('TABLE_USERS')."
 			WHERE group_id = ".(int)$user_group."
 		");
 		
@@ -441,14 +434,14 @@ class user_management extends base_module {
 	public static function getUserAccount($user_id) {
 		
 		$res = DB::query("SELECT
-			u.name, u.uname, u.email, u.group_id, CASE
-				WHEN up.parent_name IS NOT NULL THEN up.parent_name
-				ELSE ug.name
-			END AS domain, uk.passkey, uk.email_new
-				FROM ".DB::getTable('TABLE_USERS')." u
-				LEFT JOIN ".DB::getTable('TABLE_USER_ACCOUNT_KEY')." uk ON (uk.user_id = u.id)
-				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
-				LEFT JOIN ".DB::getTable('VIEW_USER_PARENT')." up ON (up.id = u.parent_id)
+				u.name, u.uname, u.email, u.lang_code, u.group_id, CASE
+					WHEN up.parent_name IS NOT NULL THEN up.parent_name
+					ELSE ug.name
+				END AS domain, uk.passkey, uk.email_new
+			FROM ".DB::getTable('TABLE_USERS')." u
+			LEFT JOIN ".DB::getTable('TABLE_USER_ACCOUNT_KEY')." uk ON (uk.user_id = u.id)
+			LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
+			LEFT JOIN ".DB::getTable('VIEW_USER_PARENT')." up ON (up.id = u.parent_id)
 			WHERE u.id = ".(int)$user_id
 		);
 		

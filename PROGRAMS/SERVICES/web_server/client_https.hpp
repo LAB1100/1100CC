@@ -1,9 +1,9 @@
-#ifndef CLIENT_HTTPS_HPP
-#define CLIENT_HTTPS_HPP
+#ifndef SIMPLE_WEB_CLIENT_HTTPS_HPP
+#define SIMPLE_WEB_CLIENT_HTTPS_HPP
 
 #include "client_http.hpp"
 
-#ifdef USE_STANDALONE_ASIO
+#ifdef ASIO_STANDALONE
 #include <asio/ssl.hpp>
 #else
 #include <boost/asio/ssl.hpp>
@@ -15,11 +15,28 @@ namespace SimpleWeb {
   template <>
   class Client<HTTPS> : public ClientBase<HTTPS> {
   public:
-    Client(const std::string &server_port_path, bool verify_certificate = true, const std::string &cert_file = std::string(),
+    /**
+     * Constructs a client object.
+     *
+     * @param server_port_path   Server resource given by host[:port][/path]
+     * @param verify_certificate Set to true (default) to verify the server's certificate and hostname according to RFC 2818.
+     * @param certification_file If non-empty, sends the given certification file to server. Requires private_key_file.
+     * @param private_key_file   If non-empty, specifies the file containing the private key for certification_file. Requires certification_file.
+     * @param verify_file        If non-empty, use this certificate authority file to perform verification.
+     */
+    Client(const std::string &server_port_path, bool verify_certificate = true, const std::string &certification_file = std::string(),
            const std::string &private_key_file = std::string(), const std::string &verify_file = std::string())
-        : ClientBase<HTTPS>::ClientBase(server_port_path, 443), context(asio::ssl::context::tlsv12) {
-      if(cert_file.size() > 0 && private_key_file.size() > 0) {
-        context.use_certificate_chain_file(cert_file);
+        : ClientBase<HTTPS>::ClientBase(server_port_path, 443),
+#if(ASIO_STANDALONE && ASIO_VERSION >= 101300) || BOOST_ASIO_VERSION >= 101300
+          context(asio::ssl::context::tls_client) {
+      // Disabling TLS 1.0 and 1.1 (see RFC 8996)
+      context.set_options(asio::ssl::context::no_tlsv1);
+      context.set_options(asio::ssl::context::no_tlsv1_1);
+#else
+          context(asio::ssl::context::tlsv12) {
+#endif
+      if(certification_file.size() > 0 && private_key_file.size() > 0) {
+        context.use_certificate_chain_file(certification_file);
         context.use_private_key_file(private_key_file, asio::ssl::context::pem);
       }
 
@@ -31,7 +48,7 @@ namespace SimpleWeb {
       else
         context.set_default_verify_paths();
 
-      if(verify_file.size() > 0 || verify_certificate)
+      if(verify_certificate)
         context.set_verify_mode(asio::ssl::verify_peer);
       else
         context.set_verify_mode(asio::ssl::verify_none);
@@ -40,20 +57,27 @@ namespace SimpleWeb {
   protected:
     asio::ssl::context context;
 
+    /// Ignore for end of file and SSL_R_SHORT_READ error codes
+    error_code clean_error_code(const error_code &ec) override {
+      return ec == error::eof || ec == asio::ssl::error::stream_truncated ? error_code() : ec;
+    }
+
     std::shared_ptr<Connection> create_connection() noexcept override {
-      return std::make_shared<Connection>(handler_runner, config.timeout, *io_service, context);
+      return std::make_shared<Connection>(handler_runner, *io_service, context);
     }
 
     void connect(const std::shared_ptr<Session> &session) override {
       if(!session->connection->socket->lowest_layer().is_open()) {
         auto resolver = std::make_shared<asio::ip::tcp::resolver>(*io_service);
-        resolver->async_resolve(*query, [this, session, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator it) {
+        session->connection->set_timeout(this->config.timeout_connect);
+        async_resolve(*resolver, *host_port, [this, session, resolver](const error_code &ec, resolver_results results) {
+          session->connection->cancel_timeout();
           auto lock = session->connection->handler_runner->continue_lock();
           if(!lock)
             return;
           if(!ec) {
             session->connection->set_timeout(this->config.timeout_connect);
-            asio::async_connect(session->connection->socket->lowest_layer(), it, [this, session, resolver](const error_code &ec, asio::ip::tcp::resolver::iterator /*it*/) {
+            asio::async_connect(session->connection->socket->lowest_layer(), results, [this, session, resolver](const error_code &ec, async_connect_endpoint /*endpoint*/) {
               session->connection->cancel_timeout();
               auto lock = session->connection->handler_runner->continue_lock();
               if(!lock)
@@ -76,44 +100,45 @@ namespace SimpleWeb {
                     if(!lock)
                       return;
                     if(!ec) {
-                      std::shared_ptr<Response> response(new Response(this->config.max_response_streambuf_size));
+                      std::shared_ptr<Response> response(new Response(this->config.max_response_streambuf_size, session->connection));
                       session->connection->set_timeout(this->config.timeout_connect);
                       asio::async_read_until(session->connection->socket->next_layer(), response->streambuf, "\r\n\r\n", [this, session, response](const error_code &ec, std::size_t /*bytes_transferred*/) {
                         session->connection->cancel_timeout();
                         auto lock = session->connection->handler_runner->continue_lock();
                         if(!lock)
                           return;
-                        if((!ec || ec == asio::error::not_found) && response->streambuf.size() == response->streambuf.max_size()) {
-                          session->callback(session->connection, make_error_code::make_error_code(errc::message_size));
+                        if(response->streambuf.size() == response->streambuf.max_size()) {
+                          session->callback(make_error_code::make_error_code(errc::message_size));
                           return;
                         }
+
                         if(!ec) {
                           if(!ResponseMessage::parse(response->content, response->http_version, response->status_code, response->header))
-                            session->callback(session->connection, make_error_code::make_error_code(errc::protocol_error));
+                            session->callback(make_error_code::make_error_code(errc::protocol_error));
                           else {
                             if(response->status_code.compare(0, 3, "200") != 0)
-                              session->callback(session->connection, make_error_code::make_error_code(errc::permission_denied));
+                              session->callback(make_error_code::make_error_code(errc::permission_denied));
                             else
                               this->handshake(session);
                           }
                         }
                         else
-                          session->callback(session->connection, ec);
+                          session->callback(ec);
                       });
                     }
                     else
-                      session->callback(session->connection, ec);
+                      session->callback(ec);
                   });
                 }
                 else
                   this->handshake(session);
               }
               else
-                session->callback(session->connection, ec);
+                session->callback(ec);
             });
           }
           else
-            session->callback(session->connection, ec);
+            session->callback(ec);
         });
       }
       else
@@ -132,10 +157,10 @@ namespace SimpleWeb {
         if(!ec)
           this->write(session);
         else
-          session->callback(session->connection, ec);
+          session->callback(ec);
       });
     }
   };
 } // namespace SimpleWeb
 
-#endif /* CLIENT_HTTPS_HPP */
+#endif /* SIMPLE_WEB_CLIENT_HTTPS_HPP */

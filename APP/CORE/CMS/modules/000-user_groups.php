@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -69,14 +69,14 @@ class user_groups extends base_module {
 		return $return;
 	}
 	
-	public static function getUserGroupTables($user_group, $user_id = false, $indirect = true) {
+	public static function getUserGroupTables($user_group_id, $user_id = false, $do_indirect = true) {
 	
-		if ($user_group) {
+		if ($user_group_id) {
 			
 			$res = DB::query("SELECT *
 					FROM ".DB::getTable('TABLE_USER_GROUP_LINK')."
-				WHERE group_id = ".(int)$user_group."
-					".(!$indirect ? "AND (from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
+				WHERE group_id = ".(int)$user_group_id."
+					".(!$do_indirect ? "AND (from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 				ORDER BY sort
 			");
 		} else {
@@ -85,7 +85,7 @@ class user_groups extends base_module {
 					FROM ".DB::getTable('TABLE_USERS')." u
 					JOIN ".DB::getTable('TABLE_USER_GROUP_LINK')." l ON (l.group_id = u.group_id)
 				WHERE u.id = ".(int)$user_id."
-					".(!$indirect ? "AND (l.from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR l.from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
+					".(!$do_indirect ? "AND (l.from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR l.from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 				ORDER BY sort
 			");
 		}
@@ -107,14 +107,14 @@ class user_groups extends base_module {
 		return $arr;
 	}
 		
-	public static function getUserGroupColumns($user_group, $user_id = false, $indirect = true) {
+	public static function getUserGroupColumns($user_group_id, $user_id = false, $do_indirect = true) {
 
-		if ($user_group) {
+		if ($user_group_id) {
 			
 			$res = DB::query("SELECT *
 				FROM ".DB::getTable('TABLE_USER_GROUP_LINK')."
-					WHERE group_id = ".(int)$user_group."
-						".(!$indirect ? "AND (from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
+					WHERE group_id = ".(int)$user_group_id."
+						".(!$do_indirect ? "AND (from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 					ORDER BY sort
 			");
 		} else {
@@ -123,7 +123,7 @@ class user_groups extends base_module {
 				FROM ".DB::getTable('TABLE_USERS')." u
 				JOIN ".DB::getTable('TABLE_USER_GROUP_LINK')." l ON (l.group_id = u.group_id)
 					WHERE u.id = ".(int)$user_id."
-						".(!$indirect ? "AND (l.from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR l.from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
+						".(!$do_indirect ? "AND (l.from_table = '".static::formatTableNameToTemplate(DB::getTableName('TABLE_USERS'))."' OR l.from_table = '".DB::getTableName('TABLE_USERS')."')" : "")."
 					ORDER BY sort
 			");
 		}
@@ -242,9 +242,20 @@ class user_groups extends base_module {
 		return $str_table_name;
 	}
 	
-	public static function getUserData($user_id, $indirect = false) {
-
-		$arr_tables = self::getUserGroupTables(0, $user_id, $indirect);
+	public static function getUserData($user_id, $do_indirect = false) {
+		
+		if (is_array($user_id)) {
+			
+			$user_id = arrParseRecursive($user_id, TYPE_INTEGER);
+			
+			$arr_tables = self::getUserGroupTables(false, reset($user_id), $do_indirect); // Requires only one user ID
+			$sql_user_id = 'IN ('.arr2String($user_id, ',').')';
+		} else {
+			
+			$arr_tables = self::getUserGroupTables(false, $user_id, $do_indirect);
+			$sql_user_id = '= '.(int)$user_id;
+		}
+		
 		$arr_table_names = [];
 		
 		$sql_query = "SELECT ".DB::getTable('TABLE_USERS').".*, ".DB::getTable('TABLE_USER_GROUPS').".*
@@ -266,7 +277,7 @@ class user_groups extends base_module {
 			$arr_table_names[$arr_scheme_table[1]] = $key;
 		}
 		
-		$sql_query .= "WHERE ".DB::getTable('TABLE_USERS').".id = ".(int)$user_id;
+		$sql_query .= "WHERE ".DB::getTable('TABLE_USERS').".id ".$sql_user_id;
 
 		$res = DB::query($sql_query);
 
@@ -286,24 +297,26 @@ class user_groups extends base_module {
 		
 		while ($arr_row = $res->fetchArray()) {
 			
+			$s_arr_user = &$arr[$arr_row[0]]; // User ID
+			
 			foreach ($arr_fields_meta as $i => $arr_field_meta) {
 				
 				$table_name = $arr_table_names[$arr_field_meta['table']];
 				$arr_table_info = ($arr_tables[$table_name] ?? null);
 
-				$arr[$table_name] = (!isset($arr[$table_name]) ? [] : $arr[$table_name]); // Make sure the table does exist
+				$s_arr_user[$table_name] = (!isset($s_arr_user[$table_name]) ? [] : $s_arr_user[$table_name]); // Make sure the table does exist
 
 				if ($arr_table_info && $arr_table_info['multi_source']) { // If source has multiple rows create multidimensional array based on to_column
 					
 					if (!empty($arr_row[$arr_table_info['to_column']])) { // Do not store empty rows
 						
-						$arr[$table_name][$arr_row[$arr_table_info['to_column']]][$arr_field_meta['name']] = $arr_row[$i];
+						$s_arr_user[$table_name][$arr_row[$arr_table_info['to_column']]][$arr_field_meta['name']] = $arr_row[$i];
 					}
 				} else if ($arr_table_info && $arr_table_info['multi_target']) {  // If target has multiple rows create multidimensional array based on get_column
 				
 					if (!empty($arr_row[$arr_table_info['get_column']])) { // Do not store empty rows
 						
-						$arr[$table_name][$arr_row[$arr_table_info['get_column']]][$arr_field_meta['name']] = $arr_row[$i];
+						$s_arr_user[$table_name][$arr_row[$arr_table_info['get_column']]][$arr_field_meta['name']] = $arr_row[$i];
 					}
 				} else {
 					if (!empty($arr_row[$i])) { // Do not store empty values
@@ -313,13 +326,13 @@ class user_groups extends base_module {
 							$arr_row[$i] = DBFunctions::unescapeAs($arr_row[$i], DBFunctions::TYPE_BOOLEAN);
 						}
 						
-						$arr[$table_name][$arr_field_meta['name']] = $arr_row[$i];
+						$s_arr_user[$table_name][$arr_field_meta['name']] = $arr_row[$i];
 					}
 				}
 			}
 		}
 
-		return $arr;
+		return (is_array($user_id) ? $arr : current($arr));
 	}
 	
 	public static function getUserGroups($user_group_id = 0, $parent_user_goup_id = 0) {

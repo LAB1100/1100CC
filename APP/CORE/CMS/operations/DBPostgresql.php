@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -84,7 +84,7 @@ class DB extends DBBase {
 		
 		// Nothing to do
 	}
-	
+		
 	public static function query($q) {
 		
 		if (!static::$connection_active_is_async) {
@@ -200,12 +200,30 @@ class DB extends DBBase {
 	public static function isActive($connection = false) {
 		
 		$connection = ($connection !== false ? $connection : static::$connection_active);
-							
-		if (!$connection || pg_transaction_status($connection) === PGSQL_TRANSACTION_UNKNOWN) {
+		
+		try {
+						
+			if (!$connection || pg_transaction_status($connection) === PGSQL_TRANSACTION_UNKNOWN) {
+				return false;
+			}
+		} catch (Exception $e) {
+			
 			return false;
 		}
 		
 		return true;
+	}
+	
+	protected static function doClose($connection = false) {
+		
+		$connection = ($connection !== false ? $connection : static::$connection_active);
+		
+		try {
+			
+			pg_close($connection);
+		} catch (Exception $e) {
+			
+		}
 	}
 	
 	public static function lastInsertID() {

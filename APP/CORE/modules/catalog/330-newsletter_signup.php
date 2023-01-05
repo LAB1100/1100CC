@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -28,6 +28,8 @@ class newsletter_signup extends base_module {
 			</ul></fieldset>
 		</form>';
 		
+		$this->validate = ['name' => 'required', 'email' => ['required' => true, 'email' => true]];
+		
 		return $return;
 	}
 	
@@ -40,10 +42,7 @@ class newsletter_signup extends base_module {
 	
 	public static function js() {
 	
-		$return = "SCRIPTER.static('.newsletter_signup', function(elm_scripter) {
-		
-			elm_scripter.find('[id^=f\\\:newsletter_signup\\\:signup]').data('rules', {'name': 'required', 'email': {'required': true, 'email': true}});
-		});";
+		$return = "";
 		
 		return $return;
 	}

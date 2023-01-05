@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -39,6 +39,12 @@
 	const EOL_1100CC = PHP_EOL;
 	const EOL_EXCHANGE = "\r\n";
 	const CSV_ESCAPE = "\0"; // Empty '' for PHP 7.4+ 
+	
+	const TYPE_INTEGER = 'int';
+	const TYPE_FLOAT = 'float';
+	const TYPE_BOOLEAN = 'boolean';
+	const TYPE_STRING = 'string';
+	const TYPE_TEXT = 'text';
 	
 	require('operations/Trouble.php');
 	require('operations/Log.php');
@@ -452,6 +458,18 @@
 		SiteStartVars::startSession();
 	}
 	
+	function variableHasValue($variable, ...$values) {
+		
+		foreach ($values as $value) {
+			
+			if ($variable === $value) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
 	const BIT_MODE_ADD = 1;
 	const BIT_MODE_SUBTRACT = 2;
 	
@@ -693,7 +711,7 @@
 	function str2Name($str, $str_keep = false) {
 		
 		if (!$str) {
-			return '';
+			return (string)$str;
 		}
 		
 		return strtolower(preg_replace('/[^a-z0-9'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', '', $str));
@@ -702,7 +720,7 @@
 	function str2Label($str, $str_keep = false) {
 		
 		if (!$str) {
-			return '';
+			return (string)$str;
 		}
 		
 		return strtolower(preg_replace('/[^a-z0-9-_'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', '', str_replace(' ', '_', $str)));
@@ -711,7 +729,7 @@
 	function str2URL($str, $str_keep = false) {
 		
 		if (!$str) {
-			return '';
+			return (string)$str;
 		}
 		
 		return strtolower(preg_replace('/[^a-z0-9-_'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', '', str_replace(' ', '-', $str)));
@@ -806,19 +824,22 @@
 		
 		switch ($what) {
 			
-			case 'int':
+			case TYPE_INTEGER:
 				$value = (int)$value;
 				break;
-			case 'float':
+			case TYPE_FLOAT:
 				$value = (float)$value;
 				break;
-			case 'string':
+			case TYPE_BOOLEAN:
+				$value = (bool)$value;
+				break;
+			case TYPE_STRING:
 				if ($value !== null) {
 					$value = trim($value, " \x00..\x1F\x7F"); // Also remove control characters
 					$value = str_replace(["\r\n", "\n"], ' ', $value); // Clear linebreaks
 				}
 				break;
-			case 'text':
+			case TYPE_TEXT:
 			case 'trim':
 				if ($value !== null) {
 					$value = trim($value, " \x00..\x1F\x7F"); // Also remove control characters
@@ -831,7 +852,7 @@
 		return $value;
 	}
 	
-	function arrParseRecursive($arr, $what = 'int', $arr_keys = null, $keys_include = true) {
+	function arrParseRecursive($arr, $what = TYPE_INTEGER, $arr_keys = null, $keys_include = true) {
 		
 		if (!is_array($arr)) {
 			return parseValue($arr, $what);
@@ -877,7 +898,11 @@
 		}
 	}
 	
-	function arrValuesRecursive($key, $arr, &$arr_flat = []) {
+	function arrValuesRecursive($arr_keys, $arr, &$arr_flat = []) {
+		
+		if (!is_array($arr_keys) && $arr_keys !== false) {
+			$arr_keys = [$arr_keys => true];
+		}
 	
 		foreach ($arr as $k => $v) {
 		
@@ -885,12 +910,12 @@
 				continue;
 			}
 			
-			if ($k === $key || $key === false) {
+			if ($arr_keys === false || isset($arr_keys[$k])) {
 				$arr_flat[] = $v;
 			}
 			
 			if (is_array($v)) { // Recursive
-				arrValuesRecursive($key, $v, $arr_flat);
+				arrValuesRecursive($arr_keys, $v, $arr_flat);
 			}
 		}
 		
@@ -905,7 +930,7 @@
 	
 		foreach ($arr as $k => $v) {
 			
-			if (($k === $key || $key === false) && !empty($arr_values[$v])) {
+			if (($k === $key || $key === false) && isset($arr_values[$v])) {
 				return $v;
 			}
 			
@@ -913,13 +938,13 @@
 
 				$value_found = arrHasValuesRecursive($key, $arr_values, $v);
 				
-				if ($value_found !== false) {
+				if ($value_found !== null) {
 					return $value_found;
 				}
 			}
 		}
 		
-		return false;
+		return null;
 	}
 	
 	function arrHasKeysRecursive($arr_keys, $arr, $only_positive = false) {
@@ -942,13 +967,13 @@
 				
 				$key_found = arrHasKeysRecursive($arr_keys, $v, $only_positive);
 				
-				if ($key_found !== false) {
+				if ($key_found !== null) {
 					return $key_found;
 				}
 			}
 		}
 		
-		return false;
+		return null;
 	}
 	
 	function arrFlattenKeysRecursive($arr) {
@@ -1023,7 +1048,11 @@
 		}
 	}
 	
-	function arrMergeValues($arrs) {
+	function arrMergeValues(...$arrs) {
+		
+		if (count($arrs) == 1) {
+			$arrs = current($arrs);
+		}
 		
 		$arr_buffer = [];
 		
@@ -1090,7 +1119,7 @@
 	function strEscapeXML($str_xml) {
 		
 		if (!$str_xml) {
-			return '';
+			return (string)$str_xml;
 		}
 		
 		return htmlspecialchars($str_xml, ENT_QUOTES | ENT_XML1);
@@ -1099,7 +1128,7 @@
 	function strEscapeXMLEntities($str_xml) {
 		
 		if (!$str_xml) {
-			return '';
+			return (string)$str_xml;
 		}
 		
 		return preg_replace('/&(?!#?[a-zA-Z0-9]+;)/', '&amp;', $str_xml);
@@ -1108,7 +1137,7 @@
 	function strEscapeHTML($str_html) {
 		
 		if (!$str_html) {
-			return '';
+			return (string)$str_html;
 		}
 		
 		return htmlspecialchars($str_html);
@@ -1117,7 +1146,7 @@
 	function strUnescapeHTML($str_html) {
 		
 		if (!$str_html) {
-			return '';
+			return (string)$str_html;
 		}
 		
 		return htmlspecialchars_decode($str_html);
@@ -1224,13 +1253,17 @@
 		public $html;
 		public $data;
 		public $validate = [];
-		public $confirm = false;
-		public $download = false;
+		public $do_confirm = false;
+		public $do_download = false;
 		public $refresh = false;
 		public $refresh_table = false;
 		public $reset_form = false;	
 		public $style = false;
 		public $msg = false;
+		
+		public $is_confirm = null;
+		public $is_download = null;
+		public $is_discard = null;
 		
 		protected $arr_access = [];
 		

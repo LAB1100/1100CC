@@ -2,35 +2,42 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class FileArchive {
 
-	private $str_path = false;
-	private $zip = false;
-	private $num_count_add = 1;
+	protected $str_path = false;
+	protected $zip = false;
+	protected $num_count_add = 1;
+	protected $mode_zip = null;
 
 	public function __construct($str_path = false, $arr_contents = []) {
 		
+		$do_read_only = ($arr_contents === null || $arr_contents === false); // No contents, open only
+		
 		if (!$str_path) {
+
+			if ($do_read_only) {
+				error('Missing file.');
+			}
 			
 			$this->str_path = tempnam(Settings::get('path_temporary'), '1100CC');
-			$this->zip = new ZipArchive();
-			$this->zip->open($this->str_path, ZipArchive::CREATE);
+			$this->mode_zip = ZipArchive::CREATE;
 		} else {
 			
-			$this->str_path = FileStore::checkDuplicates($str_path);
-			
-			$this->zip = new ZipArchive();
-			$this->zip->open($this->str_path, ZipArchive::CREATE);
+			$this->str_path = $str_path;
+			$this->mode_zip = ($do_read_only ? ZipArchive::RDONLY : ZipArchive::CREATE);
 		}
+		
+		$this->zip = new ZipArchive();			
+		$this->zip->open($this->str_path, $this->mode_zip);
 		
 		$this->zip->close();
 		
-		if ($arr_contents) {
+		if ($arr_contents && is_array($arr_contents)) {
 			
 			$this->add($arr_contents);
 		}
@@ -38,14 +45,14 @@ class FileArchive {
 	
 	public function add($arr_contents) {
 		
-		$this->zip->open($this->str_path);
+		$this->zip->open($this->str_path, $this->mode_zip);
 		
 		foreach ($arr_contents as $filename => $content) { // Filename in zip => file/dir/memory
 	
 			// Prevent OS max opened file limit
 			if ($this->num_count_add % 100 == 0) {
 				$this->zip->close();
-				$this->zip->open($this->str_path);
+				$this->zip->open($this->str_path, $this->mode_zip);
 			}
 			
 			try {
@@ -85,6 +92,31 @@ class FileArchive {
 		}
 		
 		$this->zip->close();
+	}
+	
+	public function iterate() {
+		
+		$this->zip->open($this->str_path, $this->mode_zip);
+				
+		for ($i = 0; $i < $this->zip->numFiles; $i++) {
+			
+			$str_entry = $this->zip->getNameIndex($i);
+			
+			$arr_entry = str2Array($str_entry, '/');
+			$str_target = $arr_entry[0];
+			$arr_segments = array_slice($arr_entry, 1);
+			
+			$str_path_zip = $this->getEntry($str_entry);
+			
+			yield $str_path_zip => ['target' => $str_target, 'segments' => $arr_segments];
+		}
+		
+		$this->zip->close();
+	}
+	
+	public function getEntry($str_entry) {
+		
+		return 'zip://'.$this->str_path.'#'.$str_entry;
 	}
 	
 	public function get() {

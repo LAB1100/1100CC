@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -114,10 +114,10 @@ class uris extends base_module {
 			
 			if (substr($str, 0, 2) == '//') {
 				
-				$url = SERVER_PROTOCOL.ltrim($str, '/');
+				$url = SERVER_SCHEME.ltrim($str, '/');
 			} else {
 				
-				$url = SERVER_PROTOCOL.($host_name ?: SERVER_NAME_SITE_NAME).$str;
+				$url = SERVER_SCHEME.($host_name ?: SERVER_NAME_SITE_NAME).$str;
 			}
 		} else {
 			

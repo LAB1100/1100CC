@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -55,14 +55,12 @@ abstract class register_self extends base_module {
 				</ul></fieldset>
 			</form>';
 			
-			$arr_validate = ['name' => 'required', 'email' => 'required', 'password' => 'required', 'password_confirm' => ['required' => true, 'equalTo' => '#password']];
+			$this->validate = ['name' => 'required', 'email' => 'required', 'password' => 'required', 'password_confirm' => ['required' => true, 'equalTo' => '#password']];
 			if (!$this->arr_variables['email_as_username']) {
-				$arr_validate['uname'] = 'required';
+				$this->validate['uname'] = 'required';
 			}
 			
-			SiteEndVars::addScript("$(document).on('documentloaded', function() {
-				setElementData($('#f\\\:".static::class."\\\:user_add-0'), 'rules', ".value2JSON(array_merge($arr_validate, $this->arr_validate_extra)).");
-			});");
+			$this->validate = array_merge($this->validate, $this->arr_validate_extra);
 		}
 		
 		return $return;

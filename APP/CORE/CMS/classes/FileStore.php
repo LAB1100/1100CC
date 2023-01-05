@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,11 +13,11 @@ class FileStore {
 	
 	const STORE_FILE_DOCUMENT = 1;
 	const STORE_FILE_IMAGE = 2;
-	const STORE_FILE_VIDEO = 3;
-	const STORE_FILE = self::STORE_FILE_DOCUMENT && self::STORE_FILE_IMAGE & self::STORE_FILE_VIDEO;
-	const STORE_TEXT = 4;
+	const STORE_FILE_VIDEO = 4;
+	const STORE_FILE = (self::STORE_FILE_DOCUMENT | self::STORE_FILE_IMAGE | self::STORE_FILE_VIDEO);
+	const STORE_TEXT = 8;
 	
-	protected static $arr_mime_type_ext = [
+	protected static $arr_mime_types = [
 		'image/jpeg' => 'jpg',
 		'image/png' => 'png',
 		'image/gif' => 'gif',
@@ -29,44 +29,37 @@ class FileStore {
 		'application/zip' => 'zip',
 		'application/json' => 'json',
 		'application/javascript' => 'js',
+		'text/plain' => 'txt',
 		'text/css' => 'css'
 	];
 	protected static $arr_disallowed_extensions = ['php', 'ini', 'py', 'dll', 'exe', 'html', 'htm', 'sh'];
-	protected static $arr_img_extensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif'];
+	protected static $arr_img_extensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'];
 	protected static $arr_store_limit = [];
 
-	protected $path_source = false;
-	protected $source_name = false;
+	protected $str_path_source = false;
+	protected $str_source_name = false;
 
 	protected $num_size = false;
 	protected $str_extension = false;
-	protected $path_destination = false;
+	protected $str_path_destination = false;
 	
 	protected $from_cache = false;
 
-	public function __construct($file, $destination, $num_size_limit = false, $img_only = false) {
+	public function __construct($file, $destination, $num_size_limit = false, $do_image_only = false) {
 	
 		// $file = $_FILE or FileGet();
-		// $destination = string OR array("dir" => string, "filename" => string, "overwrite" => boolean)
+		// $destination = string OR array("directory" => string, "filename" => string, "path" => string, "overwrite" => boolean)
 
-		if (is_object($file)) {
-			$this->path_source = $file->getPath();
-			$this->source_name = $file->getSource();
-			$this->from_cache = true;
-		} else {
-			$this->path_source = $file['tmp_name'];
-			$this->source_name = $file['name'];
-		}
-	
 		try {
-			
-			if ((!$this->from_cache && !is_uploaded_file($this->path_source)) || ($this->from_cache && !isPath($this->path_source))) {
-				
-				Labels::setVariable('max_size', bytes2String(static::getSizeLimitClient()));
-				error(getLabel('msg_no_file_or_too_large'));
+			if (is_object($file)) {
+				$this->fromFileGet($file);
+			} else if (is_array($file)) {
+				$this->fromUpload($file);
+			} else {
+				error();
 			}
-			
-			$this->num_size = filesize($this->path_source);
+
+			$this->num_size = filesize($this->str_path_source);
 			
 			if ($num_size_limit && $this->num_size > $num_size_limit) {
 				
@@ -74,58 +67,63 @@ class FileStore {
 				error(getLabel('msg_file_too_large'));
 			}
 			
-			$dir = (is_array($destination) ? $destination['dir'] : $destination);
-			static::makeDirectoryTree($dir);
+			if (isset($destination['path'])) {
+				$destination['directory'] = dirname($destination['path']);
+				$destination['filename'] = basename($destination['path']);
+			}
 			
-			$filename = (is_array($destination) && $destination['filename'] ? $destination['filename'] : basename($this->source_name));
+			$str_directory = (is_array($destination) ? $destination['directory'] : $destination);
+			static::makeDirectoryTree($str_directory);
 			
-			$str_extension = static::getExtension($this->path_source);
+			$str_filename = (is_array($destination) && $destination['filename'] ? $destination['filename'] : basename($this->str_source_name));
+			
+			$str_extension = static::getExtension($str_filename);
 			if ($str_extension == static::EXTENSION_UNKNOWN) {
-				$str_extension = static::getExtension($filename);
+				$str_extension = static::getExtension($this->str_path_source);
 			}
 			
 			$this->str_extension = $str_extension;
 
-			if (strpos($filename, '.')) {
-				$filename = substr($filename, 0, strpos($filename, '.'));
+			if (strpos($str_filename, '.')) {
+				$str_filename = substr($str_filename, 0, strpos($str_filename, '.'));
 			}
-			$filename = $filename.'.'.$this->str_extension;
+			$str_filename = $str_filename.'.'.$this->str_extension;
 			
 			$overwrite = (is_array($destination) && $destination['overwrite']);	
 
-			if ($img_only && !in_array($this->str_extension, static::$arr_img_extensions)) {
+			if ($do_image_only && !in_array($this->str_extension, static::$arr_img_extensions)) {
 				
 				Labels::setVariable('type', 'image');
 				error(getLabel('msg_invalid_file_type_specific'));
 			}
-			if (!$img_only && (!$this->str_extension || in_array($this->str_extension, static::$arr_disallowed_extensions))) {
+			if (!$do_image_only && (!$this->str_extension || in_array($this->str_extension, static::$arr_disallowed_extensions))) {
 				
 				error(getLabel('msg_invalid_file_type'));
 			}
 			
-			$filename = static::cleanFilename($filename);
+			$str_filename = static::cleanFilename($str_filename);
 			
 			if ($overwrite) {
 				
-				if (isPath($dir.$filename)) {
-					static::deleteFile($dir.$filename);
+				if (isPath($str_directory.$str_filename)) {
+					static::deleteFile($str_directory.$str_filename);
 				}
 				
-				$this->path_destination = $dir.$filename;
+				$this->str_path_destination = $str_directory.$str_filename;
 			} else {
 				
-				$this->path_destination = static::checkDuplicates($dir.$filename);
+				$this->str_path_destination = static::checkDuplicates($str_directory.$str_filename);
 			}
 			
 			if ($this->from_cache) {
 				
-				rename($this->path_source, $this->path_destination);
+				rename($this->str_path_source, $this->str_path_destination);
 			} else {
 				
-				move_uploaded_file($this->path_source, $this->path_destination);
+				move_uploaded_file($this->str_path_source, $this->str_path_destination);
 			}
 			
-			static::setFilePermission($this->path_destination);
+			static::setFilePermission($this->str_path_destination);
 						
 		} catch (Exception $e) {
 			
@@ -139,16 +137,58 @@ class FileStore {
 		}
 	}
 	
+	protected function fromFileGet($file) {
+		
+		$this->from_cache = true;
+		
+		$this->str_path_source = $file->getPath();
+		$this->str_source_name = $file->getSource();
+		
+		if (!isPath($this->str_path_source)) {
+			
+			Labels::setVariable('max_size', bytes2String(static::getSizeLimitClient()));
+			error(getLabel('msg_no_file_or_too_large'));
+		}
+	}
+	
+	protected function fromUpload($file) {
+		
+		$this->str_path_source = $file['tmp_name'];
+		$this->str_source_name = $file['name'];
+		
+		if (!is_uploaded_file($this->str_path_source)) {
+			
+			Labels::setVariable('max_size', bytes2String(static::getSizeLimitClient()));
+			error(getLabel('msg_no_file_or_too_large'));
+		}
+	}
+		
+	public function rename($str_path) {
+		
+		$is_renamed = static::renameFile($this->str_path_destination, $str_path);
+		
+		if ($is_renamed) {
+			$this->str_path_destination = $str_path;
+		}
+		
+		return $is_renamed;
+	}
+	
+	public function get() {
+		
+		return $this->str_path_destination;
+	}
+	
 	public function getDetails() {
 	
 		$arr = [];
 	
 		$arr['size'] = $this->num_size;
-		$arr['ext']  = $this->str_extension;
-		$arr['name'] = pathinfo($this->path_destination, PATHINFO_BASENAME);
+		$arr['extension']  = $this->str_extension;
+		$arr['name'] = pathinfo($this->str_path_destination, PATHINFO_BASENAME);
 		
 		$file_info = new finfo(FILEINFO_MIME_TYPE);
-		$file_type = $file_info->file($this->path_destination);
+		$file_type = $file_info->file($this->str_path_destination);
 		$arr['type']  = $file_type;
 		
 		return $arr;
@@ -159,9 +199,9 @@ class FileStore {
 		if (in_array($this->str_extension, static::$arr_img_extensions)) {
 			
 			$resize = new ImageResize();
-			$resize->resize($this->path_destination, $this->path_destination, $width, $height);
+			$resize->resize($this->str_path_destination, $this->str_path_destination, $width, $height);
 			
-			$this->num_size = filesize($this->path_destination);
+			$this->num_size = filesize($this->str_path_destination);
 		}
 	}
 	
@@ -189,14 +229,14 @@ class FileStore {
 		$file_info = new finfo(FILEINFO_MIME_TYPE);
 		$file_type = $file_info->file($file);
 				
-		$str_extension = (static::$arr_mime_type_ext[$file_type] ?? false);
+		$str_extension = (static::$arr_mime_types[$file_type] ?? false);
 			
 		return $str_extension;
 	}
 	
-	public static function getFilenameExtension($filename) {
+	public static function getFilenameExtension($str_filename) {
 		
-		$str_extension = strtolower(substr(strrchr($filename, '.'), 1));
+		$str_extension = strtolower(substr(strrchr($str_filename, '.'), 1));
 			
 		if (preg_match('/[^a-z0-9]/', $str_extension)) {
 			$str_extension = false;
@@ -205,14 +245,19 @@ class FileStore {
 		return $str_extension;
 	}
 	
+	public static function getMIMETypeExtension($mime) {
+		
+		return (static::$arr_mime_types[$mime] ?? static::EXTENSION_UNKNOWN);
+	}
+	
 	public static function getExtensionMIMEType($what) {
 		
-		$type = array_search($what, static::$arr_mime_type_ext);
+		$type = array_search($what, static::$arr_mime_types);
 		
 		return ($type ?: false);
 	}
 	
-	public static function setUploadLimit($mode, $num_size = false) {
+	public static function setSizeLimit($mode, $num_size = false) {
 		
 		if ($mode & static::STORE_FILE) {
 			
@@ -230,7 +275,7 @@ class FileStore {
 		}
 	}
 	
-	public static function getSizeLimit($mode = false) {
+	public static function getSizeLimit($mode = 0) {
 		
 		$num_size = false;
 		
@@ -241,9 +286,9 @@ class FileStore {
 		return $num_size;
 	}
 	
-	public static function getSizeLimitClient($mode = false) {
+	public static function getSizeLimitClient($mode = 0) {
 		
-		$num_system = min(str2Bytes(ini_get('upload_max_filesize')), str2Bytes(ini_get('post_max_size')), str2Bytes(ini_get('memory_limit')));
+		$num_system = min(str2Bytes(ini_get('upload_max_filesize')), str2Bytes(ini_get('post_max_size')));
 		$num_size = static::getSizeLimit($mode);
 		
 		if ($num_size) {
@@ -253,68 +298,68 @@ class FileStore {
 		return $num_system;
 	}
 	
-	public static function cleanFilename($filename) {
+	public static function cleanFilename($str_filename) {
 		
 		$arr_check = ['\\', '/', ' ', '\'', '"', '%20', '!', '@', '#', '$', '%', '^', '&', '*'];
 		
-		return str_replace($arr_check, '', $filename); 
+		return str_replace($arr_check, '', $str_filename); 
 	}
 
-	public static function checkDuplicates($target, $count = 0) {		
+	public static function checkDuplicates($str_target, $count = 0) {		
 		
-		if (isPath($target)) {
+		if (isPath($str_target)) {
 			
 			$count++;
 			
-			if (preg_match("/(\()([0-9]+)(\))/", pathinfo($target, PATHINFO_BASENAME))) {
+			if (preg_match("/(\()([0-9]+)(\))/", pathinfo($str_target, PATHINFO_BASENAME))) {
 				
-				$new_filename = preg_replace("/(\()([0-9]+)(\))/", '('.$count.')', pathinfo($target, PATHINFO_BASENAME));
+				$str_filename_new = preg_replace("/(\()([0-9]+)(\))/", '('.$count.')', pathinfo($str_target, PATHINFO_BASENAME));
 			} else {
 				
-				$str_extension = pathinfo($target, PATHINFO_EXTENSION);
-				$new_filename = pathinfo($target, PATHINFO_FILENAME).'('.$count.')'.($str_extension ? '.'.$str_extension : '');
+				$str_extension = pathinfo($str_target, PATHINFO_EXTENSION);
+				$str_filename_new = pathinfo($str_target, PATHINFO_FILENAME).'('.$count.')'.($str_extension ? '.'.$str_extension : '');
 			}
 			
-			$new_target = pathinfo($target, PATHINFO_DIRNAME).'/'.$new_filename;
+			$str_target_new = pathinfo($str_target, PATHINFO_DIRNAME).'/'.$str_filename_new;
 						
-			return static::checkDuplicates($new_target, $count);
+			return static::checkDuplicates($str_target_new, $count);
 		} else {	
 					
-			return $target;
+			return $str_target;
 		}
 	}
 	
-	public static function setFilePermission($path, $mode = false) {
+	public static function setFilePermission($str_path, $mode = false) {
 		
-		chmod($path, ($mode ?: Settings::get('chmod_file')));
+		chmod($str_path, ($mode ?: Settings::get('chmod_file')));
 	}
 	
-	public static function setFilePermissionRecursive($dir, $mode = false) {
+	public static function setFilePermissionRecursive($str_directory, $mode = false) {
 		
-		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir), RecursiveIteratorIterator::SELF_FIRST);
+		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($str_directory), RecursiveIteratorIterator::SELF_FIRST);
 
 		foreach ($iterator as $item) {
 			static::setFilePermission($item, $mode);
 		}
 	}
 	
-	public static function makeDirectoryTree($path, $mode = false) {
+	public static function makeDirectoryTree($str_path, $mode = false) {
 		
-		if (isPath($path) || !trim($path)) {
+		if (isPath($str_path) || !trim($str_path)) {
 			return true;
 		}
 		
-		$path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
-		$next_path = substr($path, 0, strrpos($path, DIRECTORY_SEPARATOR));
+		$str_path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $str_path);
+		$str_path_next = substr($str_path, 0, strrpos($str_path, DIRECTORY_SEPARATOR));
 
-		if (static::makeDirectoryTree($next_path, $mode)) {
+		if (static::makeDirectoryTree($str_path_next, $mode)) {
 			
-			if (!isPath($path)) {
+			if (!isPath($str_path)) {
 				
 				$mode = ($mode ?: Settings::get('chmod_directory'));
 				
-				mkdir($path, $mode);
-				static::setFilePermission($path, $mode);
+				mkdir($str_path, $mode);
+				static::setFilePermission($str_path, $mode);
 				
 				return true;
 			}
@@ -322,29 +367,32 @@ class FileStore {
 
 		return false;
 	}
+	
+	public static function deleteDirectoryTree($str_directory) {
 		
-	public static function delDirectoryTree($dir) {
+		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($str_directory, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
 		
-		$files = array_diff(scandir($dir), ['.','..']);
-		
-		foreach ($files as $file) {
-			if (is_dir($dir.'/'.$file)) {
-				static::delDirectoryTree($dir.'/'.$file);
+		foreach ($iterator as $file) {
+			
+			if ($file->isDir()) {
+				rmdir($file);
 			} else {
-				unlink($dir.'/'.$file);
+				unlink($file);
 			}
 		}
 		
-		return rmdir($dir);
+		if (!strEndsWith($str_directory, '/')) { // Also remove self
+			rmdir($str_directory);
+		}
 	}
 	
-	public static function storeFile($path, $data = '', $path_destination = false) {
+	public static function storeFile($str_path, $data = '', $str_path_destination = false) {
 		
-		$dir = dirname($path);
+		$str_directory = dirname($str_path);
 		
-		static::makeDirectoryTree($dir);
-		$file = fopen($path, 'c');
-		static::setFilePermission($path);
+		static::makeDirectoryTree($str_directory);
+		$file = fopen($str_path, 'c');
+		static::setFilePermission($str_path);
 		
 		if (flock($file, LOCK_EX)) {
 			
@@ -355,45 +403,45 @@ class FileStore {
 		
 		fclose($file);
 		
-		if ($path_destination) {
-			rename($path, $path_destination);
+		if ($str_path_destination) {
+			rename($str_path, $str_path_destination);
 		}
 	}
 	
-	public static function renameFile($path, $path_destination) {
+	public static function renameFile($str_path, $str_path_destination) {
 		
-		if (trim($path != '')) {
+		if (trim($str_path != '') && ($str_path != $str_path_destination)) {
 						
-			if (isPath($path) && $path_destination) {
-				return rename($path, $path_destination);
+			if (isPath($str_path) && $str_path_destination) {
+				return rename($str_path, $str_path_destination);
 			}
 		}
 				
 		return false;
 	}
 		
-	public static function deleteFile($path) {
+	public static function deleteFile($str_path) {
 		
-		if (trim($path != '')) {
+		if (trim($str_path != '')) {
 						
-			if (isPath($path)) {			
-				return unlink($path);
+			if (isPath($str_path)) {			
+				return unlink($str_path);
 			}
 		}
 		
 		return true;
 	}
 	
-	public static function readFile($path, $filename, $do_delete = false) {
+	public static function readFile($str_path, $str_filename, $do_delete = false) {
 		
 		ob_end_clean();
 		
-		Response::sendFileHeaders($path, $filename);
+		Response::sendFileHeaders($str_path, $str_filename);
 		
-		readfile($path);
+		readfile($str_path);
 		
 		if ($do_delete) {
-			static::deleteFile($path);
+			static::deleteFile($str_path);
 		}
 	}
 }

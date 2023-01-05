@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -17,7 +17,7 @@ class Settings {
 	public static $server_file_host_name = '';
 	public static $arr_storage_paths = [DIR_CSS, DIR_JS, DIR_CMS, DIR_UPLOAD];
 	public static $arr_storage_paths_cacheable = ['combine/', 'cache/'];
-			
+				
 	public static function get($setting, $key = false) { // Get a setting following: set or override, and add
 		
 		$value = null;
@@ -141,5 +141,13 @@ class Settings {
 		}
 		
 		return $str;
+	}
+	
+	public static function getUpdatePath($do_file = true) {
+		
+		//$str_path = DIR_ROOT_SETTINGS.DIR_HOME.'update/';
+		$str_path = DIR_ROOT_STORAGE.DIR_HOME.DIR_CMS.DIR_PRIVATE.'update/';
+		
+		return $str_path.($do_file ? 'update.php' : '');
 	}
 }

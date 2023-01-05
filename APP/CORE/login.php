@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -45,7 +45,7 @@ class HomeLogin {
 		if ($arr_api_client_user && $arr_api_client_user['api_id'] == SiteStartVars::$api['id']) {
 			
 			// Regenerate token when provided unsecure
-			if (SERVER_PROTOCOL != 'https://') {
+			if (SERVER_SCHEME != 'https://') {
 				
 				apis::handleClientUser($arr_api_client_user['client_id'], $arr_api_client_user['user_id'], $arr_api_client_user['enabled'], false, true);
 				

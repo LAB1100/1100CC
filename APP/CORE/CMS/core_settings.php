@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,7 +13,7 @@
 	define('IS_CMS', ($_SERVER['IF_CMS_PATH'] ? 1 : 0)); // Custom environment variable
 	define('STATE_PRODUCTION', 0);
 	define('STATE_DEVELOPMENT', 1);
-	define('STATE', (isset($_SERVER['STATE']) && ($_SERVER['STATE'] == 'development' || $_SERVER['STATE'] == STATE_DEVELOPMENT) ? STATE_DEVELOPMENT : STATE_PRODUCTION)); // Custom environment variable
+	define('STATE', (isset($_SERVER['STATE']) && ($_SERVER['STATE'] === 'development' || (int)$_SERVER['STATE'] === STATE_DEVELOPMENT) ? STATE_DEVELOPMENT : STATE_PRODUCTION)); // Custom environment variable
 	define('MESSAGE', ($_SERVER['MESSAGE'] ?? '')); // Custom environment variable
 	define('DIR_STORAGE', 'STORAGE/');
 	define('DIR_CACHE', 'CACHE/');
@@ -59,9 +59,10 @@
 	define('DIR_INFO', 'info/');
 	
 	spl_autoload_register('autoLoadClass');
-
+	
 	define('SERVER_NAME_SUB', strtolower($_SERVER['SERVER_NAME_SUB'])); // Custom environment variable
 	define('SERVER_NAME_CUSTOM', strtolower($_SERVER['SERVER_NAME_CUSTOM'])); // Custom environment variable
+	
 	define('SERVER_NAME_1100CC', strtolower($_SERVER['SERVER_NAME_1100CC'])); // Custom environment variable
 	define('SERVER_NAME_MODIFIER', strtolower($_SERVER['SERVER_NAME_MODIFIER'])); // Custom environment variable
 	define('SERVER_NAME_SITE_NAME', strtolower($_SERVER['SERVER_NAME_SITE_NAME'])); // Custom environment variable
@@ -91,13 +92,14 @@
 	}
 
 	// CORE settings
+	
 	DB::$localhost = 'localhost';
 	DB::$database_core = '1100CC'; // Root dir
 	DB::$database_cms = SITE_NAME.'_cms';
 	DB::$database_home = SITE_NAME.'_home';
 	
 	Settings::set('path_temporary', sys_get_temp_dir().'/1100CC/'.DIR_HOME);
-	Settings::set('chmod_file', 0660);
+	Settings::set('chmod_file', 00660);
 	Settings::set('chmod_directory', 02775);
 	
 	// SITE settings
@@ -114,11 +116,14 @@
 	
 	// Applied settings
 	
-	define('SERVER_PROTOCOL', (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') ? 'https' : 'http').'://'); // Custom environment variable
+	if (!isset($_SERVER['SERVER_SCHEME'])) { // Custom environment variable
+		$_SERVER['SERVER_SCHEME'] = (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') ? 'https' : 'http').'://';
+	}
+	define('SERVER_SCHEME', $_SERVER['SERVER_SCHEME']);
 	
-	define('URL_BASE', SERVER_PROTOCOL.SERVER_NAME.'/');
-	define('URL_BASE_HOME', SERVER_PROTOCOL.SERVER_NAME_HOME.'/');
-	define('URL_BASE_CMS', SERVER_PROTOCOL.SERVER_NAME_CMS.'/');
+	define('URL_BASE', SERVER_SCHEME.SERVER_NAME.'/');
+	define('URL_BASE_HOME', SERVER_SCHEME.SERVER_NAME_HOME.'/');
+	define('URL_BASE_CMS', SERVER_SCHEME.SERVER_NAME_CMS.'/');
 	
 	Response::setOutputUpdates(!empty($_SERVER['HTTP_1100CC_STATUS']) ? true : null);
 

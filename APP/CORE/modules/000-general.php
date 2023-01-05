@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -59,10 +59,10 @@ class general extends base_module {
 			<div>
 				
 				<div class="options">
-					<menu><input type="button" id="y:general:label_cleanup-0" class="msg clean" data-msg="conf_cleanup_labels" value="'.getLabel('lbl_cleanup_labels').'" /></menu>
+					<menu><input type="button" id="y:general:cleanup_labels-0" class="msg clean" data-msg="conf_cleanup_labels" value="'.getLabel('lbl_cleanup_labels').'" /></menu>
 				</div>
 				
-				<table class="display" id="d:general:labels_data-select">
+				<table class="display" id="d:general:data_labels-select">
 					<thead>
 						<tr>
 							<th class="disable-sort"></th>
@@ -108,9 +108,9 @@ class general extends base_module {
 
 	public function commands($method, $id, $value = "") {
 		
-		if ($method == "label_popup") {
+		if ($method == "popup_labels") {
 							
-			$this->html = '<form class="label-popup" data-method="label_select">
+			$this->html = '<form class="label-popup" data-method="select_label">
 				'.$this->createLabel($value['selected'], 'auto_'.($value['module'] ?: 'x').'_'.$value['name'].'_'.uniqid()).'
 				<input class="hide" type="submit" name="" value="" />
 				<input type="submit" data-tab="save" name="save" value="'.getLabel('lbl_save').'" />
@@ -118,7 +118,7 @@ class general extends base_module {
 			</form>';
 		}
 		
-		if ($method == "label_select") {
+		if ($method == "select_label") {
 			
 			if ($_POST['select'] && $_POST['label_item']) {
 				
@@ -142,7 +142,7 @@ class general extends base_module {
 			}
 		}
 		
-		if ($method == "label_cleanup") {
+		if ($method == "cleanup_labels") {
 			
 			$user_id = ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] ?: $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']);
 			
@@ -152,7 +152,7 @@ class general extends base_module {
 			$this->msg = true;
 		}
 		
-		if ($method == "labels_data") {
+		if ($method == "data_labels") {
 			
 			$user_id = ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'] ?: $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']);
 			

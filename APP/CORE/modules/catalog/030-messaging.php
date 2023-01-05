@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -335,26 +335,30 @@ class messaging extends base_module {
 		
 		// QUERY
 		
-		if ($method == "insert" || (is_array($method) && $method["method"] == "insert" && $method["confirmed"])) {
+		if ($method == 'insert' && $this->is_confirm !== false) {
 		
 			if (!$_POST['subject']) {
 				error(getLabel('msg_missing_information'));
 			}
 			
 			$arr_participants = ($_POST['participants'] ? array_filter($_POST['participants']) : []);
+			
 			if ($arr_participants) {
+				
 				$all = (in_array('all', $arr_participants) || in_array('all_individual', $arr_participants));
 				$individual = in_array('all_individual', $arr_participants);
 				$arr_participants = $this->getValidParticipants($arr_participants);
+			
 				if ($all && !$arr_participants) {
 					error(getLabel('msg_missing_information'));
 				}
 			}
 			
-			if ($all && !(is_array($method) && $method['method'] == 'insert' && $method['confirmed'])) {
+			if ($all && !$this->is_confirm) {
+				
 				Labels::setVariable('count', count($arr_participants));
 				$this->html = getLabel(($individual ? 'conf_message_all_individual' : 'conf_message_all'));
-				$this->confirm = true;
+				$this->do_confirm = true;
 				return;
 			}
 		

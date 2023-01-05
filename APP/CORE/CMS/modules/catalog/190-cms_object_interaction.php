@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -568,7 +568,7 @@ class cms_object_interaction extends base_module {
 			$path = Settings::get('object_interaction_stage_tiles_path').'stage_'.$id.'/';
 
 			if (is_dir($path)) {
-				FileStore::delDirectoryTree($path);
+				FileStore::deleteDirectoryTree($path);
 			}
 		
 			$this->msg = true;
@@ -659,7 +659,7 @@ class cms_object_interaction extends base_module {
 		$path = Settings::get('object_interaction_stage_tiles_path').'stage_'.$stage_id.'/';
 
 		if (is_dir($path)) {
-			FileStore::delDirectoryTree($path);
+			FileStore::deleteDirectoryTree($path);
 		}
 		mkdir($path, 0777, true);
 

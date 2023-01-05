@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -652,9 +652,13 @@ class cms_jobs extends base_module {
 		$module = $arr_module_method['module'];
 		$method = $arr_module_method['method'];
 		
-		$do = Mediator::setLock($module.$method, 'job');
+		$do = Mediator::setLock($module.$method, false);
 		
-		if ($do) {
+		if (!$do) {
+			return;
+		}
+		
+		try {
 			
 			$update = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET 
 					running = TRUE
@@ -670,6 +674,10 @@ class cms_jobs extends base_module {
 			}
 			
 			Mediator::removeLock($module.$method);
+		} catch (Exception $e) {
+		
+			Mediator::removeLock($module.$method);
+			throw($e);
 		}
 	}
 	
@@ -687,9 +695,22 @@ class cms_jobs extends base_module {
 
 		SiteStartVars::stopSession();
 
-		$do = Mediator::setLock($module.$method, ($key ?: 'job'));
+		$do = Mediator::setLock($module.$method, $key);
 		
-		if ($do) {
+		if (!$do) {
+			
+			SiteStartVars::startSession();
+			return;
+		}
+		
+		$func_done = function() use ($module, $method) {
+			
+			Mediator::removeLock($module.$method);
+			DB::setConnection();
+			SiteStartVars::startSession();
+		};
+		
+		try {
 			
 			self::cleanupJobs($module, $method);
 			
@@ -721,18 +742,18 @@ class cms_jobs extends base_module {
 					
 					DB::setConnection();
 					
-					timeLimit(0);
+					timeLimit(false);
 					
 					self::executeJobTask(['module' => $module, 'method' => $method, 'options' => $arr_job]);
 				}
 			}
 			
-			DB::setConnection();
-			
-			Mediator::removeLock($module.$method);
-		}
+			$func_done();
+		} catch (Exception $e) {
 		
-		SiteStartVars::startSession();
+			$func_done();
+			throw($e);
+		}
 	}
 	
 	// Actual execution of the Job

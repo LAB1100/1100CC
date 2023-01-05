@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -47,13 +47,13 @@ abstract class DBBase {
 	
 	protected static $last_query = '';
 	
-	public static function setConnection($level = false, $default = false) {
+	public static function setConnection($level = false, $is_default = false) {
 
 		if ($level) {
 			
 			static::$connection_level = $level;
 			
-			if ($default) {
+			if ($is_default) {
 				static::$connection_level_default = static::$connection_level;
 			}
 		} else {
@@ -176,6 +176,7 @@ abstract class DBBase {
 				$connection = static::createConnection($arr_connection_details);
 				
 				for ($i = static::$connection_level; $i <= $level; $i++) {
+					
 					static::$arr_database_level_connection[$database][$i] = $connection;
 				}
 				
@@ -184,22 +185,41 @@ abstract class DBBase {
 		}
 	}
 	
+	public static function closeConnection() {
+				
+		static::doClose();
+		
+		foreach (static::$arr_database_level_connection[static::$connection_database] as $level => $connection) { // The same connection could be used by multiple levels
+			
+			if ($connection !== static::$connection_active) {
+				continue;
+			}
+				
+			unset(static::$arr_database_level_connection[static::$connection_database][$level]);
+		}
+	}
+
 	public static function fixConnection() {
 		
-		unset(static::$arr_database_level_connection[static::$connection_database]);
+		static::closeConnection();
 		
 		static::newConnection();
+		
+		static::setDatabase(static::$database_selected);
 	}
 	
 	abstract public static function clearConnection();
 	
 	protected static function newConnectionAsync() {
-							
-		foreach ((array)static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level] as $connection_async) {
+		
+		if (isset(static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level])) {
 			
-			if (static::isReady($connection_async)) {
-									
-				return $connection_async;
+			foreach (static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level] as $connection_async) {
+				
+				if (static::isReady($connection_async)) {
+										
+					return $connection_async;
+				}
 			}
 		}
 		
@@ -304,9 +324,11 @@ abstract class DBBase {
 
 	abstract public static function lastInsertID();
 	
-	abstract public static function isReady();
+	abstract public static function isReady($connection);
 	
-	abstract public static function isActive();
+	abstract public static function isActive($connection);
+	
+	abstract protected static function doClose($connection);
 
 	public static function error($e) {
 		
@@ -432,6 +454,9 @@ abstract class DBFunctionsBase {
 	const CAST_TYPE_BOOLEAN = false;
 	const CAST_TYPE_BINARY = false;
 	
+	const INDEX_HASH = '';
+	const INDEX_LTF = ''; // Left-to-right index (tree)
+	
 	protected static $count_sql_index = 0;
 	
 	public static function specific($arr_sql, $sql_default = '') {
@@ -546,7 +571,7 @@ abstract class DBFunctionsBase {
 		return $sql;
 	}
 	
-	public static function createIndex($table, $column, $identifier = false) {
+	public static function createIndex($table, $column, $identifier = false, $using = self::INDEX_HASH) {
 
 		if (!$identifier) {
 			
@@ -556,8 +581,9 @@ abstract class DBFunctionsBase {
 		}
 		
 		$sql_index = (is_array($column) ? implode(',', $column) : $column);
+		$sql_using = ($using ? ' USING '.$using : '');
 		
-		return "CREATE INDEX ".$identifier." ON ".$table." (".$sql_index.")";
+		return "CREATE INDEX ".$identifier." ON ".$table." (".$sql_index.")".$sql_using;
 	}
 	
 	abstract public static function onConflict($key, $arr_values, $sql_other = false);
@@ -621,7 +647,7 @@ abstract class DBFunctionsBase {
 		$func_result = function() use (&$arr_msg) {
 			
 			$count = count($arr_msg);
-			$debug = implode(PHP_EOL, $arr_msg);
+			$debug = implode(EOL_1100CC, $arr_msg);
 		
 			msg('Cleaned up '.$count.' tables.', 'DATABASE', LOG_BOTH, $debug);
 		};

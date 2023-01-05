@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -131,15 +131,15 @@ class intf_user_management extends user_management {
 		
 		if ($method == "edit" || $method == "add") {
 			
-			$arr_row = [];
+			$arr_user = [];
 			$str_url_account = false;
 		
 			if ($method == "edit" && (int)$id) {
 			
-				$arr_row = user_groups::getUserData($id, true);
+				$arr_user = user_groups::getUserData($id, true);
 				$arr_user_account = user_management::getUserAccount($id);
 				
-				$user_group_id = $arr_row[DB::getTableName('TABLE_USERS')]['group_id'];
+				$user_group_id = $arr_user[DB::getTableName('TABLE_USERS')]['group_id'];
 				
 				if ($arr_user_account['passkey']) {
 					
@@ -160,34 +160,40 @@ class intf_user_management extends user_management {
 			}
 
 			$arr_user_group = user_groups::getUserGroups($user_group_id);
+			$arr_tables = user_groups::getUserGroupTables($user_group_id, false, false);
 			$arr_columns = user_groups::getUserGroupColumns($user_group_id);
 			
 			$this->html = '<form id="frm-user_management" data-method="'.$mode.'">
 				<fieldset><ul>
 					<li>
 						<label></label>
-						<div>'.cms_general::createSelectorRadio([['id' => '1', 'name' => getLabel('lbl_active')], ['id' => '0', 'name' => getLabel('lbl_inactive')]], 'enabled', ($mode == 'insert' || $arr_row[DB::getTableName('TABLE_USERS')]['enabled'])).'</div>
+						<div>'.cms_general::createSelectorRadio([['id' => '1', 'name' => getLabel('lbl_active')], ['id' => '0', 'name' => getLabel('lbl_inactive')]], 'enabled', ($mode == 'insert' || $arr_user[DB::getTableName('TABLE_USERS')]['enabled'])).'</div>
 					</li>
 				</ul>
 				<hr />
 				<ul>';
-					if ($arr_row[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] !== null) {
+					if (isset($arr_tables[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')])) {
+						
+						$arr_clearance = [];
+						if (isset($arr_user[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')])) {
+							$arr_clearance = array_keys($arr_user[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]);
+						}
 						
 						$this->html .= '<li>
 							<label>'.getLabel('lbl_clearance').'</label>
 							<div>'
-								.'<input type="hidden" name="col['.DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id]" value="'.strEscapeHTML(value2JSON(array_keys($arr_row[DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]))).'" />'
+								.'<input type="hidden" name="col['.DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id]" value="'.strEscapeHTML(value2JSON($arr_clearance)).'" />'
 								.'<button type="button" id="y:intf_user_management:popup_user_clearance-'.$user_group_id.'" title="'.getLabel('inf_set_user_clearance').'"><span class="icon">'.getIcon('clearance').'</span></button>'
 							.'</div>
 						</li>';
 					}
 					$this->html .= '<li>
 						<label>'.getLabel('lbl_name').'</label>
-						<div><input type="text" name="name" value="'.strEscapeHTML($arr_row[DB::getTableName('TABLE_USERS')]['name']).'" /></div>
+						<div><input type="text" name="name" value="'.strEscapeHTML($arr_user[DB::getTableName('TABLE_USERS')]['name']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_username').'</label>
-						<div><input type="text" name="uname" value="'.strEscapeHTML($arr_row[DB::getTableName('TABLE_USERS')]['uname']).'" /></div>
+						<div><input type="text" name="uname" value="'.strEscapeHTML($arr_user[DB::getTableName('TABLE_USERS')]['uname']).'" /></div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_password').'</label>
@@ -198,13 +204,13 @@ class intf_user_management extends user_management {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_email').'</label>
-						<div><input type="text" name="email" value="'.strEscapeHTML($arr_row[DB::getTableName('TABLE_USERS')]['email']).'" /></div>
+						<div><input type="text" name="email" value="'.strEscapeHTML($arr_user[DB::getTableName('TABLE_USERS')]['email']).'" /></div>
 					</li>';
 					if ($arr_user_group['parent_id']) {
 						
 						$this->html .= '<li>
 							<label>'.getLabel('lbl_parent').'</label>
-							<div><input type="hidden" name="parent_id" value="'.$arr_row[DB::getTableName('TABLE_USERS')]['parent_id'].'" /><input type="text" id="y:intf_user_management:lookup_parent_user-'.$arr_user_group['parent_id'].'" class="autocomplete" value="'.$arr_row[DB::getTableName('VIEW_USER_PARENT')]['parent_name'].'" /></div>
+							<div><input type="hidden" name="parent_id" value="'.$arr_user[DB::getTableName('TABLE_USERS')]['parent_id'].'" /><input type="text" id="y:intf_user_management:lookup_parent_user-'.$arr_user_group['parent_id'].'" class="autocomplete" value="'.$arr_user[DB::getTableName('VIEW_USER_PARENT')]['parent_name'].'" /></div>
 						</li>';
 					}
 					if ($str_url_account) {
@@ -247,14 +253,14 @@ class intf_user_management extends user_management {
 								if ($arr_column['SOURCE_TABLE_NAME']) {
 									if ($arr_column['MULTI_SOURCE']) {
 										$arr_tags = [];
-										if ($arr_row[$arr_column['TABLE_NAME']] && key($arr_row[$arr_column['TABLE_NAME']])) {
-											foreach ($arr_row[$arr_column['TABLE_NAME']] as $key => $value) {
+										if ($arr_user[$arr_column['TABLE_NAME']] && key($arr_user[$arr_column['TABLE_NAME']])) {
+											foreach ($arr_user[$arr_column['TABLE_NAME']] as $key => $value) {
 												$arr_tags[$key] = $value[$arr_column['COLUMN_NAME']];
 											}
 										}
 										$this->html .= cms_general::createMultiSelect('col['.$arr_column['SOURCE_TABLE_NAME'].'.'.$arr_column['SOURCE_COLUMN_NAME'].']', 'y:intf_user_management:lookup_table-'.$arr_column['TABLE_NAME'].'.'.$arr_column['LINK_COLUMN_NAME'].'.'.$arr_column['COLUMN_NAME'], $arr_tags);
 									} else {
-										$this->html .= '<input type="hidden" name="col['.$arr_column['SOURCE_TABLE_NAME'].'.'.$arr_column['SOURCE_COLUMN_NAME'].']" value="'.strEscapeHTML($arr_row[$arr_column['SOURCE_TABLE_NAME']][$arr_column['SOURCE_COLUMN_NAME']]).'" /><input type="text" id="y:intf_user_management:lookup_table-'.$arr_column['TABLE_NAME'].'.'.$arr_column['LINK_COLUMN_NAME'].'.'.$arr_column['COLUMN_NAME'].'" class="autocomplete" value="'.strEscapeHTML($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]).'" />';
+										$this->html .= '<input type="hidden" name="col['.$arr_column['SOURCE_TABLE_NAME'].'.'.$arr_column['SOURCE_COLUMN_NAME'].']" value="'.strEscapeHTML($arr_user[$arr_column['SOURCE_TABLE_NAME']][$arr_column['SOURCE_COLUMN_NAME']]).'" /><input type="text" id="y:intf_user_management:lookup_table-'.$arr_column['TABLE_NAME'].'.'.$arr_column['LINK_COLUMN_NAME'].'.'.$arr_column['COLUMN_NAME'].'" class="autocomplete" value="'.strEscapeHTML($arr_user[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]).'" />';
 									}
 								} else {
 									$arr_class = [];
@@ -262,10 +268,10 @@ class intf_user_management extends user_management {
 										case 'datetime':
 										case 'date':
 											$arr_class[] = 'datepicker';
-											$value_column = date('d-m-Y'.($arr_column['DATA_TYPE'] == 'datetime' ? ' h:i:s' : ''), ($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']] ? strtotime($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]) : time()));
+											$value_column = date('d-m-Y'.($arr_column['DATA_TYPE'] == 'datetime' ? ' h:i:s' : ''), ($arr_user[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']] ? strtotime($arr_user[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]) : time()));
 											break;
 										default:
-											$value_column = strEscapeHTML($arr_row[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]);
+											$value_column = strEscapeHTML($arr_user[$arr_column['TABLE_NAME']][$arr_column['COLUMN_NAME']]);
 									}
 									$this->html .= '<input type="text" '.($arr_class ? ' class="'.implode(" ", $arr_class).'"' : '').'name="col['.$arr_column['TABLE_NAME'].'.'.$arr_column['COLUMN_NAME'].']" value="'.$value_column.'" />';
 								}
@@ -466,33 +472,35 @@ class intf_user_management extends user_management {
 							
 		// QUERY
 	
-		if ($method == "insert") {
-		
-			$new_user = self::addUser($_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'group_id' => $id, 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (bool)$_POST['send_mail']);
+		if ($method == "insert" || ($method == "update" && $id)) {
+						
+			if ($method == "insert") {
+				
+				$arr_user_new = static::addUser($_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'group_id' => $id, 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (bool)$_POST['send_mail']);
+				$user_id = $arr_user_new['id'];
+			} else {
+				
+				$user_id = (int)$id;
+				static::updateUser($user_id, $_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (int)$_POST['send_mail']);
+			}
 			
-			self::updateUserLinkedData($new_user['id'], $_POST['col']);
+			if (!empty($_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'])) {
+				$_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'] = array_filter(json_decode($_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'], true));
+			} else {
+				$_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'] = [];
+			}
+			
+			static::updateUserLinkedData($user_id, $_POST['col']);
 											
 			$this->refresh_table = true;
 			$this->msg = true;
 		}
 		
-		if ($method == "update" && (int)$id) {
-
-			$update_user = self::updateUser($id, $_POST['enabled'], ['name' => $_POST['name'], 'uname' => $_POST['uname'], 'email' => $_POST['email'], 'parent_id' => $_POST['parent_id']], $_POST['password'], (int)$_POST['send_mail']);
-			
-			$_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'] = ($_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'] ? array_filter(json_decode($_POST['col'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE').'.page_id'], true)) : []);
-			
-			self::updateUserLinkedData($id, $_POST['col']);
-
-			$this->refresh_table = true;
-			$this->msg = true;
-		}
-
 		if ($method == "del" && $id) {
 			
 			foreach ((is_array($id) ? $id : [$id]) as $id) {
 				
-				self::delUser($id);
+				static::delUser($id);
 			}
 			
 			$this->refresh_table = true;

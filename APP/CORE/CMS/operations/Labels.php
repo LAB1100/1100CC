@@ -2,19 +2,21 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class Labels {
 			
-	private static $arr_identifiers = [];
-	private static $arr_labels = [];
-	private static $arr_labels_override = [];
-	private static $arr_labels_last = [];
-	private static $arr_system_labels = [];
-	private static $arr_vars = [];
+	protected static $arr_identifiers = [];
+	protected static $arr_labels = [];
+	protected static $arr_labels_override = [];
+	protected static $arr_labels_last = [];
+	protected static $arr_system_labels = [];
+	protected static $arr_vars = [];
+	
+	const NAMESPACE_SEPARATOR = ':';
 	
 	public static function getLabel($identifier, $type = 'L', $go_now = false) {
 		
@@ -382,6 +384,39 @@ class Labels {
 		return str_replace(['[LABEL]', '[/LABEL]', '[\/LABEL]'], '', $str);
 	}
 	
+	public static function addNamespace($str, $str_namespace, $do_strict = false) {
+		
+		if ($do_strict) {
+			$str_namespace = strtoupper($str_namespace);
+		}
+		
+		return $str_namespace.static::NAMESPACE_SEPARATOR.$str;
+	}
+	
+	public static function parseNamespace($str, $do_strict = false) {
+		
+		if (!$str) {
+			return false;
+		}
+		
+		$num_pos = strpos($str, static::NAMESPACE_SEPARATOR);
+		
+		if ($num_pos === false) {
+			return false;
+		}
+		
+		$str_namespace = substr($str, 0, $num_pos);
+		
+		if ($do_strict && $str_namespace != strtoupper($str_namespace)) {
+			return false;
+		}
+		
+		$str_namespace = strtoupper($str_namespace);		
+		$str_other = ltrim(substr($str, $num_pos + strlen(static::NAMESPACE_SEPARATOR)));
+		
+		return ['namespace' => $str_namespace, 'label' => $str_other];
+	}
+	
 	public static function getServerVariable($str) {
 		
 		switch ($str) {
@@ -391,11 +426,18 @@ class Labels {
 				$path_site = DIR_ROOT_SITE.DIR_CMS.DIR_INFO.'version.txt';
 				
 				if (IS_CMS) {
-					$str = '1100CC '.trim(file_get_contents($path_core));
-					if (isPath($path_site)) {
-						$str = '<span>'.$str.'</span><span>'.SITE_NAME.' '.trim(file_get_contents($path_site)).'</span>';
+					
+					if (Response::getFormat() & Response::RENDER_TEXT) {
+						
+						$str = '1100CC '.trim(file_get_contents($path_core));
+						$str .= PHP_EOL.SITE_NAME.(isPath($path_site) ? ' '.trim(file_get_contents($path_site)) : '');
+					} else {
+						
+						$str = '<span>1100CC '.trim(file_get_contents($path_core)).'</span>';
+						$str .= '<span>'.SITE_NAME.(isPath($path_site) ? ' '.trim(file_get_contents($path_site)) : '').'</span>';
 					}
 				} else {
+					
 					$str = trim((isPath($path_site) ? file_get_contents($path_site) : file_get_contents($path_core)));
 				}
 				
@@ -406,9 +448,11 @@ class Labels {
 				$path_site = DIR_ROOT_SITE.DIR_CMS.DIR_INFO.'humans.txt';
 			
 				if (IS_CMS) {
+					
 					$str = trim(file_get_contents($path_core));
 					$str .= (isPath($path_site) ? PHP_EOL.PHP_EOL.trim(file_get_contents($path_site)) : '');
 				} else {
+					
 					$str = trim((isPath($path_site) ? file_get_contents($path_site) : file_get_contents($path_core)));
 				}
 				
@@ -419,9 +463,7 @@ class Labels {
 				$path_site = DIR_ROOT_SITE.DIR_CMS.DIR_INFO.'version.txt';
 				
 				$str = '1100CC '.trim(file_get_contents($path_core));
-				if (isPath($path_site)) {
-					$str = $str.' / '.SITE_NAME.' '.trim(file_get_contents($path_site));
-				}
+				$str .= (isPath($path_site) ? ' / '.SITE_NAME.' '.trim(file_get_contents($path_site)) : '');
 				
 				break;
 			case 'language':	
@@ -430,8 +472,8 @@ class Labels {
 			case 'url_site':
 				$str = URL_BASE;
 				break;
-			case 'protocol':
-				$str = SERVER_PROTOCOL;
+			case 'scheme':
+				$str = SERVER_SCHEME;
 				break;
 			case 'domain_site':
 				$str = SERVER_NAME_SITE_NAME;

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -75,28 +75,32 @@ class login extends base_module {
 				
 			$return .= '<h1>'.getLabel('lbl_login_welcome').'</h1>
 			
-				<section class="info attention">'.$str_message.'</section>
-				
-				<form id="f:login:'.$method.'-0">
-					<fieldset><ul>
-						<li><label>'.getLabel('lbl_password').'</label><input name="password" id="password" type="password" autocomplete="off" /></li>
-						<li><label>'.getLabel('lbl_confirmation').'</label><input name="password_confirm" type="password" /></li>
-						<li><label></label><input type="submit" value="'.getLabel('lbl_send').'" /></li>
-					</ul></fieldset>
-				</form>';
+			<section class="info attention">'.$str_message.'</section>
+			
+			<form id="f:login:'.$method.'-0">
+				<fieldset><ul>
+					<li><label>'.getLabel('lbl_password').'</label><input name="password" id="password" type="password" autocomplete="off" /></li>
+					<li><label>'.getLabel('lbl_confirmation').'</label><input name="password_confirm" type="password" /></li>
+					<li><label></label><input type="submit" value="'.getLabel('lbl_send').'" /></li>
+				</ul></fieldset>
+			</form>';
+			
+			$this->validate = ['password' => 'required', 'password_confirm' => ['equalTo' => '#password']];
 		} else if ($method == 'recover') {
 		
 			Labels::setVariable('url_login', SiteStartVars::getPageUrl());
 			
 			$return .= '<h1>'.getLabel('lbl_login_recover').'</h1>
-				
-				<form id="f:login:recover-0">
-					<fieldset><ul>
-						<li><label>'.getLabel('lbl_username').'</label><input name="recover_user" type="text" /></li>
-						<li><label></label><p>'.getLabel('msg_login_recover_link_return').'</p></li>
-						<li><label></label><input type="submit" value="'.getLabel('lbl_send').'" /></li>
-					</ul></fieldset>
-				</form>';
+			
+			<form id="f:login:recover-0">
+				<fieldset><ul>
+					<li><label>'.getLabel('lbl_username').'</label><input name="recover_user" type="text" /></li>
+					<li><label></label><p>'.getLabel('msg_login_recover_link_return').'</p></li>
+					<li><label></label><input type="submit" value="'.getLabel('lbl_send').'" /></li>
+				</ul></fieldset>
+			</form>';
+			
+			$this->validate = ['recover_user' => 'required'];
 		} else {
 			
 			$str_message = false;
@@ -119,17 +123,19 @@ class login extends base_module {
 			Labels::setVariable('url_recover_password', SiteStartVars::getModUrl($this->mod_id).'recover/');
 				
 			$return .= '<h1>'.getLabel('lbl_login').'</h1>
-				
-				'.($str_message ? '<section class="info attention">'.$str_message.'</section>' : '').'
-				
-				<form method="post" action="'.$str_path.'">
-					<fieldset><ul>		
-						<li><label>'.getLabel('lbl_username').'</label><input name="login_user" type="text" class="'.$str_input_error.'" /></li>
-						<li><label>'.getLabel('lbl_password').'</label><input name="login_ww" type="password" class="'.$str_input_error.'" /></li>
-						<li><label></label><p>'.getLabel('msg_login_recover_link').'</p></li>
-						<li><label></label><input type="submit" value="'.getLabel('lbl_login').'" /></li>
-					</ul></fieldset>
-				</form>';
+			
+			'.($str_message ? '<section class="info attention">'.$str_message.'</section>' : '').'
+			
+			<form method="post" action="'.$str_path.'">
+				<fieldset><ul>		
+					<li><label>'.getLabel('lbl_username').'</label><input name="login_user" type="text" class="'.$str_input_error.'" /></li>
+					<li><label>'.getLabel('lbl_password').'</label><input name="login_ww" type="password" class="'.$str_input_error.'" /></li>
+					<li><label></label><p>'.getLabel('msg_login_recover_link').'</p></li>
+					<li><label></label><input type="submit" value="'.getLabel('lbl_login').'" /></li>
+				</ul></fieldset>
+			</form>';
+			
+			$this->validate = ['login_user' => 'required', 'login_ww' => 'required'];
 		}
 		
 		return $return;
@@ -144,10 +150,7 @@ class login extends base_module {
 	
 	public static function js() {
 	
-		$return = "SCRIPTER.static('.login', function(elm_scripter) {
-		
-			elm_scripter.find('[id^=f\\\:login\\\:]').data('rules', {'password': 'required', 'password_confirm': {'equalTo': '#password'}});
-		});";
+		$return = "";
 		
 		return $return;
 	}

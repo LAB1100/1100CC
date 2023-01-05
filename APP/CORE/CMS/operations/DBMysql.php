@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -45,10 +45,13 @@ class DB extends DBBase {
 		
 		$connection->multi_query("
 			SET NAMES utf8mb4;
-			SET SESSION time_zone = '+00:00';
 			
-			SET SESSION sql_mode = (SELECT CONCAT(@@sql_mode, ',ANSI_QUOTES'));
-			SET SESSION group_concat_max_len = 100000;
+			SET SESSION
+				time_zone = '+00:00',
+				sql_mode = (SELECT CONCAT(@@sql_mode, ',ANSI_QUOTES')),
+				group_concat_max_len = 100000,
+				wait_timeout = 28800
+			;
 			
 			SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
 		");
@@ -144,7 +147,7 @@ class DB extends DBBase {
 			// Remove new connection from async library
 			foreach (static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level] as $key => $cur_connection_async) {
 				
-				if ($cur_connection_async == $connection_async) {
+				if ($cur_connection_async === $connection_async) {
 					unset(static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level][$key]);
 					break;
 				}					
@@ -229,11 +232,29 @@ class DB extends DBBase {
 		
 		$connection = ($connection !== false ? $connection : static::$connection_active);
 		
-		if (!$connection || $connection->errno == 2006 || $connection->errno == 2014 || !$connection->stat()) { // 2006: Server has gone away. 2014: Command out of sync. No stat: Server does not respond at all
+		try {
+			
+			if (!$connection || $connection->errno == 2006 || $connection->errno == 2013 || $connection->errno == 2014 || !$connection->stat()) { // 2006: Server has gone away. 2013: Lost connection during query. 2014: Command out of sync. No stat: Server does not respond at all
+				return false;
+			}
+		} catch (Exception $e) {
+			
 			return false;
 		}
 		
 		return true;
+	}
+	
+	protected static function doClose($connection = false) {
+		
+		$connection = ($connection !== false ? $connection : static::$connection_active);
+		
+		try {
+			
+			$connection->close();
+		} catch (Exception $e) {
+			
+		}
 	}
 	
 	public static function lastInsertID() {
@@ -390,6 +411,9 @@ class DBFunctions extends DBFunctionsBase {
 	const CAST_TYPE_STRING = 'CHAR';
 	const CAST_TYPE_BOOLEAN = 'SIGNED';
 	const CAST_TYPE_BINARY = 'BINARY';
+	
+	const INDEX_HASH = 'HASH';
+	const INDEX_LTF = 'BTREE';
 			
 	public static function strEscape($str) {
 		

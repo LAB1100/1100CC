@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -119,10 +119,21 @@
 				$mod = $mod_target;
 			}
 		}
+
+		if ($method) {
+			
+			if (isset($_POST['is_confirm'])) {
+				$mod->is_confirm = (bool)$_POST['is_confirm'];
+			}
+			if (isset($_POST['is_download'])) {
+				$mod->is_download = (bool)$_POST['is_download'];
+			}
+			if (isset($_POST['is_discard'])) {
+				$mod->is_discard = (bool)$_POST['is_discard'];
+			}
+		}
 		
 		$JSON->html =& $mod->html;
-		
-		$method = ($method && !empty($_POST['confirmed']) ? ['method' => $method, 'confirmed' => true] : $method);
 
 		$mod->commands($method, $_POST['id'], $_POST['value']);
 		
@@ -133,8 +144,8 @@
 		
 		SiteEndVars::checkServerName();
 		
-		$JSON->confirm = $mod->confirm;
-		$JSON->download = $mod->download;
+		$JSON->do_confirm = $mod->do_confirm;
+		$JSON->do_download = $mod->do_download;
 		$JSON->validate = $mod->validate;
 		$JSON->data = $mod->data;
 		$JSON->refresh_table = $mod->refresh_table;

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -155,7 +155,7 @@ class SiteStartVars {
 			$arr_session_options = ['use_only_cookies' => false, 'use_cookies' => false, 'use_trans_sid' => false, 'cache_limiter' => ''];
 		} else {
 			
-			$is_secure = (SERVER_PROTOCOL == 'https://' ? true : false);
+			$is_secure = (SERVER_SCHEME == 'https://' ? true : false);
 
 			$arr_session_options = [];
 			$arr_cookie_options = ['lifetime' => 0, 'path' => (IS_CMS ? ini_get('session.cookie_path') : '/'), 'domain' => ini_get('session.cookie_domain'), 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None' : null)];
@@ -208,7 +208,7 @@ class SiteStartVars {
 			return;
 		}
 		
-		$is_secure = (SERVER_PROTOCOL == 'https://' ? true : false);
+		$is_secure = (SERVER_SCHEME == 'https://' ? true : false);
 		
 		$arr_cookie_options = ['expires' => 0, 'path' => (IS_CMS ? ini_get('session.cookie_path') : '/'), 'domain' => ($include_sub_domains ? SERVER_NAME : ini_get('session.cookie_domain')), 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None' : null)];
 		
@@ -327,7 +327,7 @@ class SiteStartVars {
 			return static::REQUEST_COMMAND;
 		} else if (SiteStartVars::$api) { // API calls
 			return static::REQUEST_API;
-		} else if (!empty($_FILES) || !empty($_POST['get-download'])) { // Plain file upload or download
+		} else if (!empty($_FILES) || !empty($_POST['is_download'])) { // Plain file upload or download
 			return static::REQUEST_DOWNLOAD;
 		} else { // Direct page request
 			return static::REQUEST_INDEX;

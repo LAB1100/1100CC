@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -164,7 +164,7 @@ class intf_uris extends uris {
 			
 			$str_url = $_POST['url'];
 			
-			if (!FileGet::getExternalProtocol($str_url)) {
+			if (!FileGet::getProtocolExternal($str_url)) {
 				
 				if (substr($str_url, 0, 1) != '/') {
 					$str_url = '/'.$str_url;

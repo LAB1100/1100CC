@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -57,25 +57,26 @@ class account extends base_module {
 			$arr_settings = getModuleConfiguration('accountSettings');
 				
 			$return .= '<h1>Account Setup</h1>
-				<form id="f:account:account_update-0">
-					<fieldset><ul>
-						<li><label>'.getLabel('lbl_name_display').'</label>'.($this->arr_variables['allow_name'] ? '<input name="name" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'</span>').'</li>
-						<li><label>'.getLabel('lbl_username').'</label>'.($this->arr_variables['allow_uname'] ? '<input name="uname" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'</span>').'</li>
-						<li><label>'.getLabel('lbl_email').'</label><input name="email" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['email'].'" /></li>
-						'.($arr_languages ? '<li><label>'.getLabel('lbl_language').'</label>'.self::createLanguageMenu($arr_languages, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code']).'</li>' : '').'
-						<li><label>'.getLabel('lbl_password').'</label><input name="password" id="password" type="password" autocomplete="off" /></li>
-						<li><label>'.getLabel('lbl_confirmation').'</label><input name="password_confirm" type="password" /></li>';
-					
-						foreach ($arr_settings as $arr_setting) {
-							foreach ($arr_setting['values']() as $label => $html) {
-								$return .= '<li><label>'.$label.'</label><div>'.$html.'</div></li>';
-							}
-						}
-						
-						$return .= '<li><label></label><input type="submit" value="'.getLabel('lbl_update').'" /></li>
-					</ul></fieldset>
-				</form>';
+			<form id="f:account:account_update-0">
+				<fieldset><ul>
+					<li><label>'.getLabel('lbl_name_display').'</label>'.($this->arr_variables['allow_name'] ? '<input name="name" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'</span>').'</li>
+					<li><label>'.getLabel('lbl_username').'</label>'.($this->arr_variables['allow_uname'] ? '<input name="uname" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'</span>').'</li>
+					<li><label>'.getLabel('lbl_email').'</label><input name="email" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['email'].'" /></li>
+					'.($arr_languages ? '<li><label>'.getLabel('lbl_language').'</label>'.self::createLanguageMenu($arr_languages, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code']).'</li>' : '').'
+					<li><label>'.getLabel('lbl_password').'</label><input name="password" id="password" type="password" autocomplete="off" /></li>
+					<li><label>'.getLabel('lbl_confirmation').'</label><input name="password_confirm" type="password" /></li>';
 				
+					foreach ($arr_settings as $arr_setting) {
+						foreach ($arr_setting['values']() as $label => $html) {
+							$return .= '<li><label>'.$label.'</label><div>'.$html.'</div></li>';
+						}
+					}
+					
+					$return .= '<li><label></label><input type="submit" value="'.getLabel('lbl_update').'" /></li>
+				</ul></fieldset>
+			</form>';
+			
+			$this->validate = ['name' => 'required', 'uname' => 'required', 'email' => 'required', 'password_confirm' => ['equalTo' => '#password']];
 		}
 		
 		return $return;
@@ -90,10 +91,7 @@ class account extends base_module {
 	
 	public static function js() {
 	
-		$return = "SCRIPTER.static('.account', function(elm_scripter) {
-		
-			elm_scripter.find('#f\\\:account\\\:account_update-0').data('rules', {'name': 'required', 'uname': 'required', 'email': 'required', 'password_confirm': {'equalTo': '#password'}});
-		});";
+		$return = "";
 		
 		return $return;
 	}
@@ -126,7 +124,7 @@ class account extends base_module {
 				
 				if ($arr_language['is_user_selectable']) {
 					
-					user_management::updateUserValue(['lang_code' => $_POST['lang_code']], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id']);
+					user_management::updateUserData($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], ['lang_code' => $_POST['lang_code']]);
 				}
 			}
 			

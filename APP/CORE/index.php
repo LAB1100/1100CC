@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -11,6 +11,8 @@
 
 	ini_set('display_errors', 0);
 	ini_set('error_reporting', E_ALL);
+	
+	require('./CMS/core_operations.php');
 	
 	if (!isset($_SERVER['SITE_NAME'])) { // Cleanup server variables when applicable, depends on host
 		
@@ -21,7 +23,6 @@
 	
 	$_SERVER['DIR_INDEX'] = dirname(__FILE__);
 	
-	require('./CMS/core_operations.php');
 	require('./CMS/core_settings.php');
 	
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -60,8 +61,8 @@
 		header('Content-Type: text/plain;charset=utf-8');
 		
 		if ($str_path_start == 'robots.txt') {
-			echo 'User-agent: *'.PHP_EOL;
-			echo 'Disallow: '.(STATE == STATE_DEVELOPMENT ? '/' : '').PHP_EOL;
+			echo 'User-agent: *'.EOL_1100CC;
+			echo 'Disallow: '.(STATE == STATE_DEVELOPMENT ? '/' : '').EOL_1100CC;
 		} else if ($str_path_start == 'version.txt') {
 			echo Labels::getServerVariable('version');
 		} else {
@@ -483,10 +484,13 @@
 			$domxpath = new DOMXPath($doc);
 			
 			$arr_modules = pages::getPageModules(SiteStartVars::$page['id']);
+			
+			$JSON = Response::getObject();
 
 			foreach ($arr_modules as $arr_module) {
 				
-				$doc_select = $domxpath->query('//div[@id="mod-'.$arr_module['x'].'_'.$arr_module['y'].'"]');
+				$str_mod_identifier = 'mod-'.$arr_module['x'].'_'.$arr_module['y'];
+				$doc_select = $domxpath->query('//div[@id="'.$str_mod_identifier.'"]');
 				
 				if ($doc_select->length) {
 					
@@ -504,6 +508,10 @@
 						$frag = $doc->createDocumentFragment(); // create fragment
 						$frag->appendXML($content); // insert arbitary html into the fragment
 						$doc_select->item(0)->appendChild($frag);
+						
+						if (isset($mod->validate)) {
+							$JSON->validate[$str_mod_identifier] = $mod->validate;
+						}
 					}
 				}
 			}
@@ -512,7 +520,6 @@
 
 			$html_body = $doc->saveHTML();
 			
-			$JSON = Response::getObject();
 			$JSON->data_feedback = SiteEndVars::getFeedback();
 			$JSON->location = ['replace' => true, 'url' => SiteEndVars::getLocation(), 'url_canonical' => SiteEndVars::getLocation(true, true)]; // Make sure the resulting location is clean
 			$JSON = Log::addToObj($JSON);
@@ -520,8 +527,7 @@
 				$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
 			}
 			SiteEndVars::addScript("PARSE = function() {"
-				."var obj = JSON.parse(".value2JSON(value2JSON($JSON)).");"
-				."FEEDBACK.check(document.body, obj);"
+				."return JSON.parse(".value2JSON(value2JSON($JSON)).");"
 			."};");
 
 			if (SiteStartVars::$page['script']) {
@@ -552,9 +558,9 @@
 				Settings::setShare($str_identifier, $html_icons, 60);
 			}
 			
-			$html = '<!DOCTYPE html>'.PHP_EOL
-			.'<html lang="en">'.PHP_EOL
-				.'<head>'.PHP_EOL
+			$html = '<!DOCTYPE html>'.EOL_1100CC
+			.'<html lang="en">'.EOL_1100CC
+				.'<head>'.EOL_1100CC
 					.'<title>'.$str_title.'</title>'
 					// Description
 					.'<meta name="application-name" content="'.getLabel('name', 'D').'">'
@@ -596,7 +602,7 @@
 						.'</script>';
 					}
 
-				$html .= PHP_EOL.'</head>'.PHP_EOL;
+				$html .= EOL_1100CC.'</head>'.EOL_1100CC;
 				
 				$arr_dir_classes = [];
 				foreach (explode('/', SiteStartVars::$dir['path']) as $value) {
@@ -612,7 +618,7 @@
 					.$html_body
 					.Labels::parseTextVariables(SiteStartVars::$page['html'])
 					.getLabel('html', 'D')
-				.PHP_EOL.'</body>'.PHP_EOL
+				.EOL_1100CC.'</body>'.EOL_1100CC
 			.'</html>';
 			
 			SiteStartVars::cooldownModules();

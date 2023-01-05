@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -48,12 +48,12 @@ class cms_general extends base_module {
 						var elms_input = $('form textarea[name], form input[type=text][name]').not('.editor');
 						
 						elms_input.each(function() {
-							new LabelOption(this, {action: 'y:cms_labels:label_popup-0', tag: 'L'});
+							new LabelOption(this, {action: 'y:cms_labels:popup_labels-0', tag: 'L'});
 						});
 					}
 				}).on('editorloaded', function(e) {
 					if (labeler) {
-						new LabelOption(e.detail.source, {action: 'y:cms_labels:label_popup-0', tag: 'L'});
+						new LabelOption(e.detail.source, {action: 'y:cms_labels:popup_labels-0', tag: 'L'});
 					}
 				}).on('click', 'img.select', function() {
 					var input = $(this).prev('input');
@@ -202,7 +202,7 @@ class cms_general extends base_module {
 			
 			if ($str_url) {
 				
-				$str_protocol = FileGet::getExternalProtocol($str_url);
+				$str_protocol = FileGet::getProtocolExternal($str_url);
 				
 				if (!$str_protocol) {
 				

@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -14,7 +14,23 @@ document.addEventListener("DOMContentLoaded", function(e) {
 	MESSAGEBOX = new MessageBox(document.body);
 	
 	if (PARSE) {
-		PARSE();
+		
+		const obj = PARSE();
+		
+		FEEDBACK.check(document.body, obj);
+		
+		if (obj.validate) {
+			
+			for (const mod_id in obj.validate) {
+				
+				const elm_mod = document.querySelector('#'+mod_id+' form');
+				
+				if (elm_mod) {
+					setElementData(elm_mod, 'rules', obj.validate[mod_id]);
+				}
+			}
+		}
+		
 		PARSE = false;
 	}
 	
@@ -67,7 +83,8 @@ document.addEventListener("DOMContentLoaded", function(e) {
 		}, 300);
 	});
 
-	new EmbedDocument();
+	new DocumentEmbedded();
+	new DocumentEmbeddingListener();
 });
 
 const EOL_1100CC = "\n";
@@ -292,18 +309,19 @@ function ElementObjectByParameters(object_class, object_target, arr_arguments) {
 	
 	this.run = function() {
 		
-		var obj_self = this[object_target];
+		const obj_self = this[object_target];
+		let elm_return = null;
 		
 		if (obj_self) {
-			
+						
 			if (method_or_options && typeof method_or_options === 'string' && obj_self[method_or_options]) {
 		
 				var func_method = obj_self[method_or_options];
 				
-				func_method(...arr_arguments_new);
+				elm_return = func_method(...arr_arguments_new);
 			}
 			
-			return;
+			return (elm_return != undefined ? elm_return : this);
 		}
 		
 		//new object_class(this, ...arr_arguments);
@@ -313,7 +331,10 @@ function ElementObjectByParameters(object_class, object_target, arr_arguments) {
 		
 		var instance = Object.create(object_class.prototype);
 		instance.constructor = object_class;
-		object_class.apply(instance, arr_arguments_all);
+		
+		elm_return = object_class.apply(instance, arr_arguments_all);
+		
+		return (elm_return != undefined ? elm_return : this);
 	};
 }
 
@@ -789,13 +810,13 @@ function Scripter() {
 	
 	this.runStatic = function() {
 		
-		for (var selector in obj_scripts_static) {
+		for (const selector in obj_scripts_static) {
 			
-			var elm_find = document.querySelectorAll(selector);
+			const elm_find = document.querySelectorAll(selector);
 			
-			for (var i = 0, len = elm_find.length; i < len; i++) {
+			for (let i = 0, len = elm_find.length; i < len; i++) {
 			
-				var elm = elm_find[i];
+				const elm = elm_find[i];
 				
 				attachScripts(elm, selector, obj_scripts_static);
 			}
@@ -810,11 +831,11 @@ function Scripter() {
 			return;
 		}
 		
-		var elm_attach = $(elm);
+		const elm_attach = $(elm);
 		
 		elm.scripter = true;
 
-		for (var selector in obj_scripts_dynamic) {
+		for (const selector in obj_scripts_dynamic) {
 			
 			if (!elm.matches(selector)) {
 				continue;
@@ -828,15 +849,15 @@ function Scripter() {
 		
 	var attachScripts = function(elm, selector, obj_scripts, elm_attach) {
 		
-		var arr_selectors = obj_scripts[selector];
+		const arr_selectors = obj_scripts[selector];
 		
 		if (!arr_selectors) {
 			return;
 		}
 		
-		for (var i = 0, len = arr_selectors.length; i < len; i++) {
+		for (let i = 0, len = arr_selectors.length; i < len; i++) {
 			
-			var obj_call = arr_selectors[i];
+			const obj_call = arr_selectors[i];
 			
 			if (!elm_attach) {
 				var elm_attach = $(elm);
@@ -844,12 +865,13 @@ function Scripter() {
 			
 			if (typeof obj_call.call == 'string') {
 				
-				var use_selector = obj_call.call;
+				const use_selector = obj_call.call;
+				let use_obj_scripts = null;
 				
 				if (isIdentifier(use_selector)) {
-					var use_obj_scripts = (obj_scripts === obj_scripts_static_identifier ? obj_scripts_static_identifier : obj_scripts_dynamic_identifier);
+					use_obj_scripts = (obj_scripts === obj_scripts_static_identifier ? obj_scripts_static_identifier : obj_scripts_dynamic_identifier);
 				} else {
-					var use_obj_scripts = obj_scripts;
+					use_obj_scripts = obj_scripts;
 				}
 								
 				attachScripts(elm, use_selector, use_obj_scripts);
@@ -1068,7 +1090,7 @@ var POSITION = new Position();
 
 function Tooltip() {
 	
-	var SELF = this;
+	const SELF = this;
 	var selector = '*[title]:not(iframe)';
 	var elm_tooltip = $('<div class="tooltip mouse"></div>')[0];
 	
@@ -1998,90 +2020,200 @@ function Location() {
 }
 var LOCATION = new Location();
 
-function EmbedDocument() {
+function DocumentEmbedded() {
 	
-	// Resize embedded or parent 1100CC documents
+	// Communicate as embedded/embeddee 1100CC document, authorative class
 	
-	var SELF = this;
+	if (window.parent === window) {
+		return;
+	}
 	
-	var num_height_window = 0;
+	const SELF = this;
+	
+	var is_embedded = false;
 	var num_height_document = 0;
 
-	window.addEventListener('message', function(e) { // Get size messages from embedded or parent document
-		
-		if (e.data.height_embedded) {
-	
-			runElementSelectorFunction(document.body, 'iframe.resize', function(elm_found) {
+	window.addEventListener('message', function(e) { // Get size messages from parent document
+				
+		if (e.data.embedding) {
 			
-				if (e.source !== elm_found.contentWindow) { // Skip message in this event listener
-					return;
+			if (!is_embedded || e.data.initialise) { // Initialise embedded state
+				
+				if (!is_embedded) {
+				
+					is_embedded = true;
+					document.body.classList.add('framed');
+					new ResizeSensor(document.body, SELF.resizeEmbedding);
 				}
 				
-				if (!elm_found.is_framed) { // Embedded document is ready and send the parent's view size 
-					
-					elm_found.is_framed = true;
-					elm_found.contentWindow.postMessage({height_view: num_height_window}, '*');
-				}
-				
-				elm_found.style.height = e.data.height_embedded+'px';
-			});
+				SELF.resizeEmbedding(e.data.initialise);
+			}
+			
+			if (e.data.embedding !== true) {
+			
+				const num_height_view = e.data.embedding.height;
+
+				document.body.style.setProperty('--view-height', num_height_view+'px');
+			}
 		}
 		
-		if (e.data.height_view) {
+		if (e.data.script === true) {
+
+			const str_script = 'if (typeof DocumentEmbedding != \'function\') { '+DocumentEmbedding.toString()+' new DocumentEmbedding(); }';
 			
-			document.body.style.setProperty('--view-height', e.data.height_view+'px');
+			window.parent.postMessage({script: str_script}, '*');
 		}
 	}, false);
 	
-	this.resizeEmbedded = function() { // Message size to embedded documents
+	var requestEmbedding = function() {
 		
-		if (num_height_window == window.innerHeight) {
-			return;
-		}
-			
-		num_height_window = window.innerHeight;
-		
-		runElementSelectorFunction(document.body, 'iframe.resize', function(elm_found) {
-							
-			if (!elm_found.is_framed) {
-				return;
-			}
-				
-			elm_found.contentWindow.postMessage({height_view: num_height_window}, '*');
-		});
+		window.parent.postMessage({embedded: true, initialise: true}, '*');
 	};
 	
-	this.resizeParent = function() { // Message size to external/parent document
+	this.resizeEmbedding = function(do_initialise) { // Message size to external/parent document
 		
-		if (num_height_document == document.body.scrollHeight) {
+		if (num_height_document == document.body.scrollHeight && !do_initialise) {
 			return;
 		}
 		
 		num_height_document = document.body.scrollHeight;
 		
-		window.parent.postMessage({height_embedded: num_height_document}, '*');
+		window.parent.postMessage({embedded: {height: num_height_document}, initialise: do_initialise}, '*');
 	};
 
-	if (document.querySelector('iframe.resize')) {
-			
-		window.addEventListener('resize', SELF.resizeEmbedded);
-		
-		SELF.resizeEmbedded();
-	}
+	requestEmbedding();
+}
+
+function DocumentEmbedding() {
 	
-	if (window.parent !== window) {
+	// Communicate with embedded 1100CC documents
+	// Only use vanilla JavaScript
+	
+	const SELF = this;
+	
+	var num_height_window = 0;
+	const str_selector_frame = 'iframe.resize';
+
+	window.addEventListener('message', function(e) { // Get size messages from embedded document
 		
-		document.body.classList.add('framed');
-						
-		new ResizeSensor(document.body, SELF.resizeParent);
+		if (e.data.embedded) {
+			
+			const elms = document.body.querySelectorAll(str_selector_frame);
+
+			for (let i = 0, len = elms.length; i < len; i++) {
+				
+				const elm_found = elms[i];
 		
-		SELF.resizeParent();
-	}
+				if (e.source !== elm_found.contentWindow) { // Skip message in this event listener
+					continue;
+				}
+				
+				if (e.data.initialise) {
+					
+					initialiseEmbedded(elm_found);
+				}
+				
+				if (e.data.embedded !== true) {
+					
+					const num_height_embedded = (!elm_found.height_default || e.data.embedded.height > elm_found.height_default ? e.data.embedded.height : elm_found.height_default);
+				
+					elm_found.style.height = num_height_embedded+'px';
+				}
+			}
+		}
+	}, false);
+	
+	var initialiseEmbedded = function(elm_frame) {
+				
+		if (!elm_frame.is_embedded) { // Do not redetermine default height if previously initialised
+		
+			let num_height = elm_frame.getAttribute('height');
+			
+			if (num_height && num_height != 'auto' && num_height != '100%') {
+				
+				const arr_style = window.getComputedStyle(elm_frame);
+				num_height = parseInt(arr_style['height']);
+			} else {
+				
+				num_height = false;
+			}
+			
+			elm_frame.height_default = num_height;
+		}
+		
+		elm_frame.is_embedded = true; // Embedded document is ready and send the parent's view size 
+		
+		SELF.resizeEmbedded(elm_frame);
+	};
+	
+	this.resizeEmbedded = function(elm_frame) {
+		
+		const num_height_view = (!elm_frame.height_default ? num_height_window : elm_frame.height_default);
+				
+		elm_frame.contentWindow.postMessage({embedding: {height: num_height_view}}, '*');
+	};
+	
+	this.requestEmbedded = function(elm_frame) {
+				
+		elm_frame.contentWindow.postMessage({embedding: true, initialise: true}, '*');
+	};
+	
+	this.resizeEmbeddedAll = function(do_initialise) { // Message size to embedded documents
+		
+		if (num_height_window == window.innerHeight) {
+			return;
+		}
+		
+		num_height_window = window.innerHeight;
+		
+		const elms = document.body.querySelectorAll(str_selector_frame);
+
+		for (let i = 0, len = elms.length; i < len; i++) {
+			
+			const elm_frame = elms[i];
+			
+			if (do_initialise) {
+				
+				SELF.requestEmbedded(elm_frame);
+			} else if (elm_frame.is_embedded) {
+				
+				SELF.resizeEmbedded(elm_frame);
+			}
+		}
+	};
+
+	SELF.resizeEmbeddedAll(true);
+	
+	window.addEventListener('resize', SELF.resizeEmbeddedAll);
+}
+
+function DocumentEmbeddingListener() {
+	
+	window.addEventListener('message', function handler(e) {
+	
+		if (!e.data.embedded) {
+			return;
+		}
+		
+		this.removeEventListener('message', handler);
+		e.source.postMessage({script: true}, '*');
+
+		window.addEventListener('message', function handler(e) {
+			
+			if (!e.data.script) {
+				return;
+			}
+			
+			this.removeEventListener('message', handler);
+			eval(e.data.script);
+		}, false);
+		
+	}, false);
 }
 
 function Assets() {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var obj_fetched = {font: {}, script: {}, media: {}};
 	var obj_labels = {};
@@ -2421,7 +2553,7 @@ function Assets() {
 				const cur_file = file;
 				let str_url = (str_url_prefix ? str_url_prefix : '')+cur_file+(str_url_affix ? str_url_affix : '');
 				
-				if (!SELF.getExternalProtocol(str_url)) {
+				if (!SELF.getProtocolExternal(str_url)) {
 					str_url = (str_host ? str_host : '')+str_url;
 				}				
 				
@@ -2517,7 +2649,7 @@ function Assets() {
 		return worker;
 	};
 		
-	this.getExternalProtocol = function(str_url) {
+	this.getProtocolExternal = function(str_url) {
 		
 		const arr_protocol_url = str_url.split('://');
 		
@@ -2531,7 +2663,7 @@ var ASSETS = new Assets();
 
 function Animator() {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_animate = [];
 	var key_tween = false;
@@ -2620,7 +2752,7 @@ var ANIMATOR = new Animator();
 	
 function MessageBox(elm) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var count = 0;
 	var is_hovering = false;
@@ -2872,7 +3004,7 @@ function MessageBox(elm) {
 
 function MessagePopup(elm, str_message, call_close) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var elm = getElement(elm);
 	
@@ -3509,7 +3641,7 @@ function moveScroll(elm, arr_options) {
 
 function Pulse(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var elm = getElement(elm);
 
@@ -4612,7 +4744,7 @@ function LabelOption(elm, arr_options) {
 
 function EditContent(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 		inline: false,
@@ -5033,7 +5165,7 @@ var counter_filebrowse = 0;
 	
 function FileBrowse(elm) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var elm = $(elm);
 	
@@ -5114,7 +5246,7 @@ function RegularExpressionEditor(elm) {
 
 function LazyLoad(elm, elm_scroll) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var elm = $(elm);
 	
@@ -5215,7 +5347,7 @@ function ImagesLoaded(elm, callback) {
 
 function FormManager(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = arr_options;
 	
@@ -5368,7 +5500,7 @@ FEEDBACK.addValidatorMethod('required_autocomplete', function(value, elm) {
 
 function AutoCompleter(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 		multi: false,
@@ -5800,7 +5932,7 @@ $.fn.autocomplete = function() {
 
 function Sorter(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 		elm_menu: false,
@@ -5946,7 +6078,8 @@ function Sorter(elm, arr_options) {
 	this.addRow = function(arr_options_row) {
 		
 		var arr_options_row = $.extend({
-			focus: true
+			focus: true,
+			prepend: arr_options.prepend,
 		}, arr_options_row || {});
 					
 		var elm_target = $(html_source);
@@ -5964,7 +6097,7 @@ function Sorter(elm, arr_options) {
 		
 		// Add new row
 		
-		if (arr_options.prepend) {
+		if (arr_options_row.prepend) {
 			elm_target.prependTo(cur);
 		} else {
 			elm_target.appendTo(cur);
@@ -5974,6 +6107,8 @@ function Sorter(elm, arr_options) {
 			SCRIPTER.triggerEvent(elm_targets.first(), 'focus');
 		}
 		SCRIPTER.triggerEvent(cur, 'ajaxloaded', {elm: elm_target});
+		
+		return elm_target[0];
 	};
 	
 	this.resetRow = function(elm_row) {
@@ -6035,7 +6170,7 @@ $.fn.sorter = function() {
 	
 	var obj = new ElementObjectByParameters(Sorter, 'sorter', arguments);
 	
-	return this.each(obj.run);
+	return this.map(obj.run);
 };
 
 // SortSorter
@@ -6044,7 +6179,7 @@ var counter_sortsorter = 0;
 
 function SortSorter(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 		container: 'ul',
@@ -6155,7 +6290,7 @@ function SortSorter(elm, arr_options) {
 
 function NavigationTabs(elm, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 		call_open: function() {},
@@ -6522,7 +6657,7 @@ $.fn.navTabs = function() {
 
 function Overlay(elm, content, arr_options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 		sizing: 'fit-width', // fit, fit-width, full, full-width, force-full-width
@@ -6850,6 +6985,8 @@ function Overlay(elm, content, arr_options) {
 		
 		var func_close = function() {
 				
+			elm_overlay_active.addClass('close');	
+			
 			arr_options_active.call_close.apply(elm_overlay_active);
 			SCRIPTER.triggerEvent(elm_overlay_active, 'close');
 			elm_overlay_active.remove();
@@ -6964,7 +7101,7 @@ $.fn.overlay = function() {
 
 function IframeDynamic(elm) {
 	
-	var SELF = this;
+	const SELF = this;
 	var elm_iframe = $(elm);
 	
 	var count = 0;
@@ -7014,7 +7151,7 @@ function IframeDynamic(elm) {
 
 function Album(elm, options) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_options = $.extend({
 		lazyload: false
@@ -7117,7 +7254,7 @@ function Album(elm, options) {
 
 function CaptureElementImage(elm, settings) {
 	
-	var SELF = this;
+	const SELF = this;
 	
 	var arr_settings = $.extend({
 		name: '1100CC',

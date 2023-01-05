@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -177,7 +177,7 @@ class Trouble {
 		}
 		Mediator::setShutdown((Mediator::getShutdown() & ~Mediator::SHUTDOWN_INIT_UNDETERMINED) | $b_state);
 		
-		if (!Mediator::$in_cleanup) {
+		if (!Mediator::inCleanup()) {
 			
 			$msg_log = Labels::getSystemLabel('msg_error');
 		
@@ -200,7 +200,7 @@ class Trouble {
 				);
 			} catch (Exception $e) {
 				
-				Mediator::$in_cleanup = true;
+				Mediator::setCleanup();
 				self::catchError($e);
 			}
 		} else {

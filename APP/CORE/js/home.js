@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -42,7 +42,10 @@ $(document).on('documentloaded ajaxloaded', function(e) {
 	});
 });
 
-$(document).on('click', 'img.enlarge', function() {
+$(document).on('click', '[id^=y\\\:cms_general\\\:set_language-]', function() {
+	
+	$(this).quickCommand();
+}).on('click', 'img.enlarge', function() {
 
 	if (this.closest('.album')) {
 		return false;
@@ -62,9 +65,19 @@ $(document).on('click', 'img.enlarge', function() {
 	}
 	
 	new Overlay(document.body, elm_img, {sizing: 'fit-width'});
-}).on('click', '[id^=y\\\:cms_general\\\:set_language-]', function() {
+}).on('click', '.icon.a.info[title]', function() {
 	
-	$(this).quickCommand();
+	let html_value = TOOLTIP.getTitle(this);
+	const html_icon = this.innerHTML;
+	
+	html_value = '<div class=\"popup message\"><span class=\"icon\">'+html_icon+'</span><div>'+html_value+'</div></div>';
+	
+	let elm_overlay_target = this.closest('.mod');
+	elm_overlay_target = (elm_overlay_target ? elm_overlay_target : document.body);
+	
+	new Overlay(elm_overlay_target, html_value, {position: 'middle'});
+	
+	return false;
 });
 
 // METHODS

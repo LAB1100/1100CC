@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -27,7 +27,7 @@ class WebSocketClient {
 	protected $time_cleanup = 0;
 	protected $time_status = 0;
 	protected $size_buffer_max = false;
-	protected $nr_socket_error = false;
+	protected $num_socket_error = false;
 	protected $str_socket_error = false;
 	protected $socket = false;
 	
@@ -63,13 +63,13 @@ class WebSocketClient {
 		
 		if ($use_ssl) {
 			
-			$this->socket = stream_socket_client('ssl://'.$this->address.':'.$this->port.'', $this->nr_socket_error, $this->str_socket_error, static::TIMEOUT_WAIT, STREAM_CLIENT_CONNECT, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
+			$this->socket = stream_socket_client('ssl://'.$this->address.':'.$this->port.'', $this->num_socket_error, $this->str_socket_error, static::TIMEOUT_WAIT, STREAM_CLIENT_CONNECT, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
 
 			stream_context_set_option($context, 'ssl', 'allow_self_signed', false);
 			stream_context_set_option($context, 'ssl', 'verify_peer', false);
 		} else {
 			
-			$this->socket = stream_socket_client('tcp://'.$this->address.':'.$this->port.'', $this->nr_socket_error, $this->str_socket_error, static::TIMEOUT_WAIT, STREAM_CLIENT_CONNECT, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
+			$this->socket = stream_socket_client('tcp://'.$this->address.':'.$this->port.'', $this->num_socket_error, $this->str_socket_error, static::TIMEOUT_WAIT, STREAM_CLIENT_CONNECT, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
 		}
 		
 		stream_set_blocking($this->socket, false); // Make sure to set to non-blocking in case of future fread() loops 

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -17,9 +17,8 @@ class Mediator {
 	const SHUTDOWN_INIT_SCRIPT = 16;
 	const SHUTDOWN_INIT_SYSTEM = 32;
 	
-	public static $in_cleanup = false;
-
 	protected static $shutdown = false;
+	protected static $in_cleanup = false;
 	
 	protected static $arr_events = [];
 	protected static $arr_processes = [];
@@ -34,6 +33,7 @@ class Mediator {
 	
 	const LOCK_POOL_SEPARATOR = '::';
 	const LOCK_POOL_EMPTY = '::::';
+	const LOCK_POOL_NO_CODE = 'nocode';
 	
 	public static function attach($event, $id, $function) {
 		
@@ -88,7 +88,7 @@ class Mediator {
 					
 		if (is_callable($function)) {
 			
-			if (self::$in_cleanup) {
+			if (self::inCleanup()) {
 				
 				try {
 					$function($event, $id, $data);
@@ -137,12 +137,16 @@ class Mediator {
 			
 	public static function setLock($identifier, $code) {
 		
+		if (!$code) {
+			$code = static::LOCK_POOL_NO_CODE;
+		}
+				
 		$path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
 		$path_pool = $path.'_pool';
-		$time_self = microtime(true);
+		$time_self = (int)(microtime(true) * 1000); // Keep millisecond precision and as integer to preserve accuracy
 		
 		$file_pool = fopen($path_pool, 'c+');
-		flock($file_pool, LOCK_EX);
+		static::setFileLock($file_pool);
 		
 		list($code_initial, $time_initial, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
 		
@@ -150,27 +154,27 @@ class Mediator {
 		
 		$file = fopen($path, 'c');
 		
-		if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock
+		if (static::setFileLock($file, false)) { // Got lock
 
 			fseek($file_pool, 0);
 			ftruncate($file_pool, 0);
-			fwrite($file_pool, $code.'::'.microtime(true).'::'.$time_initial);
+			fwrite($file_pool, $code.'::'.((int)(microtime(true) * 1000)).'::'.$time_initial);
 			fflush($file_pool);
 			
 			self::$arr_locks[$identifier] = $file;
 			
-			flock($file_pool, LOCK_UN); // Remove pool lock
-			fclose($file_pool);
+			static::removeFileLock($file_pool);
 
 			return true;
 		}
 		
-		flock($file, LOCK_UN);
-		fclose($file);
+		static::removeFileLock($file);
+		static::removeFileLock($file_pool);
 		
-		flock($file_pool, LOCK_UN); // Remove pool lock
-		fclose($file_pool);
-
+		if ($code == static::LOCK_POOL_NO_CODE) {
+			return false;
+		}
+		
 		$do_pool = ($code_initial && $code_initial != $code); // Our code seems to be different (newer) than the current one, so join the pool to get a lock
 		
 		while (true) {
@@ -180,14 +184,13 @@ class Mediator {
 			if ($do_pool) { // Add to the pool, exit when the pool date is initiated later and has finished (time_done), or when we get lock
 				
 				$file_pool = fopen($path_pool, 'c+');
-				flock($file_pool, LOCK_EX);
+				static::setFileLock($file_pool);
 			
 				list($code_pool, $time_pool, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
 				
-				if (!$code_pool || (float)$time_done >= $time_self) { // There has been a process initialised and finished after us.
+				if (!$code_pool || (int)$time_done >= $time_self) { // There has been a process initialised and finished after us.
 					
-					flock($file_pool, LOCK_UN); // Remove pool lock
-					fclose($file_pool);
+					static::removeFileLock($file_pool);
 				
 					return false;
 				}
@@ -195,68 +198,66 @@ class Mediator {
 				// Try to get the lock
 				$file = fopen($path, 'c');
 				
-				if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock
+				if (static::setFileLock($file, false)) { // Got lock
+					
+					if ((int)$time_pool >= $time_self) { // There has been a process initialised and finished after us.
+						
+						static::removeFileLock($file);
+						static::removeFileLock($file_pool);
+						
+						return false;
+					}
 					
 					fseek($file_pool, 0);
 					ftruncate($file_pool, 0);
-					fwrite($file_pool, $code.'::'.microtime(true).'::'.$time_pool);
+					fwrite($file_pool, $code.'::'.((int)(microtime(true) * 1000)).'::'.$time_pool);
 					fflush($file_pool);
 					
 					self::$arr_locks[$identifier] = $file;
 					
-					flock($file_pool, LOCK_UN); // Remove pool lock
-					fclose($file_pool);
+					static::removeFileLock($file_pool);
 			
 					return true;
 				}
 				
-				flock($file, LOCK_UN);
-				fclose($file);
-				
-				flock($file_pool, LOCK_UN); // Remove pool lock
-				fclose($file_pool);
+				static::removeFileLock($file);
+				static::removeFileLock($file_pool);
 			} else {
 				
 				$file_pool = fopen($path_pool, 'r');
-				flock($file_pool, LOCK_EX);
+				static::setFileLock($file_pool);
 				
 				list($code_pool, $time_pool, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
 			
 				if (!$code_pool || $code_pool != $code_initial || $time_pool != $time_initial) { // The initial lock has changed
 					
-					flock($file_pool, LOCK_UN); // Remove pool lock
-					fclose($file_pool);
+					static::removeFileLock($file_pool);
 					
 					return false;
 				}
 				
 				$file = fopen($path, 'r');
 
-				if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock, initial lock is obviously gone
+				if (static::setFileLock($file, false)) { // Got lock, initial lock is obviously gone
 
-					flock($file, LOCK_UN);
-					fclose($file);
-					
-					flock($file_pool, LOCK_UN); // Remove pool lock
-					fclose($file_pool);
+					static::removeFileLock($file);
+					static::removeFileLock($file_pool);
 					
 					return false;
 				}
 				
-				flock($file, LOCK_UN);
-				fclose($file);
-				
-				flock($file_pool, LOCK_UN); // Remove pool lock
-				fclose($file_pool);
+				static::removeFileLock($file);
+				static::removeFileLock($file_pool);
 			}
 			
-			$time_now = microtime(true);
+			$time_start = ($time_start ?? time());
+			$time_now = time();
 			$time_notify = ($time_notify ?? $time_now);
 			
 			if (($time_now - $time_notify) > static::$timeout_lock_notify) {
 				
 				msg('Lock status:'.EOL_1100CC
-					.'	'.$identifier.' = '.(int)($time_now - $time_self).' seconds.'
+					.'	'.$identifier.' = '.($time_now - $time_start).' seconds.'
 				, 'MEDIATOR', LOG_SYSTEM, 'Path lock: '.$path.EOL_1100CC.'Path pool: '.$path_pool);
 				
 				$time_notify = ($time_now - (($time_now - $time_notify) % static::$timeout_lock_notify));
@@ -270,7 +271,7 @@ class Mediator {
 		
 		$file = fopen($path, 'c');
 		
-		if (flock($file, LOCK_EX | LOCK_NB)) { // Got lock
+		if (static::setFileLock($file, false)) { // Got lock
 						
 			self::$arr_locks[$identifier] = $file;
 						
@@ -287,29 +288,47 @@ class Mediator {
 		
 		// Clear pool file state
 		$file_pool = fopen($path_pool, 'c');
-		flock($file_pool, LOCK_EX);
+		static::setFileLock($file_pool);
 		
 		ftruncate($file_pool, 0);
 		
-		flock($file_pool, LOCK_UN);
-		fclose($file_pool);
+		static::removeFileLock($file_pool);
 	}
 	
 	public static function removeLock($identifier) {
 		
 		$file = self::$arr_locks[$identifier];
 		
-		flock($file, LOCK_UN);
-		fclose($file);
+		static::removeFileLock($file);
 		
 		unset(self::$arr_locks[$identifier]);
 	}
 	
+	public static function setFileLock($file, $do_wait = true) {
+		
+		return flock($file, ($do_wait ? LOCK_EX : (LOCK_EX | LOCK_NB)));
+	}
+	
+	public static function removeFileLock($file) {
+		
+		flock($file, LOCK_UN);
+		fclose($file);
+	}
+	
 	public static function runAsync($module, $method, $arr_options = []) {
 		
-		$state = STATE.';'.(SiteStartVars::useHTTPS(false) ? 'https' : 'http');
+		$arr_signature = [
+			SITE_NAME,
+			SERVER_NAME_1100CC,
+			SERVER_NAME_CUSTOM,
+			SERVER_NAME_SUB,
+			SERVER_SCHEME,
+			STATE
+		];
 		
-		$process = new Process("php -q ".DIR_ROOT_CORE.DIR_CMS."index.php '".SITE_NAME."' '".SERVER_NAME_1100CC."' '".SERVER_NAME_CUSTOM."' '".SERVER_NAME_SUB."' '".$state."' '".$module."' '".$method."' '".($arr_options ? value2JSON($arr_options) : '')."'");
+		$str_signature = arr2String($arr_signature, ';');
+		
+		$process = new Process("php -q ".DIR_ROOT_CORE.DIR_CMS."index.php '".$str_signature."' '".$module."' '".$method."'".($arr_options ? ' '.escapeshellarg(value2JSON($arr_options)) : ''));
 		$process_id = $process->getPID();
 		
 		self::$arr_processes[$module][$method][$process_id] = $process_id;
@@ -319,7 +338,7 @@ class Mediator {
 	
 	public static function stopAsync($module, $method, $process_id = false) {
 
-		$arr = ($process_id ? [$process_id] : (self::$arr_processes[$module][$method] ?: []));
+		$arr = ($process_id ? [$process_id] : (self::$arr_processes[$module][$method] ?? []));
 		$arr_stopped = [];
 		
 		foreach ($arr as $cur_process_id) {
@@ -339,7 +358,7 @@ class Mediator {
 		self::$run_method = $method;
 		self::$arr_run_options = $arr_options;
 		
-		timeLimit(0);
+		timeLimit(false);
 			
 		$module::$method($arr_options);
 	}
@@ -374,6 +393,16 @@ class Mediator {
 	public static function getShutdown() {
 		
 		return self::$shutdown;
+	}
+	
+	public static function setCleanup() {
+		
+		self::$in_cleanup = true;
+	}
+	
+	public static function inCleanup() {
+		
+		return self::$in_cleanup;
 	}
 	
 	public static function terminate($signal) {
@@ -427,7 +456,7 @@ function shutdown() {
 	
 	// Cleanup
 			
-	Mediator::$in_cleanup = true;
+	Mediator::setCleanup();
 
 	Mediator::runListeners('cleanup');
 

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -20,8 +20,8 @@ abstract class WebSocketServer {
 	protected $time_cleanup = 0;
 	protected $time_status = 0;
 	protected $size_buffer_max = false;
-	protected $nr_socket_error = false;
-	protected $nr_socket_error_ssl = false;
+	protected $num_socket_error = false;
+	protected $num_socket_error_ssl = false;
 	protected $str_socket_error = false;
 	protected $str_socket_error_ssl = false;
 	protected $arr_sockets = [];
@@ -42,13 +42,13 @@ abstract class WebSocketServer {
 		
 		$context = stream_context_create();
 		
-		$this->arr_sockets['m'] = stream_socket_server('tcp://'.$address.':'.$port.'', $this->nr_socket_error, $this->str_socket_error, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
+		$this->arr_sockets['m'] = stream_socket_server('tcp://'.$address.':'.$port.'', $this->num_socket_error, $this->str_socket_error, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
 
 		if ($use_ssl) {
 			
 			$context = stream_context_create();
 			
-			$this->arr_sockets['m_ssl'] = stream_socket_server('ssl://'.$address.':'.($port+1).'', $this->nr_socket_error_ssl, $this->str_socket_error_ssl, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
+			$this->arr_sockets['m_ssl'] = stream_socket_server('ssl://'.$address.':'.($port+1).'', $this->num_socket_error_ssl, $this->str_socket_error_ssl, STREAM_SERVER_BIND|STREAM_SERVER_LISTEN, $context) or error('Failed to create master socket'); // $address => '0.0.0.0'/'0' for everywhere, '127.0.0.1' localhost
 
 			stream_context_set_option($context, 'ssl', 'local_cert', DIR_SAFE_SITE.'cert.pem');  // SSL Cert in PEM format
 			stream_context_set_option($context, 'ssl', 'local_pk', DIR_SAFE_SITE.'privkey.pem');  // SSL Cert in PEM format

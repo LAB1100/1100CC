@@ -42,4 +42,12 @@ Initial release.
 * Front-end: Developed class CaptureElementImage to capture multi-layer Canvas and SVG elements as a downloadable high-resolution image.
 * Various fixes, modernisation, and overall streamlining.
 
+## VERSION 10.5
+
+* Front-end: Expanded class EmbedDocument into seperate classes DocumentEmbedded and DocumentEmbedding to allow for dynamic loading of 1100CC documents in any website using the snippet DocumentEmbeddingListener.
+* Data Exchange: Implemented the .1100CC file format. The ExchangePackage class is able to package and process any 1100CC data and processes as an .1100CC file.
+* File Upload: Added support for Data URLs to FileGet.
+* Mediator: Improved CLI API and Job locking/mutex procedures.
+* Various fixes, modernisation, and overall streamlining.
+
 ## VERSION x.x

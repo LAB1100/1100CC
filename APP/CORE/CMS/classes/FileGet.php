@@ -2,41 +2,46 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2022 LAB1100.
+ * Copyright (C) 2023 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class FileGet {
 	
-	private $async = false;
+	const PROTOCOL_LOCAL = 0;
+	const PROTOCOL_EXTERNAL = 1;
+	const PROTOCOL_DATA_URL = 2;
 	
-	private $url = '';
-	private $url_redirect = '';
+	protected $async = false;
 	
-	private $file = false;
-	private $path = false;
-	private $get_body = true;
-	private $external_protocol = false;
+	protected $url = '';
+	protected $url_redirect = '';
+	protected $mode_protocol = self::PROTOCOL_LOCAL;
 	
-	private $num_redirect = 2;
-	private $arr_request = [];
-	private $num_error = false;
-	private $str_error = '';
+	protected $file = false;
+	protected $filename = false;
+	protected $path = false;
 	
-	private $arr_settings = [
+	protected $get_body = true;
+	protected $num_redirect = 2;
+	protected $arr_request = [];
+	protected $num_error = false;
+	protected $str_error = '';
+	
+	protected $arr_settings = [
 		'timeout' => 10,
 		'timeout_connect' => 5,
 		'headers' => false,
 		'secure' => true
 	];
 	
-	private static $arr_external_protocols = ['http', 'https', 'ftp'];
+	protected static $arr_external_protocols = ['http', 'https', 'ftp'];
 
 	public function __construct($str_url, $arr_settings = [], $async = false) {
 	
 		$this->url = $str_url;
-		$this->external_protocol = self::getExternalProtocol($this->url);
+		$this->mode_protocol = static::getProtocol($this->url);
 		
 		$this->setConfiguration($arr_settings);
 		
@@ -45,12 +50,17 @@ class FileGet {
 			
 	public function load() {
 		
-		if (!$this->external_protocol) {
+		if ($this->mode_protocol == static::PROTOCOL_LOCAL) {
 			return false;
+		} else if ($this->mode_protocol == static::PROTOCOL_DATA_URL) {
+			
+			$this->path = $this->storeDataURL();
+		} else {
+			
+			$this->get_body = true;
+			
+			$this->path = $this->storeExternalSource();
 		}
-		
-		$this->get_body = true;
-		$this->path = $this->storeExternalSource();
 			
 		if (!$this->path) {
 			return false;
@@ -66,21 +76,27 @@ class FileGet {
 	
 	public function get() {
 		
-		if (!$this->external_protocol) {
+		if ($this->mode_protocol == static::PROTOCOL_LOCAL) {
 			return false;
-		}
-		
-		$this->get_body = true;
-		$this->file = false;
+		} else if ($this->mode_protocol == static::PROTOCOL_DATA_URL) {
+
+			$this->file = false;
 				
-		$result = $this->getExternalSource();
+			$result = $this->getDataURL();
+		} else {
+		
+			$this->get_body = true;
+			$this->file = false;
+				
+			$result = $this->getExternalSource();
+		}
 
 		return $result;
 	}
 	
 	public function request() {
 		
-		if (!$this->external_protocol) {
+		if ($this->mode_protocol == static::PROTOCOL_LOCAL || $this->mode_protocol == static::PROTOCOL_DATA_URL) {
 			return false;
 		}
 		
@@ -103,24 +119,24 @@ class FileGet {
 		}
 	}
 	
-	private function storeExternalSource() {
+	protected function storeExternalSource() {
 		
-		$temp_path = tempnam(Settings::get('path_temporary'), '1100CC');
-		$this->file = fopen($temp_path, 'w');
+		$str_path_temp = tempnam(Settings::get('path_temporary'), '1100CC');
+		$this->file = fopen($str_path_temp, 'w');
 		
 		$store = $this->getExternalSource();
 		
 		fclose($this->file);
 		
 		if (!$store) { // Something went wrong
-			FileStore::deleteFile($temp_path);
+			FileStore::deleteFile($str_path_temp);
 			return false;
 		}
 		
-		return $temp_path;
+		return $str_path_temp;
 	}
-	
-	private function getExternalSource() {
+		
+	protected function getExternalSource() {
 		
 		$do_continue = true;
 		$has_redirect = false;
@@ -314,19 +330,98 @@ class FileGet {
 			return ($has_result ? $result : false);
 		}
 	}
+	
+	protected function storeDataURL() {
+				
+		$str_path_temp = tempnam(Settings::get('path_temporary'), '1100CC');
+		$this->file = fopen($str_path_temp, 'w');
+		
+		$store = $this->getDataURL();
+		
+		if (!$store) { // Something went wrong
+			FileStore::deleteFile($str_path_temp);
+			return false;
+		}
+		
+		return $str_path_temp;
+	}
+	
+	protected function getDataURL() {
+		
+		$arr_data_url = static::getProtocolDataURL($this->url);
+				
+		$data = substr($this->url, strlen($arr_data_url['protocol']) + 5 + 1); // Add back 'data:[protocol],'
 
-	public static function getExternalProtocol($str_url) {
+		if ($arr_data_url['encoding'] == 'base64') {
+			$data = base64_decode($data);
+		} else {
+			$data = rawurldecode($data);
+		}
+		
+		$this->filename = 'dataurl.'.FileStore::getMIMETypeExtension($arr_data_url['mime']);
+		
+		if ($this->file) {
+			
+			fwrite($this->file, $data);
+			return true;
+		} else {
+			
+			return $data;
+		}
+	}
+	
+	public static function getProtocol($str_url) {
+
+		$mode_protocol = (static::getProtocolExternal($str_url) ? static::PROTOCOL_EXTERNAL : false);
+		
+		if (!$mode_protocol) {
+			
+			$mode_protocol = (static::getProtocolDataURL($str_url, true) ? static::PROTOCOL_DATA_URL : false);
+		}
+		
+		return ($mode_protocol ?: static::PROTOCOL_LOCAL);
+	}
+
+	public static function getProtocolExternal($str_url) {
 		
 		$arr_protocol_url = explode('://', $str_url);
-		$str_protocol = (!empty($arr_protocol_url[1]) ? $arr_protocol_url[0] : false);
-		$str_protocol = ($str_protocol && in_array($str_protocol, self::$arr_external_protocols) ? $str_protocol : false);
+		
+		if (empty($arr_protocol_url[1])) {
+			return false;
+		}
+		
+		$str_protocol = $arr_protocol_url[0];
+		
+		if (!in_array($str_protocol, static::$arr_external_protocols)) {
+			return false;
+		}
 		
 		return $str_protocol;
 	}
 	
+	public static function getProtocolDataURL($str_url, $do_check = false) {
+		
+		if (!strStartsWith($str_url, 'data:')) {
+			return false;
+		}
+		
+		if ($do_check) {
+			return true;
+		}
+		
+		$num_pos_data = strpos($str_url, ',');
+		
+		$str_type = substr($str_url, 5, $num_pos_data - 5);
+		$arr_type = str2Array($str_type, ';');
+		$str_mime = ($arr_type[0] ?? '');
+		$str_encoding = end($arr_type);
+		
+		return ['protocol' => $str_type, 'mime' => $str_mime, 'encoding' => $str_encoding];
+	}
+	
 	public function getSource() {
 				
-		return $this->url;
+		return ($this->filename ?: $this->url);
 	}
 	
 	public function getPath() {
