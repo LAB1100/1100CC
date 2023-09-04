@@ -8,9 +8,15 @@
 
 function Feedback() {
 	
-	var obj = this,
-	arr_store = {},
-	arr_listeners = [];
+	const SELF = this;
+	
+	var arr_store = {};
+	var arr_listeners = [];
+	var do_merge = false;
+	var arr_merge = [];
+	
+	this.CONTENT_TYPE_JSON = 'application/json; charset=utf-8';
+	this.CONTENT_TYPE_FORM = 'multipart/form-data; charset=utf-8';
 	
 	this.start = function(elm) {
 		
@@ -69,14 +75,32 @@ function Feedback() {
 		}
 		
 		for (var i = 0, len = arr_elms.length; i < len; i++) {
-			obj.stop(arr_elms[i]);
+			SELF.stop(arr_elms[i]);
 		}
-	}
-	
+	};
+
 	this.request = function(elm, elm_context, obj_request) {
 		
 		var elm = getElement(elm);
 		var elm_context = getElement(elm_context);
+		
+		var obj_request = obj_request;
+		
+		if (do_merge) {
+			
+			const num_length = arr_merge.push(obj_request);
+			
+			if (num_length > 1) { // No need for loader other that the first (master element) request
+				LOADER.stop(elm);
+			}
+		} else {
+			
+			if (obj_request.includeFeedback == null) {
+				obj_request.includeFeedback = true;
+			}
+		
+			obj_request = $.ajax(parseRequest(obj_request));
+		}
 		
 		elm.request = {obj_request: obj_request, elm_context: elm_context};
 		
@@ -91,6 +115,149 @@ function Feedback() {
 			}
 		}
 	}
+
+	this.mergeRequests = function(do_so) {
+		
+		if (do_so) {
+			
+			do_merge = true;
+			return;
+		}
+		
+		requestMerged(arr_merge);
+		
+		arr_merge = [];
+		do_merge = false;
+	};
+	
+	var requestMerged = function(arr) {
+		
+		if (!arr.length) {
+			return;
+		}
+		
+		const arr_request_master = arr[0];
+		const arr_data = {multi: []};
+		
+		for (let i = 0, len = arr.length; i < len; i++) {
+
+			arr_data.multi.push(arr[i].data);
+		}
+		
+		const func_apply_call = function(str_property, arr_arguments) {
+			
+			for (let i = 0, len = arr.length; i < len; i++) {
+				
+				const func_apply = arr[i][str_property];
+				
+				if (func_apply === undefined) {
+					continue;
+				}
+				
+				func_apply(...arr_arguments);
+			}
+		};
+
+		const obj_request_merged = {
+			type: arr_request_master.type,
+			contentType: arr_request_master.contentType,
+			dataType: arr_request_master.dataType,
+			url: arr_request_master.url,
+			data: arr_data,
+			includeFeedback: (arr_request_master.includeFeedback != null ? arr_request_master.includeFeedback : true),
+			processData: (arr_request_master.processData != null ? arr_request_master.processData : false),
+			context: arr_request_master.context,
+			async: (arr_request_master.async != null ? arr_request_master.async : true),
+			beforeSend: function(xhr, settings) {
+				func_apply_call('beforeSend', [xhr, settings]);
+			},
+			uploadProgress: function(event, position, total, percent) {
+				func_apply_call('uploadProgress', [event, position, total, percent]);
+			},
+			success: function(json) {
+				
+				const do_continue = FEEDBACK.check(arr_request_master.context, json);
+				
+				if (!do_continue) {
+					
+					for (let i = 1, len = arr.length; i < len; i++) { // Start after first/master element
+						FEEDBACK.stop(arr[i].context);
+					}
+					
+					return;
+				}
+			
+				for (let i = 0, len = arr.length; i < len; i++) {
+				
+					const func_success = arr[i]['success'];
+					
+					if (func_success === undefined) {
+						continue;
+					}
+					
+					const json_target = json.multi[i];
+					
+					func_success(json_target);
+				}
+			}
+		};
+		
+		$.ajax(parseRequest(obj_request_merged));
+	};
+	
+	this.getRequestElementName = function(str) {
+		
+		if (!do_merge) {
+			return str;
+		}
+		
+		const num_length = arr_merge.length;
+		const str_open = 'multi['+num_length+']'; // Upcomming position in the merged requests
+		
+		const num_pos = str.indexOf('[');
+		let str_new = '';
+		
+		if (num_pos !== -1) {
+			str_new = str_open+'['+str.substring(0, num_pos)+']'+str.substring(num_pos);
+		} else {
+			str_new = str_open+'['+str+']';
+		}
+		
+		return str_new;
+	};
+	
+	var parseRequest = function(obj_request) {
+
+		if (obj_request.contentType == FEEDBACK.CONTENT_TYPE_JSON) {
+			
+			if (obj_request.includeFeedback) {
+				
+				obj_request.data.feedback = SELF.getFeedback();
+			}
+			
+			obj_request.data = JSON.stringify(obj_request.data);
+		} else if (obj_request.contentType == FEEDBACK.CONTENT_TYPE_FORM) {
+			
+			if (obj_request.includeFeedback) {
+				
+				// Append to JSON in FormData
+				
+				let arr_json = {};
+				if (obj_request.data.has('json')) {
+					arr_json = JSON.parse(obj_request.data.get('json'));
+				}
+				arr_json.feedback = SELF.getFeedback();
+				
+				obj_request.data.set('json', JSON.stringify(arr_json));
+			}
+			
+			obj_request.contentType = false; // Let the system determine the contentType dynamically
+		}
+		
+		delete obj_request.includeFeedback;
+		
+		return obj_request;
+	};
 	
 	this.check = function(elm, json, callback) {
 	
@@ -98,7 +265,7 @@ function Feedback() {
 
 		if (!onStage(elm) && !elm.keep_alive) {
 			
-			obj.stop(elm);
+			SELF.stop(elm);
 			return false;
 		}
 		
@@ -106,10 +273,9 @@ function Feedback() {
 			console.log('1100CC server-side execution time: '+json.timing+' seconds.');
 		}
 		
-		var msg = json.msg;
-		var msg_type = json.msg_type;
-		
-		var arr_msg_options = (json.msg_options ? json.msg_options : {});
+		const msg = json.msg;
+		const msg_type = json.msg_type;
+		const arr_msg_options = (json.msg_options ? json.msg_options : {});
 		arr_msg_options.duration = (arr_msg_options.duration !== undefined ? arr_msg_options.duration : (msg_type == 'status' ? 3000 : 5000));
 		arr_msg_options.identifier = (arr_msg_options.identifier !== undefined ? arr_msg_options.identifier : false);
 
@@ -117,23 +283,24 @@ function Feedback() {
 			
 			if (json.location.reload) {
 				
-				LOCATION.reload(json.location.url, (msg ? arr_msg_options.duration : false));
+				LOCATION.reload(json.location.real, (msg ? arr_msg_options.duration : false));
 			} else {
 				
 				if (json.location.replace) {
 					
-					LOCATION.replace(json.location.url, json.location.url_canonical, true);
+					LOCATION.replace(json.location.real, json.location.canonical, true);
 				} else {
 					
-					LOCATION.push(json.location.url, json.location.url_canonical, true);
+					LOCATION.push(json.location.real, json.location.canonical, true);
 				}
 			}
 		}
 		
 		// Messages
 		
+		MESSAGEBOX.checkSystem(json.system_msg);
+		
 		if (arr_msg_options.clear) {
-			
 			MESSAGEBOX.clear(arr_msg_options.clear);
 		}
 		
@@ -167,7 +334,7 @@ function Feedback() {
 		
 		if (json.data_feedback) {
 			
-			obj.setFeedback(json.data_feedback, elm);
+			SELF.setFeedback(json.data_feedback, elm);
 
 			if (LOCATION.hasChanged()) {
 				return false;
@@ -191,14 +358,14 @@ function Feedback() {
 	
 	this.listen = function(call, key) {
 		
-		if (key === 0 || key > 0) {
+		if (key != null) {
 			
 			arr_listeners[key] = call;
 		} else {
 			
-			for (var i = 0, len = arr_listeners.length; i <= len; i++) {
+			for (let i = 0, len = arr_listeners.length; i <= len; i++) {
 				
-				if (arr_listeners[i] === null || arr_listeners[i] === undefined) {
+				if (arr_listeners[i] == null) { // Empty useable position
 					
 					var key = i;
 					arr_listeners[key] = call;
@@ -216,13 +383,13 @@ function Feedback() {
 			
 			for (var variable in data.store) {
 				
-				obj.setFeedbackStore(variable, data.store[variable], elm);			
+				SELF.setFeedbackStore(variable, data.store[variable], elm);			
 			}
 		}
 		
 		if (data.broadcast) {
 			
-			obj.sendFeedbackBroadcast(data.broadcast, elm);
+			SELF.sendFeedbackBroadcast(data.broadcast, elm);
 		}
 	};
 	
@@ -236,7 +403,7 @@ function Feedback() {
 		if (PARSE) { // Document not officially loaded, wait before broadcast
 			
 			document.addEventListener("documentloaded", function(e) {
-				obj.sendFeedbackBroadcast(data, elm);
+				SELF.sendFeedbackBroadcast(data, elm);
 			}, {once: true});
 		} else {
 			
@@ -275,7 +442,7 @@ function Feedback() {
 			},
 			invalidHandler: function(e, validator) {
 				
-				obj.stop(this);
+				SELF.stop(this);
 				
 				var num_errors = validator.numberOfInvalids();
 				
@@ -289,7 +456,7 @@ function Feedback() {
 					var str_msg = 'The form you would like to submit contains '+num_errors+' invalid or missing values.';
 				}
 				
-				MESSAGEBOX.add({msg: '<ul><li><label></label><span>'+str_msg+'</span></li></ul>', type: 'attention', method: 'append', duration: 5000});
+				MESSAGEBOX.add({msg: '<ul><li><label></label><div>'+str_msg+'</div></li></ul>', type: 'attention', method: 'append', duration: 5000});
 
 				validator.defaultShowErrors();
 				
@@ -331,7 +498,7 @@ var FEEDBACK = new Feedback();
 
 function Loader() {
 	
-	var obj = this;
+	const SELF = this;
 	
 	this.start = function(elm) {
 		
@@ -360,7 +527,7 @@ function Loader() {
 		elm.loading = true;
 	
 		obj_loader.timeout = setTimeout(function() {
-			obj.show(elm);
+			SELF.show(elm);
 		}, 400);
 		
 		obj_loader.updated = 0;
@@ -381,7 +548,7 @@ function Loader() {
 			if (obj_loader.updated == 240) { // Timeout connection after x seconds
 				
 				FEEDBACK.stop(elm);
-				FEEDBACK.check(elm, {msg_type: 'alert', msg: '<ul><li><label></label><span>Connection timed out.</span></li></ul>'});
+				FEEDBACK.check(elm, {msg_type: 'alert', msg: '<ul><li><label></label><div>Connection timed out.</div></li></ul>'});
 			}
 		}, 1000);
 	};
@@ -756,9 +923,9 @@ var WEBSERVICES = new WebServices();
 		}
 		
 		if (exception) {
-			var msg = '<ul><li><label></label><span>Connection error: '+exception+'.</span></li></ul>';
+			var msg = '<ul><li><label></label><div>Connection error: '+exception+'.</div></li></ul>';
 		} else {
-			var msg = '<ul><li><label></label><span>Connection lost.</span></li></ul>';
+			var msg = '<ul><li><label></label><div>Connection lost.</div></li></ul>';
 		}
 		
 		FEEDBACK.check(elm, {msg_type: 'alert', msg: msg});

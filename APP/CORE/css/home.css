@@ -5,9 +5,10 @@ html {
  }
 /* Ensure body will stretch along with its content */
 body {
+	--font-body: var(--font-site);
 	display: flex; flex-flow: column nowrap; align-content: stretch; align-items: stretch; justify-content: flex-start;
-	position: relative; 
-	font-family: var(--font-site);
+	position: relative;
+	font-family: var(--font-body);
 	color: #000000;
 	background: #ffffff;
 	line-height: 1.26;
@@ -155,7 +156,7 @@ ul.sorter > li > ul > li > input.date-time { width: 4em; }
 
 .network { text-align: center; overflow-x: auto; overflow-y: hidden; }
 .network .node { display: block; }
-.network .node > h4 { margin: 0px; }
+.network .node > h4 { margin: 0px; background-color: var(--back-nested); padding: 0px 8px; height: 2.3em; line-height: 2.3em; }
 .network .node > h4 + div { display: block; vertical-align: top; }
 .network .node > h4 + div > fieldset > * { text-align: left; }
 .network > .node,
@@ -203,14 +204,15 @@ fieldset > ul > li > label:first-child:empty { padding: 0px; width: 0%; }
 .options fieldset > ul > li > label:first-child + span,
 .options fieldset > ul > li > label:first-child + div { display: table-cell; }
 
-time.date, time.time { font-family: Georgia, serif; color: #999999; line-height: 1; }
+time.date,
+time.time { font-family: var(--font-serif); font-size: 1rem; color: #999999; line-height: 1; }
 time.date span { display: block; text-align: justify; }
-time.date span:first-child { font-size: 1.3em; }
-time.date span + span { font-size: 2.6em; }
-time.date span + span + span { font-size: 1.3em; }
+time.date span:first-child { font-size: 1em; }
+time.date span + span { font-size: 1.5em; }
+time.date span + span + span { font-size: 1.2em; }
 time.time span { display: inline-block; margin-left: 2px; line-height: 1; }
-time.time span:first-child { font-size: 1.7em; margin-left: 0px; }
-time.time span + span  { font-size: 1.3em; }
+time.time span:first-child { font-size: 1em; margin-left: 0px; }
+time.time span + span  { font-size: 1.2em; }
 
 /* BBCODE */
 					

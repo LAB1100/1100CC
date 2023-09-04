@@ -27,7 +27,7 @@ class StreamJSONOutput {
 		
 		if (!$resource) {
 			
-			$this->resource = fopen('php://temp/maxmemory:'.(100 * BYTE_MULTIPLIER * BYTE_MULTIPLIER), 'w'); // Keep resource in memory until it reaches 100MB, otherwise create a temporary file
+			$this->resource = getStreamMemory(false);
 			$this->is_temporary = true;
 		} else {
 			

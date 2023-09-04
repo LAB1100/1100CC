@@ -93,7 +93,7 @@ class templates extends base_module {
 			$css .= $arr_row['css'];
 		}
 		
-		$path = DIR_SITE_STORAGE.'css/templates.css';
+		$path = DIR_SITE_STORAGE.DIR_CSS.'templates.css';
 		
 		FileStore::deleteFile($path);
 		FileStore::storeFile($path, $css);

@@ -1,5 +1,7 @@
 # Changelog
 
+Go to [1100CC Release](http://lab1100.com/1100cc/release) to view the pre-release/development version of the changelog.
+
 To get the version for your current 1100CC installation, view `/APP/CORE/CMS/info/version.txt`
 
 ## VERSION 10.1
@@ -44,10 +46,20 @@ Initial release.
 
 ## VERSION 10.5
 
-* Front-end: Expanded class EmbedDocument into seperate classes DocumentEmbedded and DocumentEmbedding to allow for dynamic loading of 1100CC documents in any website using the snippet DocumentEmbeddingListener.
+* Front-end: Expanded class EmbedDocument into separate classes DocumentEmbedded and DocumentEmbedding to allow for dynamic loading of 1100CC documents in any website using the snippet DocumentEmbeddingListener.
 * Data Exchange: Implemented the .1100CC file format. The ExchangePackage class is able to package and process any 1100CC data and processes as an .1100CC file.
 * File Upload: Added support for Data URLs to FileGet.
 * Mediator: Improved CLI API and Job locking/mutex procedures.
+* Various fixes, modernisation, and overall streamlining.
+
+## VERSION 10.6
+
+* JSON/Object Traversal: Created new class TraverseJSON to traverse any JSON/Object(/Array) to collect and process specific values based on a given JSON Path. The syntax of a Path follows the baseline of JSON.
+* Feed Module: Added a new Feed module to publish streams of information. A Feed Entry can have a short text, a media item, and the option to link to internal or external pages/URLs. A Feed can be ordered and has various layout/styling options using the 1100CC Tagging system.
+* URI Translation: Extended the URI Translation service to transparently translate between dynamic or custom URIs and their native 1100CC URL counterparts.
+* Sitemap: Implemented modular sitemap generation through the new GenerateSitemap class and related Job. Resulting URLs leverage URI Translation and are canonical-aware.
+* Commands: Implemented the ability to dynamically merge multiple Commands (requests) into one request, with each retaining their own logic.
+* Back-end: Added new class ParseXML2JSON to have full control over serialising XML to JSON.
 * Various fixes, modernisation, and overall streamlining.
 
 ## VERSION x.x

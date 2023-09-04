@@ -29,9 +29,9 @@ class documentation_overview extends base_module {
 		$arr_documentation = cms_documentations::getDocumentations($documentation_id);
 		
 		$arr_documentation_vars = documentation::findMainDocumentation($documentation_id);
-		$arr_documentation_vars['mod_vars'] = SiteStartVars::getModVariables($arr_documentation_vars['id']);
+		$arr_documentation_vars['mod_vars'] = SiteStartVars::getModuleVariables($arr_documentation_vars['id']);
 	
-		$arr_documentation_sections = cms_documentation_sections::getDocumentationSections($documentation_id, false, ['published' => true]);
+		$arr_documentation_sections = cms_documentation_sections::getDocumentationSections($documentation_id, false, true);
 		$arr_documentation_section_ids = [];
 		
 		foreach ($arr_documentation_sections as $documentation_section_id => $arr_documentation_section) {
@@ -77,7 +77,7 @@ class documentation_overview extends base_module {
 				$html_identation .= '<span class="indentation"></span>';
 			}
 			
-			$str_url_documentation = SiteStartVars::getModUrl($arr_documentation_vars['id'], $arr_documentation_vars['page_name'], $arr_documentation_vars['sub_dir'], true);
+			$str_url_documentation = SiteStartVars::getModuleURL($arr_documentation_vars['id'], $arr_documentation_vars['page_name'], $arr_documentation_vars['sub_dir'], true);
 			$str_url_section = $str_url_documentation.$documentation_section_id.'/'.$arr_documentation_section['name'];
 			
 			$return .= '<a '.($active ? 'class="active"' : '').' href="'.$str_url_section.'">'
@@ -122,9 +122,9 @@ class documentation_overview extends base_module {
 	public static function findMainDocumentationOverview($id = 0) {
 		
 		if ($id) {
-			return pages::getClosestMod('documentation_overview', 0, 0, 0, $id, 'id');
+			return pages::getClosestModule('documentation_overview', 0, 0, 0, $id, 'id');
 		} else {
-			return pages::getClosestMod('documentation_overview', SiteStartVars::$dir['id'], SiteStartVars::$page['id'], 0, $id, 'id');
+			return pages::getClosestModule('documentation_overview', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'), 0, $id, 'id');
 		}
 	}
 }

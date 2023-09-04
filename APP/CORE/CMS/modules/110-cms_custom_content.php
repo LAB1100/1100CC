@@ -94,7 +94,7 @@ class cms_custom_content extends base_module {
 				
 				$arr_row = self::getCustomContent($id);
 				
-				$arr_tags = cms_general::getObjectTags(DB::getTable('TABLE_CUSTOM_CONTENT_TAGS'), 'custom_content_id', $id);
+				$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_CUSTOM_CONTENT_TAGS'), 'custom_content_id', $id);
 				
 				$mode = "update";
 			} else {
@@ -173,15 +173,14 @@ class cms_custom_content extends base_module {
 				$arr_data['id'] = 'x:cms_custom_content:id-'.$arr_row['id'];
 				$arr_data[] = $arr_row['name'];
 				
-				$arr_pages = explode(',', $arr_row['pages']);
-				$directories = array_filter(explode(',', $arr_row['directories']));
+				$arr_pages = str2Array($arr_row['pages'], ',');
+				$arr_directories = array_filter(str2Array($arr_row['directories'], ','));
 				$arr_paths = [];
-				for ($i = 0; $i < count($directories); $i++) {
-					
-					$dir = directories::getDirectories($directories[$i]);
 				
-					if ($dir['id']) {
-						$arr_paths[] = $dir['path'].' / '.$arr_pages[$i];
+				for ($i = 0; $i < count($arr_directories); $i++) {
+					$arr_dir = directories::getDirectories($arr_directories[$i]);
+					if ($arr_dir['id']) {
+						$arr_paths[] = $arr_dir['path'].' / '.$arr_pages[$i];
 					}
 				}
 				

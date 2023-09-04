@@ -10,7 +10,7 @@
 class blog_preview extends base_module {
 
 	public static function moduleProperties() {
-		static::$label = getLabel('ttl_blog_preview');
+		static::$label = getLabel('lbl_blog_preview');
 		static::$parent_label = getLabel('lbl_communication');
 	}
 	
@@ -50,7 +50,7 @@ class blog_preview extends base_module {
 		
 			$arr_comments_link = blog_post_comments::findBlogPostComments();
 		
-			foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], $this->arr_variables['limit']) as $row) {
+			foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], false, $this->arr_variables['limit']) as $row) {
 				
 				$return .= blog::createBlogPostPreview($row, $arr_link, $arr_comments_link, $arr_comments_link);
 			}
@@ -59,7 +59,7 @@ class blog_preview extends base_module {
 			
 			if ($total > $this->arr_variables['limit']) {
 				
-				$next_prev .= '<a class="prev" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'go/'.$this->arr_variables['limit'].'"><span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span><span>'.getLabel('lbl_previous').'</span></a>';
+				$next_prev .= '<a class="prev" href="'.SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'go/'.$this->arr_variables['limit'].'"><span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span><span>'.getLabel('lbl_previous').'</span></a>';
 				
 				$return .= '<nav class="nextprev">'.$next_prev.'</nav>';
 			}
@@ -68,10 +68,10 @@ class blog_preview extends base_module {
 			$return .= '<h1>'.($this->arr_variables['id'] ? strEscapeHTML(Labels::parseTextVariables($arr_blog_options['name'])) : getLabel('ttl_posts')).'</h1>'
 			.'<ul>';
 			
-				foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], $this->arr_variables['limit'], false, 0) as $row) {
+				foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], false, $this->arr_variables['limit'], 0, false) as $row) {
 					
 					$title = Labels::parseTextVariables($row['title']);
-					$return .= '<li><a title="'.strEscapeHTML($title).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['id'].'/'.str2URL($title).'"><span></span><span>'.strEscapeHTML($title).'</span></a></li>';
+					$return .= '<li><a title="'.strEscapeHTML($title).'" href="'.SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['id'].'/'.str2URL($title).'"><span></span><span>'.strEscapeHTML($title).'</span></a></li>';
 				}
 				
 			$return .= '</ul>';
@@ -82,7 +82,7 @@ class blog_preview extends base_module {
 			
 				foreach (cms_blog_post_comments::getBlogComments($arr_blog_options['id'], $this->arr_variables['limit']) as $row) {
 					
-					$return .= '<li><a title="'.strEscapeHTML($row['name']).' on '.date('d-m-y H:i', strtotime($row['added'])).'" href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['blog_post_id'].'/'.str2URL(Labels::parseTextVariables($row['blog_post_title'])).'#'.$row['id'].'">
+					$return .= '<li><a title="'.strEscapeHTML($row['name']).' on '.date('d-m-y H:i', strtotime($row['added'])).'" href="'.SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['blog_post_id'].'/'.str2URL(Labels::parseTextVariables($row['blog_post_title'])).'#'.$row['id'].'">
 						<span></span>
 						<span><span>'.strEscapeHTML($row['name']).':</span><span>'.strEscapeHTML($row['body']).'</span></span></a>
 					</li>';

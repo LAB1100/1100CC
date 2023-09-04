@@ -129,3 +129,73 @@ Run SQL queries in database ?SITE?_cms:
 ```sql
 ALTER TABLE `cms_language` CHANGE `user` `is_user_selectable` TINYINT(1) NOT NULL;
 ```
+
+## VERSION 10.6
+
+Install/enable the Apache module 'headers'.
+
+Update 1100CC [1100CC.core_labels.en.sql](/setup/1100CC.core_labels.en.sql).
+
+Run SQL queries in database ?SITE?_cms:
+
+```sql
+ALTER TABLE `site_uris` ADD `in_out` TINYINT NOT NULL DEFAULT '1' AFTER `uri_translator_id`; 
+ALTER TABLE `site_uris` DROP PRIMARY KEY, ADD PRIMARY KEY(`uri_translator_id`, `in_out`, `identifier`);
+
+ALTER TABLE `site_uri_translators` ADD `mode` TINYINT NOT NULL DEFAULT '1' AFTER `name`;
+
+ALTER TABLE `users` CHANGE `name` `name` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, CHANGE `uname` `uname` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;
+```
+
+---
+
+Run SQL queries in database ?SITE?_home:
+
+```sql
+DROP TABLE IF EXISTS `def_projects`;
+
+CREATE TABLE `def_feeds` (
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_feed_entries` (
+  `id` int NOT NULL,
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `media` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `date` datetime NOT NULL,
+  `sort` int NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_feed_entry_link` (
+  `feed_id` int NOT NULL,
+  `feed_entry_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_feed_entry_tags` (
+  `feed_entry_id` int NOT NULL,
+  `tag_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `def_feeds`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `def_feed_entries`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `def_feed_entry_link`
+  ADD PRIMARY KEY (`feed_id`,`feed_entry_id`);
+
+ALTER TABLE `def_feed_entry_tags`
+  ADD PRIMARY KEY (`feed_entry_id`,`tag_id`);
+
+ALTER TABLE `def_feeds`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `def_feed_entries`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `def_media` ADD UNIQUE(`directory`, `filename`); 
+```

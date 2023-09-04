@@ -1,1 +1,1524 @@
-(function(a,b){function d(b){if(a.fn.cycle.debug)e(b)}function e(){if(window.console&&console.log)console.log("[cycle] "+Array.prototype.join.call(arguments," "))}function f(b,c,d){var e=a(b).data("cycle.opts");var f=!!b.cyclePause;if(f&&e.paused)e.paused(b,e,c,d);else if(!f&&e.resumed)e.resumed(b,e,c,d)}function g(c,d,g){function k(b,c,d){if(!b&&c===true){var f=a(d).data("cycle.opts");if(!f){e("options not found, can not resume");return false}if(d.cycleTimeout){clearTimeout(d.cycleTimeout);d.cycleTimeout=0}n(f.elements,f,1,!f.backwards)}}if(c.cycleStop===b)c.cycleStop=0;if(d===b||d===null)d={};if(d.constructor==String){switch(d){case"destroy":case"stop":var h=a(c).data("cycle.opts");if(!h)return false;c.cycleStop++;if(c.cycleTimeout)clearTimeout(c.cycleTimeout);c.cycleTimeout=0;if(h.elements)a(h.elements).stop();a(c).removeData("cycle.opts");if(d=="destroy")i(c,h);return false;case"toggle":c.cyclePause=c.cyclePause===1?0:1;k(c.cyclePause,g,c);f(c);return false;case"pause":c.cyclePause=1;f(c);return false;case"resume":c.cyclePause=0;k(false,g,c);f(c);return false;case"prev":case"next":h=a(c).data("cycle.opts");if(!h){e('options not found, "prev/next" ignored');return false}a.fn.cycle[d](h);return false;default:d={fx:d}}return d}else if(d.constructor==Number){var j=d;d=a(c).data("cycle.opts");if(!d){e("options not found, can not advance slide");return false}if(j<0||j>=d.elements.length){e("invalid slide index: "+j);return false}d.nextSlide=j;if(c.cycleTimeout){clearTimeout(c.cycleTimeout);c.cycleTimeout=0}if(typeof g=="string")d.oneTimeFx=g;n(d.elements,d,1,j>=d.currSlide);return false}return d}function h(b,c){if(!a.support.opacity&&c.cleartype&&b.style.filter){try{b.style.removeAttribute("filter")}catch(d){}}}function i(b,c){if(c.next)a(c.next).unbind(c.prevNextEvent);if(c.prev)a(c.prev).unbind(c.prevNextEvent);if(c.pager||c.pagerAnchorBuilder)a.each(c.pagerAnchors||[],function(){this.unbind().remove()});c.pagerAnchors=null;a(b).unbind("mouseenter.cycle mouseleave.cycle");if(c.destroy)c.destroy(c)}function j(c,d,g,i,j){var o;var s=a.extend({},a.fn.cycle.defaults,i||{},a.metadata?c.metadata():a.meta?c.data():{});var t=a.isFunction(c.data)?c.data(s.metaAttr):null;if(t)s=a.extend(s,t);if(s.autostop)s.countdown=s.autostopCount||g.length;var u=c[0];c.data("cycle.opts",s);s.$cont=c;s.stopCount=u.cycleStop;s.elements=g;s.before=s.before?[s.before]:[];s.after=s.after?[s.after]:[];if(!a.support.opacity&&s.cleartype)s.after.push(function(){h(this,s)});if(s.continuous)s.after.push(function(){n(g,s,0,!s.backwards)});k(s);if(!a.support.opacity&&s.cleartype&&!s.cleartypeNoBg)r(d);if(c.css("position")=="static")c.css("position","relative");if(s.width)c.width(s.width);if(s.height&&s.height!="auto")c.height(s.height);if(s.startingSlide!==b){s.startingSlide=parseInt(s.startingSlide,10);if(s.startingSlide>=g.length||s.startSlide<0)s.startingSlide=0;else o=true}else if(s.backwards)s.startingSlide=g.length-1;else s.startingSlide=0;if(s.random){s.randomMap=[];for(var v=0;v<g.length;v++)s.randomMap.push(v);s.randomMap.sort(function(a,b){return Math.random()-.5});if(o){for(var w=0;w<g.length;w++){if(s.startingSlide==s.randomMap[w]){s.randomIndex=w}}}else{s.randomIndex=1;s.startingSlide=s.randomMap[1]}}else if(s.startingSlide>=g.length)s.startingSlide=0;s.currSlide=s.startingSlide||0;var x=s.startingSlide;d.css({position:"absolute",top:0,left:0}).hide().each(function(b){var c;if(s.backwards)c=x?b<=x?g.length+(b-x):x-b:g.length-b;else c=x?b>=x?g.length-(b-x):x-b:g.length-b;a(this).css("z-index",c)});a(g[x]).css("opacity",1).show();h(g[x],s);if(s.fit){if(!s.aspect){if(s.width)d.width(s.width);if(s.height&&s.height!="auto")d.height(s.height)}else{d.each(function(){var b=a(this);var c=s.aspect===true?b.width()/b.height():s.aspect;if(s.width&&b.width()!=s.width){b.width(s.width);b.height(s.width/c)}if(s.height&&b.height()<s.height){b.height(s.height);b.width(s.height*c)}})}}if(s.center&&(!s.fit||s.aspect)){d.each(function(){var b=a(this);b.css({"margin-left":s.width?(s.width-b.width())/2+"px":0,"margin-top":s.height?(s.height-b.height())/2+"px":0})})}if(s.center&&!s.fit&&!s.slideResize){d.each(function(){var b=a(this);b.css({"margin-left":s.width?(s.width-b.width())/2+"px":0,"margin-top":s.height?(s.height-b.height())/2+"px":0})})}var y=s.containerResize&&!c.innerHeight();if(y){var z=0,A=0;for(var B=0;B<g.length;B++){var C=a(g[B]),D=C[0],E=C.outerWidth(),F=C.outerHeight();if(!E)E=D.offsetWidth||D.width||C.attr("width");if(!F)F=D.offsetHeight||D.height||C.attr("height");z=E>z?E:z;A=F>A?F:A}if(z>0&&A>0)c.css({width:z+"px",height:A+"px"})}var G=false;if(s.pause)c.bind("mouseenter.cycle",function(){G=true;this.cyclePause++;f(u,true)}).bind("mouseleave.cycle",function(){if(G)this.cyclePause--;f(u,true)});if(l(s)===false)return false;var H=false;i.requeueAttempts=i.requeueAttempts||0;d.each(function(){var b=a(this);this.cycleH=s.fit&&s.height?s.height:b.height()||this.offsetHeight||this.height||b.attr("height")||0;this.cycleW=s.fit&&s.width?s.width:b.width()||this.offsetWidth||this.width||b.attr("width")||0;if(b.is("img")){var c=a.browser.msie&&this.cycleW==28&&this.cycleH==30&&!this.complete;var d=a.browser.mozilla&&this.cycleW==34&&this.cycleH==19&&!this.complete;var f=a.browser.opera&&(this.cycleW==42&&this.cycleH==19||this.cycleW==37&&this.cycleH==17)&&!this.complete;var g=this.cycleH===0&&this.cycleW===0&&!this.complete;if(c||d||f||g){if(j.s&&s.requeueOnImageNotLoaded&&++i.requeueAttempts<100){e(i.requeueAttempts," - img slide not loaded, requeuing slideshow: ",this.src,this.cycleW,this.cycleH);setTimeout(function(){a(j.s,j.c).cycle(i)},s.requeueTimeout);H=true;return false}else{e("could not determine size of image: "+this.src,this.cycleW,this.cycleH)}}}return true});if(H)return false;s.cssBefore=s.cssBefore||{};s.cssAfter=s.cssAfter||{};s.cssFirst=s.cssFirst||{};s.animIn=s.animIn||{};s.animOut=s.animOut||{};d.not(":eq("+x+")").css(s.cssBefore);a(d[x]).css(s.cssFirst);if(s.timeout){s.timeout=parseInt(s.timeout,10);if(s.speed.constructor==String)s.speed=a.fx.speeds[s.speed]||parseInt(s.speed,10);if(!s.sync)s.speed=s.speed/2;var I=s.fx=="none"?0:s.fx=="shuffle"?500:250;while(s.timeout-s.speed<I)s.timeout+=s.speed}if(s.easing)s.easeIn=s.easeOut=s.easing;if(!s.speedIn)s.speedIn=s.speed;if(!s.speedOut)s.speedOut=s.speed;s.slideCount=g.length;s.currSlide=s.lastSlide=x;if(s.random){if(++s.randomIndex==g.length)s.randomIndex=0;s.nextSlide=s.randomMap[s.randomIndex]}else if(s.backwards)s.nextSlide=s.startingSlide===0?g.length-1:s.startingSlide-1;else s.nextSlide=s.startingSlide>=g.length-1?0:s.startingSlide+1;if(!s.multiFx){var J=a.fn.cycle.transitions[s.fx];if(a.isFunction(J))J(c,d,s);else if(s.fx!="custom"&&!s.multiFx){e("unknown transition: "+s.fx,"; slideshow terminating");return false}}var K=d[x];if(!s.skipInitializationCallbacks){if(s.before.length)s.before[0].apply(K,[K,K,s,true]);if(s.after.length)s.after[0].apply(K,[K,K,s,true])}if(s.next)a(s.next).bind(s.prevNextEvent,function(){return p(s,1)});if(s.prev)a(s.prev).bind(s.prevNextEvent,function(){return p(s,0)});if(s.pager||s.pagerAnchorBuilder)q(g,s);m(s,g);return s}function k(b){b.original={before:[],after:[]};b.original.cssBefore=a.extend({},b.cssBefore);b.original.cssAfter=a.extend({},b.cssAfter);b.original.animIn=a.extend({},b.animIn);b.original.animOut=a.extend({},b.animOut);a.each(b.before,function(){b.original.before.push(this)});a.each(b.after,function(){b.original.after.push(this)})}function l(b){var c,f,g=a.fn.cycle.transitions;if(b.fx.indexOf(",")>0){b.multiFx=true;b.fxs=b.fx.replace(/\s*/g,"").split(",");for(c=0;c<b.fxs.length;c++){var h=b.fxs[c];f=g[h];if(!f||!g.hasOwnProperty(h)||!a.isFunction(f)){e("discarding unknown transition: ",h);b.fxs.splice(c,1);c--}}if(!b.fxs.length){e("No valid transitions named; slideshow terminating.");return false}}else if(b.fx=="all"){b.multiFx=true;b.fxs=[];for(var i in g){if(g.hasOwnProperty(i)){f=g[i];if(g.hasOwnProperty(i)&&a.isFunction(f))b.fxs.push(i)}}}if(b.multiFx&&b.randomizeEffects){var j=Math.floor(Math.random()*20)+30;for(c=0;c<j;c++){var k=Math.floor(Math.random()*b.fxs.length);b.fxs.push(b.fxs.splice(k,1)[0])}d("randomized fx sequence: ",b.fxs)}return true}function m(b,c){b.addSlide=function(d,e){var f=a(d),g=f[0];if(!b.autostopCount)b.countdown++;c[e?"unshift":"push"](g);if(b.els)b.els[e?"unshift":"push"](g);b.slideCount=c.length;if(b.random){b.randomMap.push(b.slideCount-1);b.randomMap.sort(function(a,b){return Math.random()-.5})}f.css("position","absolute");f[e?"prependTo":"appendTo"](b.$cont);if(e){b.currSlide++;b.nextSlide++}if(!a.support.opacity&&b.cleartype&&!b.cleartypeNoBg)r(f);if(b.fit&&b.width)f.width(b.width);if(b.fit&&b.height&&b.height!="auto")f.height(b.height);g.cycleH=b.fit&&b.height?b.height:f.height();g.cycleW=b.fit&&b.width?b.width:f.width();f.css(b.cssBefore);if(b.pager||b.pagerAnchorBuilder)a.fn.cycle.createPagerAnchor(c.length-1,g,a(b.pager),c,b);if(a.isFunction(b.onAddSlide))b.onAddSlide(f);else f.hide()}}function n(c,e,f,g){function q(){var a=0,b=e.timeout;if(e.timeout&&!e.continuous){a=o(c[e.currSlide],c[e.nextSlide],e,g);if(e.fx=="shuffle")a-=e.speedOut}else if(e.continuous&&h.cyclePause)a=10;if(a>0)h.cycleTimeout=setTimeout(function(){n(c,e,0,!e.backwards)},a)}var h=e.$cont[0],i=c[e.currSlide],j=c[e.nextSlide];if(f&&e.busy&&e.manualTrump){d("manualTrump in go(), stopping active transition");a(c).stop(true,true);e.busy=0;clearTimeout(h.cycleTimeout)}if(e.busy){d("transition active, ignoring new tx request");return}if(h.cycleStop!=e.stopCount||h.cycleTimeout===0&&!f)return;if(!f&&!h.cyclePause&&!e.bounce&&(e.autostop&&--e.countdown<=0||e.nowrap&&!e.random&&e.nextSlide<e.currSlide)){if(e.end)e.end(e);return}var k=false;if((f||!h.cyclePause)&&e.nextSlide!=e.currSlide){k=true;var l=e.fx;i.cycleH=i.cycleH||a(i).height();i.cycleW=i.cycleW||a(i).width();j.cycleH=j.cycleH||a(j).height();j.cycleW=j.cycleW||a(j).width();if(e.multiFx){if(g&&(e.lastFx===b||++e.lastFx>=e.fxs.length))e.lastFx=0;else if(!g&&(e.lastFx===b||--e.lastFx<0))e.lastFx=e.fxs.length-1;l=e.fxs[e.lastFx]}if(e.oneTimeFx){l=e.oneTimeFx;e.oneTimeFx=null}a.fn.cycle.resetState(e,l);if(e.before.length)a.each(e.before,function(a,b){if(h.cycleStop!=e.stopCount)return;b.apply(j,[i,j,e,g])});var m=function(){e.busy=0;a.each(e.after,function(a,b){if(h.cycleStop!=e.stopCount)return;b.apply(j,[i,j,e,g])});if(!h.cycleStop){q()}};d("tx firing("+l+"); currSlide: "+e.currSlide+"; nextSlide: "+e.nextSlide);e.busy=1;if(e.fxFn)e.fxFn(i,j,e,m,g,f&&e.fastOnEvent);else if(a.isFunction(a.fn.cycle[e.fx]))a.fn.cycle[e.fx](i,j,e,m,g,f&&e.fastOnEvent);else a.fn.cycle.custom(i,j,e,m,g,f&&e.fastOnEvent)}else{q()}if(k||e.nextSlide==e.currSlide){var p;e.lastSlide=e.currSlide;if(e.random){e.currSlide=e.nextSlide;if(++e.randomIndex==c.length){e.randomIndex=0;e.randomMap.sort(function(a,b){return Math.random()-.5})}e.nextSlide=e.randomMap[e.randomIndex];if(e.nextSlide==e.currSlide)e.nextSlide=e.currSlide==e.slideCount-1?0:e.currSlide+1}else if(e.backwards){p=e.nextSlide-1<0;if(p&&e.bounce){e.backwards=!e.backwards;e.nextSlide=1;e.currSlide=0}else{e.nextSlide=p?c.length-1:e.nextSlide-1;e.currSlide=p?0:e.nextSlide+1}}else{p=e.nextSlide+1==c.length;if(p&&e.bounce){e.backwards=!e.backwards;e.nextSlide=c.length-2;e.currSlide=c.length-1}else{e.nextSlide=p?0:e.nextSlide+1;e.currSlide=p?c.length-1:e.nextSlide-1}}}if(k&&e.pager)e.updateActivePagerLink(e.pager,e.currSlide,e.activePagerClass)}function o(a,b,c,e){if(c.timeoutFn){var f=c.timeoutFn.call(a,a,b,c,e);while(c.fx!="none"&&f-c.speed<250)f+=c.speed;d("calculated timeout: "+f+"; speed: "+c.speed);if(f!==false)return f}return c.timeout}function p(b,c){var d=c?1:-1;var e=b.elements;var f=b.$cont[0],g=f.cycleTimeout;if(g){clearTimeout(g);f.cycleTimeout=0}if(b.random&&d<0){b.randomIndex--;if(--b.randomIndex==-2)b.randomIndex=e.length-2;else if(b.randomIndex==-1)b.randomIndex=e.length-1;b.nextSlide=b.randomMap[b.randomIndex]}else if(b.random){b.nextSlide=b.randomMap[b.randomIndex]}else{b.nextSlide=b.currSlide+d;if(b.nextSlide<0){if(b.nowrap)return false;b.nextSlide=e.length-1}else if(b.nextSlide>=e.length){if(b.nowrap)return false;b.nextSlide=0}}var h=b.onPrevNextEvent||b.prevNextClick;if(a.isFunction(h))h(d>0,b.nextSlide,e[b.nextSlide]);n(e,b,1,c);return false}function q(b,c){var d=a(c.pager);a.each(b,function(e,f){a.fn.cycle.createPagerAnchor(e,f,d,b,c)});c.updateActivePagerLink(c.pager,c.startingSlide,c.activePagerClass)}function r(b){function c(a){a=parseInt(a,10).toString(16);return a.length<2?"0"+a:a}function e(b){for(;b&&b.nodeName.toLowerCase()!="html";b=b.parentNode){var d=a.css(b,"background-color");if(d&&d.indexOf("rgb")>=0){var e=d.match(/\d+/g);return"#"+c(e[0])+c(e[1])+c(e[2])}if(d&&d!="transparent")return d}return"#ffffff"}d("applying clearType background-color hack");b.each(function(){a(this).css("background-color",e(this))})}"use strict";var c="2.9999.5";if(a.support===b){a.support={opacity:!a.browser.msie}}a.expr[":"].paused=function(a){return a.cyclePause};a.fn.cycle=function(b,c){var f={s:this.selector,c:this.context};if(this.length===0&&b!="stop"){if(!a.isReady&&f.s){e("DOM not ready, queuing slideshow");a(function(){a(f.s,f.c).cycle(b,c)});return this}e("terminating; zero elements found by selector"+(a.isReady?"":" (DOM not ready)"));return this}return this.each(function(){var h=g(this,b,c);if(h===false)return;h.updateActivePagerLink=h.updateActivePagerLink||a.fn.cycle.updateActivePagerLink;if(this.cycleTimeout)clearTimeout(this.cycleTimeout);this.cycleTimeout=this.cyclePause=0;this.cycleStop=0;var i=a(this);var k=h.slideExpr?a(h.slideExpr,this):i.children();var l=k.get();if(l.length<2){e("terminating; too few slides: "+l.length);return}var m=j(i,k,l,h,f);if(m===false)return;var p=m.continuous?10:o(l[m.currSlide],l[m.nextSlide],m,!m.backwards);if(p){p+=m.delay||0;if(p<10)p=10;d("first timeout: "+p);this.cycleTimeout=setTimeout(function(){n(l,m,0,!h.backwards)},p)}})};a.fn.cycle.resetState=function(b,c){c=c||b.fx;b.before=[];b.after=[];b.cssBefore=a.extend({},b.original.cssBefore);b.cssAfter=a.extend({},b.original.cssAfter);b.animIn=a.extend({},b.original.animIn);b.animOut=a.extend({},b.original.animOut);b.fxFn=null;a.each(b.original.before,function(){b.before.push(this)});a.each(b.original.after,function(){b.after.push(this)});var d=a.fn.cycle.transitions[c];if(a.isFunction(d))d(b.$cont,a(b.elements),b)};a.fn.cycle.updateActivePagerLink=function(b,c,d){a(b).each(function(){a(this).children().removeClass(d).eq(c).addClass(d)})};a.fn.cycle.next=function(a){p(a,1)};a.fn.cycle.prev=function(a){p(a,0)};a.fn.cycle.createPagerAnchor=function(b,c,e,g,h){var i;if(a.isFunction(h.pagerAnchorBuilder)){i=h.pagerAnchorBuilder(b,c);d("pagerAnchorBuilder("+b+", el) returned: "+i)}else i='<a href="#">'+(b+1)+"</a>";if(!i)return;var j=a(i);if(j.parents("body").length===0){var k=[];if(e.length>1){e.each(function(){var b=j.clone(true);a(this).append(b);k.push(b[0])});j=a(k)}else{j.appendTo(e)}}h.pagerAnchors=h.pagerAnchors||[];h.pagerAnchors.push(j);var l=function(c){c.preventDefault();h.nextSlide=b;var d=h.$cont[0],e=d.cycleTimeout;if(e){clearTimeout(e);d.cycleTimeout=0}var f=h.onPagerEvent||h.pagerClick;if(a.isFunction(f))f(h.nextSlide,g[h.nextSlide]);n(g,h,1,h.currSlide<b)};if(/mouseenter|mouseover/i.test(h.pagerEvent)){j.hover(l,function(){})}else{j.bind(h.pagerEvent,l)}if(!/^click/.test(h.pagerEvent)&&!h.allowPagerClickBubble)j.bind("click.cycle",function(){return false});var m=h.$cont[0];var o=false;if(h.pauseOnPagerHover){j.hover(function(){o=true;m.cyclePause++;f(m,true,true)},function(){if(o)m.cyclePause--;f(m,true,true)})}};a.fn.cycle.hopsFromLast=function(a,b){var c,d=a.lastSlide,e=a.currSlide;if(b)c=e>d?e-d:a.slideCount-d;else c=e<d?d-e:d+a.slideCount-e;return c};a.fn.cycle.commonReset=function(b,c,d,e,f,g){a(d.elements).not(b).hide();if(typeof d.cssBefore.opacity=="undefined")d.cssBefore.opacity=1;d.cssBefore.display="block";if(d.slideResize&&e!==false&&c.cycleW>0)d.cssBefore.width=c.cycleW;if(d.slideResize&&f!==false&&c.cycleH>0)d.cssBefore.height=c.cycleH;d.cssAfter=d.cssAfter||{};d.cssAfter.display="none";a(b).css("zIndex",d.slideCount+(g===true?1:0));a(c).css("zIndex",d.slideCount+(g===true?0:1))};a.fn.cycle.custom=function(b,c,d,e,f,g){var h=a(b),i=a(c);var j=d.speedIn,k=d.speedOut,l=d.easeIn,m=d.easeOut;i.css(d.cssBefore);if(g){if(typeof g=="number")j=k=g;else j=k=1;l=m=null}var n=function(){i.animate(d.animIn,j,l,function(){e()})};h.animate(d.animOut,k,m,function(){h.css(d.cssAfter);if(!d.sync)n()});if(d.sync)n()};a.fn.cycle.transitions={fade:function(b,c,d){c.not(":eq("+d.currSlide+")").css("opacity",0);d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d);d.cssBefore.opacity=0});d.animIn={opacity:1};d.animOut={opacity:0};d.cssBefore={top:0,left:0}}};a.fn.cycle.ver=function(){return c};a.fn.cycle.defaults={activePagerClass:"activeSlide",after:null,allowPagerClickBubble:false,animIn:null,animOut:null,aspect:false,autostop:0,autostopCount:0,backwards:false,before:null,center:null,cleartype:!a.support.opacity,cleartypeNoBg:false,containerResize:1,continuous:0,cssAfter:null,cssBefore:null,delay:0,easeIn:null,easeOut:null,easing:null,end:null,fastOnEvent:0,fit:0,fx:"fade",fxFn:null,height:"auto",manualTrump:true,metaAttr:"cycle",next:null,nowrap:0,onPagerEvent:null,onPrevNextEvent:null,pager:null,pagerAnchorBuilder:null,pagerEvent:"click.cycle",pause:0,pauseOnPagerHover:0,prev:null,prevNextEvent:"click.cycle",random:0,randomizeEffects:1,requeueOnImageNotLoaded:true,requeueTimeout:250,rev:0,shuffle:null,skipInitializationCallbacks:false,slideExpr:null,slideResize:1,speed:1e3,speedIn:null,speedOut:null,startingSlide:b,sync:1,timeout:4e3,timeoutFn:null,updateActivePagerLink:null,width:null}})(jQuery);(function(a){"use strict";a.fn.cycle.transitions.none=function(b,c,d){d.fxFn=function(b,c,d,e){a(c).show();a(b).hide();e()}};a.fn.cycle.transitions.fadeout=function(b,c,d){c.not(":eq("+d.currSlide+")").css({display:"block",opacity:1});d.before.push(function(b,c,d,e,f,g){a(b).css("zIndex",d.slideCount+(g!==true?1:0));a(c).css("zIndex",d.slideCount+(g!==true?0:1))});d.animIn.opacity=1;d.animOut.opacity=0;d.cssBefore.opacity=1;d.cssBefore.display="block";d.cssAfter.zIndex=0};a.fn.cycle.transitions.scrollUp=function(b,c,d){b.css("overflow","hidden");d.before.push(a.fn.cycle.commonReset);var e=b.height();d.cssBefore.top=e;d.cssBefore.left=0;d.cssFirst.top=0;d.animIn.top=0;d.animOut.top=-e};a.fn.cycle.transitions.scrollDown=function(b,c,d){b.css("overflow","hidden");d.before.push(a.fn.cycle.commonReset);var e=b.height();d.cssFirst.top=0;d.cssBefore.top=-e;d.cssBefore.left=0;d.animIn.top=0;d.animOut.top=e};a.fn.cycle.transitions.scrollLeft=function(b,c,d){b.css("overflow","hidden");d.before.push(a.fn.cycle.commonReset);var e=b.width();d.cssFirst.left=0;d.cssBefore.left=e;d.cssBefore.top=0;d.animIn.left=0;d.animOut.left=0-e};a.fn.cycle.transitions.scrollRight=function(b,c,d){b.css("overflow","hidden");d.before.push(a.fn.cycle.commonReset);var e=b.width();d.cssFirst.left=0;d.cssBefore.left=-e;d.cssBefore.top=0;d.animIn.left=0;d.animOut.left=e};a.fn.cycle.transitions.scrollHorz=function(b,c,d){b.css("overflow","hidden").width();d.before.push(function(b,c,d,e){if(d.rev)e=!e;a.fn.cycle.commonReset(b,c,d);d.cssBefore.left=e?c.cycleW-1:1-c.cycleW;d.animOut.left=e?-b.cycleW:b.cycleW});d.cssFirst.left=0;d.cssBefore.top=0;d.animIn.left=0;d.animOut.top=0};a.fn.cycle.transitions.scrollVert=function(b,c,d){b.css("overflow","hidden");d.before.push(function(b,c,d,e){if(d.rev)e=!e;a.fn.cycle.commonReset(b,c,d);d.cssBefore.top=e?1-c.cycleH:c.cycleH-1;d.animOut.top=e?b.cycleH:-b.cycleH});d.cssFirst.top=0;d.cssBefore.left=0;d.animIn.top=0;d.animOut.left=0};a.fn.cycle.transitions.slideX=function(b,c,d){d.before.push(function(b,c,d){a(d.elements).not(b).hide();a.fn.cycle.commonReset(b,c,d,false,true);d.animIn.width=c.cycleW});d.cssBefore.left=0;d.cssBefore.top=0;d.cssBefore.width=0;d.animIn.width="show";d.animOut.width=0};a.fn.cycle.transitions.slideY=function(b,c,d){d.before.push(function(b,c,d){a(d.elements).not(b).hide();a.fn.cycle.commonReset(b,c,d,true,false);d.animIn.height=c.cycleH});d.cssBefore.left=0;d.cssBefore.top=0;d.cssBefore.height=0;d.animIn.height="show";d.animOut.height=0};a.fn.cycle.transitions.shuffle=function(b,c,d){var e,f=b.css("overflow","visible").width();c.css({left:0,top:0});d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,true,true,true)});if(!d.speedAdjusted){d.speed=d.speed/2;d.speedAdjusted=true}d.random=0;d.shuffle=d.shuffle||{left:-f,top:15};d.els=[];for(e=0;e<c.length;e++)d.els.push(c[e]);for(e=0;e<d.currSlide;e++)d.els.push(d.els.shift());d.fxFn=function(b,c,d,e,f){if(d.rev)f=!f;var g=f?a(b):a(c);a(c).css(d.cssBefore);var h=d.slideCount;g.animate(d.shuffle,d.speedIn,d.easeIn,function(){var c=a.fn.cycle.hopsFromLast(d,f);for(var i=0;i<c;i++){if(f)d.els.push(d.els.shift());else d.els.unshift(d.els.pop())}if(f){for(var j=0,k=d.els.length;j<k;j++)a(d.els[j]).css("z-index",k-j+h)}else{var l=a(b).css("z-index");g.css("z-index",parseInt(l,10)+1+h)}g.animate({left:0,top:0},d.speedOut,d.easeOut,function(){a(f?this:b).hide();if(e)e()})})};a.extend(d.cssBefore,{display:"block",opacity:1,top:0,left:0})};a.fn.cycle.transitions.turnUp=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,true,false);d.cssBefore.top=c.cycleH;d.animIn.height=c.cycleH;d.animOut.width=c.cycleW});d.cssFirst.top=0;d.cssBefore.left=0;d.cssBefore.height=0;d.animIn.top=0;d.animOut.height=0};a.fn.cycle.transitions.turnDown=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,true,false);d.animIn.height=c.cycleH;d.animOut.top=b.cycleH});d.cssFirst.top=0;d.cssBefore.left=0;d.cssBefore.top=0;d.cssBefore.height=0;d.animOut.height=0};a.fn.cycle.transitions.turnLeft=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,false,true);d.cssBefore.left=c.cycleW;d.animIn.width=c.cycleW});d.cssBefore.top=0;d.cssBefore.width=0;d.animIn.left=0;d.animOut.width=0};a.fn.cycle.transitions.turnRight=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,false,true);d.animIn.width=c.cycleW;d.animOut.left=b.cycleW});a.extend(d.cssBefore,{top:0,left:0,width:0});d.animIn.left=0;d.animOut.width=0};a.fn.cycle.transitions.zoom=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,false,false,true);d.cssBefore.top=c.cycleH/2;d.cssBefore.left=c.cycleW/2;a.extend(d.animIn,{top:0,left:0,width:c.cycleW,height:c.cycleH});a.extend(d.animOut,{width:0,height:0,top:b.cycleH/2,left:b.cycleW/2})});d.cssFirst.top=0;d.cssFirst.left=0;d.cssBefore.width=0;d.cssBefore.height=0};a.fn.cycle.transitions.fadeZoom=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,false,false);d.cssBefore.left=c.cycleW/2;d.cssBefore.top=c.cycleH/2;a.extend(d.animIn,{top:0,left:0,width:c.cycleW,height:c.cycleH})});d.cssBefore.width=0;d.cssBefore.height=0;d.animOut.opacity=0};a.fn.cycle.transitions.blindX=function(b,c,d){var e=b.css("overflow","hidden").width();d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d);d.animIn.width=c.cycleW;d.animOut.left=b.cycleW});d.cssBefore.left=e;d.cssBefore.top=0;d.animIn.left=0;d.animOut.left=e};a.fn.cycle.transitions.blindY=function(b,c,d){var e=b.css("overflow","hidden").height();d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d);d.animIn.height=c.cycleH;d.animOut.top=b.cycleH});d.cssBefore.top=e;d.cssBefore.left=0;d.animIn.top=0;d.animOut.top=e};a.fn.cycle.transitions.blindZ=function(b,c,d){var e=b.css("overflow","hidden").height();var f=b.width();d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d);d.animIn.height=c.cycleH;d.animOut.top=b.cycleH});d.cssBefore.top=e;d.cssBefore.left=f;d.animIn.top=0;d.animIn.left=0;d.animOut.top=e;d.animOut.left=f};a.fn.cycle.transitions.growX=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,false,true);d.cssBefore.left=this.cycleW/2;d.animIn.left=0;d.animIn.width=this.cycleW;d.animOut.left=0});d.cssBefore.top=0;d.cssBefore.width=0};a.fn.cycle.transitions.growY=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,true,false);d.cssBefore.top=this.cycleH/2;d.animIn.top=0;d.animIn.height=this.cycleH;d.animOut.top=0});d.cssBefore.height=0;d.cssBefore.left=0};a.fn.cycle.transitions.curtainX=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,false,true,true);d.cssBefore.left=c.cycleW/2;d.animIn.left=0;d.animIn.width=this.cycleW;d.animOut.left=b.cycleW/2;d.animOut.width=0});d.cssBefore.top=0;d.cssBefore.width=0};a.fn.cycle.transitions.curtainY=function(b,c,d){d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,true,false,true);d.cssBefore.top=c.cycleH/2;d.animIn.top=0;d.animIn.height=c.cycleH;d.animOut.top=b.cycleH/2;d.animOut.height=0});d.cssBefore.height=0;d.cssBefore.left=0};a.fn.cycle.transitions.cover=function(b,c,d){var e=d.direction||"left";var f=b.css("overflow","hidden").width();var g=b.height();d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d);if(e=="right")d.cssBefore.left=-f;else if(e=="up")d.cssBefore.top=g;else if(e=="down")d.cssBefore.top=-g;else d.cssBefore.left=f});d.animIn.left=0;d.animIn.top=0;d.cssBefore.top=0;d.cssBefore.left=0};a.fn.cycle.transitions.uncover=function(b,c,d){var e=d.direction||"left";var f=b.css("overflow","hidden").width();var g=b.height();d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,true,true,true);if(e=="right")d.animOut.left=f;else if(e=="up")d.animOut.top=-g;else if(e=="down")d.animOut.top=g;else d.animOut.left=-f});d.animIn.left=0;d.animIn.top=0;d.cssBefore.top=0;d.cssBefore.left=0};a.fn.cycle.transitions.toss=function(b,c,d){var e=b.css("overflow","visible").width();var f=b.height();d.before.push(function(b,c,d){a.fn.cycle.commonReset(b,c,d,true,true,true);if(!d.animOut.left&&!d.animOut.top)a.extend(d.animOut,{left:e*2,top:-f/2,opacity:0});else d.animOut.opacity=0});d.cssBefore.left=0;d.cssBefore.top=0;d.animIn.left=0};a.fn.cycle.transitions.wipe=function(b,c,d){var e=b.css("overflow","hidden").width();var f=b.height();d.cssBefore=d.cssBefore||{};var g;if(d.clip){if(/l2r/.test(d.clip))g="rect(0px 0px "+f+"px 0px)";else if(/r2l/.test(d.clip))g="rect(0px "+e+"px "+f+"px "+e+"px)";else if(/t2b/.test(d.clip))g="rect(0px "+e+"px 0px 0px)";else if(/b2t/.test(d.clip))g="rect("+f+"px "+e+"px "+f+"px 0px)";else if(/zoom/.test(d.clip)){var h=parseInt(f/2,10);var i=parseInt(e/2,10);g="rect("+h+"px "+i+"px "+h+"px "+i+"px)"}}d.cssBefore.clip=d.cssBefore.clip||g||"rect(0px 0px 0px 0px)";var j=d.cssBefore.clip.match(/(\d+)/g);var k=parseInt(j[0],10),l=parseInt(j[1],10),m=parseInt(j[2],10),n=parseInt(j[3],10);d.before.push(function(b,c,d){if(b==c)return;var g=a(b),h=a(c);a.fn.cycle.commonReset(b,c,d,true,true,false);d.cssAfter.display="block";var i=1,j=parseInt(d.speedIn/13,10)-1;(function o(){var a=k?k-parseInt(i*(k/j),10):0;var b=n?n-parseInt(i*(n/j),10):0;var c=m<f?m+parseInt(i*((f-m)/j||1),10):f;var d=l<e?l+parseInt(i*((e-l)/j||1),10):e;h.css({clip:"rect("+a+"px "+d+"px "+c+"px "+b+"px)"});i++<=j?setTimeout(o,13):g.css("display","none")})()});a.extend(d.cssBefore,{display:"block",opacity:1,top:0,left:0});d.animIn={left:0};d.animOut={left:0}}})(jQuery)
+/*!
+ * jQuery Cycle Plugin (with Transition Definitions)
+ * Examples and documentation at: http://jquery.malsup.com/cycle/
+ * Copyright (c) 2007-2013 M. Alsup
+ * Version: 3.0.3 (11-JUL-2013)
+ * Dual licensed under the MIT and GPL licenses.
+ * http://jquery.malsup.com/license.html
+ * Requires: jQuery v1.7.1 or later
+ */
+;(function($, undefined) {
+"use strict";
+
+var ver = '3.0.3';
+
+function debug(s) {
+	if ($.fn.cycle.debug)
+		log(s);
+}		
+function log() {
+	/*global console */
+	if (window.console && console.log)
+		console.log('[cycle] ' + Array.prototype.join.call(arguments,' '));
+}
+$.expr[':'].paused = function(el) {
+	return el.cyclePause;
+};
+
+
+// the options arg can be...
+//   a number  - indicates an immediate transition should occur to the given slide index
+//   a string  - 'pause', 'resume', 'toggle', 'next', 'prev', 'stop', 'destroy' or the name of a transition effect (ie, 'fade', 'zoom', etc)
+//   an object - properties to control the slideshow
+//
+// the arg2 arg can be...
+//   the name of an fx (only used in conjunction with a numeric value for 'options')
+//   the value true (only used in first arg == 'resume') and indicates
+//	 that the resume should occur immediately (not wait for next timeout)
+
+$.fn.cycle = function(options, arg2) {
+	var o = { s: this.selector, c: this.context };
+
+	// in 1.3+ we can fix mistakes with the ready state
+	if (this.length === 0 && options != 'stop') {
+		if (!$.isReady && o.s) {
+			log('DOM not ready, queuing slideshow');
+			$(function() {
+				$(o.s,o.c).cycle(options,arg2);
+			});
+			return this;
+		}
+		// is your DOM ready?  http://docs.jquery.com/Tutorials:Introducing_$(document).ready()
+		log('terminating; zero elements found by selector' + ($.isReady ? '' : ' (DOM not ready)'));
+		return this;
+	}
+
+	// iterate the matched nodeset
+	return this.each(function() {
+		var opts = handleArguments(this, options, arg2);
+		if (opts === false)
+			return;
+
+		opts.updateActivePagerLink = opts.updateActivePagerLink || $.fn.cycle.updateActivePagerLink;
+		
+		// stop existing slideshow for this container (if there is one)
+		if (this.cycleTimeout)
+			clearTimeout(this.cycleTimeout);
+		this.cycleTimeout = this.cyclePause = 0;
+		this.cycleStop = 0; // issue #108
+
+		var $cont = $(this);
+		var $slides = opts.slideExpr ? $(opts.slideExpr, this) : $cont.children();
+		var els = $slides.get();
+
+		if (els.length < 2) {
+			log('terminating; too few slides: ' + els.length);
+			return;
+		}
+
+		var opts2 = buildOptions($cont, $slides, els, opts, o);
+		if (opts2 === false)
+			return;
+
+		var startTime = opts2.continuous ? 10 : getTimeout(els[opts2.currSlide], els[opts2.nextSlide], opts2, !opts2.backwards);
+
+		// if it's an auto slideshow, kick it off
+		if (startTime) {
+			startTime += (opts2.delay || 0);
+			if (startTime < 10)
+				startTime = 10;
+			debug('first timeout: ' + startTime);
+			this.cycleTimeout = setTimeout(function(){go(els,opts2,0,!opts.backwards);}, startTime);
+		}
+	});
+};
+
+function triggerPause(cont, byHover, onPager) {
+	var opts = $(cont).data('cycle.opts');
+	if (!opts)
+		return;
+	var paused = !!cont.cyclePause;
+	if (paused && opts.paused)
+		opts.paused(cont, opts, byHover, onPager);
+	else if (!paused && opts.resumed)
+		opts.resumed(cont, opts, byHover, onPager);
+}
+
+// process the args that were passed to the plugin fn
+function handleArguments(cont, options, arg2) {
+	if (cont.cycleStop === undefined)
+		cont.cycleStop = 0;
+	if (options === undefined || options === null)
+		options = {};
+	if (options.constructor == String) {
+		switch(options) {
+		case 'destroy':
+		case 'stop':
+			var opts = $(cont).data('cycle.opts');
+			if (!opts)
+				return false;
+			cont.cycleStop++; // callbacks look for change
+			if (cont.cycleTimeout)
+				clearTimeout(cont.cycleTimeout);
+			cont.cycleTimeout = 0;
+			if (opts.elements)
+				$(opts.elements).stop();
+			$(cont).removeData('cycle.opts');
+			if (options == 'destroy')
+				destroy(cont, opts);
+			return false;
+		case 'toggle':
+			cont.cyclePause = (cont.cyclePause === 1) ? 0 : 1;
+			checkInstantResume(cont.cyclePause, arg2, cont);
+			triggerPause(cont);
+			return false;
+		case 'pause':
+			cont.cyclePause = 1;
+			triggerPause(cont);
+			return false;
+		case 'resume':
+			cont.cyclePause = 0;
+			checkInstantResume(false, arg2, cont);
+			triggerPause(cont);
+			return false;
+		case 'prev':
+		case 'next':
+			opts = $(cont).data('cycle.opts');
+			if (!opts) {
+				log('options not found, "prev/next" ignored');
+				return false;
+			}
+			if (typeof arg2 == 'string') 
+				opts.oneTimeFx = arg2;
+			$.fn.cycle[options](opts);
+			return false;
+		default:
+			options = { fx: options };
+		}
+		return options;
+	}
+	else if (options.constructor == Number) {
+		// go to the requested slide
+		var num = options;
+		options = $(cont).data('cycle.opts');
+		if (!options) {
+			log('options not found, can not advance slide');
+			return false;
+		}
+		if (num < 0 || num >= options.elements.length) {
+			log('invalid slide index: ' + num);
+			return false;
+		}
+		options.nextSlide = num;
+		if (cont.cycleTimeout) {
+			clearTimeout(cont.cycleTimeout);
+			cont.cycleTimeout = 0;
+		}
+		if (typeof arg2 == 'string')
+			options.oneTimeFx = arg2;
+		go(options.elements, options, 1, num >= options.currSlide);
+		return false;
+	}
+	return options;
+	
+	function checkInstantResume(isPaused, arg2, cont) {
+		if (!isPaused && arg2 === true) { // resume now!
+			var options = $(cont).data('cycle.opts');
+			if (!options) {
+				log('options not found, can not resume');
+				return false;
+			}
+			if (cont.cycleTimeout) {
+				clearTimeout(cont.cycleTimeout);
+				cont.cycleTimeout = 0;
+			}
+			go(options.elements, options, 1, !options.backwards);
+		}
+	}
+}
+
+// unbind event handlers
+function destroy(cont, opts) {
+	if (opts.next)
+		$(opts.next).unbind(opts.prevNextEvent);
+	if (opts.prev)
+		$(opts.prev).unbind(opts.prevNextEvent);
+	
+	if (opts.pager || opts.pagerAnchorBuilder)
+		$.each(opts.pagerAnchors || [], function() {
+			this.unbind().remove();
+		});
+	opts.pagerAnchors = null;
+	$(cont).unbind('mouseenter.cycle mouseleave.cycle');
+	if (opts.destroy) // callback
+		opts.destroy(opts);
+}
+
+// one-time initialization
+function buildOptions($cont, $slides, els, options, o) {
+	var startingSlideSpecified;
+	// support metadata plugin (v1.0 and v2.0)
+	var opts = $.extend({}, $.fn.cycle.defaults, options || {}, $.metadata ? $cont.metadata() : $.meta ? $cont.data() : {});
+	var meta = $.isFunction($cont.data) ? $cont.data(opts.metaAttr) : null;
+	if (meta)
+		opts = $.extend(opts, meta);
+	if (opts.autostop)
+		opts.countdown = opts.autostopCount || els.length;
+
+	var cont = $cont[0];
+	$cont.data('cycle.opts', opts);
+	opts.$cont = $cont;
+	opts.stopCount = cont.cycleStop;
+	opts.elements = els;
+	opts.before = opts.before ? [opts.before] : [];
+	opts.after = opts.after ? [opts.after] : [];
+
+	// push some after callbacks
+	if (opts.continuous)
+		opts.after.push(function() { go(els,opts,0,!opts.backwards); });
+
+	saveOriginalOpts(opts);
+
+	// container requires non-static position so that slides can be position within
+	if ($cont.css('position') == 'static')
+		$cont.css('position', 'relative');
+	if (opts.width)
+		$cont.width(opts.width);
+	if (opts.height && opts.height != 'auto')
+		$cont.height(opts.height);
+
+	if (opts.startingSlide !== undefined) {
+		opts.startingSlide = parseInt(opts.startingSlide,10);
+		if (opts.startingSlide >= els.length || opts.startSlide < 0)
+			opts.startingSlide = 0; // catch bogus input
+		else 
+			startingSlideSpecified = true;
+	}
+	else if (opts.backwards)
+		opts.startingSlide = els.length - 1;
+	else
+		opts.startingSlide = 0;
+
+	// if random, mix up the slide array
+	if (opts.random) {
+		opts.randomMap = [];
+		for (var i = 0; i < els.length; i++)
+			opts.randomMap.push(i);
+		opts.randomMap.sort(function(a,b) {return Math.random() - 0.5;});
+		if (startingSlideSpecified) {
+			// try to find the specified starting slide and if found set start slide index in the map accordingly
+			for ( var cnt = 0; cnt < els.length; cnt++ ) {
+				if ( opts.startingSlide == opts.randomMap[cnt] ) {
+					opts.randomIndex = cnt;
+				}
+			}
+		}
+		else {
+			opts.randomIndex = 1;
+			opts.startingSlide = opts.randomMap[1];
+		}
+	}
+	else if (opts.startingSlide >= els.length)
+		opts.startingSlide = 0; // catch bogus input
+	opts.currSlide = opts.startingSlide || 0;
+	var first = opts.startingSlide;
+
+	// set position and zIndex on all the slides
+	$slides.css({position: 'absolute', top:0, left:0}).hide().each(function(i) {
+		var z;
+		if (opts.backwards)
+			z = first ? i <= first ? els.length + (i-first) : first-i : els.length-i;
+		else
+			z = first ? i >= first ? els.length - (i-first) : first-i : els.length-i;
+		$(this).css('z-index', z);
+	});
+
+	// make sure first slide is visible
+	$(els[first]).css('opacity',1).show(); // opacity bit needed to handle restart use case
+
+	// stretch slides
+	if (opts.fit) {
+		if (!opts.aspect) {
+	        if (opts.width)
+	            $slides.width(opts.width);
+	        if (opts.height && opts.height != 'auto')
+	            $slides.height(opts.height);
+		} else {
+			$slides.each(function(){
+				var $slide = $(this);
+				var ratio = (opts.aspect === true) ? $slide.width()/$slide.height() : opts.aspect;
+				if( opts.width && $slide.width() != opts.width ) {
+					$slide.width( opts.width );
+					$slide.height( opts.width / ratio );
+				}
+
+				if( opts.height && $slide.height() < opts.height ) {
+					$slide.height( opts.height );
+					$slide.width( opts.height * ratio );
+				}
+			});
+		}
+	}
+
+	if (opts.center && ((!opts.fit) || opts.aspect)) {
+		$slides.each(function(){
+			var $slide = $(this);
+			$slide.css({
+				"margin-left": opts.width ?
+					((opts.width - $slide.width()) / 2) + "px" :
+					0,
+				"margin-top": opts.height ?
+					((opts.height - $slide.height()) / 2) + "px" :
+					0
+			});
+		});
+	}
+
+	if (opts.center && !opts.fit && !opts.slideResize) {
+		$slides.each(function(){
+			var $slide = $(this);
+			$slide.css({
+				"margin-left": opts.width ? ((opts.width - $slide.width()) / 2) + "px" : 0,
+				"margin-top": opts.height ? ((opts.height - $slide.height()) / 2) + "px" : 0
+			});
+		});
+	}
+		
+	// stretch container
+	var reshape = (opts.containerResize || opts.containerResizeHeight) && $cont.innerHeight() < 1;
+	if (reshape) { // do this only if container has no size http://tinyurl.com/da2oa9
+		var maxw = 0, maxh = 0;
+		for(var j=0; j < els.length; j++) {
+			var $e = $(els[j]), e = $e[0], w = $e.outerWidth(), h = $e.outerHeight();
+			if (!w) w = e.offsetWidth || e.width || $e.attr('width');
+			if (!h) h = e.offsetHeight || e.height || $e.attr('height');
+			maxw = w > maxw ? w : maxw;
+			maxh = h > maxh ? h : maxh;
+		}
+		if (opts.containerResize && maxw > 0 && maxh > 0)
+			$cont.css({width:maxw+'px',height:maxh+'px'});
+		if (opts.containerResizeHeight && maxh > 0)
+			$cont.css({height:maxh+'px'});
+	}
+
+	var pauseFlag = false;  // https://github.com/malsup/cycle/issues/44
+	if (opts.pause)
+		$cont.bind('mouseenter.cycle', function(){
+			pauseFlag = true;
+			this.cyclePause++;
+			triggerPause(cont, true);
+		}).bind('mouseleave.cycle', function(){
+				if (pauseFlag)
+					this.cyclePause--;
+				triggerPause(cont, true);
+		});
+
+	if (supportMultiTransitions(opts) === false)
+		return false;
+
+	// apparently a lot of people use image slideshows without height/width attributes on the images.
+	// Cycle 2.50+ requires the sizing info for every slide; this block tries to deal with that.
+	var requeue = false;
+	options.requeueAttempts = options.requeueAttempts || 0;
+	$slides.each(function() {
+		// try to get height/width of each slide
+		var $el = $(this);
+		this.cycleH = (opts.fit && opts.height) ? opts.height : ($el.height() || this.offsetHeight || this.height || $el.attr('height') || 0);
+		this.cycleW = (opts.fit && opts.width) ? opts.width : ($el.width() || this.offsetWidth || this.width || $el.attr('width') || 0);
+
+		if ( $el.is('img') ) {
+			var loading = (this.cycleH === 0 && this.cycleW === 0 && !this.complete);
+			// don't requeue for images that are still loading but have a valid size
+			if (loading) {
+				if (o.s && opts.requeueOnImageNotLoaded && ++options.requeueAttempts < 100) { // track retry count so we don't loop forever
+					log(options.requeueAttempts,' - img slide not loaded, requeuing slideshow: ', this.src, this.cycleW, this.cycleH);
+					setTimeout(function() {$(o.s,o.c).cycle(options);}, opts.requeueTimeout);
+					requeue = true;
+					return false; // break each loop
+				}
+				else {
+					log('could not determine size of image: '+this.src, this.cycleW, this.cycleH);
+				}
+			}
+		}
+		return true;
+	});
+
+	if (requeue)
+		return false;
+
+	opts.cssBefore = opts.cssBefore || {};
+	opts.cssAfter = opts.cssAfter || {};
+	opts.cssFirst = opts.cssFirst || {};
+	opts.animIn = opts.animIn || {};
+	opts.animOut = opts.animOut || {};
+
+	$slides.not(':eq('+first+')').css(opts.cssBefore);
+	$($slides[first]).css(opts.cssFirst);
+
+	if (opts.timeout) {
+		opts.timeout = parseInt(opts.timeout,10);
+		// ensure that timeout and speed settings are sane
+		if (opts.speed.constructor == String)
+			opts.speed = $.fx.speeds[opts.speed] || parseInt(opts.speed,10);
+		if (!opts.sync)
+			opts.speed = opts.speed / 2;
+		
+		var buffer = opts.fx == 'none' ? 0 : opts.fx == 'shuffle' ? 500 : 250;
+		while((opts.timeout - opts.speed) < buffer) // sanitize timeout
+			opts.timeout += opts.speed;
+	}
+	if (opts.easing)
+		opts.easeIn = opts.easeOut = opts.easing;
+	if (!opts.speedIn)
+		opts.speedIn = opts.speed;
+	if (!opts.speedOut)
+		opts.speedOut = opts.speed;
+
+	opts.slideCount = els.length;
+	opts.currSlide = opts.lastSlide = first;
+	if (opts.random) {
+		if (++opts.randomIndex == els.length)
+			opts.randomIndex = 0;
+		opts.nextSlide = opts.randomMap[opts.randomIndex];
+	}
+	else if (opts.backwards)
+		opts.nextSlide = opts.startingSlide === 0 ? (els.length-1) : opts.startingSlide-1;
+	else
+		opts.nextSlide = opts.startingSlide >= (els.length-1) ? 0 : opts.startingSlide+1;
+
+	// run transition init fn
+	if (!opts.multiFx) {
+		var init = $.fn.cycle.transitions[opts.fx];
+		if ($.isFunction(init))
+			init($cont, $slides, opts);
+		else if (opts.fx != 'custom' && !opts.multiFx) {
+			log('unknown transition: ' + opts.fx,'; slideshow terminating');
+			return false;
+		}
+	}
+
+	// fire artificial events
+	var e0 = $slides[first];
+	if (!opts.skipInitializationCallbacks) {
+		if (opts.before.length)
+			opts.before[0].apply(e0, [e0, e0, opts, true]);
+		if (opts.after.length)
+			opts.after[0].apply(e0, [e0, e0, opts, true]);
+	}
+	if (opts.next)
+		$(opts.next).bind(opts.prevNextEvent,function(){return advance(opts,1);});
+	if (opts.prev)
+		$(opts.prev).bind(opts.prevNextEvent,function(){return advance(opts,0);});
+	if (opts.pager || opts.pagerAnchorBuilder)
+		buildPager(els,opts);
+
+	exposeAddSlide(opts, els);
+
+	return opts;
+}
+
+// save off original opts so we can restore after clearing state
+function saveOriginalOpts(opts) {
+	opts.original = { before: [], after: [] };
+	opts.original.cssBefore = $.extend({}, opts.cssBefore);
+	opts.original.cssAfter  = $.extend({}, opts.cssAfter);
+	opts.original.animIn	= $.extend({}, opts.animIn);
+	opts.original.animOut   = $.extend({}, opts.animOut);
+	$.each(opts.before, function() { opts.original.before.push(this); });
+	$.each(opts.after,  function() { opts.original.after.push(this); });
+}
+
+function supportMultiTransitions(opts) {
+	var i, tx, txs = $.fn.cycle.transitions;
+	// look for multiple effects
+	if (opts.fx.indexOf(',') > 0) {
+		opts.multiFx = true;
+		opts.fxs = opts.fx.replace(/\s*/g,'').split(',');
+		// discard any bogus effect names
+		for (i=0; i < opts.fxs.length; i++) {
+			var fx = opts.fxs[i];
+			tx = txs[fx];
+			if (!tx || !txs.hasOwnProperty(fx) || !$.isFunction(tx)) {
+				log('discarding unknown transition: ',fx);
+				opts.fxs.splice(i,1);
+				i--;
+			}
+		}
+		// if we have an empty list then we threw everything away!
+		if (!opts.fxs.length) {
+			log('No valid transitions named; slideshow terminating.');
+			return false;
+		}
+	}
+	else if (opts.fx == 'all') {  // auto-gen the list of transitions
+		opts.multiFx = true;
+		opts.fxs = [];
+		for (var p in txs) {
+			if (txs.hasOwnProperty(p)) {
+				tx = txs[p];
+				if (txs.hasOwnProperty(p) && $.isFunction(tx))
+					opts.fxs.push(p);
+			}
+		}
+	}
+	if (opts.multiFx && opts.randomizeEffects) {
+		// munge the fxs array to make effect selection random
+		var r1 = Math.floor(Math.random() * 20) + 30;
+		for (i = 0; i < r1; i++) {
+			var r2 = Math.floor(Math.random() * opts.fxs.length);
+			opts.fxs.push(opts.fxs.splice(r2,1)[0]);
+		}
+		debug('randomized fx sequence: ',opts.fxs);
+	}
+	return true;
+}
+
+// provide a mechanism for adding slides after the slideshow has started
+function exposeAddSlide(opts, els) {
+	opts.addSlide = function(newSlide, prepend) {
+		var $s = $(newSlide), s = $s[0];
+		if (!opts.autostopCount)
+			opts.countdown++;
+		els[prepend?'unshift':'push'](s);
+		if (opts.els)
+			opts.els[prepend?'unshift':'push'](s); // shuffle needs this
+		opts.slideCount = els.length;
+
+		// add the slide to the random map and resort
+		if (opts.random) {
+			opts.randomMap.push(opts.slideCount-1);
+			opts.randomMap.sort(function(a,b) {return Math.random() - 0.5;});
+		}
+
+		$s.css('position','absolute');
+		$s[prepend?'prependTo':'appendTo'](opts.$cont);
+
+		if (prepend) {
+			opts.currSlide++;
+			opts.nextSlide++;
+		}
+
+		if (opts.fit && opts.width)
+			$s.width(opts.width);
+		if (opts.fit && opts.height && opts.height != 'auto')
+			$s.height(opts.height);
+		s.cycleH = (opts.fit && opts.height) ? opts.height : $s.height();
+		s.cycleW = (opts.fit && opts.width) ? opts.width : $s.width();
+
+		$s.css(opts.cssBefore);
+
+		if (opts.pager || opts.pagerAnchorBuilder)
+			$.fn.cycle.createPagerAnchor(els.length-1, s, $(opts.pager), els, opts);
+
+		if ($.isFunction(opts.onAddSlide))
+			opts.onAddSlide($s);
+		else
+			$s.hide(); // default behavior
+	};
+}
+
+// reset internal state; we do this on every pass in order to support multiple effects
+$.fn.cycle.resetState = function(opts, fx) {
+	fx = fx || opts.fx;
+	opts.before = []; opts.after = [];
+	opts.cssBefore = $.extend({}, opts.original.cssBefore);
+	opts.cssAfter  = $.extend({}, opts.original.cssAfter);
+	opts.animIn	= $.extend({}, opts.original.animIn);
+	opts.animOut   = $.extend({}, opts.original.animOut);
+	opts.fxFn = null;
+	$.each(opts.original.before, function() { opts.before.push(this); });
+	$.each(opts.original.after,  function() { opts.after.push(this); });
+
+	// re-init
+	var init = $.fn.cycle.transitions[fx];
+	if ($.isFunction(init))
+		init(opts.$cont, $(opts.elements), opts);
+};
+
+// this is the main engine fn, it handles the timeouts, callbacks and slide index mgmt
+function go(els, opts, manual, fwd) {
+	var p = opts.$cont[0], curr = els[opts.currSlide], next = els[opts.nextSlide];
+
+	// opts.busy is true if we're in the middle of an animation
+	if (manual && opts.busy && opts.manualTrump) {
+		// let manual transitions requests trump active ones
+		debug('manualTrump in go(), stopping active transition');
+		$(els).stop(true,true);
+		opts.busy = 0;
+		clearTimeout(p.cycleTimeout);
+	}
+
+	// don't begin another timeout-based transition if there is one active
+	if (opts.busy) {
+		debug('transition active, ignoring new tx request');
+		return;
+	}
+
+
+	// stop cycling if we have an outstanding stop request
+	if (p.cycleStop != opts.stopCount || p.cycleTimeout === 0 && !manual)
+		return;
+
+	// check to see if we should stop cycling based on autostop options
+	if (!manual && !p.cyclePause && !opts.bounce &&
+		((opts.autostop && (--opts.countdown <= 0)) ||
+		(opts.nowrap && !opts.random && opts.nextSlide < opts.currSlide))) {
+		if (opts.end)
+			opts.end(opts);
+		return;
+	}
+
+	// if slideshow is paused, only transition on a manual trigger
+	var changed = false;
+	if ((manual || !p.cyclePause) && (opts.nextSlide != opts.currSlide)) {
+		changed = true;
+		var fx = opts.fx;
+		// keep trying to get the slide size if we don't have it yet
+		curr.cycleH = curr.cycleH || $(curr).height();
+		curr.cycleW = curr.cycleW || $(curr).width();
+		next.cycleH = next.cycleH || $(next).height();
+		next.cycleW = next.cycleW || $(next).width();
+
+		// support multiple transition types
+		if (opts.multiFx) {
+			if (fwd && (opts.lastFx === undefined || ++opts.lastFx >= opts.fxs.length))
+				opts.lastFx = 0;
+			else if (!fwd && (opts.lastFx === undefined || --opts.lastFx < 0))
+				opts.lastFx = opts.fxs.length - 1;
+			fx = opts.fxs[opts.lastFx];
+		}
+
+		// one-time fx overrides apply to:  $('div').cycle(3,'zoom');
+		if (opts.oneTimeFx) {
+			fx = opts.oneTimeFx;
+			opts.oneTimeFx = null;
+		}
+
+		$.fn.cycle.resetState(opts, fx);
+
+		// run the before callbacks
+		if (opts.before.length)
+			$.each(opts.before, function(i,o) {
+				if (p.cycleStop != opts.stopCount) return;
+				o.apply(next, [curr, next, opts, fwd]);
+			});
+
+		// stage the after callacks
+		var after = function() {
+			opts.busy = 0;
+			$.each(opts.after, function(i,o) {
+				if (p.cycleStop != opts.stopCount) return;
+				o.apply(next, [curr, next, opts, fwd]);
+			});
+			if (!p.cycleStop) {
+				// queue next transition
+				queueNext();
+			}
+		};
+
+		debug('tx firing('+fx+'); currSlide: ' + opts.currSlide + '; nextSlide: ' + opts.nextSlide);
+		
+		// get ready to perform the transition
+		opts.busy = 1;
+		if (opts.fxFn) // fx function provided?
+			opts.fxFn(curr, next, opts, after, fwd, manual && opts.fastOnEvent);
+		else if ($.isFunction($.fn.cycle[opts.fx])) // fx plugin ?
+			$.fn.cycle[opts.fx](curr, next, opts, after, fwd, manual && opts.fastOnEvent);
+		else
+			$.fn.cycle.custom(curr, next, opts, after, fwd, manual && opts.fastOnEvent);
+	}
+	else {
+		queueNext();
+	}
+
+	if (changed || opts.nextSlide == opts.currSlide) {
+		// calculate the next slide
+		var roll;
+		opts.lastSlide = opts.currSlide;
+		if (opts.random) {
+			opts.currSlide = opts.nextSlide;
+			if (++opts.randomIndex == els.length) {
+				opts.randomIndex = 0;
+				opts.randomMap.sort(function(a,b) {return Math.random() - 0.5;});
+			}
+			opts.nextSlide = opts.randomMap[opts.randomIndex];
+			if (opts.nextSlide == opts.currSlide)
+				opts.nextSlide = (opts.currSlide == opts.slideCount - 1) ? 0 : opts.currSlide + 1;
+		}
+		else if (opts.backwards) {
+			roll = (opts.nextSlide - 1) < 0;
+			if (roll && opts.bounce) {
+				opts.backwards = !opts.backwards;
+				opts.nextSlide = 1;
+				opts.currSlide = 0;
+			}
+			else {
+				opts.nextSlide = roll ? (els.length-1) : opts.nextSlide-1;
+				opts.currSlide = roll ? 0 : opts.nextSlide+1;
+			}
+		}
+		else { // sequence
+			roll = (opts.nextSlide + 1) == els.length;
+			if (roll && opts.bounce) {
+				opts.backwards = !opts.backwards;
+				opts.nextSlide = els.length-2;
+				opts.currSlide = els.length-1;
+			}
+			else {
+				opts.nextSlide = roll ? 0 : opts.nextSlide+1;
+				opts.currSlide = roll ? els.length-1 : opts.nextSlide-1;
+			}
+		}
+	}
+	if (changed && opts.pager)
+		opts.updateActivePagerLink(opts.pager, opts.currSlide, opts.activePagerClass);
+	
+	function queueNext() {
+		// stage the next transition
+		var ms = 0, timeout = opts.timeout;
+		if (opts.timeout && !opts.continuous) {
+			ms = getTimeout(els[opts.currSlide], els[opts.nextSlide], opts, fwd);
+         if (opts.fx == 'shuffle')
+            ms -= opts.speedOut;
+      }
+		else if (opts.continuous && p.cyclePause) // continuous shows work off an after callback, not this timer logic
+			ms = 10;
+		if (ms > 0)
+			p.cycleTimeout = setTimeout(function(){ go(els, opts, 0, !opts.backwards); }, ms);
+	}
+}
+
+// invoked after transition
+$.fn.cycle.updateActivePagerLink = function(pager, currSlide, clsName) {
+   $(pager).each(function() {
+       $(this).children().removeClass(clsName).eq(currSlide).addClass(clsName);
+   });
+};
+
+// calculate timeout value for current transition
+function getTimeout(curr, next, opts, fwd) {
+	if (opts.timeoutFn) {
+		// call user provided calc fn
+		var t = opts.timeoutFn.call(curr,curr,next,opts,fwd);
+		while (opts.fx != 'none' && (t - opts.speed) < 250) // sanitize timeout
+			t += opts.speed;
+		debug('calculated timeout: ' + t + '; speed: ' + opts.speed);
+		if (t !== false)
+			return t;
+	}
+	return opts.timeout;
+}
+
+// expose next/prev function, caller must pass in state
+$.fn.cycle.next = function(opts) { advance(opts,1); };
+$.fn.cycle.prev = function(opts) { advance(opts,0);};
+
+// advance slide forward or back
+function advance(opts, moveForward) {
+	var val = moveForward ? 1 : -1;
+	var els = opts.elements;
+	var p = opts.$cont[0], timeout = p.cycleTimeout;
+	if (timeout) {
+		clearTimeout(timeout);
+		p.cycleTimeout = 0;
+	}
+	if (opts.random && val < 0) {
+		// move back to the previously display slide
+		opts.randomIndex--;
+		if (--opts.randomIndex == -2)
+			opts.randomIndex = els.length-2;
+		else if (opts.randomIndex == -1)
+			opts.randomIndex = els.length-1;
+		opts.nextSlide = opts.randomMap[opts.randomIndex];
+	}
+	else if (opts.random) {
+		opts.nextSlide = opts.randomMap[opts.randomIndex];
+	}
+	else {
+		opts.nextSlide = opts.currSlide + val;
+		if (opts.nextSlide < 0) {
+			if (opts.nowrap) return false;
+			opts.nextSlide = els.length - 1;
+		}
+		else if (opts.nextSlide >= els.length) {
+			if (opts.nowrap) return false;
+			opts.nextSlide = 0;
+		}
+	}
+
+	var cb = opts.onPrevNextEvent || opts.prevNextClick; // prevNextClick is deprecated
+	if ($.isFunction(cb))
+		cb(val > 0, opts.nextSlide, els[opts.nextSlide]);
+	go(els, opts, 1, moveForward);
+	return false;
+}
+
+function buildPager(els, opts) {
+	var $p = $(opts.pager);
+	$.each(els, function(i,o) {
+		$.fn.cycle.createPagerAnchor(i,o,$p,els,opts);
+	});
+	opts.updateActivePagerLink(opts.pager, opts.startingSlide, opts.activePagerClass);
+}
+
+$.fn.cycle.createPagerAnchor = function(i, el, $p, els, opts) {
+	var a;
+	if ($.isFunction(opts.pagerAnchorBuilder)) {
+		a = opts.pagerAnchorBuilder(i,el);
+		debug('pagerAnchorBuilder('+i+', el) returned: ' + a);
+	}
+	else
+		a = '<a href="#">'+(i+1)+'</a>';
+		
+	if (!a)
+		return;
+	var $a = $(a);
+	// don't reparent if anchor is in the dom
+	if ($a.parents('body').length === 0) {
+		var arr = [];
+		if ($p.length > 1) {
+			$p.each(function() {
+				var $clone = $a.clone(true);
+				$(this).append($clone);
+				arr.push($clone[0]);
+			});
+			$a = $(arr);
+		}
+		else {
+			$a.appendTo($p);
+		}
+	}
+
+	opts.pagerAnchors =  opts.pagerAnchors || [];
+	opts.pagerAnchors.push($a);
+	
+	var pagerFn = function(e) {
+		e.preventDefault();
+		opts.nextSlide = i;
+		var p = opts.$cont[0], timeout = p.cycleTimeout;
+		if (timeout) {
+			clearTimeout(timeout);
+			p.cycleTimeout = 0;
+		}
+		var cb = opts.onPagerEvent || opts.pagerClick; // pagerClick is deprecated
+		if ($.isFunction(cb))
+			cb(opts.nextSlide, els[opts.nextSlide]);
+		go(els,opts,1,opts.currSlide < i); // trigger the trans
+//		return false; // <== allow bubble
+	};
+	
+	if ( /mouseenter|mouseover/i.test(opts.pagerEvent) ) {
+		$a.hover(pagerFn, function(){/* no-op */} );
+	}
+	else {
+		$a.bind(opts.pagerEvent, pagerFn);
+	}
+	
+	if ( ! /^click/.test(opts.pagerEvent) && !opts.allowPagerClickBubble)
+		$a.bind('click.cycle', function(){return false;}); // suppress click
+	
+	var cont = opts.$cont[0];
+	var pauseFlag = false; // https://github.com/malsup/cycle/issues/44
+	if (opts.pauseOnPagerHover) {
+		$a.hover(
+			function() { 
+				pauseFlag = true;
+				cont.cyclePause++; 
+				triggerPause(cont,true,true);
+			}, function() { 
+				if (pauseFlag)
+					cont.cyclePause--; 
+				triggerPause(cont,true,true);
+			} 
+		);
+	}
+};
+
+// helper fn to calculate the number of slides between the current and the next
+$.fn.cycle.hopsFromLast = function(opts, fwd) {
+	var hops, l = opts.lastSlide, c = opts.currSlide;
+	if (fwd)
+		hops = c > l ? c - l : opts.slideCount - l;
+	else
+		hops = c < l ? l - c : l + opts.slideCount - c;
+	return hops;
+};
+
+// fix clearType problems in ie6 by setting an explicit bg color
+// (otherwise text slides look horrible during a fade transition)
+function clearTypeFix($slides) {
+	debug('applying clearType background-color hack');
+	function hex(s) {
+		s = parseInt(s,10).toString(16);
+		return s.length < 2 ? '0'+s : s;
+	}
+	function getBg(e) {
+		for ( ; e && e.nodeName.toLowerCase() != 'html'; e = e.parentNode) {
+			var v = $.css(e,'background-color');
+			if (v && v.indexOf('rgb') >= 0 ) {
+				var rgb = v.match(/\d+/g);
+				return '#'+ hex(rgb[0]) + hex(rgb[1]) + hex(rgb[2]);
+			}
+			if (v && v != 'transparent')
+				return v;
+		}
+		return '#ffffff';
+	}
+	$slides.each(function() { $(this).css('background-color', getBg(this)); });
+}
+
+// reset common props before the next transition
+$.fn.cycle.commonReset = function(curr,next,opts,w,h,rev) {
+	$(opts.elements).not(curr).hide();
+	if (typeof opts.cssBefore.opacity == 'undefined')
+		opts.cssBefore.opacity = 1;
+	opts.cssBefore.display = 'block';
+	if (opts.slideResize && w !== false && next.cycleW > 0)
+		opts.cssBefore.width = next.cycleW;
+	if (opts.slideResize && h !== false && next.cycleH > 0)
+		opts.cssBefore.height = next.cycleH;
+	opts.cssAfter = opts.cssAfter || {};
+	opts.cssAfter.display = 'none';
+	$(curr).css('zIndex',opts.slideCount + (rev === true ? 1 : 0));
+	$(next).css('zIndex',opts.slideCount + (rev === true ? 0 : 1));
+};
+
+// the actual fn for effecting a transition
+$.fn.cycle.custom = function(curr, next, opts, cb, fwd, speedOverride) {
+	var $l = $(curr), $n = $(next);
+	var speedIn = opts.speedIn, speedOut = opts.speedOut, easeIn = opts.easeIn, easeOut = opts.easeOut, animInDelay = opts.animInDelay, animOutDelay = opts.animOutDelay;
+	$n.css(opts.cssBefore);
+	if (speedOverride) {
+		if (typeof speedOverride == 'number')
+			speedIn = speedOut = speedOverride;
+		else
+			speedIn = speedOut = 1;
+		easeIn = easeOut = null;
+	}
+	var fn = function() {
+		$n.delay(animInDelay).animate(opts.animIn, speedIn, easeIn, function() {
+			cb();
+		});
+	};
+	$l.delay(animOutDelay).animate(opts.animOut, speedOut, easeOut, function() {
+		$l.css(opts.cssAfter);
+		if (!opts.sync) 
+			fn();
+	});
+	if (opts.sync) fn();
+};
+
+// transition definitions - only fade is defined here, transition pack defines the rest
+$.fn.cycle.transitions = {
+	fade: function($cont, $slides, opts) {
+		$slides.not(':eq('+opts.currSlide+')').css('opacity',0);
+		opts.before.push(function(curr,next,opts) {
+			$.fn.cycle.commonReset(curr,next,opts);
+			opts.cssBefore.opacity = 0;
+		});
+		opts.animIn	   = { opacity: 1 };
+		opts.animOut   = { opacity: 0 };
+		opts.cssBefore = { top: 0, left: 0 };
+	}
+};
+
+$.fn.cycle.ver = function() { return ver; };
+
+// override these globally if you like (they are all optional)
+$.fn.cycle.defaults = {
+    activePagerClass: 'activeSlide', // class name used for the active pager link
+    after:            null,     // transition callback (scope set to element that was shown):  function(currSlideElement, nextSlideElement, options, forwardFlag)
+    allowPagerClickBubble: false, // allows or prevents click event on pager anchors from bubbling
+    animIn:           null,     // properties that define how the slide animates in
+    animInDelay:      0,        // allows delay before next slide transitions in	
+    animOut:          null,     // properties that define how the slide animates out
+    animOutDelay:     0,        // allows delay before current slide transitions out
+    aspect:           false,    // preserve aspect ratio during fit resizing, cropping if necessary (must be used with fit option)
+    autostop:         0,        // true to end slideshow after X transitions (where X == slide count)
+    autostopCount:    0,        // number of transitions (optionally used with autostop to define X)
+    backwards:        false,    // true to start slideshow at last slide and move backwards through the stack
+    before:           null,     // transition callback (scope set to element to be shown):     function(currSlideElement, nextSlideElement, options, forwardFlag)
+    center:           null,     // set to true to have cycle add top/left margin to each slide (use with width and height options)
+    containerResize:  1,        // resize container to fit largest slide
+    containerResizeHeight:  0,  // resize containers height to fit the largest slide but leave the width dynamic
+    continuous:       0,        // true to start next transition immediately after current one completes
+    cssAfter:         null,     // properties that defined the state of the slide after transitioning out
+    cssBefore:        null,     // properties that define the initial state of the slide before transitioning in
+    delay:            0,        // additional delay (in ms) for first transition (hint: can be negative)
+    easeIn:           null,     // easing for "in" transition
+    easeOut:          null,     // easing for "out" transition
+    easing:           null,     // easing method for both in and out transitions
+    end:              null,     // callback invoked when the slideshow terminates (use with autostop or nowrap options): function(options)
+    fastOnEvent:      0,        // force fast transitions when triggered manually (via pager or prev/next); value == time in ms
+    fit:              0,        // force slides to fit container
+    fx:               'fade',   // name of transition effect (or comma separated names, ex: 'fade,scrollUp,shuffle')
+    fxFn:             null,     // function used to control the transition: function(currSlideElement, nextSlideElement, options, afterCalback, forwardFlag)
+    height:           'auto',   // container height (if the 'fit' option is true, the slides will be set to this height as well)
+    manualTrump:      true,     // causes manual transition to stop an active transition instead of being ignored
+    metaAttr:         'cycle',  // data- attribute that holds the option data for the slideshow
+    next:             null,     // element, jQuery object, or jQuery selector string for the element to use as event trigger for next slide
+    nowrap:           0,        // true to prevent slideshow from wrapping
+    onPagerEvent:     null,     // callback fn for pager events: function(zeroBasedSlideIndex, slideElement)
+    onPrevNextEvent:  null,     // callback fn for prev/next events: function(isNext, zeroBasedSlideIndex, slideElement)
+    pager:            null,     // element, jQuery object, or jQuery selector string for the element to use as pager container
+    pagerAnchorBuilder: null,   // callback fn for building anchor links:  function(index, DOMelement)
+    pagerEvent:       'click.cycle', // name of event which drives the pager navigation
+    pause:            0,        // true to enable "pause on hover"
+    pauseOnPagerHover: 0,       // true to pause when hovering over pager link
+    prev:             null,     // element, jQuery object, or jQuery selector string for the element to use as event trigger for previous slide
+    prevNextEvent:    'click.cycle',// event which drives the manual transition to the previous or next slide
+    random:           0,        // true for random, false for sequence (not applicable to shuffle fx)
+    randomizeEffects: 1,        // valid when multiple effects are used; true to make the effect sequence random
+    requeueOnImageNotLoaded: true, // requeue the slideshow if any image slides are not yet loaded
+    requeueTimeout:   250,      // ms delay for requeue
+    rev:              0,        // causes animations to transition in reverse (for effects that support it such as scrollHorz/scrollVert/shuffle)
+    shuffle:          null,     // coords for shuffle animation, ex: { top:15, left: 200 }
+    skipInitializationCallbacks: false, // set to true to disable the first before/after callback that occurs prior to any transition
+    slideExpr:        null,     // expression for selecting slides (if something other than all children is required)
+    slideResize:      1,        // force slide width/height to fixed size before every transition
+    speed:            1000,     // speed of the transition (any valid fx speed value)
+    speedIn:          null,     // speed of the 'in' transition
+    speedOut:         null,     // speed of the 'out' transition
+    startingSlide:    undefined,// zero-based index of the first slide to be displayed
+    sync:             1,        // true if in/out transitions should occur simultaneously
+    timeout:          4000,     // milliseconds between slide transitions (0 to disable auto advance)
+    timeoutFn:        null,     // callback for determining per-slide timeout value:  function(currSlideElement, nextSlideElement, options, forwardFlag)
+    updateActivePagerLink: null,// callback fn invoked to update the active pager link (adds/removes activePagerClass style)
+    width:            null      // container width (if the 'fit' option is true, the slides will be set to this width as well)
+};
+
+})(jQuery);
+
+
+/*!
+ * jQuery Cycle Plugin Transition Definitions
+ * This script is a plugin for the jQuery Cycle Plugin
+ * Examples and documentation at: http://malsup.com/jquery/cycle/
+ * Copyright (c) 2007-2010 M. Alsup
+ * Version:	 2.73
+ * Dual licensed under the MIT and GPL licenses:
+ * http://www.opensource.org/licenses/mit-license.php
+ * http://www.gnu.org/licenses/gpl.html
+ */
+(function($) {
+"use strict";
+
+//
+// These functions define slide initialization and properties for the named
+// transitions. To save file size feel free to remove any of these that you
+// don't need.
+//
+$.fn.cycle.transitions.none = function($cont, $slides, opts) {
+	opts.fxFn = function(curr,next,opts,after){
+		$(next).show();
+		$(curr).hide();
+		after();
+	};
+};
+
+// not a cross-fade, fadeout only fades out the top slide
+$.fn.cycle.transitions.fadeout = function($cont, $slides, opts) {
+	$slides.not(':eq('+opts.currSlide+')').css({ display: 'block', 'opacity': 1 });
+	opts.before.push(function(curr,next,opts,w,h,rev) {
+		$(curr).css('zIndex',opts.slideCount + (rev !== true ? 1 : 0));
+		$(next).css('zIndex',opts.slideCount + (rev !== true ? 0 : 1));
+	});
+	opts.animIn.opacity = 1;
+	opts.animOut.opacity = 0;
+	opts.cssBefore.opacity = 1;
+	opts.cssBefore.display = 'block';
+	opts.cssAfter.zIndex = 0;
+};
+
+// scrollUp/Down/Left/Right
+$.fn.cycle.transitions.scrollUp = function($cont, $slides, opts) {
+	$cont.css('overflow','hidden');
+	opts.before.push($.fn.cycle.commonReset);
+	var h = $cont.height();
+	opts.cssBefore.top = h;
+	opts.cssBefore.left = 0;
+	opts.cssFirst.top = 0;
+	opts.animIn.top = 0;
+	opts.animOut.top = -h;
+};
+$.fn.cycle.transitions.scrollDown = function($cont, $slides, opts) {
+	$cont.css('overflow','hidden');
+	opts.before.push($.fn.cycle.commonReset);
+	var h = $cont.height();
+	opts.cssFirst.top = 0;
+	opts.cssBefore.top = -h;
+	opts.cssBefore.left = 0;
+	opts.animIn.top = 0;
+	opts.animOut.top = h;
+};
+$.fn.cycle.transitions.scrollLeft = function($cont, $slides, opts) {
+	$cont.css('overflow','hidden');
+	opts.before.push($.fn.cycle.commonReset);
+	var w = $cont.width();
+	opts.cssFirst.left = 0;
+	opts.cssBefore.left = w;
+	opts.cssBefore.top = 0;
+	opts.animIn.left = 0;
+	opts.animOut.left = 0-w;
+};
+$.fn.cycle.transitions.scrollRight = function($cont, $slides, opts) {
+	$cont.css('overflow','hidden');
+	opts.before.push($.fn.cycle.commonReset);
+	var w = $cont.width();
+	opts.cssFirst.left = 0;
+	opts.cssBefore.left = -w;
+	opts.cssBefore.top = 0;
+	opts.animIn.left = 0;
+	opts.animOut.left = w;
+};
+$.fn.cycle.transitions.scrollHorz = function($cont, $slides, opts) {
+	$cont.css('overflow','hidden').width();
+	opts.before.push(function(curr, next, opts, fwd) {
+		if (opts.rev)
+			fwd = !fwd;
+		$.fn.cycle.commonReset(curr,next,opts);
+		opts.cssBefore.left = fwd ? (next.cycleW-1) : (1-next.cycleW);
+		opts.animOut.left = fwd ? -curr.cycleW : curr.cycleW;
+	});
+	opts.cssFirst.left = 0;
+	opts.cssBefore.top = 0;
+	opts.animIn.left = 0;
+	opts.animOut.top = 0;
+};
+$.fn.cycle.transitions.scrollVert = function($cont, $slides, opts) {
+	$cont.css('overflow','hidden');
+	opts.before.push(function(curr, next, opts, fwd) {
+		if (opts.rev)
+			fwd = !fwd;
+		$.fn.cycle.commonReset(curr,next,opts);
+		opts.cssBefore.top = fwd ? (1-next.cycleH) : (next.cycleH-1);
+		opts.animOut.top = fwd ? curr.cycleH : -curr.cycleH;
+	});
+	opts.cssFirst.top = 0;
+	opts.cssBefore.left = 0;
+	opts.animIn.top = 0;
+	opts.animOut.left = 0;
+};
+
+// slideX/slideY
+$.fn.cycle.transitions.slideX = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$(opts.elements).not(curr).hide();
+		$.fn.cycle.commonReset(curr,next,opts,false,true);
+		opts.animIn.width = next.cycleW;
+	});
+	opts.cssBefore.left = 0;
+	opts.cssBefore.top = 0;
+	opts.cssBefore.width = 0;
+	opts.animIn.width = 'show';
+	opts.animOut.width = 0;
+};
+$.fn.cycle.transitions.slideY = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$(opts.elements).not(curr).hide();
+		$.fn.cycle.commonReset(curr,next,opts,true,false);
+		opts.animIn.height = next.cycleH;
+	});
+	opts.cssBefore.left = 0;
+	opts.cssBefore.top = 0;
+	opts.cssBefore.height = 0;
+	opts.animIn.height = 'show';
+	opts.animOut.height = 0;
+};
+
+// shuffle
+$.fn.cycle.transitions.shuffle = function($cont, $slides, opts) {
+	var i, w = $cont.css('overflow', 'visible').width();
+	$slides.css({left: 0, top: 0});
+	opts.before.push(function(curr,next,opts) {
+		$.fn.cycle.commonReset(curr,next,opts,true,true,true);
+	});
+	// only adjust speed once!
+	if (!opts.speedAdjusted) {
+		opts.speed = opts.speed / 2; // shuffle has 2 transitions
+		opts.speedAdjusted = true;
+	}
+	opts.random = 0;
+	opts.shuffle = opts.shuffle || {left:-w, top:15};
+	opts.els = [];
+	for (i=0; i < $slides.length; i++)
+		opts.els.push($slides[i]);
+
+	for (i=0; i < opts.currSlide; i++)
+		opts.els.push(opts.els.shift());
+
+	// custom transition fn (hat tip to Benjamin Sterling for this bit of sweetness!)
+	opts.fxFn = function(curr, next, opts, cb, fwd) {
+		if (opts.rev)
+			fwd = !fwd;
+		var $el = fwd ? $(curr) : $(next);
+		$(next).css(opts.cssBefore);
+		var count = opts.slideCount;
+		$el.animate(opts.shuffle, opts.speedIn, opts.easeIn, function() {
+			var hops = $.fn.cycle.hopsFromLast(opts, fwd);
+			for (var k=0; k < hops; k++) {
+				if (fwd)
+					opts.els.push(opts.els.shift());
+				else
+					opts.els.unshift(opts.els.pop());
+			}
+			if (fwd) {
+				for (var i=0, len=opts.els.length; i < len; i++)
+					$(opts.els[i]).css('z-index', len-i+count);
+			}
+			else {
+				var z = $(curr).css('z-index');
+				$el.css('z-index', parseInt(z,10)+1+count);
+			}
+			$el.animate({left:0, top:0}, opts.speedOut, opts.easeOut, function() {
+				$(fwd ? this : curr).hide();
+				if (cb) cb();
+			});
+		});
+	};
+	$.extend(opts.cssBefore, { display: 'block', opacity: 1, top: 0, left: 0 });
+};
+
+// turnUp/Down/Left/Right
+$.fn.cycle.transitions.turnUp = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,true,false);
+		opts.cssBefore.top = next.cycleH;
+		opts.animIn.height = next.cycleH;
+		opts.animOut.width = next.cycleW;
+	});
+	opts.cssFirst.top = 0;
+	opts.cssBefore.left = 0;
+	opts.cssBefore.height = 0;
+	opts.animIn.top = 0;
+	opts.animOut.height = 0;
+};
+$.fn.cycle.transitions.turnDown = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,true,false);
+		opts.animIn.height = next.cycleH;
+		opts.animOut.top   = curr.cycleH;
+	});
+	opts.cssFirst.top = 0;
+	opts.cssBefore.left = 0;
+	opts.cssBefore.top = 0;
+	opts.cssBefore.height = 0;
+	opts.animOut.height = 0;
+};
+$.fn.cycle.transitions.turnLeft = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,false,true);
+		opts.cssBefore.left = next.cycleW;
+		opts.animIn.width = next.cycleW;
+	});
+	opts.cssBefore.top = 0;
+	opts.cssBefore.width = 0;
+	opts.animIn.left = 0;
+	opts.animOut.width = 0;
+};
+$.fn.cycle.transitions.turnRight = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,false,true);
+		opts.animIn.width = next.cycleW;
+		opts.animOut.left = curr.cycleW;
+	});
+	$.extend(opts.cssBefore, { top: 0, left: 0, width: 0 });
+	opts.animIn.left = 0;
+	opts.animOut.width = 0;
+};
+
+// zoom
+$.fn.cycle.transitions.zoom = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,false,false,true);
+		opts.cssBefore.top = next.cycleH/2;
+		opts.cssBefore.left = next.cycleW/2;
+		$.extend(opts.animIn, { top: 0, left: 0, width: next.cycleW, height: next.cycleH });
+		$.extend(opts.animOut, { width: 0, height: 0, top: curr.cycleH/2, left: curr.cycleW/2 });
+	});
+	opts.cssFirst.top = 0;
+	opts.cssFirst.left = 0;
+	opts.cssBefore.width = 0;
+	opts.cssBefore.height = 0;
+};
+
+// fadeZoom
+$.fn.cycle.transitions.fadeZoom = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,false,false);
+		opts.cssBefore.left = next.cycleW/2;
+		opts.cssBefore.top = next.cycleH/2;
+		$.extend(opts.animIn, { top: 0, left: 0, width: next.cycleW, height: next.cycleH });
+	});
+	opts.cssBefore.width = 0;
+	opts.cssBefore.height = 0;
+	opts.animOut.opacity = 0;
+};
+
+// blindX
+$.fn.cycle.transitions.blindX = function($cont, $slides, opts) {
+	var w = $cont.css('overflow','hidden').width();
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts);
+		opts.animIn.width = next.cycleW;
+		opts.animOut.left   = curr.cycleW;
+	});
+	opts.cssBefore.left = w;
+	opts.cssBefore.top = 0;
+	opts.animIn.left = 0;
+	opts.animOut.left = w;
+};
+// blindY
+$.fn.cycle.transitions.blindY = function($cont, $slides, opts) {
+	var h = $cont.css('overflow','hidden').height();
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts);
+		opts.animIn.height = next.cycleH;
+		opts.animOut.top   = curr.cycleH;
+	});
+	opts.cssBefore.top = h;
+	opts.cssBefore.left = 0;
+	opts.animIn.top = 0;
+	opts.animOut.top = h;
+};
+// blindZ
+$.fn.cycle.transitions.blindZ = function($cont, $slides, opts) {
+	var h = $cont.css('overflow','hidden').height();
+	var w = $cont.width();
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts);
+		opts.animIn.height = next.cycleH;
+		opts.animOut.top   = curr.cycleH;
+	});
+	opts.cssBefore.top = h;
+	opts.cssBefore.left = w;
+	opts.animIn.top = 0;
+	opts.animIn.left = 0;
+	opts.animOut.top = h;
+	opts.animOut.left = w;
+};
+
+// growX - grow horizontally from centered 0 width
+$.fn.cycle.transitions.growX = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,false,true);
+		opts.cssBefore.left = this.cycleW/2;
+		opts.animIn.left = 0;
+		opts.animIn.width = this.cycleW;
+		opts.animOut.left = 0;
+	});
+	opts.cssBefore.top = 0;
+	opts.cssBefore.width = 0;
+};
+// growY - grow vertically from centered 0 height
+$.fn.cycle.transitions.growY = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,true,false);
+		opts.cssBefore.top = this.cycleH/2;
+		opts.animIn.top = 0;
+		opts.animIn.height = this.cycleH;
+		opts.animOut.top = 0;
+	});
+	opts.cssBefore.height = 0;
+	opts.cssBefore.left = 0;
+};
+
+// curtainX - squeeze in both edges horizontally
+$.fn.cycle.transitions.curtainX = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,false,true,true);
+		opts.cssBefore.left = next.cycleW/2;
+		opts.animIn.left = 0;
+		opts.animIn.width = this.cycleW;
+		opts.animOut.left = curr.cycleW/2;
+		opts.animOut.width = 0;
+	});
+	opts.cssBefore.top = 0;
+	opts.cssBefore.width = 0;
+};
+// curtainY - squeeze in both edges vertically
+$.fn.cycle.transitions.curtainY = function($cont, $slides, opts) {
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,true,false,true);
+		opts.cssBefore.top = next.cycleH/2;
+		opts.animIn.top = 0;
+		opts.animIn.height = next.cycleH;
+		opts.animOut.top = curr.cycleH/2;
+		opts.animOut.height = 0;
+	});
+	opts.cssBefore.height = 0;
+	opts.cssBefore.left = 0;
+};
+
+// cover - curr slide covered by next slide
+$.fn.cycle.transitions.cover = function($cont, $slides, opts) {
+	var d = opts.direction || 'left';
+	var w = $cont.css('overflow','hidden').width();
+	var h = $cont.height();
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts);
+		opts.cssAfter.display = '';
+		if (d == 'right')
+			opts.cssBefore.left = -w;
+		else if (d == 'up')
+			opts.cssBefore.top = h;
+		else if (d == 'down')
+			opts.cssBefore.top = -h;
+		else
+			opts.cssBefore.left = w;
+	});
+	opts.animIn.left = 0;
+	opts.animIn.top = 0;
+	opts.cssBefore.top = 0;
+	opts.cssBefore.left = 0;
+};
+
+// uncover - curr slide moves off next slide
+$.fn.cycle.transitions.uncover = function($cont, $slides, opts) {
+	var d = opts.direction || 'left';
+	var w = $cont.css('overflow','hidden').width();
+	var h = $cont.height();
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,true,true,true);
+		if (d == 'right')
+			opts.animOut.left = w;
+		else if (d == 'up')
+			opts.animOut.top = -h;
+		else if (d == 'down')
+			opts.animOut.top = h;
+		else
+			opts.animOut.left = -w;
+	});
+	opts.animIn.left = 0;
+	opts.animIn.top = 0;
+	opts.cssBefore.top = 0;
+	opts.cssBefore.left = 0;
+};
+
+// toss - move top slide and fade away
+$.fn.cycle.transitions.toss = function($cont, $slides, opts) {
+	var w = $cont.css('overflow','visible').width();
+	var h = $cont.height();
+	opts.before.push(function(curr, next, opts) {
+		$.fn.cycle.commonReset(curr,next,opts,true,true,true);
+		// provide default toss settings if animOut not provided
+		if (!opts.animOut.left && !opts.animOut.top)
+			$.extend(opts.animOut, { left: w*2, top: -h/2, opacity: 0 });
+		else
+			opts.animOut.opacity = 0;
+	});
+	opts.cssBefore.left = 0;
+	opts.cssBefore.top = 0;
+	opts.animIn.left = 0;
+};
+
+// wipe - clip animation
+$.fn.cycle.transitions.wipe = function($cont, $slides, opts) {
+	var w = $cont.css('overflow','hidden').width();
+	var h = $cont.height();
+	opts.cssBefore = opts.cssBefore || {};
+	var clip;
+	if (opts.clip) {
+		if (/l2r/.test(opts.clip))
+			clip = 'rect(0px 0px '+h+'px 0px)';
+		else if (/r2l/.test(opts.clip))
+			clip = 'rect(0px '+w+'px '+h+'px '+w+'px)';
+		else if (/t2b/.test(opts.clip))
+			clip = 'rect(0px '+w+'px 0px 0px)';
+		else if (/b2t/.test(opts.clip))
+			clip = 'rect('+h+'px '+w+'px '+h+'px 0px)';
+		else if (/zoom/.test(opts.clip)) {
+			var top = parseInt(h/2,10);
+			var left = parseInt(w/2,10);
+			clip = 'rect('+top+'px '+left+'px '+top+'px '+left+'px)';
+		}
+	}
+
+	opts.cssBefore.clip = opts.cssBefore.clip || clip || 'rect(0px 0px 0px 0px)';
+
+	var d = opts.cssBefore.clip.match(/(\d+)/g);
+	var t = parseInt(d[0],10), r = parseInt(d[1],10), b = parseInt(d[2],10), l = parseInt(d[3],10);
+
+	opts.before.push(function(curr, next, opts) {
+		if (curr == next) return;
+		var $curr = $(curr), $next = $(next);
+		$.fn.cycle.commonReset(curr,next,opts,true,true,false);
+		opts.cssAfter.display = 'block';
+
+		var step = 1, count = parseInt((opts.speedIn / 13),10) - 1;
+		(function f() {
+			var tt = t ? t - parseInt(step * (t/count),10) : 0;
+			var ll = l ? l - parseInt(step * (l/count),10) : 0;
+			var bb = b < h ? b + parseInt(step * ((h-b)/count || 1),10) : h;
+			var rr = r < w ? r + parseInt(step * ((w-r)/count || 1),10) : w;
+			$next.css({ clip: 'rect('+tt+'px '+rr+'px '+bb+'px '+ll+'px)' });
+			(step++ <= count) ? setTimeout(f, 13) : $curr.css('display', 'none');
+		})();
+	});
+	$.extend(opts.cssBefore, { display: 'block', opacity: 1, top: 0, left: 0 });
+	opts.animIn	   = { left: 0 };
+	opts.animOut   = { left: 0 };
+};
+
+})(jQuery);

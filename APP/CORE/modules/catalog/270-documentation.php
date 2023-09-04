@@ -39,8 +39,7 @@ class documentation extends base_module {
 			],
 			'module_var' => 'id',
 			'module_query' => function($arr_result) {
-				
-				return '/'.$arr_result['extra_values'][DB::getTable('TABLE_DOCUMENTATION_SECTIONS')]['documentation_section_id'].'/'.$arr_result['extra_values'][DB::getTable('TABLE_DOCUMENTATION_SECTIONS')]['documentation_section_name'];
+				return $arr_result['extra_values'][DB::getTable('TABLE_DOCUMENTATION_SECTIONS')]['documentation_section_id'].'/'.$arr_result['extra_values'][DB::getTable('TABLE_DOCUMENTATION_SECTIONS')]['documentation_section_name'];
 			}
 		];
 	}
@@ -60,7 +59,7 @@ class documentation extends base_module {
 				
 				$arr_documentation_overview_vars = documentation_overview::findMainDocumentationOverview($documentation_id);
 				
-				Response::location(SiteStartVars::getPageUrl($arr_documentation_overview_vars['page_name'], $arr_documentation_overview_vars['sub_dir']));
+				Response::location(SiteStartVars::getPageURL($arr_documentation_overview_vars['page_name'], $arr_documentation_overview_vars['sub_dir']));
 			}
 			
 			$return = $this->createDocumentationSection($arr_documentation_section);		
@@ -83,7 +82,7 @@ class documentation extends base_module {
 		$documentation_section_id = $arr_documentation_section['id'];
 
 		$arr_documentation = cms_documentations::getDocumentations($documentation_id);
-		$arr_documentation_sections = cms_documentation_sections::getDocumentationSections($documentation_id, false, ['meta_data' => true, 'published' => true]);
+		$arr_documentation_sections = cms_documentation_sections::getDocumentationSections($documentation_id, false, true, ['meta_data' => true]);
 		
 		$arr_documentation_section_ids = array_keys($arr_documentation_sections);
 		
@@ -97,7 +96,7 @@ class documentation extends base_module {
 		
 		$arr_documentation_overview_vars = documentation_overview::findMainDocumentationOverview($documentation_id);
 		
-		$str_url_documentation = SiteStartVars::getShortestModUrl($this->mod_id, false, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root'], 0, true);
+		$str_url_documentation = SiteStartVars::getShortestModuleURL($this->mod_id, false, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root'], 0, true);
 		$str_url_section = $str_url_documentation.$arr_documentation_section['id'].'/'.$arr_documentation_section['name'];
 		
 		cms_documentation_sections::loadTextTags($documentation_id, $documentation_section_id, $this->arr_mod);
@@ -105,9 +104,9 @@ class documentation extends base_module {
 		$body = parseBody($arr_documentation_section['body']);
 		
 		$return = '<nav class="breadcrumbs">'
-			.'<a href="'.SiteStartVars::getPageUrl($arr_documentation_overview_vars['page_name'], $arr_documentation_overview_vars['sub_dir']).'">'.strEscapeHTML(Labels::parseTextVariables($arr_documentation['name'])).'</a>'
+			.'<a href="'.SiteStartVars::getPageURL($arr_documentation_overview_vars['page_name'], $arr_documentation_overview_vars['sub_dir']).'"><span>'.strEscapeHTML(Labels::parseTextVariables($arr_documentation['name'])).'</span></a>'
 			.$this->createDocumentationSectionBreadcrumb($documentation_section_id, $arr_documentation_sections)
-			.'<a href="'.$str_url_section.'"><span class="icon">'.getIcon('next').'</span>'.$str_title.'</a>'
+			.'<a href="'.$str_url_section.'"><span class="icon">'.getIcon('next').'</span><span>'.$str_title.'</span></a>'
 		.'</nav>'
 		.'<article>'
 			.'<h1>'.$str_title.'</h1>'
@@ -145,7 +144,7 @@ class documentation extends base_module {
 	
 	private function createDocumentationSectionLink($arr_documentation_section, $icon_left = false, $icon_right = false) {
 		
-		$url_documentation = SiteStartVars::getModUrl($this->mod_id, false, 0, true);
+		$url_documentation = SiteStartVars::getModuleURL($this->mod_id, false, 0, true);
 		$url_section = $url_documentation.$arr_documentation_section['id'].'/'.$arr_documentation_section['name'];
 		
 		$html = '<a href="'.$url_section.'">'
@@ -161,7 +160,10 @@ class documentation extends base_module {
 	
 		$return = '
 				.documentation > nav.breadcrumbs > a > span.icon { padding: 0 5px;  }
-				.documentation > nav.breadcrumbs > a > span.icon > svg { height: 10px; }		
+				.documentation > nav.breadcrumbs > a > span.icon > svg { height: 10px; }
+				.documentation > nav.breadcrumbs > a > span:not(.icon) { vertical-align: middle; }
+				.documentation > nav.breadcrumbs > a:hover { text-decoration: none; }
+				.documentation > nav.breadcrumbs > a:hover > span:not(.icon) { text-decoration: underline; }
 				.documentation > nav.nextprev { display: flex; justify-content: space-between; margin-top: 40px; }
 				.documentation > nav.nextprev a > span:not(.icon) { vertical-align: middle; }
 				.documentation > nav.nextprev a > span.icon svg { height: 0.8em; }
@@ -185,9 +187,9 @@ class documentation extends base_module {
 	public static function findMainDocumentation($id = 0) {
 		
 		if ($id) {
-			return pages::getClosestMod('documentation', 0, 0, 0, $id, 'id');
+			return pages::getClosestModule('documentation', 0, 0, 0, $id, 'id');
 		} else {
-			return pages::getClosestMod('documentation', SiteStartVars::$dir['id'], SiteStartVars::$page['id'], 0, $id, 'id');
+			return pages::getClosestModule('documentation', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'), 0, $id, 'id');
 		}
 	}
 }

@@ -17,10 +17,42 @@ class cms_documentation_sections extends base_module {
 	}
 	
 	public static function mediaLocations() {
+		
 		return [
 			'TABLE_DOCUMENTATION_SECTIONS' => [
 				'body'
 			]
+		];
+	}
+	
+	public static function webLocations() {
+		
+		return [
+			'name' => 'documentations',
+			'entries' => function() {
+				
+				$arr_documentations = cms_documentations::getDocumentations();
+
+				foreach ($arr_documentations as $arr_documentation) {
+					
+					$arr_link = cms_documentations::findMainDocumentation($arr_documentation['id']);
+					
+					if (!$arr_link || $arr_link['require_login']) {
+						continue;
+					}
+					
+					$str_location_base = pages::getModuleURL($arr_link, true);
+					
+					$arr_documentation_sections = static::getDocumentationSections($arr_documentation['id'], false, true);
+					
+					foreach ($arr_documentation_sections as $arr_documentation_section) {
+							
+						$str_location = $str_location_base.$arr_documentation_section['id'].'/'.$arr_documentation_section['name'];
+						
+						yield $str_location;
+					}
+				}
+			}
 		];
 	}
 	
@@ -37,9 +69,8 @@ class cms_documentation_sections extends base_module {
 			if (!$arr_documentations) {
 			
 				Labels::setVariable('name', getLabel('lbl_documentations'));
-				$msg = getLabel('msg_no', 'L', true);
 					
-				$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+				$return .= '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 			} else {
 			
 				$return .= '<div id="tabs-documentations">
@@ -71,9 +102,8 @@ class cms_documentation_sections extends base_module {
 		if (!$arr_documentation_sections) {
 			
 			Labels::setVariable('name', getLabel('lbl_documentation_sections'));
-			$msg = getLabel('msg_no', 'L', true);
-				
-			return '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+
+			return '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 		}
 		
 		$arr_top_level_documentation_section_ids = [];
@@ -492,7 +522,7 @@ class cms_documentation_sections extends base_module {
 		}
 	}
 	
-	public static function getDocumentationSections($documentation_id, $documentation_section_id = 0, $arr_options = []) {
+	public static function getDocumentationSections($documentation_id, $documentation_section_id = 0, $is_published = null, $arr_options = []) {
 	
 		$arr_documentation_sections = [];
 
@@ -502,7 +532,7 @@ class cms_documentation_sections extends base_module {
 			WHERE 
 				ds.documentation_id = ".(int)$documentation_id."
 				".($documentation_section_id ? "AND ds.id = ".(int)$documentation_section_id : "")."
-				".($arr_options['published'] ? "AND ds.publish = TRUE" : "")."
+				".($is_published !== null ? "AND ds.publish = ".($is_published ? 'TRUE' : 'FALSE') : '')."
 			ORDER BY ds.sort
 		");
 							
@@ -592,7 +622,7 @@ class cms_documentation_sections extends base_module {
 		$arr_documentation_sections = static::getDocumentationSections($documentation_id);
 		$arr_documentation_section = $arr_documentation_sections[$documentation_section_id];
 		
-		$str_url_documentation = SiteStartVars::getShortestModUrl($arr_mod['id'], false, $arr_mod['shortcut'], $arr_mod['shortcut_root'], 0, true);
+		$str_url_documentation = SiteStartVars::getShortestModuleURL($arr_mod['id'], false, $arr_mod['shortcut'], $arr_mod['shortcut_root'], 0, true);
 		
 		$url_section = $str_url_documentation.$arr_documentation_section['id'].'/'.$arr_documentation_section['name'];
 		Labels::setVariable('url_documentation', $str_url_documentation);
@@ -617,12 +647,12 @@ class cms_documentation_sections extends base_module {
 				if ($use_documentation_id) {
 
 					$arr_mod_external = documentation::findMainDocumentation($use_documentation_id);
-					$str_url_documentation = SiteStartVars::getModUrl($arr_mod_external['id'], $arr_mod_external['page_name'], $arr_mod_external['sub_dir'], true); // Make sure to not use shortcut URLs
+					$str_url_documentation = SiteStartVars::getModuleURL($arr_mod_external['id'], $arr_mod_external['page_name'], $arr_mod_external['sub_dir'], true); // Make sure to not use shortcut URLs
 					
 					$arr_documentation_sections = static::getDocumentationSections($use_documentation_id);
 				} else if ($use_documentation_section_id != $documentation_section_id) {
 					
-					$str_url_documentation = SiteStartVars::getModUrl($arr_mod['id'], false, 0, true); // Make sure to not use shortcut URLs
+					$str_url_documentation = SiteStartVars::getModuleURL($arr_mod['id'], false, 0, true); // Make sure to not use shortcut URLs
 				}
 				
 				$arr_use_documentation_section = $arr_documentation_sections[$use_documentation_section_id];

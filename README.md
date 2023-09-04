@@ -83,7 +83,7 @@ To make use of the 1100CC mailing features it is recommended to setup a mailserv
 
 ### Client
 
-Any modern HTML5 browser will do: Firefox, Chrome, IE 11, Edge, Safari.
+Any modern HTML5 browser will do: Firefox, Chrome, Edge, Safari.
 
 ## Installation
 

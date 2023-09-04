@@ -175,7 +175,7 @@ class Response {
 		ob_flush();
 		flush();
 	}
-		
+			
 	public static function stop($index, $dynamic) {
 					
 		self::$response_sent++;
@@ -378,10 +378,14 @@ class Response {
 		return self::$format;
 	}
 	
-	public static function holdFormat($do_hold = false) { // Store and release format
+	public static function holdFormat($do_hold = false) { // Quick store and release of format
 		
 		if ($do_hold) {
 			
+			if (self::$format_hold !== null && self::$format_hold != self::$format) {
+				error('Already holding response format.');
+			}
+
 			self::$format_hold = self::$format;
 		} else if (self::$format_hold !== null) {
 			
@@ -688,7 +692,7 @@ class Response {
 			if ($arr_options['regex']) {
 				
 				$arr_regex = $arr_options['regex'];
-				$str = preg_replace('/'.$arr_regex['pattern'].'/'.$arr_regex['flags'], $arr_regex['template'], $str);
+				$str = strRegularExpression($str, $arr_regex['pattern'], $arr_regex['flags'], $arr_regex['template']);
 			}
 			
 			$str = self::encode($str);
@@ -713,13 +717,17 @@ class Response {
 	}
 	
 	public static function sendHeaders() {
-	
+		
+		SiteEndVars::checkRequestPolicy();
+		
 		foreach (static::$arr_headers as $header) {
 			header($header);
 		}
 	}
 	
 	public static function sendFileHeaders($file, $download = true, $arr_headers = []) {
+		
+		static::sendHeaders();
 		
 		if ($file) {
 			
@@ -799,7 +807,7 @@ class Response {
 				}
 								
 				$JSON = (object)[];
-				$JSON->location = ['reload' => true, 'url' => $url];
+				$JSON->location = ['reload' => true, 'real' => $url];
 				$JSON = Log::addToObj($JSON);
 				
 				return $JSON;

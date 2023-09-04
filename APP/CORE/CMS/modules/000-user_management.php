@@ -455,14 +455,14 @@ class user_management extends base_module {
 		return $arr;
 	}
 	
-	public static function filterUsers($value, $arr_options = [], $limit = 20) {
+	public static function filterUsers($value, $arr_options = [], $num_limit = 20) {
 			
 		$arr = [];
 		
 		$arr_limit = [];
 		if ($arr_options['group_id']) {
 			if (is_array($arr_options['group_id'])) {
-				$arr_limit[] = "u.group_id IN (".implode(",", arrParseRecursive($arr_options['group_id'], 'int')).")";
+				$arr_limit[] = "u.group_id IN (".implode(",", arrParseRecursive($arr_options['group_id'], TYPE_INTEGER)).")";
 			} else {
 				$arr_limit[] = "u.group_id = ".(int)$arr_options['group_id'];
 			}
@@ -484,7 +484,7 @@ class user_management extends base_module {
 		} else {
 			$enabled = "u.enabled = TRUE";
 		}
-		$operator = ($arr_options['reduce'] ? ' AND ' : ' OR ');
+		$sql_operator = ($arr_options['reduce'] ? ' AND ' : ' OR ');
 		
 		if ($value) {
 			if ($arr_options['exact']) {
@@ -499,10 +499,10 @@ class user_management extends base_module {
 				FROM ".DB::getTable('TABLE_USERS')." u
 			WHERE ".($enabled ?: "TRUE")."
 				".($value ? "AND ".$sql_value : "")."
-				".($arr_limit ? "AND (".implode($operator, $arr_limit).")" : "")."
+				".($arr_limit ? "AND (".implode($sql_operator, $arr_limit).")" : "")."
 				".($arr_options['arr_filter'] ? "AND u.id IN (".implode(",", $arr_options['arr_filter']).")" : "")."
 			ORDER BY u.name
-			".($limit ? "LIMIT ".$limit : "")
+			".($num_limit ? "LIMIT ".(int)$num_limit : "")
 		);
 	
 		while ($arr_row = $res->fetchAssoc()) {
@@ -587,12 +587,12 @@ class user_management extends base_module {
 		Labels::setVariable('domain', $arr['domain']);
 		Labels::setVariable('user_name', $arr['uname']);
 		
-		$arr_mod = pages::getClosestMod('login', 0, 0, $arr['group_id']);
+		$arr_mod = pages::getClosestModule('login', 0, 0, $arr['group_id']);
 		
 		if ($arr['passkey']) { // Possibility to set password
-			$str_url = pages::getModUrl($arr_mod).'welcome/'.$id.'/'.$arr['passkey'];
+			$str_url = pages::getModuleURL($arr_mod).'welcome/'.$id.'/'.$arr['passkey'];
 		} else {
-			$str_url = pages::getPageUrl($arr_mod);
+			$str_url = pages::getPageURL($arr_mod);
 		}
 		
 		Labels::setVariable('url', $str_url);

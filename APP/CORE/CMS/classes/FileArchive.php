@@ -11,8 +11,13 @@ class FileArchive {
 
 	protected $str_path = false;
 	protected $zip = false;
-	protected $num_count_add = 1;
 	protected $mode_zip = null;
+	
+	protected $num_count_files = 0;
+	protected $num_count_memory = 0;
+	protected $func_update = null;
+	
+	const NUM_OPEN_FILES = 100;
 
 	public function __construct($str_path = false, $arr_contents = []) {
 		
@@ -24,16 +29,18 @@ class FileArchive {
 				error('Missing file.');
 			}
 			
-			$this->str_path = tempnam(Settings::get('path_temporary'), '1100CC');
+			$this->str_path = getPathTemporary();
+			$mode_zip_init = ZipArchive::OVERWRITE;
 			$this->mode_zip = ZipArchive::CREATE;
 		} else {
 			
 			$this->str_path = $str_path;
-			$this->mode_zip = ($do_read_only ? ZipArchive::RDONLY : ZipArchive::CREATE);
+			$mode_zip_init = ($do_read_only ? ZipArchive::RDONLY : ZipArchive::CREATE);
+			$this->mode_zip = $mode_zip_init;
 		}
 		
 		$this->zip = new ZipArchive();			
-		$this->zip->open($this->str_path, $this->mode_zip);
+		$this->zip->open($this->str_path, $mode_zip_init);
 		
 		$this->zip->close();
 		
@@ -48,21 +55,22 @@ class FileArchive {
 		$this->zip->open($this->str_path, $this->mode_zip);
 		
 		foreach ($arr_contents as $filename => $content) { // Filename in zip => file/dir/memory
-	
-			// Prevent OS max opened file limit
-			if ($this->num_count_add % 100 == 0) {
+			
+			if ($this->num_count_files != 0 && $this->num_count_files % static::NUM_OPEN_FILES == 0) { // Prevent OS max opened file limit
+				
 				$this->zip->close();
 				$this->zip->open($this->str_path, $this->mode_zip);
 			}
 			
 			try {
+				
 				$is_file = is_file($content);
 			} catch (Exception $e) { }
 			
 			if ($is_file) {
 		
 				$this->zip->addFile($content, $filename); // File
-				$this->num_count_add++;
+				$this->updateStatistics();
 			} else {
 				
 				try {
@@ -81,17 +89,44 @@ class FileArchive {
 						if ($file->isFile()) {
 							
 							$this->zip->addFile($file->getPathname(), $filename.substr($file->getPathname(), strlen($str_path))); // Directory
-							$this->num_count_add++;
+							$this->updateStatistics();
 						}
 					}
 				} else {
 			
 					$this->zip->addFromString($filename, $content); // Memory
+					$this->updateStatistics(true);
 				}
 			}
 		}
 		
 		$this->zip->close();
+	}
+		
+	protected function updateStatistics($is_memory = false) {
+		
+		if ($is_memory) {
+			$this->num_count_memory++;
+		} else {
+			$this->num_count_files++;
+		}
+		
+		if ($this->func_update) {
+			
+			$num_total = ($this->num_count_files + $this->num_count_memory);
+			
+			$func = $this->func_update;
+			$func($num_total);
+		}
+	}
+	
+	public function getStatistics($func = false) {
+		
+		if ($func) {
+			$this->func_update = $func;
+		}
+		
+		return ($this->num_count_files + $this->num_count_memory);
 	}
 	
 	public function iterate() {

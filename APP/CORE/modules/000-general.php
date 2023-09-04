@@ -27,7 +27,7 @@ class general extends base_module {
 			$arr_label = cms_labels::getLabel($label, 'user', $user_id);
 		} else {
 			$label = $label_default;
-			$arr_label[SiteStartVars::$language] = $str;
+			$arr_label[SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)] = $str;
 		}
 		
 		$return = '<div class="tabs">

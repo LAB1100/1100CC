@@ -58,6 +58,7 @@ class cms_jobs extends base_module {
 					<th><span>'.getLabel('lbl_timing').'</span></th>
 					<th class="limit"><span>'.getLabel('lbl_executed').'</span></th>
 					<th class="limit"><span>'.getLabel('lbl_running').'</span></th>
+					<th></th>
 				</tr>
 			</thead>
 			<tbody>';
@@ -121,19 +122,18 @@ class cms_jobs extends base_module {
 					$(html).find('> tbody > tr').each(function() {
 					
 						var cur = $(this);
-						var target = elm_table.children('tr[id=\"'+cur.attr('id')+'\"]');
+						var elm_target = elm_table.children('tr[id=\"'+cur.attr('id')+'\"]');
 						
-						if (target.length) {
+						if (elm_target.length) {
 						
-							elm_tds = cur.children('td');
+							elms_td = cur.children('td');
 							
-							var count = 2;
-							target.children('td:gt('+count+')').each(function() {
-							
-								var elm_td = $(this);
-								elm_td.replaceWith(elm_tds.eq(count+1));
+							var num_count = 2;
+							elm_target.children('td:gt('+num_count+')').each(function() {
+
+								this.innerHTML = elms_td[num_count+1].innerHTML;
 								
-								count++;
+								num_count++;
 							});
 						} else {
 						
@@ -320,17 +320,17 @@ class cms_jobs extends base_module {
 			WHERE j.module = '".DBFunctions::strEscape($module)."' AND j.method = '".DBFunctions::strEscape($method)."'
 		");
 		
-		$row = $res->fetchAssoc();
+		$arr_row = $res->fetchAssoc();
 		
-		if (!$row) {
+		if (!$arr_row) {
 			
 			return false;
 		} else {
 		
-			$arr = json_decode($row['options'], true);
-			$arr['process_id'] = $row['process_id'];
+			$arr = JSON2Value($arr_row['options']);
+			$arr['process_id'] = $arr_row['process_id'];
 			$arr['date_executed'] = [
-				'previous' => $row['date_executed'],
+				'previous' => $arr_row['date_executed'],
 				'now' => false
 			];
 

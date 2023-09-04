@@ -54,7 +54,7 @@ class intf_user_groups extends user_groups {
 							
 							$arr_directories = [];
 							
-							foreach (explode(',', $row['directories']) as $id) {
+							foreach (str2Array($row['directories'], ',') as $id) {
 								
 								$arr_dir = directories::getDirectories($id);
 								

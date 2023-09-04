@@ -573,6 +573,6 @@ class messaging extends base_module {
 		
 	public static function findMessaging() {
 	
-		return pages::getClosestMod('messaging', SiteStartVars::$dir['id'], SiteStartVars::$page['id']);
+		return pages::getClosestModule('messaging', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
 	}
 }

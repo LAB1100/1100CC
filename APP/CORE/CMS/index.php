@@ -28,14 +28,16 @@
 		}
 
 		$_SERVER['SITE_NAME'] = $arr_signature[0];
-		$_SERVER['SERVER_NAME_1100CC'] = ($arr_signature[1] ?? null);
-		$_SERVER['SERVER_NAME_CUSTOM'] = ($arr_signature[2] ?? null);
-		$_SERVER['SERVER_NAME_SUB'] = ($arr_signature[3] ?? null);
+		$_SERVER['SERVER_NAME_1100CC'] = ($arr_signature[1] ?? '');
+		$_SERVER['SERVER_NAME_SITE_NAME'] = ($arr_signature[6] ?? $_SERVER['SERVER_NAME_1100CC']);
+		$_SERVER['SERVER_NAME_MODIFIER'] = ($arr_signature[7] ?? '');
+		$_SERVER['SERVER_NAME_CUSTOM'] = ($arr_signature[2] ?? '');
+		$_SERVER['SERVER_NAME_SUB'] = ($arr_signature[3] ?? '');
 		$_SERVER['SERVER_SCHEME'] = ($arr_signature[4] ?? null);
 		$_SERVER['STATE'] = ($arr_signature[5] ?? null);
-		
+
 		$_SERVER['PATH_INFO'] = '/';
-		$_SERVER['IF_CMS_PATH'] = true;
+		$_SERVER['PATH_CMS'] = true;
 		
 	} else if (!isset($_SERVER['SITE_NAME'])) { // Cleanup server variables when applicable, depends on host
 		
@@ -55,8 +57,7 @@
 			$json = file_get_contents('php://input');
 			
 			if ($json) {
-				$arr = JSON2Value($json);
-				$_POST = $arr;
+				$_POST = JSON2Value($json);
 			}
 		} else if (!empty($_POST['json'])) { // Posted data in serialized format, check for JSON data
 			
@@ -66,6 +67,7 @@
 			foreach ($arr as $key => $value) {
 				$_POST[$key] = $value;
 			}
+			unset($arr);
 		}
 	}
 	
@@ -98,17 +100,16 @@
 	}
 	
 	// Prepare
-	SiteStartVars::$arr_cms_vars = $arr_path_info;
-	
-	SiteStartVars::$arr_modules = getModules();
+	SiteStartVars::setRequestVariables($arr_path_info);
+	SiteStartVars::setModules(getModules());
 	
 	DB::setConnection(DB::CONNECT_HOME);
 	
 	Labels::setSystemLabels();
 	
 	// Sytem Language
-	$arr_lang_default = cms_language::getDefaultLanguage();
-	SiteStartVars::$language = $arr_lang_default['lang_code'];
+	$arr_language_default = cms_language::getDefaultLanguage();
+	SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $arr_language_default['lang_code']);
 	
 	// Async		
 	if ($run_module && $run_method) {
@@ -124,18 +125,18 @@
 	if ($str_path_start == 'combine') {
 
 		require('core_combine.php');
-		SiteStartVars::setJSCSS();
+		SiteStartVars::setMaterial();
 		
 		$type = ($arr_path_info[2] ?? '');
 		
-		if ($type != 'js' && $type != 'css') {
+		if ($type != SiteStartVars::MATERIAL_JS && $type != SiteStartVars::MATERIAL_CSS) {
 			pages::noPage(true);
 		}
 		
-		$arr_modules = SiteStartVars::$arr_modules;
+		$arr_modules = SiteStartVars::getModules();
 		$ie_tag = ($arr_path_info[3] ?? '');
 
-		CombineJSCSS::combine(SiteStartVars::$js_css[$type], $arr_modules, $type, $ie_tag);
+		CombineJSCSS::combine(SiteStartVars::getMaterial($type), $arr_modules, $type, $ie_tag);
 		
 		exit;
 	} else if ($str_path_start == 'cache') {
@@ -170,7 +171,7 @@
 	
 	// Virtual path
 	if ($str_path_start == 'commands') {
-		$_SERVER['PATH_VIRTUAL'] = '/'.$_POST['module'].'/';
+		$_SERVER['PATH_VIRTUAL'] = '/'.($_POST['module'] ?? $_POST['multi'][0]['module']).'/';
 	}
 	
 	// Login
@@ -182,9 +183,9 @@
 
 	// Language
 	if (!empty($_SESSION['LANGUAGE_SYSTEM'])) {
-		SiteStartVars::$language = $_SESSION['LANGUAGE_SYSTEM'];
+		SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE_SYSTEM']);
 	} else if (!empty($_SESSION['CUR_USER']['lang_code'])) {
-		SiteStartVars::$language = $_SESSION['CUR_USER']['lang_code'];
+		SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $_SESSION['CUR_USER']['lang_code']);
 	}
 	
 	// Return page
@@ -222,7 +223,7 @@
 		foreach ([64, 96, 128, 192, 256, 512] as $nr_size) {
 			
 			$arr_images[] = [
-				'src' => SiteStartVars::getCacheUrl('img', [$nr_size, $nr_size], $str_image, DIR_CMS),
+				'src' => SiteStartVars::getCacheURL('img', [$nr_size, $nr_size], $str_image, DIR_CMS),
 				'type' => 'image/png',
 				'sizes' => $nr_size.'x'.$nr_size
 			];
@@ -244,7 +245,8 @@
 		$json = Response::parse($arr_manifest);
 		$json = Response::output($json);
 			
-		header('Content-Type: application/manifest+json;charset=utf-8');
+		Response::addHeaders('Content-Type: application/manifest+json;charset=utf-8');
+		Response::sendHeaders();
 		
 		echo $json;
 	} else {
@@ -259,7 +261,7 @@
 			SiteEndVars::checkServerName();
 			
 			require('core_combine.php');
-			SiteStartVars::setJSCSS();
+			SiteStartVars::setMaterial();
 					
 			$html_body = '<div id="cms-login">
 			
@@ -280,12 +282,13 @@
 			
 			SiteStartVars::preloadModules();
 			
-			$str_module = (SiteStartVars::$arr_cms_vars[1] ?? '');
+			$str_module = (SiteStartVars::getRequestVariables(1) ?? '');
 			
-			if (!SiteStartVars::$arr_modules[$str_module]) {
+			if (!$str_module || !SiteStartVars::getModules($str_module)) {
 				
 				$str_module = 'cms_dashboard';
-				SiteStartVars::$arr_cms_vars[1] = $str_module;
+
+				SiteEndVars::setRequestVariables($str_module, 1);
 			}
 			
 			$str_mod_identifier = 'mod-'.$str_module;
@@ -312,11 +315,11 @@
 			."};");
 			
 			require('core_combine.php');
-			SiteStartVars::setJSCSS();
+			SiteStartVars::setMaterial();
 			
 			$html_body = '<div id="cms-menu" class="section">
 				<h1>'.getLabel('lbl_modules').'</h1>
-				'.cms_general::selectModuleList(SiteStartVars::$arr_modules).'
+				'.cms_general::selectModuleList(SiteStartVars::getModules()).'
 				<div id="lab1100">'
 					.'<span><strong>1100CC</strong> is developed by</span>'
 					.'<a href="https://lab1100.com" target="_blank"></a>'
@@ -348,9 +351,9 @@
 				.'<meta name="theme-color" content="'.$arr_theme['theme_color'].'">'
 				.'<link rel="manifest" href="'.$str_url_manifest.'" crossOrigin="use-credentials" />';
 				
-				$version = CombineJSCSS::getVersion(SiteStartVars::$js_css['css'], SiteStartVars::$arr_modules);
+				$version = CombineJSCSS::getVersion(SiteStartVars::getMaterial(SiteStartVars::MATERIAL_CSS), SiteStartVars::getModules());
 				$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" />';
-				$version = CombineJSCSS::getVersion(SiteStartVars::$js_css['js'], SiteStartVars::$arr_modules);
+				$version = CombineJSCSS::getVersion(SiteStartVars::getMaterial(SiteStartVars::MATERIAL_JS), SiteStartVars::getModules());
 				$html .= '<script type="text/javascript" src="/combine/js/'.$version.'"></script>';
 				
 				if ($str_path_start != 'login') {

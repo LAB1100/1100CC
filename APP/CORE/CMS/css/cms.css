@@ -20,9 +20,10 @@ html {
  }
 /* Ensure body will stretch along with its content */
 body {
+	--font-body: var(--font-cms);
 	display: flex; flex-flow: column nowrap; align-content: stretch; align-items: stretch; justify-content: flex-start;
 	position: relative; 
-	font-family: var(--font-cms);
+	font-family: var(--font-body);
 	color: #000000;
 	background: #f3f3f3;
 	line-height: 1.26;
@@ -58,7 +59,7 @@ h2 { font-size: 14px; font-weight:bold; margin: 5px 0px; vertical-align: middle;
 h3 { font-size: 13px; font-weight:bold; margin: 3px 0px; vertical-align: middle; }
 legend { font-size: 14px; font-weight:bold; margin: 2px 0px; }
 
-a, a:link, a:visited, a:active, a:hover, .a { text-decoration: none; color: #008dcf; cursor: pointer; }
+a, a:link, a:visited, a:active, a:hover, .a { text-decoration: none; color: var(--highlight-soft); cursor: pointer; }
 a:hover, span.a:hover { text-decoration: underline; }
 
 hr { margin: 8px 0px; border: 0px; border-bottom: 4px dotted #56a7d3; }
@@ -70,7 +71,7 @@ body > .overlay { min-width: 1000px; }
 #cms-header { margin: 0px; padding: 0px 20px; height: 55px; background-color: #232120; color: #ffffff; text-align: center; display: flex; flex-flow: row nowrap; justify-content: space-between; align-items: center; align-content: center; box-sizing: border-box; }
 #cms-header a, #cms-header .a { color: #ffffff; }
 #cms-header a:hover, #cms-header .a:hover { text-decoration: underline; }
-#cms-header > #welcome { font-size: 14px; position: relative; line-height: 50px; flex: 0 0 auto; }
+#cms-header > #welcome { font-size: 1.4rem; position: relative; line-height: 50px; flex: 0 0 auto; }
 #cms-header > #plate { flex: 1 1 auto; margin: 0px 15px; display: inline-flex; flex-flow: row nowrap; justify-content: center; align-items: center; align-content: center; }
 #cms-header > #plate > * { display: block; }
 #cms-header > #plate > span:first-child { flex: 1 1 100px; min-width: 100px; }
@@ -80,23 +81,23 @@ body > .overlay { min-width: 1000px; }
 #cms-header > #plate > #lab1100cc { line-height: 50px; margin-left: 60px; margin-right: 60px; }
 #cms-header > #plate > #lab1100cc > a { display: inline-block; vertical-align: middle; width: 35px; height: 30px; margin-top: -3px; background-image: url('/css/images/lab1100_icon.svg'); background-repeat: no-repeat; background-size: contain; background-position: center center; }
 #cms-header > #plate > #site { text-align: left; overflow: hidden; text-overflow: ellipsis; }
-#cms-header > #plate > #site > a { white-space: nowrap; font-size: 18px; font-weight: bold; }
+#cms-header > #plate > #site > a { white-space: nowrap; font-size: 1.8rem; font-weight: bold; }
 #cms-header > nav { flex: 0 0 auto; }
-#cms-header > nav > ul > li { display: inline-block; vertical-align: middle; font-size: 14px; position: relative; line-height: 50px; margin-left: 20px; }
+#cms-header > nav > ul > li { display: inline-block; vertical-align: middle; font-size: 1.4rem; position: relative; line-height: 50px; margin-left: 20px; }
 #cms-header > nav > ul > li:first-child { margin-left: 0px; }
 
 #cms-body { overflow: hidden; display: flex; flex-flow: row nowrap; box-sizing: border-box; }
 
 #cms-body > #cms-menu { display: inline-block; width: 250px; vertical-align: top; flex: 0 0 auto; }
 #cms-body > #cms-menu .mod-list { border-bottom-left-radius: 2px; border-bottom-right-radius: 2px; }
-#cms-body > .cms-content { display: inline-block; overflow: hidden; vertical-align: top; flex: 1 1 100%; }
+#cms-body > .cms-content { display: inline-block; overflow: hidden; vertical-align: top; flex: 1 1 100%; position: relative; }
 #cms-body > #cms-menu,
 #cms-body > .cms-content { margin: 25px; }
 #cms-body > .cms-content { margin-left: 0px; }
 
 #cms-login { position: relative; margin: 0 auto; margin-top: 75px; width: 360px; }
 #cms-login > form { border-radius: 2px; padding: 20px 30px 20px 30px; background-color: #e8e8e8; }
-#cms-login > form > label { font-size: 1.6em; margin-top: 5px; margin-bottom: 5px; margin-left: 0px; }
+#cms-login > form > label { font-size: 1.8rem; margin-top: 5px; margin-bottom: 5px; margin-left: 0px; }
 #cms-login > form > label:first-child { margin-top: 0px; }
 #cms-login > form > input { display: block; margin: 0px; }
 #cms-login > form > menu { margin: 15px 0px 0px 0px; text-align: right; }
@@ -180,8 +181,6 @@ fieldset > ul > li > label:first-child + * > .options { margin: 0px; }
 .body-content { width: 900px; height: 500px; }
 
 .tags { margin: 0px; }
-.tags > ul > li > span { line-height: 18px; height: 18px; background-color: #e8e8e8; font-size: 11px; }
-.tags > ul > li > span + span.handler:hover { background-color: var(--highlight); }
 
 div.autocomplete.tags { max-width: 300px; }
 
@@ -208,7 +207,7 @@ div.filebrowse > .progressbar { width: 150px; }
 .object-info > label > input { display: none; }
 .object-info > label > input + span { cursor: pointer; display: inline-block; border-left: 3px solid #e8e8e8; padding-left: 3px; }
 .object-info > span.selected,
-.object-info > label > input:checked + span { border-color: #008dcf; color: #008dcf; }
+.object-info > label > input:checked + span { border-color: var(--highlight-soft); color: var(--highlight-soft); }
 .object-info.vertical > span,
 .object-info.vertical > label  { display: block; margin-left: 0px; margin-top: 4px; }
 .object-info > span:first-child,
@@ -256,7 +255,7 @@ fieldset > ul > li > label:first-child + div { display: table-cell; }
 .mod-list > li h1 { font-size: 1.0em; color: #000000; margin: 0px; padding: 0px 25px 0px 20px; line-height: 28px; background-color: #ffffff; }
 .mod-list > li > ul { background-color: #ffffff; list-style: none; margin: 0px; padding: 0px; }
 .mod-list > li > ul > li { padding-left: 40px; }
-.mod-list li span { cursor: pointer; color: #008dcf; }
+.mod-list li span { cursor: pointer; color: var(--highlight-soft); }
 .mod-list > li:hover,
 .mod-list > li > ul > li:hover,
 .mod-list li.active,

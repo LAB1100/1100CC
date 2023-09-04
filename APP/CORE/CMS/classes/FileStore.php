@@ -30,7 +30,8 @@ class FileStore {
 		'application/json' => 'json',
 		'application/javascript' => 'js',
 		'text/plain' => 'txt',
-		'text/css' => 'css'
+		'text/css' => 'css',
+		'video/mp4' => 'mp4'
 	];
 	protected static $arr_disallowed_extensions = ['php', 'ini', 'py', 'dll', 'exe', 'html', 'htm', 'sh'];
 	protected static $arr_img_extensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'];
@@ -73,6 +74,9 @@ class FileStore {
 			}
 			
 			$str_directory = (is_array($destination) ? $destination['directory'] : $destination);
+			if (!strEndsWith($str_directory, '/')) {
+				$str_directory .= '/';
+			}
 			static::makeDirectoryTree($str_directory);
 			
 			$str_filename = (is_array($destination) && $destination['filename'] ? $destination['filename'] : basename($this->str_source_name));
@@ -89,7 +93,7 @@ class FileStore {
 			}
 			$str_filename = $str_filename.'.'.$this->str_extension;
 			
-			$overwrite = (is_array($destination) && $destination['overwrite']);	
+			$do_overwrite = (is_array($destination) && $destination['overwrite']);	
 
 			if ($do_image_only && !in_array($this->str_extension, static::$arr_img_extensions)) {
 				
@@ -103,7 +107,7 @@ class FileStore {
 			
 			$str_filename = static::cleanFilename($str_filename);
 			
-			if ($overwrite) {
+			if ($do_overwrite) {
 				
 				if (isPath($str_directory.$str_filename)) {
 					static::deleteFile($str_directory.$str_filename);
@@ -186,6 +190,10 @@ class FileStore {
 		$arr['size'] = $this->num_size;
 		$arr['extension']  = $this->str_extension;
 		$arr['name'] = pathinfo($this->str_path_destination, PATHINFO_BASENAME);
+		$arr['directory'] = pathinfo($this->str_path_destination, PATHINFO_DIRNAME);
+		if (!strEndsWith($arr['directory'], '/')) {
+			$arr['directory'] .= '/';
+		}
 		
 		$file_info = new finfo(FILEINFO_MIME_TYPE);
 		$file_type = $file_info->file($this->str_path_destination);
@@ -331,7 +339,9 @@ class FileStore {
 	
 	public static function setFilePermission($str_path, $mode = false) {
 		
-		chmod($str_path, ($mode ?: Settings::get('chmod_file')));
+		try {
+			chmod($str_path, ($mode ?: Settings::get('chmod_file')));
+		} catch (Exception $e) { }
 	}
 	
 	public static function setFilePermissionRecursive($str_directory, $mode = false) {
@@ -370,6 +380,10 @@ class FileStore {
 	
 	public static function deleteDirectoryTree($str_directory) {
 		
+		if (!isPath($str_directory) || !trim($str_directory)) {
+			return false;
+		}
+		
 		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($str_directory, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
 		
 		foreach ($iterator as $file) {
@@ -384,6 +398,8 @@ class FileStore {
 		if (!strEndsWith($str_directory, '/')) { // Also remove self
 			rmdir($str_directory);
 		}
+		
+		return true;
 	}
 	
 	public static function storeFile($str_path, $data = '', $str_path_destination = false) {
@@ -412,9 +428,11 @@ class FileStore {
 		
 		if (trim($str_path != '') && ($str_path != $str_path_destination)) {
 						
-			if (isPath($str_path) && $str_path_destination) {
-				return rename($str_path, $str_path_destination);
+			if (!isPath($str_path) || !$str_path_destination) {
+				return false;
 			}
+			
+			return rename($str_path, $str_path_destination);
 		}
 				
 		return false;
@@ -424,9 +442,11 @@ class FileStore {
 		
 		if (trim($str_path != '')) {
 						
-			if (isPath($str_path)) {			
-				return unlink($str_path);
+			if (!isPath($str_path)) {			
+				return true;
 			}
+			
+			return unlink($str_path);
 		}
 		
 		return true;

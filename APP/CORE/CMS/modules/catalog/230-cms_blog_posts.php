@@ -15,11 +15,12 @@ DB::setTable('TABLE_BLOG_POST_TAGS', DB::$database_home.'.def_blog_post_tags');
 class cms_blog_posts extends base_module {
 
 	public static function moduleProperties() {
-		static::$label = getLabel('ttl_blog_posts');
+		static::$label = getLabel('lbl_blog_posts');
 		static::$parent_label = getLabel('ttl_content');
 	}
 	
 	public static function mediaLocations() {
+		
 		return [
 			'TABLE_BLOG_POSTS' => [
 				'body',
@@ -27,34 +28,72 @@ class cms_blog_posts extends base_module {
 			]
 		];
 	}
+	
+	public static function webLocations() {
+		
+		return [
+			'name' => 'blogs',
+			'entries' => function() {
+				
+				$arr_blogs = cms_blogs::getBlogs();
+
+				foreach ($arr_blogs as $arr_blog) {
+					
+					$arr_link = cms_blogs::findMainBlog($arr_blog['id']);
+					
+					if (!$arr_link || $arr_link['require_login']) {
+						continue;
+					}
+					
+					$str_location_base = pages::getModuleURL($arr_link, true);
+					
+					$arr_blog_posts = static::getBlogPosts($arr_blog['id']);
+					
+					foreach ($arr_blog_posts as $arr_blog_post) {
+							
+						$str_location = $str_location_base.$arr_blog_post['id'].'/'.str2URL($arr_blog_post['title']);
+						
+						yield $str_location;
+					}
+				}
+			}
+		];
+	}
 
 	public function contents() {
 		
-		$return = '<div class="section"><h1 id="x:cms_blog_posts:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup blog_post_add" value="add" /></h1>
+		$return = '<div class="section"><h1 id="x:cms_blog_posts:new-0"><span>'.self::$label.'</span><input type="button" class="data add popup add_blog_post" value="add" /></h1>
 		<div class="blog_posts">';
-
-			$return .= '<table class="display" id="d:cms_blog_posts:blog_posts_data-0">
-					<thead> 
-						<tr>
-							<th><span title="'.getLabel('lbl_enabled').'">E</span></th>
-							<th class="max">'.getLabel('lbl_title').'</th>
-							<th class="max">'.getLabel('lbl_posted_by').'</th>
-							<th data-sort="desc-0">'.getLabel('lbl_date').'</th>';
-							$arr_blogs = cms_blogs::getBlogs();
-							if (count($arr_blogs) > 1) {
-								foreach ($arr_blogs as $blog) {
-									$return .= '<th>B: '.$blog['name'].'</th>';
-								}
+			
+			$arr_blogs = cms_blogs::getBlogs();
+			$num_columns = 5;
+			
+			$return .= '<table class="display" id="d:cms_blog_posts:data_blog_posts-0">
+				<thead> 
+					<tr>
+						<th><span title="'.getLabel('lbl_enabled').'">E</span></th>
+						<th class="max">'.getLabel('lbl_title').'</th>
+						<th class="max">'.getLabel('lbl_posted_by').'</th>
+						<th data-sort="desc-0">'.getLabel('lbl_date').'</th>';
+				
+						if (count($arr_blogs) > 1) {
+							
+							foreach ($arr_blogs as $arr_blog) {
+								$return .= '<th>B: '.$arr_blog['name'].'</th>';
 							}
-							$return .= '<th class="disable-sort"></th>
-						</tr> 
-					</thead>
-					<tbody>
-						<tr>
-							<td colspan="'.(count($arr_blogs)+3).'" class="empty">'.getLabel('msg_loading_server_data').'</td>
-						</tr>
-					</tbody>
-					</table>';
+							
+							$num_columns += count($arr_blogs);
+						}
+						
+						$return .= '<th class="disable-sort"></th>
+					</tr> 
+				</thead>
+				<tbody>
+					<tr>
+						<td colspan="'.$num_columns.'" class="empty">'.getLabel('msg_loading_server_data').'</td>
+					</tr>
+				</tbody>
+			</table>';
 						
 		$return .= '</div></div>';
 		
@@ -63,7 +102,7 @@ class cms_blog_posts extends base_module {
 		
 	public static function css() {
 	
-		$return = '#frm-blog_post input[name=title] { width: 250px; }
+		$return = '#frm-blog_post input[name=title] { width: 500px; }
 					#frm-blog_post textarea[name=abstract] { width: 400px; height: 50px; }
 					#frm-blog_post .icon[id*=get_pingback_box] { cursor: pointer; }
 					#frm-blog_post .icon[id*=get_pingback_box] + div { display: inline-block; vertical-align:middle; margin-left: 5px; }
@@ -93,34 +132,36 @@ class cms_blog_posts extends base_module {
 		
 		// POPUP
 		
-		if ($method == "blog_post_edit" || $method == "blog_post_add") {
+		if ($method == "edit_blog_post" || $method == "add_blog_post") {
 		
 			$arr_tags = [];
 			$arr_blogs = cms_blogs::getBlogs();
 		
 			if ((int)$id) {
 													
-				$arr_row = self::getBlogPost($id);
+				$arr_row = self::getBlogPosts(false, $id);
 				
-				$arr_tags = cms_general::getObjectTags(DB::getTable('TABLE_BLOG_POST_TAGS'), 'blog_post_id', $arr_row['id']);
+				$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_BLOG_POST_TAGS'), 'blog_post_id', $arr_row['id']);
 								
-				$mode = "blog_post_update";
+				$mode = "update_blog_post";
 			} else {
 			
 				if (!$arr_blogs) {
 					
-					$this->html = '<section class="info">'.getLabel('msg_no_blogs').'</section>';
+					Labels::setVariable('name', getLabel('lbl_blogs'));
+			
+					$this->html = '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 					return;
 				}
 						
-				$mode = "blog_post_insert";
+				$mode = "insert_blog_post";
 			}
 														
 			$this->html = '<form id="frm-blog_post" data-method="'.$mode.'" data-lock="1">
 				<fieldset><ul>
 					<li>
 						<label></label>
-						<div>'.cms_general::createSelectorRadio([['id' => '0', 'name' => getLabel('lbl_publish')], ['id' => '1', 'name' => getLabel('lbl_draft')]], 'draft', ($mode == 'blog_post_insert' || $arr_row['draft'])).'</div>
+						<div>'.cms_general::createSelectorRadio([['id' => '0', 'name' => getLabel('lbl_publish')], ['id' => '1', 'name' => getLabel('lbl_draft')]], 'draft', ($mode == 'insert_blog_post' || $arr_row['draft'])).'</div>
 					</li>
 				</ul>
 				<hr />
@@ -130,12 +171,12 @@ class cms_blog_posts extends base_module {
 						
 						if (count($arr_blogs) > 1) {
 							
-							$this->html .= '<div>'.cms_general::createSelector($arr_blogs, 'blog', ($mode == 'blog_post_insert' ? 'all' : self::getBlogPostLinks($arr_row['id']))).'</div>';
+							$this->html .= '<div>'.cms_general::createSelector($arr_blogs, 'blog', ($mode == 'insert_blog_post' ? 'all' : self::getBlogPostLinks($arr_row['id']))).'</div>';
 						} else if (count($arr_blogs) == 1) {
 							
-							$arr_row_blog = current($arr_blogs);
+							$arr_blog = current($arr_blogs);
 							
-							$this->html .= '<div><input type="hidden" name="blog['.$arr_row_blog['id'].']" value="1" />'.$arr_row_blog['name'].'</div>';
+							$this->html .= '<div><input type="hidden" name="blog['.$arr_blog['id'].']" value="1" />'.$arr_blog['name'].'</div>';
 						}
 						
 					$this->html .= '</li>
@@ -159,7 +200,7 @@ class cms_blog_posts extends base_module {
 						<label title="'.getLabel('inf_preview_paragraphs').'"">¶</label>
 						<div><select name="para_preview"><option value=""></option>';
 						
-						$selected = ($mode == 'blog_post_update' ? $arr_row['para_preview'] : 2);
+						$selected = ($mode == 'update_blog_post' ? $arr_row['para_preview'] : 2);
 						
 						for ($i = 1; $i <= 15; $i++) {
 							$this->html .= '<option value="'.$i.'"'.($i == $selected ? ' selected="selected"' : '').'>'.$i.'</option>';
@@ -176,7 +217,7 @@ class cms_blog_posts extends base_module {
 						<div><span id="y:cms_blog_posts:get_pingback_box-'.$arr_row['id'].'" class="icon" title="Find URLs supporting pingback">'.getIcon('refresh').'</span><div></div></div>
 					</li>
 				</ul></fieldset>
-				</form>';
+			</form>';
 			
 			$this->validate = ['title' => 'required', 'date' => 'required', 'blog' => 'required'];
 		}
@@ -250,16 +291,20 @@ class cms_blog_posts extends base_module {
 		
 		// DATATABLE
 					
-		if ($method == "blog_posts_data") {
+		if ($method == "data_blog_posts") {
 			
 			$arr_sql_columns = ['draft', 'title', 'cu.name', 'date'];
 			$arr_sql_columns_search = ['', 'title', 'cu.name', DBFunctions::castAs('date', DBFunctions::CAST_TYPE_STRING)];
 			$arr_sql_columns_as = ['draft', 'title', 'cms_user_id', 'cu.name AS cms_user_name', 'date', 'bp.id'];
 			
 			$arr_blogs = cms_blogs::getBlogs();
+			$arr_urls_base = [];
 			
 			foreach ($arr_blogs as $arr_blog) {
 				
+				$arr_link = cms_blogs::findMainBlog($arr_blog['id']);
+				$arr_urls_base[$arr_blog['id']] = pages::getModuleURL($arr_link);
+
 				$arr_sql_columns[] = 'blog_'.$arr_blog['id'].'.blog_id';
 				$arr_sql_columns_as[] = 'blog_'.$arr_blog['id'].'.blog_id AS blog_'.$arr_blog['id'];
 			}
@@ -306,12 +351,21 @@ class cms_blog_posts extends base_module {
 				if (count($arr_blogs) > 1) {
 					
 					foreach ($arr_blogs as $arr_blog) {
-						$arr_data[] = ($arr_row['blog_'.$arr_blog['id']] ? '<span class="icon">'.getIcon('linked').'</span>' : '');
+						
+						if ($arr_row['blog_'.$arr_blog['id']]) {
+							
+							$str_title_url = $arr_urls_base[$arr_blog['id']].$arr_row['id'].'/'.str2URL($arr_row['title']);
+							
+							$arr_data[] = '<a href="'.$str_title_url.'" target="_blank"><span class="icon">'.getIcon('tick').'</span></a>';
+						} else {
+							
+							$arr_data[] = '';
+						}
 					}
 				}
 				
-				$arr_data[] = '<input type="button" class="data edit popup blog_post_edit" value="edit" />'
-					.'<input type="button" class="data del msg blog_post_del" value="del" />';
+				$arr_data[] = '<input type="button" class="data edit popup edit_blog_post" value="edit" />'
+					.'<input type="button" class="data del msg del_blog_post" value="del" />';
 				
 				$arr_datatable['output']['data'][] = $arr_data;
 			}
@@ -321,11 +375,11 @@ class cms_blog_posts extends base_module {
 							
 		// QUERY
 	
-		if ($method == "blog_post_insert") {
+		if ($method == "insert_blog_post") {
 		
 			$body = $_POST['body'];
 			
-			$para = ((int)$_POST['para_preview'] ?: '0');
+			$num_para = ((int)$_POST['para_preview'] ?: '0');
 				
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POSTS')."
 				(title, body, abstract, cms_user_id, date, para_preview, draft)
@@ -336,7 +390,8 @@ class cms_blog_posts extends base_module {
 					'".DBFunctions::strEscape($_POST['abstract'])."',
 					".$_SESSION['USER_ID'].",
 					'".date('Y-m-d H:i:s', strtotime($_POST['date'].' '.$_POST['date_t']))."',
-					".$para.", ".DBFunctions::escapeAs($_POST['draft'], DBFunctions::TYPE_BOOLEAN)."
+					".$num_para.",
+					".DBFunctions::escapeAs($_POST['draft'], DBFunctions::TYPE_BOOLEAN)."
 				)
 			");
 						
@@ -344,16 +399,16 @@ class cms_blog_posts extends base_module {
 			
 			if ($_POST['blog']) {
 				
-				foreach ($_POST['blog'] as $key => $value) {
+				foreach ($_POST['blog'] as $blog_id => $value) {
 					
 					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_LINK')."
 						(blog_id, blog_post_id)
 							VALUES
-						(".(int)$key.", ".$new_id.")
+						(".(int)$blog_id.", ".$new_id.")
 					");
 				
 					if ($_POST['pingback-url']) {
-						self::doPings($_POST['pingback-url'], $key, $new_id, $_POST['title']);
+						self::doPings($_POST['pingback-url'], $blog_id, $new_id, $_POST['title']);
 					}
 				}
 			}
@@ -364,18 +419,18 @@ class cms_blog_posts extends base_module {
 			$this->msg = true;
 		}
 		
-		if ($method == "blog_post_update" && (int)$id) {
+		if ($method == "update_blog_post" && (int)$id) {
 		
 			$body = $_POST['body'];
 			
-			$para = ((int)$_POST['para_preview'] ?: '0');
+			$num_para = ((int)$_POST['para_preview'] ?: '0');
 					
 			$res = DB::query("UPDATE ".DB::getTable('TABLE_BLOG_POSTS')." SET
 				title = '".DBFunctions::strEscape($_POST['title'])."',
 				body = '".DBFunctions::strEscape($body)."',
 				abstract = '".DBFunctions::strEscape($_POST['abstract'])."',
 				date = '".date('Y-m-d H:i:s', strtotime($_POST['date'].' '.$_POST['date_t']))."',
-				para_preview = ".$para.",
+				para_preview = ".$num_para.",
 				draft = ".DBFunctions::escapeAs($_POST['draft'], DBFunctions::TYPE_BOOLEAN)."
 					WHERE id = ".(int)$id."
 			");
@@ -386,16 +441,16 @@ class cms_blog_posts extends base_module {
 			
 			if ($_POST['blog']) {
 				
-				foreach ($_POST['blog'] as $key => $value) {
+				foreach ($_POST['blog'] as $blog_id => $value) {
 					
 					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_LINK')."
 						(blog_id, blog_post_id)
 							VALUES
-						(".(int)$key.", ".(int)$id.")
+						(".(int)$blog_id.", ".(int)$id.")
 					");
 					
 					if ($_POST['pingback-url']) {
-						self::doPings($_POST['pingback-url'], $key, $id, $_POST['title']);
+						self::doPings($_POST['pingback-url'], $blog_id, $id, $_POST['title']);
 					}
 				}
 			}
@@ -406,7 +461,7 @@ class cms_blog_posts extends base_module {
 			$this->msg = true;
 		}
 			
-		if ($method == "blog_post_del" && (int)$id) {
+		if ($method == "del_blog_post" && (int)$id) {
 		
 			$res = DB::queryMulti("
 				DELETE FROM ".DB::getTable('TABLE_BLOG_POST_TAGS')."
@@ -414,7 +469,10 @@ class cms_blog_posts extends base_module {
 				;
 				DELETE FROM ".DB::getTable('TABLE_BLOG_POST_LINK')."
 					WHERE blog_post_id = ".(int)$id."
-				;				
+				;
+				DELETE FROM ".DB::getTable('TABLE_BLOG_POST_XREFS')."
+					WHERE blog_post_id = ".(int)$id."
+				;	
 				DELETE FROM ".DB::getTable('TABLE_BLOG_POSTS')."
 					WHERE id = ".(int)$id."
 				;
@@ -424,86 +482,84 @@ class cms_blog_posts extends base_module {
 		}
 	}
 		
-	private static function doPings($arr_pings, $blog, $blog_post_id, $title) {
+	private static function doPings($arr_pings, $blog_id, $blog_post_id, $str_title) {
 
-		$arr_link = self::findMainBlog($blog);
+		$arr_link = cms_blogs::findMainBlog($blog_id);
 
 		foreach ($arr_pings as $value) {
 			
-			$to = $value;
+			$str_url_to = $value;
 			
 			if ($arr_link['shortcut']) {
-				$from = pages::getShortcutUrl($arr_link);
+				$str_url_from = pages::getShortcutURL($arr_link);
 			} else {
-				$from = pages::getModUrl($arr_link);
+				$str_url_from = pages::getModuleURL($arr_link);
 			}
-			$from .= $blog_post_id.'/'.str_replace(' ', '-', strEscapeHTML($title));
+			$str_url_from .= $blog_post_id.'/'.str2URL($str_title);
 
-			$server = PingbackUtility::getPingbackServerURL($to);
+			$server = PingbackUtility::getPingbackServerURL($str_url_to);
 
-			if (PingbackUtility::sendPingback($from, $to, $server)) {
-				$source = rawurldecode($to);
-				$ret = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_XREFS')." (direction, added, source, blog_post_id) VALUES ('out', NOW(), '".DBFunctions::strEscape($source)."', ".(int)$blog_post_id.")");
+			if (PingbackUtility::sendPingback($str_url_from, $str_url_to, $server)) {
+				$str_url_source = rawurldecode($str_url_to);
+				$ret = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_XREFS')." (direction, added, source, blog_post_id) VALUES ('out', NOW(), '".DBFunctions::strEscape($str_url_source)."', ".(int)$blog_post_id.")");
 			}
 		}
 	}
-	
-	private static function findMainBlog($blog_link) {
 
-		return pages::getClosestMod('blog', 0, 0, 0, $blog_link, 'id');
-	}
-		
-	public static function getBlogPostLinks($blog_post_id = 0) {
+	public static function getBlogPostLinks($blog_post_id) {
 	
 		$arr = [];
 
 		$res = DB::query("SELECT blog_id FROM ".DB::getTable('TABLE_BLOG_POST_LINK')." WHERE blog_post_id = ".(int)$blog_post_id."");
 		
-		while($row = $res->fetchAssoc()) {
-			$arr[] = $row['blog_id'];
+		while ($arr_row = $res->fetchAssoc()) {
+			$arr[] = $arr_row['blog_id'];
 		}	
 
 		return $arr;
 	}
 	
-	public static function getBlogPostsCount($blog = 0, $tag = false) {
+	public static function getBlogPostsCount($blog_id = 0, $str_tag = false) {
 		
 		$res = DB::query("SELECT
 			COUNT(bp.id)
 				FROM ".DB::getTable('TABLE_BLOG_POSTS')." bp
 				JOIN ".DB::getTable('TABLE_BLOG_POST_LINK')." l ON (l.blog_post_id = bp.id)
-				".($tag ? "LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_TAGS')." btsel ON (btsel.blog_post_id = l.blog_post_id)
-				LEFT JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = btsel.tag_id)" : "")."
-			WHERE l.blog_id = ".(int)$blog."
-			AND bp.draft = FALSE
-			".($tag ? "AND tsel.name = '".DBFunctions::strEscape($tag)."'" : "")
-		);
+				".($str_tag ? "
+					JOIN ".DB::getTable('TABLE_BLOG_POST_TAGS')." btsel ON (btsel.blog_post_id = bp.id)
+					JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = btsel.tag_id AND tsel.name = '".DBFunctions::strEscape($str_tag)."')"
+				: "")."
+			WHERE l.blog_id = ".(int)$blog_id."
+				AND bp.draft = FALSE
+		");
 		
 		$arr_row = $res->fetchRow();
 		
 		return $arr_row[0];
 	}
 	
-	public static function getBlogPosts($blog = 0, $num_limit = 0, $tag = false, $num_start = 0) {
+	public static function getBlogPosts($blog_id = false, $blog_post_id = false, $num_limit = 0, $num_start = 0, $str_tag = false, $do_draft = false) {
 	
 		$arr = [];
 		
-		$blog_options = cms_blogs::getBlogs($blog);
-
+		$do_draft = ($blog_post_id ? null : $do_draft);
+		
 		$res = DB::query("SELECT
 			bp.*,
 			cu.name AS cms_user_name,
 			".DBFunctions::sqlImplode('t.name', ',')." AS tags
 				FROM ".DB::getTable('TABLE_BLOG_POSTS')." bp
 				LEFT JOIN ".DB::getTable('TABLE_CMS_USERS')." cu ON (cu.id = bp.cms_user_id)
-				LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_LINK')." l ON (l.blog_post_id = bp.id)
-				LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_TAGS')." bt ON (bt.blog_post_id = l.blog_post_id)
+				".($blog_id ? "JOIN ".DB::getTable('TABLE_BLOG_POST_LINK')." l ON (l.blog_post_id = bp.id AND l.blog_id = ".(int)$blog_id.")" : "")."
+				LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_TAGS')." bt ON (bt.blog_post_id = bp.id)
 				LEFT JOIN ".DB::getTable('TABLE_TAGS')." t ON (t.id = bt.tag_id)
-				".($tag ? "LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_TAGS')." btsel ON (btsel.blog_post_id = l.blog_post_id)
-				LEFT JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = btsel.tag_id)" : "")."
-			WHERE l.blog_id = ".(int)$blog."
-			AND bp.draft = FALSE
-				".($tag ? "AND tsel.name = '".DBFunctions::strEscape($tag)."'" : "")."
+				".($str_tag ? "
+					JOIN ".DB::getTable('TABLE_BLOG_POST_TAGS')." btsel ON (btsel.blog_post_id = bp.id)
+					JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = btsel.tag_id AND tsel.name = '".DBFunctions::strEscape($str_tag)."')"
+				: "")."
+			WHERE TRUE
+				".($blog_post_id ? "AND bp.id = ".(int)$blog_post_id : "")."
+				".($do_draft !== null ? "AND bp.draft = ".($do_draft ? 'TRUE' : 'FALSE') : '')."
 			GROUP BY bp.id, cu.id
 			ORDER BY bp.date DESC
 			".($num_start || $num_limit ? "LIMIT ".(int)$num_limit." OFFSET ".(int)$num_start : "")."
@@ -515,7 +571,7 @@ class cms_blog_posts extends base_module {
 			
 			if ($arr_row['cms_user_name'] === null) {
 				
-				if (!$arr_cms_users_core[$arr_row['cms_user_id']]) {
+				if (!isset($arr_cms_users_core[$arr_row['cms_user_id']])) {
 					
 					$arr_user = cms_users::getCMSUsers($arr_row['cms_user_id'], true);
 					$arr_cms_users_core[$arr_row['cms_user_id']] = $arr_user['name'];
@@ -540,48 +596,6 @@ class cms_blog_posts extends base_module {
 			$arr[$arr_row['id']] = $arr_row;
 		}
 		
-		return $arr;
-	}
-	
-	public static function getBlogPost($blog_post_id = 0) {
-	
-		$res = DB::query("SELECT
-			bp.*,
-			cu.name AS cms_user_name,
-			".DBFunctions::sqlImplode('t.name', ',')." AS tags
-				FROM ".DB::getTable('TABLE_BLOG_POSTS')." bp
-				LEFT JOIN ".DB::getTable('TABLE_CMS_USERS')." cu ON (cu.id = bp.cms_user_id)
-				LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_TAGS')." bt ON (bt.blog_post_id = bp.id)
-				LEFT JOIN ".DB::getTable('TABLE_TAGS')." t ON (t.id = bt.tag_id)
-			WHERE bp.id = ".(int)$blog_post_id."
-			GROUP BY bp.id, cu.id
-		");
-						
-		$arr_row = $res->fetchAssoc();
-		
-		if (!$arr_row) {
-			return [];
-		}
-		
-		if ($arr_row['cms_user_name'] === null) {
-			
-			$arr_row['cms_user_name'] = cms_users::getCMSUsers($arr_row['cms_user_id'], true);
-			$arr_row['cms_user_name'] = $arr_row['cms_user_name']['name'];
-		}
-		
-		$arr_tags = $arr_row['tags'];
-			
-		if ($arr_tags) {
-		
-			$arr_tags = explode(',', $arr_tags);
-			$arr_tags = array_combine($arr_tags, $arr_tags);
-			ksort($arr_tags);
-		}
-		
-		$arr_row['tags'] = ($arr_tags ?: []);
-		
-		$arr_row['draft'] = DBFunctions::unescapeAs($arr_row['draft'], DBFunctions::TYPE_BOOLEAN);
-		
-		return $arr_row;
+		return ($blog_post_id ? current($arr) : $arr);
 	}
 }

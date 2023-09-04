@@ -143,9 +143,9 @@ class intf_user_management extends user_management {
 				
 				if ($arr_user_account['passkey']) {
 					
-					$arr_mod = pages::getClosestMod('login', 0, 0, $user_group_id);
+					$arr_mod = pages::getClosestModule('login', 0, 0, $user_group_id);
 					
-					$str_url_account = pages::getModUrl($arr_mod).'welcome/'.$id.'/'.$arr_user_account['passkey'];
+					$str_url_account = pages::getModuleURL($arr_mod).'welcome/'.$id.'/'.$arr_user_account['passkey'];
 				}
 				
 				$mode = "update";
@@ -430,15 +430,15 @@ class intf_user_management extends user_management {
 								 
 			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', '', $sql_where);
 			
-			$nr_columns = count($arr_sql_columns);
+			$num_columns = count($arr_sql_columns);
 			
 			while ($arr_row = $arr_datatable['result']->fetchRow())	{
 
 				$arr_data = [];
 				
-				$arr_data['id'] = 'x:intf_user_management:user_id-'.$arr_row[$nr_columns];
+				$arr_data['id'] = 'x:intf_user_management:user_id-'.$arr_row[$num_columns];
 				
-				for ($i = 0; $i < $nr_columns; $i++) {
+				for ($i = 0; $i < $num_columns; $i++) {
 					
 					if ($i == 0) {
 						
@@ -462,7 +462,7 @@ class intf_user_management extends user_management {
 					}
 				}
 				$arr_data[] = '<input type="button" class="data popup edit" value="edit" />'
-					.'<input type="button" class="data msg del" value="del" /><input class="multi" value="'.$arr_row[$nr_columns].'" type="checkbox" />';
+					.'<input type="button" class="data msg del" value="del" /><input class="multi" value="'.$arr_row[$num_columns].'" type="checkbox" />';
 				
 				$arr_datatable['output']['data'][] = $arr_data;
 			}

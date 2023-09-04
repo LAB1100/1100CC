@@ -121,7 +121,7 @@ class FileGet {
 	
 	protected function storeExternalSource() {
 		
-		$str_path_temp = tempnam(Settings::get('path_temporary'), '1100CC');
+		$str_path_temp = getPathTemporary();
 		$this->file = fopen($str_path_temp, 'w');
 		
 		$store = $this->getExternalSource();
@@ -333,7 +333,7 @@ class FileGet {
 	
 	protected function storeDataURL() {
 				
-		$str_path_temp = tempnam(Settings::get('path_temporary'), '1100CC');
+		$str_path_temp = getPathTemporary();
 		$this->file = fopen($str_path_temp, 'w');
 		
 		$store = $this->getDataURL();
@@ -426,7 +426,7 @@ class FileGet {
 	
 	public function getPath() {
 				
-		return $this->path;
+		return ($this->mode_protocol == static::PROTOCOL_LOCAL ? $this->url : $this->path);
 	}
 	
 	public function getRequest() {
@@ -445,13 +445,13 @@ class FileGet {
 		}
 	}
 	
-	public function getErrorResponse($do_snippet = true) {
+	public function getErrorResponse($num_snippet = true) {
 		
 		if (!$this->num_error) {
 			return '';
 		}
 		
-		if (!$do_snippet) {
+		if (!$num_snippet) {
 			return $this->str_error;
 		}
 		
@@ -459,7 +459,9 @@ class FileGet {
 		
 		if ($str_error) {
 			
-			$str_error = strEscapeHTML((mb_strlen($str_error) > 200 ? mb_substr($str_error, 0, 200).' [...]' : $str_error));
+			$num_snippet = ($num_snippet === true ? 250 : $num_snippet);
+			
+			$str_error = strEscapeHTML((mb_strlen($str_error) > $num_snippet ? mb_substr($str_error, 0, $num_snippet).' [...]' : $str_error));
 		} else {
 			
 			$str_error = $this->getError();

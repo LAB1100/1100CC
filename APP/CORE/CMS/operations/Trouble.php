@@ -65,6 +65,7 @@ class Trouble {
 	
 	public static function create($msg = '', $code = TROUBLE_ERROR, $suppress = LOG_BOTH, $debug = false, $exception = null) {
 		
+		$msg = ($msg ?? '');
 		$code = ($suppress ? $code + ($suppress * 1000) : $code); // Combine suppression parameter with error code
 
 		if ($debug) {
@@ -193,7 +194,12 @@ class Trouble {
 				Response::stop(function() {
 					
 						$obj = Log::addToObj(Response::getObject());
+						
 						$page = new ExitPage($obj->msg, 'error', 'error');
+						
+						if (isset($obj->system_msg)) {
+							$page->setSystem($obj->system_msg, 'important');
+						}
 						
 						return $page->getPage();
 					}, Log::addToObj(Response::getObject())

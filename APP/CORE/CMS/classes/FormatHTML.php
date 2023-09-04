@@ -98,7 +98,7 @@ class FormatHTML {
 			
 				if ($width || $height) {
 					
-					$img->setAttribute('src', SiteStartVars::getCacheUrl('img', [$width, $height], $url));
+					$img->setAttribute('src', SiteStartVars::getCacheURL('img', [$width, $height], $url));
 				}
 			}
 		}

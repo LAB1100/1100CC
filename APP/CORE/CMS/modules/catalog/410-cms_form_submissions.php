@@ -30,8 +30,8 @@ class cms_form_submissions extends base_module {
 			'TABLE_FORM_SUBMISSIONS' => 'log_user_id'
 		];
 	}
-	
-	private static $nr_summary_fields = 4;
+		
+	protected static $num_summary_fields = 4;
 	
 	public static function widgetFormSubmissions() {
 		
@@ -59,7 +59,7 @@ class cms_form_submissions extends base_module {
 							
 							foreach ($arr_form_set['fields'] as $field_id => $arr_field) {
 								
-								if ($count > static::$nr_summary_fields) {
+								if ($count > static::$num_summary_fields) {
 									break;
 								}
 								
@@ -75,9 +75,9 @@ class cms_form_submissions extends base_module {
 					
 						if (!$arr_form_summary) {
 							
-							$nr_fields = count($arr_form_set['fields']);
+							$num_fields = count($arr_form_set['fields']);
 							
-							$return .= '<tr><td colspan="'.(($nr_fields > static::$nr_summary_fields ? static::$nr_summary_fields : $nr_fields)+1).'" class="empty">'.getLabel('msg_no_data').'</td></tr>';
+							$return .= '<tr><td colspan="'.(($num_fields > static::$num_summary_fields ? static::$num_summary_fields : $num_fields)+1).'" class="empty">'.getLabel('msg_no_data').'</td></tr>';
 						} else {
 								
 							foreach ($arr_form_summary as $submission_id => $arr_submission) {
@@ -88,11 +88,14 @@ class cms_form_submissions extends base_module {
 											
 									foreach ($arr_form_set['fields'] as $field_id => $arr_field) {
 										
-										if ($count > static::$nr_summary_fields) {
+										if ($count > static::$num_summary_fields) {
 											break;
 										}
+										
+										$str_field = ($arr_submission['fields'][$field_id] ?? '');
+										$str_field = str_replace(DBFunctions::SQL_VALUE_SEPERATOR, ' ', $str_field);
 								
-										$return .= '<td>'.str_replace('$|$', ' ', $arr_submission['field_'.$field_id]).'</td>';
+										$return .= '<td>'.$str_field.'</td>';
 										
 										$count++;
 									}
@@ -115,8 +118,8 @@ class cms_form_submissions extends base_module {
 		
 		$arr_forms = cms_forms::getForms();
 		$use_form_id = key($arr_forms);
-		
-		$form_submission_id = (int)(SiteStartVars::$arr_cms_vars[2] ?? null);
+				
+		$form_submission_id = (int)SiteStartVars::getRequestVariables(2);
 			
 		if ($form_submission_id) {
 
@@ -304,7 +307,7 @@ class cms_form_submissions extends base_module {
 						$this->html .= '<input type="text" class="datepicker" name="field['.$field_id.'][]" value="'.strEscapeHTML($arr_form_submission['fields'][$field_id]['field_input']['field_value']).'" />';
 					} else if ($arr_field['field_details']['type'] == 'field_address') {
 						
-						$arr_split = explode('$|$', $arr_form_submission['fields'][$field_id]['field_input']['field_value']);
+						$arr_split = str2Array($arr_form_submission['fields'][$field_id]['field_input']['field_value'], DBFunctions::SQL_VALUE_SEPERATOR);
 						$this->html .= '<input type="text" name="field['.$field_id.'][0]" value="'.strEscapeHTML($arr_split[0]).'" /><input type="text" name="field['.$field_id.'][1]" title="'.getLabel('lbl_address_number').'" value="'.strEscapeHTML($arr_split[1]).'" /><input type="text" name="field['.$field_id.'][2]" title="'.getLabel('lbl_address_number_affix').'" value="'.strEscapeHTML($arr_split[2]).'" />';
 					} else {
 						
@@ -330,7 +333,7 @@ class cms_form_submissions extends base_module {
 			
 			$arr_form_set = cms_forms::getFormSet($arr_form_submission['submission']['form_id']);
 			
-			$arr_tags = cms_general::getObjectTags(DB::getTable('TABLE_FORM_SUBMISSION_INTERNAL_TAGS'), 'form_submission_id', $id, true);
+			$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_FORM_SUBMISSION_INTERNAL_TAGS'), 'form_submission_id', $id, true);
 
 			$return = '<div class="record"><dl>
 				<li>
@@ -360,14 +363,17 @@ class cms_form_submissions extends base_module {
 							$return .= '<ul>';
 								foreach(($arr_field['field_details']['field_sub_table'] ? cms_forms::getFieldSubTableValues($arr_field['field_details']['field_sub_table']) : $arr_field['field_subs']) as $arr_field_sub) {
 									
-									if ($arr_form_submission['fields'][$field_id]['field_subs'][$arr_field_sub['field_sub_id']]['field_sub_value']) {
+									if (!empty($arr_form_submission['fields'][$field_id]['field_subs'][$arr_field_sub['field_sub_id']]['field_sub_value'])) {
+										
 										$return .= '<li>'.strEscapeHTML($arr_field_sub['field_sub_label']).'</li>';
 									}
 								}
 							$return .= '</ul>';
 						} else {
 							
-							$return .= strEscapeHTML(str_replace('$|$', ' ', $arr_form_submission['fields'][$field_id]['field_input']['field_value']));
+							$str_field = ($arr_form_submission['fields'][$field_id]['field_input']['field_value'] ?? '');
+							
+							$return .= strEscapeHTML(str_replace(DBFunctions::SQL_VALUE_SEPERATOR, ' ', $str_field));
 						}
 						
 						$return .= '</td>';
@@ -556,7 +562,7 @@ class cms_form_submissions extends base_module {
 						continue;
 					}
 					
-					$arr_data[] = '<span class="limit">'.str_replace('$|$', ' ', strEscapeHTML($arr_row['field_'.$field_id])).'</span>';
+					$arr_data[] = '<span class="limit">'.str_replace(DBFunctions::SQL_VALUE_SEPERATOR, ' ', strEscapeHTML($arr_row['field_'.$field_id])).'</span>';
 				}
 				
 				$arr_data[] = date('d-m-Y', strtotime($arr_row['date']));
@@ -577,7 +583,7 @@ class cms_form_submissions extends base_module {
 									
 		$arr_form_set = cms_forms::getFormSet($row_submission['form_id']);
 		
-		$arr_fields = arrParseRecursive($arr_fields, 'trim');
+		$arr_fields = arrParseRecursive($arr_fields, TYPE_TEXT);
 		
 		foreach ($arr_form_set['fields'] as $value) {
 						
@@ -596,7 +602,7 @@ class cms_form_submissions extends base_module {
 				}
 			} else {
 				
-				$field_value = implode('$|$', $arr_fields[$value['field_details']['field_id']]);
+				$field_value = implode(DBFunctions::SQL_VALUE_SEPERATOR, $arr_fields[$value['field_details']['field_id']]);
 				
 				$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORM_SUBMISSION_FIELD_INPUT')."
 					(form_submission_id, field_id, value)
@@ -620,17 +626,17 @@ class cms_form_submissions extends base_module {
 			WHERE fs.id = ".(int)$submission_id."
 		");
 
-		while($row = $res->fetchAssoc()) {
+		while($arr_row = $res->fetchAssoc()) {
 			
-			$arr['submission'] = $row;
-			$arr['fields'][$row['field_id']]['field_input'] = $row;
-			$arr['fields'][$row['parent_field_id']]['field_subs'][$row['field_sub_id']] = $row;
+			$arr['submission'] = $arr_row;
+			$arr['fields'][$arr_row['field_id']]['field_input'] = $arr_row;
+			$arr['fields'][$arr_row['parent_field_id']]['field_subs'][$arr_row['field_sub_id']] = $arr_row;
 		}
 
 		return $arr;
 	}
 	
-	private static function getFormSubmissionsSummary($form_id, $limit = 3) {
+	private static function getFormSubmissionsSummary($form_id, $num_limit = 3) {
 	
 		$arr = [];
 		
@@ -643,7 +649,7 @@ class cms_form_submissions extends base_module {
 		
 		foreach ($arr_form_set['fields'] as $field_id => $arr_field) {
 			
-			if ($count > static::$nr_summary_fields) {
+			if ($count > static::$num_summary_fields) {
 				break;
 			}
 						
@@ -684,10 +690,22 @@ class cms_form_submissions extends base_module {
 			WHERE fs.form_id = ".(int)$form_id."
 			GROUP BY fs.id
 			ORDER BY fs.date DESC
-			LIMIT ".$limit." OFFSET 0
+			LIMIT ".$num_limit." OFFSET 0
 		");
 		
 		while ($arr_row = $res->fetchAssoc()) {
+			
+			$arr_row['fields'] = [];
+			
+			foreach ($arr_form_set['fields'] as $field_id => $arr_field) {
+				
+				if (!isset($arr_row['field_'.$field_id])) {
+					continue;
+				}
+				
+				$arr_row['fields'][$field_id] = $arr_row['field_'.$field_id];
+				unset($arr_row['field_'.$field_id]);
+			}
 		
 			$arr[$arr_row['id']] = $arr_row;
 		}	

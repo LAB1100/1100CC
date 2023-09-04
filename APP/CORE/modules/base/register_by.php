@@ -80,9 +80,9 @@ abstract class register_by extends base_module {
 						
 			if ($arr_user_account['passkey']) {
 				
-				$arr_mod = pages::getClosestMod('login', 0, 0, $arr_user_account['group_id']);
+				$arr_mod = pages::getClosestModule('login', 0, 0, $arr_user_account['group_id']);
 				
-				$str_url_account = pages::getModUrl($arr_mod).'welcome/'.$id.'/'.$arr_user_account['passkey'];
+				$str_url_account = pages::getModuleURL($arr_mod).'welcome/'.$id.'/'.$arr_user_account['passkey'];
 			}
 		}
 		

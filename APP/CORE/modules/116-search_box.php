@@ -44,12 +44,12 @@ class search_box extends base_module {
 	
 		if ($method == "search") {
 			
-			Response::location(pages::getModUrl(self::findSearch()).search::encodeURLString($_POST['string']));
+			Response::location(pages::getModuleURL(self::findSearch()).search::encodeURLString($_POST['string']));
 		}
 	}
 	
 	public static function findSearch() {
 	
-		return pages::getClosestMod('search', SiteStartVars::$dir['id'], SiteStartVars::$page['id']);
+		return pages::getClosestModule('search', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
 	}
 }

@@ -505,9 +505,9 @@ class DBFunctions extends DBFunctionsBase {
 		return $sql;
 	}
 	
-	public static function regexpMatch($sql, $expression, $flags = false) {
+	public static function regexpMatch($sql_field, $expression, $flags = false) {
 		
-		return $sql.' ~ \''.$expression.'\'';
+		return $sql_field.' ~ \''.$expression.'\'';
 	}
 	
 	public static function sqlTableOptions($engine) {

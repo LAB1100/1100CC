@@ -25,7 +25,7 @@ class newsletters extends base_module {
 			],
 			'module_var' => false,
 			'module_query' => function($arr_result) {
-				return '/'.$arr_result['object_link'].'/'.str2URL($arr_result['title']);
+				return $arr_result['object_link'].'/'.str2URL($arr_result['title']);
 			}
 		];
 	}
@@ -70,7 +70,7 @@ class newsletters extends base_module {
 			$return .= '<ul>';
 			foreach ($arr_newsletters as $value) {
 				$title = Labels::parseTextVariables($value['title']);
-				$return .= '<li>'.createDate($value['date']).'<a href="'.SiteStartVars::getModUrl($this->mod_id).$value['id'].'/'.str2URL($title).'">'.$title.'</a></li>';
+				$return .= '<li>'.createDate($value['date']).'<a href="'.SiteStartVars::getModuleURL($this->mod_id).$value['id'].'/'.str2URL($title).'">'.$title.'</a></li>';
 			}
 			$return .= '</ul>';
 		}
@@ -136,6 +136,6 @@ class newsletters extends base_module {
 	
 	public static function findMainNewsletters() {
 	
-		return pages::getClosestMod('newsletters', SiteStartVars::$dir['id'], SiteStartVars::$page['id']);
+		return pages::getClosestModule('newsletters', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
 	}
 }

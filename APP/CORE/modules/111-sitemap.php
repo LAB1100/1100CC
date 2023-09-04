@@ -16,9 +16,9 @@ class sitemap extends base_module {
 
 	public function contents() {
 
-		$directory_id = SiteStartVars::$dir['id'];
+		$directory_id = SiteStartVars::getDirectory('id');
 
-		if (SiteStartVars::$dir['require_login'] && SiteStartVars::$dir['user_group_id'] && (empty($_SESSION['USER_GROUP']) || SiteStartVars::$dir['user_group_id'] != $_SESSION['USER_GROUP'])) {
+		if (SiteStartVars::getDirectory('require_login') && SiteStartVars::getDirectory('user_group_id') && (empty($_SESSION['USER_GROUP']) || SiteStartVars::getDirectory('user_group_id') != $_SESSION['USER_GROUP'])) {
 
 			$directory_id = directories::getParentDirectory();
 		}
@@ -29,7 +29,7 @@ class sitemap extends base_module {
 
 		foreach ($arr_directories as $row_directory) {
 			
-			$base_url = pages::getBaseUrl($row_directory);
+			$base_url = pages::getBaseURL($row_directory);
 			
 			$return .= '<ul>
 				<li>'.($row_directory['title'] ? '<a href="'.$base_url.'">'.strEscapeHTML(Labels::parseTextVariables($row_directory['title'])).'</a>' : '').'</li>';

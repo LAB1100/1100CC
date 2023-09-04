@@ -193,8 +193,12 @@ class cms_poll_sets extends base_module {
 			$arr_sql_columns_as = ['s.enabled', 's.label', $sql_column_set_vote_count.' AS set_vote_count', 's.date', $sql_column_options_combined.' AS options_combined', 's.id'];
 			
 			$arr_polls = cms_polls::getPolls();
+			$arr_urls_base = [];
 			
 			foreach ($arr_polls as $arr_poll) {
+				
+				$arr_link = cms_polls::findMainPoll($arr_poll['id']);
+				$arr_urls_base[$arr_poll['id']] = pages::getModuleURL($arr_link);
 				
 				$arr_sql_columns[] = 'poll_'.$arr_poll['id'].'.poll_id';
 				$arr_sql_columns_as[] = 'poll_'.$arr_poll['id'].'.poll_id AS poll_'.$arr_poll['id'];
@@ -227,10 +231,19 @@ class cms_poll_sets extends base_module {
 				if (count($arr_polls) > 1) {
 					
 					foreach ($arr_polls as $arr_poll) {
-						$arr_data[] = ($arr_row['poll_'.$arr_poll['id']] ? '<span class="icon">'.getIcon('linked').'</span>' : '');
+						
+						if ($arr_row['poll_'.$arr_poll['id']]) {
+							
+							$str_title_url = $arr_urls_base[$arr_poll['id']].$arr_row['id'].'/'.str2URL($arr_row['title']);
+							
+							$arr_data[] = '<a href="'.$str_title_url.'" target="_blank"><span class="icon">'.getIcon('tick').'</span></a>';
+						} else {
+							
+							$arr_data[] = '';
+						}
 					}
 				}
-				
+								
 				$arr_data[] = '<input type="button" class="data edit popup edit" value="edit" /><input type="button" class="data del msg del" value="del" />';
 				
 				$arr_datatable['output']['data'][] = $arr_data;
@@ -353,12 +366,7 @@ class cms_poll_sets extends base_module {
 		}
 		
 	}
-			
-	private static function findMainPoll($poll_link) {
 
-		return pages::getClosestMod('poll', 0, 0, 0, $poll_link);
-	}
-	
 	public static function getPollSetLinks($poll_set = 0) {
 	
 		$arr = [];

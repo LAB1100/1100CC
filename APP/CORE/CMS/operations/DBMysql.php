@@ -556,9 +556,9 @@ class DBFunctions extends DBFunctionsBase {
 		return $sql;
 	}
 	
-	public static function regexpMatch($sql, $expression, $flags = false) {
+	public static function regexpMatch($sql_field, $expression, $flags = false) {
 		
-		return $sql.' REGEXP '.$expression;
+		return $sql_field.' REGEXP '.$expression;
 	}
 	
 	public static function sqlTableOptions($engine) {

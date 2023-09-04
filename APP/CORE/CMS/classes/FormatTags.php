@@ -90,22 +90,47 @@ class FormatTags {
 
 			// [img]http://www.image.gif[/img]
 			'img' => [
-				'/\[img\]([^\s"<>]+?)\[\/img\]/i',
-				'<img src="\1" alt="" />'
+				'/\[img(?::([0-9]*))?(?::([0-9]*))?\]([^\s"<>]+?)\[\/img\]/i',
+				function($arr_matches) {
+					$str_attributes = '';
+					if ($arr_matches[1]) {
+						$str_attributes .= ' width="'.(int)$arr_matches[1].'"';
+					}
+					if ($arr_matches[2]) {
+						$str_attributes .= ' height="'.(int)$arr_matches[2].'"';
+					}
+					if ($str_attributes) {
+						$str_attributes .= ' class="enlarge"';
+					}
+					return '<img src="'.strEscapeHTML($arr_matches[3]).'"'.$str_attributes.'alt="" />';
+				}
 			],
 
-			// [img=http://www/image.gif]
+			// [img=http://www.image.gif]
 			'img_attr' => [
 				'/\[img=([^\s"<>]+?)\]/i',
 				'<img src="\1" alt="" />'
 			],
-		
-			// [imgw=200]http://www/image.gif[/imgw]
-			'imgw' => [
-				'/\[imgw(?:=([0-9]+))?\]([^\s\'"<>]+(\.(jpg|jpeg|gif|png)))\[\/imgw\]/si', 
+			
+			// [video]http://www.video.mp4[/video]
+			'video' => [
+				'/\[video(?::([0-9]*))?(?::([0-9]*))?\]([^\s"<>]+?)\[\/video\]/i',
 				function($arr_matches) {
-					return '<img src="'.$arr_matches[2].'"'.($arr_matches[1] ? ' width="'.$arr_matches[1].'"' : '').'" class="enlarge" alt="" />';
+					$str_attributes = '';
+					if ($arr_matches[1]) {
+						$str_attributes .= ' width="'.(int)$arr_matches[1].'"';
+					}
+					if ($arr_matches[2]) {
+						$str_attributes .= ' height="'.(int)$arr_matches[2].'"';
+					}
+					return '<video controls="1"'.$str_attributes.'><source src="'.strEscapeHTML($arr_matches[3]).'" type="video/mp4" /></video>';
 				}
+			],
+
+			// [video=http://www.video.mp4]
+			'video_attr' => [
+				'/\[video=([^\s"<>]+?)\]/i',
+				'<video controls="1"><source src="\1" type="video/mp4" /></video>'
 			],
 
 			// [color=blue/#ffcc99/rgb()]Text[/color]
@@ -118,8 +143,7 @@ class FormatTags {
 			'url_attr' => [
 				'/\[url=([^<>"\s]+?)\](.+?)\[\/url\]/si', 
 				function($arr_matches) {
-					$str_first = substr($arr_matches[1], 0, 1);
-					return '<a href="'.$arr_matches[1].'"'.(($str_first != '/' && $str_first != '#') || substr($arr_matches[1], 0, 2) == '//' ? ' target="_blank"' : '').'>'.$arr_matches[2].'</a>';
+					return '<a href="'.$arr_matches[1].'"'.(!uris::isURLInternal($arr_matches[1]) ? ' target="_blank"' : '').'>'.$arr_matches[2].'</a>';
 				}
 			],
 
@@ -127,8 +151,7 @@ class FormatTags {
 			'url' => [
 				'/\[url\]([^<>"\s]+?)\[\/url\]/i', 
 				function($arr_matches) {
-					$str_first = substr($arr_matches[1], 0, 1);
-					return '<a href="'.$arr_matches[1].'"'.(($str_first != '/' && $str_first != '#') || substr($arr_matches[1], 0, 2) == '//' ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
+					return '<a href="'.$arr_matches[1].'" class="link-only"'.(!uris::isURLInternal($arr_matches[1]) ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
 				}
 			],
 
@@ -203,7 +226,7 @@ class FormatTags {
 			'url_raw' => [
 				'/(?<=\A|[^=\]>\'"a-z0-9])((http|ftp|https|ftps|irc):\/\/(?:[-a-z0-9@:%_+~#?&\/=]|(?:\.+[-a-z0-9@:%_+~#?&\/=]))+)/i', 
 				function($arr_matches) {
-					return '<a href="'.$arr_matches[1].'"'.(!strpos($arr_matches[1], SERVER_NAME) ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
+					return '<a href="'.$arr_matches[1].'" class="link-only"'.(!strpos($arr_matches[1], '//'.SERVER_NAME) ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
 				}
 			],
 			
@@ -225,7 +248,7 @@ class FormatTags {
 			'url_raw_all' => [
 				'/(?<=\A|[^=\]>\'"a-z0-9])((http|ftp|https|ftps|irc):\/\/[^<>\s]+)/i',
 				function($arr_matches) {
-					return '<a href="'.$arr_matches[1].'"'.(!strpos($arr_matches[1], SERVER_NAME) ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
+					return '<a href="'.$arr_matches[1].'" class="link-only"'.(!strpos($arr_matches[1], '//'.SERVER_NAME) ? ' target="_blank"' : '').'>'.$arr_matches[1].'</a>';
 				}
 			]
 		];
@@ -263,7 +286,7 @@ class FormatTags {
 		return $s;
 	}
 	
-	public static function formatUrls($s) {
+	public static function formatURLs($s) {
 		
 		$arr_code = self::$arr_codes_special['url_raw_all'];
 		$s = preg_replace_callback($arr_code[0], $arr_code[1], $s);
@@ -278,7 +301,7 @@ class FormatTags {
 	
 	public static function getCode($name) {
 		
-		$arr_code = (self::$arr_codes[$name] ?: self::$arr_codes_special[$name]);
+		$arr_code = (self::$arr_codes[$name] ?? self::$arr_codes_special[$name]);
 
 		return $arr_code;
 	}

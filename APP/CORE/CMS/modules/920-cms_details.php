@@ -30,8 +30,8 @@ class cms_details extends base_module {
 		return [
 			'cleanCache' => [
 				'label' => getLabel('lbl_cleanup_cache'),
-				'options' => function($options) {
-					return '<label>'.getLabel('lbl_age').'</label><input type="text" name="options[age_amount]" value="'.$options['age_amount'].'" /><select name="options[age_unit]">'.cms_general::createDropdown(cms_general::getTimeUnits(), $options['age_unit']).'</select>';
+				'options' => function($arr_options) {
+					return '<label>'.getLabel('lbl_age').'</label><input type="text" name="options[age_amount]" value="'.$arr_options['age_amount'].'" /><select name="options[age_unit]">'.cms_general::createDropdown(cms_general::getTimeUnits(), $arr_options['age_unit']).'</select>';
 				},
 			],
 			'clearStaticServerFiles' => [
@@ -40,13 +40,21 @@ class cms_details extends base_module {
 			'runWebService' => [
 				'label' => getLabel('lbl_run_web_service'),
 				'service' => true,
-				'options' => function($options) {
+				'options' => function($arr_options) {
 					return '<fieldset><ul>
-						<li><label>'.getLabel('lbl_server_host_port').'</label><input type="text" name="options[port]" value="'.$options['port'].'" /> <span>(+1 SSL)</span></li>
-						<li><label>'.getLabel('lbl_verbose').'</label><input type="checkbox" name="options[verbose]"'.($options['verbose'] ? ' checked="checked"' : '').'" /></li>
+						<li><label>'.getLabel('lbl_server_host_port').'</label><input type="text" name="options[port]" value="'.$arr_options['port'].'" /> <span>(+1 SSL)</span></li>
+						<li><label>'.getLabel('lbl_verbose').'</label><input type="checkbox" name="options[verbose]"'.($arr_options['verbose'] ? ' checked="checked"' : '').'" /></li>
 					</ul></fieldset>';
 				},
-			]
+			],
+			'generateSitemap' => [
+				'label' => getLabel('lbl_generate_sitemap'),
+				'options' => function($arr_options) {
+					return '<fieldset><ul>
+						<li><label>'.getLabel('lbl_host_name').'</label><input type="text" name="options[host_name]" value="'.strEscapeHTML($arr_options['host_name']).'" placeholder="'.SERVER_NAME_1100CC.'" /></li>
+					</ul></fieldset>';
+				}
+			],
 		];
 	}
 
@@ -189,7 +197,7 @@ class cms_details extends base_module {
 										
 										foreach (($arr_custom ?: [[]]) as $value) {
 											
-											$unique = uniqid('array_');
+											$unique = uniqid(cms_general::NAME_GROUP_ITERATOR);
 											$arr_sorter[] = ['value' => '<input type="text" name="details_custom['.$unique.'][name]" value="'.strEscapeHTML($value['name']).'" title="'.getLabel('lbl_name').'" /><input type="text" name="details_custom['.$unique.'][value]" value="'.strEscapeHTML($value['value']).'" />'];
 										}
 										
@@ -296,7 +304,7 @@ class cms_details extends base_module {
 											
 											foreach ($arr_server_type as $value) {
 												
-												$unique = uniqid('array_');
+												$unique = uniqid(cms_general::NAME_GROUP_ITERATOR);
 												$arr_sorter[] = ['value' => 
 													'<input type="text" name="details_servers['.$unique.'][host_name]" value="'.strEscapeHTML($value['host_name']).'" title="'.getLabel('lbl_server_host').'" />
 													<select name="details_servers['.$unique.'][host_type]">'.cms_general::createDropdown(self::getServerTypes(), $value['host_type'], false, 'label').'</select>
@@ -846,7 +854,74 @@ class cms_details extends base_module {
 		}
 	}
 	
-	public static function clearStaticServerFiles($options) {
+	public static function generateSitemap($arr_options) {
+		
+		$str_path_sitemap = DIR_ROOT_STORAGE.DIR_HOME.'sitemap/';
+		$str_path_sitemap_new = getPathTemporary(false, true);
+		$arr_modules = getModuleConfiguration('webLocations');
+		
+		$str_host_name = ($arr_options['host_name'] ? rawurldecode($arr_options['host_name']) : false);
+				
+		Response::holdFormat(true);
+		Response::setFormat(Response::RENDER_TEXT);
+		
+		$sitemap = new GenerateSitemap($str_path_sitemap_new);
+		$sitemap->setHostName($str_host_name);
+		
+		foreach ($arr_modules as $module => $arr_settings) {
+			
+			$iterator = $arr_settings['entries'];
+			
+			if (!$iterator) {
+				continue;
+			}
+			
+			if (is_callable($iterator)) {
+				$iterator = $iterator();
+			}
+			
+			$sitemap->addEntries($iterator, $arr_settings['name']);
+		}
+		
+		Response::holdFormat();
+		
+		// File management
+		
+		FileStore::makeDirectoryTree(DIR_ROOT_STORAGE.DIR_HOME.'sitemap/');
+		
+		// Remove old files
+		
+		$iterator_files = new DirectoryIterator($str_path_sitemap);
+		
+		foreach ($iterator_files as $file) {
+				
+			if (!$file->isFile()) {
+				continue;
+			}
+			
+			FileStore::deleteFile($str_path_sitemap.$file->getFilename());
+		}
+		
+		// Move new files
+		
+		$arr_sitemap_files = $sitemap->get();
+		$str_index = '';
+		
+		foreach ($arr_sitemap_files as $str_identifier => $arr_files) {
+			foreach ($arr_files as $str_filename) {
+							
+				FileStore::renameFile($str_path_sitemap_new.$str_filename, $str_path_sitemap.$str_filename);
+				
+				$str_index .= 'Sitemap: '.SERVER_SCHEME.($str_host_name ?: SERVER_NAME_1100CC).'/sitemap/'.$str_filename.EOL_1100CC;
+			}
+		}
+		
+		FileStore::deleteDirectoryTree(rtrim($str_path_sitemap_new, '/'));
+		
+		FileStore::storeFile($str_path_sitemap.'index.robots.txt', $str_index);
+	}
+	
+	public static function clearStaticServerFiles($arr_options) {
 		
 		$arr_servers = self::getSiteDetailsServers();
 		
@@ -940,13 +1015,19 @@ class cms_details extends base_module {
 		
 		if ($arr_job && $arr_job['process_id']) {
 			
-			$server_name_webservice = Settings::get('server_name_webservice');
-			$server_name_webservice = ($server_name_webservice !== null ? $server_name_webservice : 'ws');
-			$server_name_webservice = ($server_name_webservice ? $server_name_webservice.'.' : '');
+			$arr_webservice = (Settings::get('webservice') ?: []);
 			
-			$arr_job['host'] = $server_name_webservice.SERVER_NAME;
+			$str_server_name = ($arr_webservice['server_name'] ? $arr_webservice['server_name'].'.' : '');
+			$num_port = null;
+			if (!empty($arr_webservice['ports'][SERVER_SCHEME])) {
+				$num_port = (int)$arr_webservice['ports'][SERVER_SCHEME];
+			} else {
+				$num_port = (SERVER_SCHEME == URI_SCHEME_HTTPS ? (int)$arr_job['port']+1 : (int)$arr_job['port']);
+			}
+
+			$arr_job['host'] = $str_server_name.SERVER_NAME;
 			$arr_job['port_local'] = (int)$arr_job['port'];
-			$arr_job['port'] = (SERVER_SCHEME == 'https://' ? (int)$arr_job['port']+1 : (int)$arr_job['port']);
+			$arr_job['port'] = $num_port;
 			
 			return $arr_job;
 		} else {

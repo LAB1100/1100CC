@@ -7,7 +7,7 @@
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-class PhpStringParser {
+class ParsePHPString {
 
 	protected static $arr_calls_allowed = [
 		'explode','implode','date','time','round','trunc','rand','ceil','floor','srand','strtolower','strtoupper','substr','stristr','strpos','print_r',

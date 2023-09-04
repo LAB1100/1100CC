@@ -732,7 +732,7 @@ class cms_newsletters extends base_module {
 		
 		$subject = $title;
 		
-		$module_url = pages::getModUrl(pages::getClosestMod('newsletters'));
+		$module_url = pages::getModuleURL(pages::getClosestModule('newsletters'));
 		
 		Labels::setVariable('link_view', $module_url.$id);
 		Labels::setVariable('link_opt_out', $module_url.'unsubscribe/'.$id.'/[V][email]');

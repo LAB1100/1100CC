@@ -18,7 +18,7 @@ class intf_uri_translators extends uris {
 		
 		$arr_hosts = cms_details::getSiteDetailsHosts();
 	
-		$return .= '<div class="section"><h1>'.self::$label.'</h1>
+		$return = '<div class="section"><h1>'.self::$label.'</h1>
 		<div class="uri_translators">';
 		
 			$return .= '<div class="tabs">
@@ -50,15 +50,14 @@ class intf_uri_translators extends uris {
 		if (!$arr_hosts) {
 
 			Labels::setVariable('name', getLabel('lbl_server_hosts'));
-			$msg = getLabel('msg_no', 'L', true);
 			
-			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+			$return = '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 		} else {
 			
 			$arr_uri_translators = self::getURITranslators();
 			$arr_uri_translators_hosts = self::getURITranslatorHosts();
 
-			$return .= '<form id="f:intf_uri_translators:host_uri_translator-0">
+			$return = '<form id="f:intf_uri_translators:host_uri_translator-0">
 				<table class="list">
 					<thead>
 						<tr>
@@ -89,15 +88,15 @@ class intf_uri_translators extends uris {
 		if (!$arr_uri_translators) {
 
 			Labels::setVariable('name', getLabel('lbl_uri_translators'));
-			$msg = getLabel('msg_no', 'L', true);
-			
-			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+
+			$return = '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 		} else {
 		
-			$return .= '<table class="list">
+			$return = '<table class="list">
 				<thead>
 					<tr>
 						<th class="max"><span>'.getLabel('lbl_name').'</span></th>
+						<th class="limit"><span>'.getLabel('lbl_mode').'</span></th>
 						<th><span>'.getLabel('lbl_host_name').'</span></th>
 						<th class="limit"><span>'.getLabel('lbl_delay').'</span></th>
 						<th class="limit"><span>'.getLabel('lbl_remarks').'</span></th>
@@ -107,9 +106,12 @@ class intf_uri_translators extends uris {
 				<tbody>';
 				
 					foreach ($arr_uri_translators as $uri_translator_id => $arr_uri_translator) {
-													
+						
+						$str_mode = (bitHasMode($arr_uri_translator['mode'], uris::MODE_IN) && bitHasMode($arr_uri_translator['mode'], uris::MODE_OUT) ? 'IN + OUT' : (bitHasMode($arr_uri_translator['mode'], uris::MODE_OUT) ? 'OUT' : 'IN'));
+						
 						$return .= '<tr id="x:intf_uri_translators:uri_translator_id-'.$uri_translator_id.'">
 							<td>'.$arr_uri_translator['name'].'</td>
+							<td>'.$str_mode.'</td>
 							<td>'.($arr_uri_translator['host_name'] ? $arr_uri_translator['host_name'] : SERVER_NAME_SITE_NAME).'</td>
 							<td>'.($arr_uri_translator['delay'] ? ((int)$arr_uri_translator['delay']/1000).' '.getLabel('unit_seconds') : '<span class="icon" data-category="status">'.getIcon('min').'</span>').'</td>
 							<td><span class="icon" data-category="status">'.getIcon(($arr_uri_translator['show_remark'] ? 'tick' : 'min')).'</span></td>
@@ -179,18 +181,32 @@ class intf_uri_translators extends uris {
 			
 			$arr_uri_translator = [];
 			$mode = 'insert_uri_translator';
+
+			$arr_mode_selected = [static::MODE_IN];
 		
 			if ($method == 'edit_uri_translator' && $id) {
 				
 				$arr_uri_translator = self::getURITranslators($id);
 				$mode = 'update_uri_translator';
+				
+				$arr_mode_selected = [];
+				if (bitHasMode($arr_uri_translator['mode'], static::MODE_IN)) {
+					$arr_mode_selected[] = static::MODE_IN;
+				}
+				if (bitHasMode($arr_uri_translator['mode'], static::MODE_OUT)) {
+					$arr_mode_selected[] = static::MODE_OUT;
+				}
 			}
-								
+						
 			$this->html = '<form id="frm-uri_translator" data-method="'.$mode.'">
 				<fieldset><ul>
 					<li>
 						<label>'.getLabel('lbl_name').'</label>
 						<div><input type="text" name="name" value="'.strEscapeHTML($arr_uri_translator['name']).'" /></div>
+					</li>
+					<li>
+						<label>'.getLabel('lbl_mode').'</label>
+						<div>'.cms_general::createSelector(static::getModes(), 'mode', $arr_mode_selected).'</div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_host_name').'</label>
@@ -215,12 +231,18 @@ class intf_uri_translators extends uris {
 		// QUERY
 		
 		if ($method == "insert_uri_translator") {
-		
+			
+			$num_mode = (($_POST['mode'][uris::MODE_IN] ? uris::MODE_IN : 0) + ($_POST['mode'][uris::MODE_OUT] ? uris::MODE_OUT : 0));
+			if (!$num_mode) {
+				$num_mode = uris::MODE_IN;
+			}
+			
 			$res = DB::query("INSERT INTO ".DB::getTable('SITE_URI_TRANSLATORS')."
-				(name, host_name, delay, show_remark)
+				(name, mode, host_name, delay, show_remark)
 					VALUES
 				(
 					'".DBFunctions::strEscape($_POST['name'])."',
+					".(int)$num_mode.",
 					".($_POST['host_name'] ? "'".DBFunctions::strEscape($_POST['host_name'])."'" : "NULL").",
 					".((float)$_POST['delay']*1000).",
 					".(int)$_POST['show_remark']."
@@ -231,10 +253,16 @@ class intf_uri_translators extends uris {
 			$this->msg = true;
 		}
 		
-		if ($method == "update_uri_translator" && $id){
+		if ($method == "update_uri_translator" && $id) {
+			
+			$num_mode = (($_POST['mode'][uris::MODE_IN] ? uris::MODE_IN : 0) + ($_POST['mode'][uris::MODE_OUT] ? uris::MODE_OUT : 0));
+			if (!$num_mode) {
+				$num_mode = uris::MODE_IN;
+			}
 						
 			$res = DB::query("UPDATE ".DB::getTable('SITE_URI_TRANSLATORS')." SET
 					name = '".DBFunctions::strEscape($_POST['name'])."',
+					mode = ".(int)$num_mode.",
 					host_name = ".($_POST['host_name'] ? "'".DBFunctions::strEscape($_POST['host_name'])."'" : "NULL").",
 					delay = ".((float)$_POST['delay']*1000).",
 					show_remark = ".(int)$_POST['show_remark']."

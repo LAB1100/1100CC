@@ -24,9 +24,8 @@ class intf_api_authentication extends apis {
 			if (!$arr_apis) {
 
 				Labels::setVariable('name', getLabel('lbl_apis'));
-				$msg = getLabel('msg_no', 'L', true);
 				
-				$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+				$return .= '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 			} else {
 				
 				$return .= '<div class="tabs">

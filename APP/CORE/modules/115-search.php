@@ -15,19 +15,7 @@ class search extends base_module {
 	}
 		
 	public function contents() {
-	
-		if ($this->arr_query[0] == 'jump') {
 			
-			if ($this->arr_query[2]) { // If a module query follows
-				$location = pages::getModUrl(pages::getMods((int)$this->arr_query[1])).implode('/', array_slice($this->arr_query, 2));
-			} else {
-				$location = pages::getPageUrl(pages::getMods((int)$this->arr_query[1]));
-			}
-			
-			Response::location($location);
-			exit;
-		}
-		
 		$str_search = static::decodeURLString($this->arr_query[0]);
 				
 		$return .= '<h1>'.getLabel('lbl_search').'</h1>
@@ -40,7 +28,7 @@ class search extends base_module {
 				
 				$return .= $this->doSearch($str_search);
 				
-				SiteEndVars::setModVariables($this->mod_id, [], true); // Clear the settings in the url
+				SiteEndVars::setModuleVariables($this->mod_id, [], true); // Clear the settings in the url
 			}
 		
 		$return .= '</div>';
@@ -59,7 +47,7 @@ class search extends base_module {
 			.search dl > dt > .hits { font-size: 1rem; display: inline-block; }
 			.search dl > dt > .link { display: block; margin-top: 4px; }
 			.search dl > dd { color: #666666; margin-top: 8px; }
-			.search dl > dd em { font-style: normal; font-weight: bold; color: #444444; background-color: #fffc5b; }
+			.search dl > dd em { font-style: normal; font-weight: bold; color: var(--text); background-color: #fffc5b; }
 			.search dl > dt > a em { font-style: normal; }
 		';
 		
@@ -105,7 +93,7 @@ class search extends base_module {
 	
 		$arr_search_properties = getModuleConfiguration('searchProperties');
 		
-		$arr_modules = pages::getMods(array_keys($arr_search_properties));
+		$arr_modules = pages::getModules(array_keys($arr_search_properties));
 		$arr_modules = pages::filterClearance($arr_modules, ($_SESSION['USER_GROUP'] ?? null), ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] ?? null));
 
 		$arr_search_vars = [];
@@ -152,10 +140,12 @@ class search extends base_module {
 				
 				$arr_bodies[$key] = Labels::printLabels($str_body);
 			}
+			
+			$arr_cache_url = [];
 						
 			foreach ($arr_results as $key => $arr_result) {
 				
-				$module_id = ($arr_result['search_var'] ? $arr_search_vars[$arr_result['module']][$arr_result['search_var']] : $arr_search_vars[$arr_result['module']]);
+				$module_id = (int)($arr_result['search_var'] ? $arr_search_vars[$arr_result['module']][$arr_result['search_var']] : $arr_search_vars[$arr_result['module']]);
 				$str_title = strEscapeHTML(Labels::printLabels(Labels::parseTextVariables($arr_result['title'])));
 				$str_excerpt = FormatExcerpt::parse($arr_bodies[$key], $arr_strings[0], false, 350, '... ', ' ...');
 				
@@ -169,8 +159,28 @@ class search extends base_module {
 					$arr_results[$key]['count'] = ($str_title_highlight['count']+($body_count ?: $str_excerpt_highlight['count']));
 				}
 				
+				if (!$str_title) { // Get module name
+					
+					$arr_result['module']::moduleProperties();
+					$str_title = $arr_result['module']::$label;
+				}
+				
 				$str_url_extra = ($arr_search_properties[$arr_result['module']]['module_query']($arr_result) ?: '');
-				$str_url = ''.SiteStartVars::getModUrl($this->mod_id).'jump/'.$module_id.$str_url_extra;
+
+				if ($str_url_extra) { // If a module query follows
+					
+					if (!isset($arr_cache_url['module'][$module_id])) {
+						$arr_cache_url['module'][$module_id] = pages::getModuleURL(pages::getModules($module_id));
+					}
+					$str_url = $arr_cache_url['module'][$module_id].$str_url_extra;
+				} else {
+					
+					if (!isset($arr_cache_url['page'][$module_id])) {
+						$arr_cache_url['page'][$module_id] = pages::getPageURL(pages::getModules($module_id));
+					}
+					$str_url = $arr_cache_url['page'][$module_id];
+				}
+				
 				$arr_results[$key]['html'] = '<dt>
 					<a href="'.$str_url.'" target="_blank">'.$str_title.'</a>
 					<span class="hits">'.$arr_results[$key]['count'].' hit'.($arr_results[$key]['count'] > 1 ? 's' : '').'</span>
@@ -184,7 +194,7 @@ class search extends base_module {
 				if ($a['count'] === $b['count']) {
 					return 0;
 				}
-				return ($a['count'] < $b['count'] ? -1 : 1);
+				return ($a['count'] > $b['count'] ? -1 : 1);
 			});
 			
 			$result = implode('', arrValuesRecursive('html', $arr_results));

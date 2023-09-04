@@ -84,6 +84,10 @@ function MapScroller(element, options) {
 		elm.off();
 		elm.empty();
 		
+		if (removeListeners) {
+			removeListeners();
+		}
+		
 		resize_sensor.detach();
 	};
 			
@@ -118,15 +122,19 @@ function MapScroller(element, options) {
 		});
 	};
 	
+	this.onInteractDown = false;
+	this.onInteractMove = false;
+	this.onInteractUp = false;
+	
 	var addListeners = function() {
 		
 		var in_event = false;
 		var pinch = false;
 		var has_moved = false;
-		
-		elm_con.on('mousedown.scroller touchstart.scroller', function(e) {
+				
+		const func_mouse_down = function(e) {
 			
-			var func_prevent_drag = false;
+			let func_prevent_drag = false;
 			
 			if (POSITION.isTouch()) {
 				
@@ -136,21 +144,22 @@ function MapScroller(element, options) {
 				
 				pinch = POSITION.getPinch(e);
 				
-				if (in_event) { // Touchstart can be triggered multiple times, prevent everything default for additional touches
+				if (in_event) { // Touchstart can be triggered multiple times, prevent additional touches
 					
 					e.preventDefault();
 					return;
 				}
+				// Allow click/click-select
 
 				func_prevent_drag = function(e2) {
 					
-					e2.preventDefault(); // Prevent document drag
+					e2.preventDefault(); // Prevent document drag/drag-select
 				};
 				
 				document.addEventListener('touchmove', func_prevent_drag, {passive: false});
 			} else {
 
-				e.preventDefault(); // Prevent document drag
+				e.preventDefault(); // Prevent document drag-select
 				
 				if (in_event) {
 					return;
@@ -162,20 +171,54 @@ function MapScroller(element, options) {
 			SCRIPTER.triggerEvent(elm[0].closest('[tabindex]'), 'focus');
 		
 			var elm_target = $(e.target);
-			var pos_mouse = POSITION.getMouseXY(e.originalEvent);
+			var pos_mouse = POSITION.getMouseXY(e);
 			has_moved = false;
+			
+			if (obj.onInteractDown) { // Do custom
+				
+				obj.onInteractDown(e);
+			} else { // Do scroller
+				
+				startTiling();
+				doMove(true);
+			}
+			
+			const func_mouse_move = function(e2) {
+				
+				const cur_pos_mouse = POSITION.getMouseXY(e2);
+				let has_moved_trigger = false;
+				
+				if (!has_moved && (cur_pos_mouse.x != pos_mouse.x || cur_pos_mouse.y != pos_mouse.y)) { // Check for real movement because of chrome 'always trigger move'-bug
 
-			startTiling();
-			doMove(true);
+					has_moved = true;
+					has_moved_trigger = true;
+				}
+				
+				if (obj.onInteractMove) { // Do custom
+					
+					obj.onInteractMove(e2);
+					return;
+				}
+				
+				// Do scroller
 
-			$(document).on('mousemove.scroller touchmove.scroller', function(e2) {
-								
+				if (has_moved_trigger) {
+					
+					SCRIPTER.triggerEvent(elm, 'movingstart');
+					elm.addClass('moving');
+				}
+
+				obj.setPosition((cur_pos_mouse.x - pos_mouse.x), (cur_pos_mouse.y - pos_mouse.y), true);
+				
+				pos_mouse.x = cur_pos_mouse.x;
+				pos_mouse.y = cur_pos_mouse.y;
+				
 				if (pinch !== false) {
 					
-					var pinch2 = POSITION.getPinch(e2.originalEvent);
-					var difference = pinch2 - pinch;
+					const pinch2 = POSITION.getPinch(e2);
+					const difference = pinch2 - pinch;
 
-					var pos_xy = obj.getMousePositionToCenter();
+					const pos_xy = obj.getMousePositionToCenter();
 					
 					if (difference > 100) {
 						
@@ -187,38 +230,54 @@ function MapScroller(element, options) {
 						pinch = pinch2;
 					}
 				}
+			};
+			
+			const func_mouse_up = function(e2) {
 				
-				var cur_pos_mouse = POSITION.getMouseXY(e2.originalEvent);
-				
-				if (!has_moved && (cur_pos_mouse.x != pos_mouse.x || cur_pos_mouse.y != pos_mouse.y)) { // Check for real movement because of chrome 'always trigger move'-bug
+				if (obj.onInteractUp) { // Do custom
 					
-					SCRIPTER.triggerEvent(elm, 'movingstart');
-					elm.addClass('moving');
-					has_moved = true;
+					obj.onInteractUp(e2);
+				} else { // Do scroller
+				
+					if (has_moved) {
+						SCRIPTER.triggerEvent(elm, 'movingstop');
+						elm.removeClass('moving');
+					}
+					
+					doMove(false);
+					stopTiling();
 				}
-				
-				obj.setPosition((cur_pos_mouse.x - pos_mouse.x), (cur_pos_mouse.y - pos_mouse.y), true);
-				
-				pos_mouse.x = cur_pos_mouse.x;
-				pos_mouse.y = cur_pos_mouse.y;
-			}).one('mouseup.scroller touchend.scroller', function(e2) {
-				
-				if (has_moved) {
-					SCRIPTER.triggerEvent(elm, 'movingstop');
-					elm.removeClass('moving');
-				}
-				
-				doMove(false);
-				stopTiling();
-				
+					
 				in_event = false;
+				
+				removeListeners();
+			};
+			
+			document.addEventListener('mousemove', func_mouse_move, {passive: true});
+			document.addEventListener('touchmove', func_mouse_move, {passive: true});
+			document.addEventListener('mouseup', func_mouse_up, {passive: true});
+			document.addEventListener('touchend', func_mouse_up, {passive: true});
+			
+			if (removeListeners) {
+				removeListeners();
+			}
+			removeListeners = function() {
 				
 				if (POSITION.isTouch()) {
 					document.removeEventListener('touchmove', func_prevent_drag, {passive: false});
 				}
-				$(document).off('mousemove.scroller touchmove.scroller mouseup.scroller touchend.scroller');
-			});
-		});
+				
+				document.removeEventListener('mousemove', func_mouse_move, {passive: true});
+				document.removeEventListener('touchmove', func_mouse_move, {passive: true});
+				document.removeEventListener('mouseup', func_mouse_up, {passive: true});
+				document.removeEventListener('touchend', func_mouse_up, {passive: true});
+				
+				removeListeners = false;
+			};
+		};
+		
+		elm_con[0].addEventListener('mousedown', func_mouse_down, {passive: false});
+		elm_con[0].addEventListener('touchstart', func_mouse_down, {passive: false});
 		
 		elm_con[0].addEventListener('click', function(e) {
 			
@@ -256,13 +315,15 @@ function MapScroller(element, options) {
 			e.preventDefault();
 			
 			SCRIPTER.triggerEvent(elm[0].closest('[tabindex]'), 'focus');
-		});
+		}, {passive: false});
 		
 		resize_sensor = new ResizeSensor(elm[0], function() {
 			
 			obj.setZoom(cur_zoom, false, pos_view_frame);
 		});
 	};
+	
+	var removeListeners = false;
 	
 	var setWindow = function() {
 		

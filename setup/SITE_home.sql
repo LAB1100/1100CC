@@ -328,15 +328,6 @@ CREATE TABLE `def_poll_set_options` (
   `sort` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `def_projects` (
-  `id` int NOT NULL,
-  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `description` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `url` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `img` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `date` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE `def_sliders` (
   `id` int NOT NULL,
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -403,6 +394,31 @@ CREATE TABLE `user_details` (
 CREATE TABLE `user_preferences_messaging` (
   `user_id` int NOT NULL,
   `notify_email` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_feeds` (
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_feed_entries` (
+  `id` int NOT NULL,
+  `title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `media` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `body` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `date` datetime NOT NULL,
+  `sort` int NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_feed_entry_link` (
+  `feed_id` int NOT NULL,
+  `feed_entry_id` int NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `def_feed_entry_tags` (
+  `feed_entry_id` int NOT NULL,
+  `tag_id` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -514,6 +530,7 @@ ALTER TABLE `def_form_field_sub`
 
 ALTER TABLE `def_media`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `directory` (`directory`,`filename`),
   ADD KEY `type` (`type`);
 
 ALTER TABLE `def_media_internal_tags`
@@ -548,9 +565,6 @@ ALTER TABLE `def_poll_set_options`
   ADD PRIMARY KEY (`id`),
   ADD KEY `poll_set_id` (`poll_set_id`);
 
-ALTER TABLE `def_projects`
-  ADD PRIMARY KEY (`id`);
-
 ALTER TABLE `def_sliders`
   ADD PRIMARY KEY (`id`);
 
@@ -584,6 +598,18 @@ ALTER TABLE `user_details`
 
 ALTER TABLE `user_preferences_messaging`
   ADD PRIMARY KEY (`user_id`);
+
+ALTER TABLE `def_feeds`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `def_feed_entries`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `def_feed_entry_link`
+  ADD PRIMARY KEY (`feed_id`,`feed_entry_id`);
+
+ALTER TABLE `def_feed_entry_tags`
+  ADD PRIMARY KEY (`feed_entry_id`,`tag_id`);
 
 
 ALTER TABLE `data_blog_post_comments`
@@ -655,9 +681,6 @@ ALTER TABLE `def_poll_sets`
 ALTER TABLE `def_poll_set_options`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
-ALTER TABLE `def_projects`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
-
 ALTER TABLE `def_sliders`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
@@ -668,4 +691,10 @@ ALTER TABLE `def_tags`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `site_log_requests_access`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `def_feeds`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `def_feed_entries`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;

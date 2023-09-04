@@ -58,38 +58,36 @@ class blog_tag_cloud extends base_module {
 		
 		ksort($arr_tags_sorted); // the query sorted it to highest count first, now it is resorted to the tag name
 		
-		$max_size = 100; // max font size in %
-		$min_size = 1; // min font size in %
-		$max_quantity = max(array_values($arr_tags_sorted)); // get the largest and smallest array values
-		$min_quantity = min(array_values($arr_tags_sorted)); // get the largest and smallest array values
-		$spread = $max_quantity - $min_quantity; // find the range of values
-		$spread = ($spread == 0 ? 1 : $spread); // we don't want to divide by zero
-		$step = (($max_size - $min_size) / $spread); // determine the font-size increment, this is the increase per tag quantity (times used)
+		$num_size_max = 100; // max font size in %
+		$num_size_min = 1; // min font size in %
+		$num_quantity_max = max(array_values($arr_tags_sorted)); // get the largest and smallest array values
+		$num_quantity_min = min(array_values($arr_tags_sorted)); // get the largest and smallest array values
+		$num_spread = $num_quantity_max - $num_quantity_min; // find the range of values
+		$num_spread = ($num_spread == 0 ? 1 : $num_spread); // we don't want to divide by zero
+		$num_step = (($num_size_max - $num_size_min) / $num_spread); // determine the font-size increment, this is the increase per tag quantity (times used)
 
-		$nr_preview = (int)$this->arr_variables['preview'];
-		$nr_preview = ($nr_preview && $nr_preview < count($arr_tags_sorted) ? $nr_preview : 0);
+		$num_preview = (int)$this->arr_variables['preview'];
+		$num_preview = ($num_preview && $num_preview < count($arr_tags_sorted) ? $num_preview : 0);
 			
 		$arr_html = [];
-		$str_inf_tags = getLabel('inf_tags_tag', 'L', true);
-		$count_tags = 0;
+		$num_count_tags = 0;
 		
-		foreach ($arr_tags_sorted as $str_tag => $count) {
+		foreach ($arr_tags_sorted as $str_tag => $num_count) {
 			
-			$size = (($count - $min_quantity) * $step) + $min_size;
+			$num_size = (($num_count - $num_quantity_min) * $num_step) + $num_size_min;
 			
-			Labels::setVariable('count', $count);
+			Labels::setVariable('count', $num_count);
 			Labels::setVariable('tag', $str_tag);
-			
-			$title = Labels::printLabels(Labels::parseTextVariables($str_inf_tags));
+			$str_title = getLabel('inf_tags_tag', 'L', true);
 			
 			$str_tag = strEscapeHTML($str_tag);
 			
-			$arr_html[] = '<a'.($arr_link ? ' href="'.SiteStartVars::getModUrl($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'tag/'.str_replace(' ', '+', $str_tag).'"' : '').' style="font-size: '.$size.'%" title="'.strEscapeHTML($title).'" data-tag="'.$str_tag.'"'.($nr_preview && $count_tags >= $nr_preview ? ' class="hide-show"' : '').'><span>'.$str_tag.'</span><sup>'.$count.'</sup></a>';
+			$arr_html[] = '<a'.($arr_link ? ' href="'.SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'tag/'.str_replace(' ', '+', $str_tag).'"' : '').' style="font-size: '.$num_size.'%" title="'.strEscapeHTML($str_title).'" data-tag="'.$str_tag.'"'.($num_preview && $num_count_tags >= $num_preview ? ' class="hide-show"' : '').'><span>'.$str_tag.'</span><sup>'.$num_count.'</sup></a>';
 			
-			$count_tags++;
+			$num_count_tags++;
 		}
 				
-		if ($nr_preview) {
+		if ($num_preview) {
 
 			$html_tags = '<input id="hide-show-'.$this->mod_id.'" type="checkbox" />'
 			.implode('', $arr_html)

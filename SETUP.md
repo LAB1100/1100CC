@@ -28,6 +28,11 @@ To create a new site/application in the 1100CC installation, do the following:
 
 ### Apache webserver
 
+Make sure the following Apache modules are enabled:
+* rewrite
+* headers
+* ssl (optional)
+
 Include and adjust the following VirtualHost configuration to your Apache config to direct all relevant traffic (hosts and HTTP/80 and or HTTPS/443) to the 1100CC `./APP` root directory:
 
 ```apache

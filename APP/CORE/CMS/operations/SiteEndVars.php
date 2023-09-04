@@ -9,23 +9,26 @@
 
 class SiteEndVars {
 	
-	private static $arr_head_tags = [];
-	private static $arr_titles = [];
-	private static $arr_descriptions = [];
-	private static $arr_keywords = [];
-	private static $arr_content_identifiers = [];
-	private static $type = 'website';
-	private static $url = '';
-	private static $image = false;
-	private static $arr_theme = [];
+	protected static $arr_head_tags = [];
+	protected static $arr_titles = [];
+	protected static $arr_descriptions = [];
+	protected static $arr_keywords = [];
+	protected static $arr_content_identifiers = [];
+	protected static $str_type = 'website';
+	protected static $str_image = false;
+	protected static $arr_theme = [];
 	
-	public static $arr_request_vars = [];
-	public static $arr_server_name_custom = [];
-	public static $arr_feedback = [];
+	protected static $arr_request_vars = [];
+	protected static $arr_server_name_custom = [];
+	protected static $arr_feedback = [];
 	
 	protected static $shortcut_mod_id = false;
 	protected static $str_shortcut_name = false;
 	protected static $is_root_shortcut = false;
+	
+	const LOCATION_REAL = 0;
+	const LOCATION_CANONICAL_NATIVE = 1; // System-directed use
+	const LOCATION_CANONICAL_PUBLIC = 2; // Public purposes
 
 	public static function addHeadTag($tag) {
 	
@@ -71,10 +74,10 @@ class SiteEndVars {
 	
 	public static function getTitle() {
 
-		array_unshift(self::$arr_titles, getLabel('title', 'D'), (SiteStartVars::$dir ? SiteStartVars::$dir['title'] : ''), (SiteStartVars::$page_name ? SiteStartVars::$page['title'] : ''));
+		array_unshift(self::$arr_titles, getLabel('title', 'D'), (SiteStartVars::getDirectory() ? SiteStartVars::getDirectory('title') : ''), (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) ? SiteStartVars::getPage('title') : ''));
 		self::$arr_titles = array_filter(self::$arr_titles);
 		
-		return strEscapeHTML(Labels::parseTextVariables(implode(' | ', self::$arr_titles)));
+		return Labels::parseTextVariables(implode(' | ', self::$arr_titles));
 	}
 	
 	public static function addDescription($arr_descriptions) {
@@ -86,7 +89,7 @@ class SiteEndVars {
 				
 		self::$arr_descriptions = (self::$arr_descriptions ? Labels::parseTextVariables(implode(' ', array_unique(self::$arr_descriptions))) : getLabel('description', 'D'));
 		
-		return strEscapeHTML(self::$arr_descriptions);
+		return self::$arr_descriptions;
 	}
 	
 	public static function addKeywords($keywords) {
@@ -121,36 +124,26 @@ class SiteEndVars {
 		return createContentIdentifier(self::$arr_content_identifiers);
 	}
 	
-	public static function setType($type) {
+	public static function setType($str_type) {
 	
-		self::$type = $type;
+		self::$str_type = $str_type;
 	}
 	
 	public static function getType() {
 	
-		return self::$type;
+		return self::$str_type;
 	}
+		
+	public static function setImage($str_image) {
 	
-	public static function setUrl($url) {
-	
-		self::$url = $url;
-	}
-	
-	public static function getUrl() {
-	
-		return self::$url;
-	}
-	
-	public static function setImage($image) {
-	
-		self::$image = $image;
+		self::$str_image = $str_image;
 	}
 	
 	public static function getImage() {
 		
-		$image = (self::$image ?: '/'.DIR_CSS.'image.png');
+		$str_image = (self::$str_image ?: '/'.DIR_CSS.'image.png');
 		
-		return $image;
+		return $str_image;
 	}
 	
 	public static function getIcons() {
@@ -160,10 +153,10 @@ class SiteEndVars {
 		$html = '';
 		
 		foreach ([16, 32, 96, 128, 196] as $num_size) {
-			$html .= '<link rel="icon" type="image/png" href="'.SiteStartVars::getCacheUrl('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
+			$html .= '<link rel="icon" type="image/png" href="'.SiteStartVars::getCacheURL('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
 		}
 		foreach ([57, 60, 72, 76, 114, 120, 144, 152] as $num_size) {
-			$html .= '<link rel="apple-touch-icon" href="'.SiteStartVars::getCacheUrl('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
+			$html .= '<link rel="apple-touch-icon" href="'.SiteStartVars::getCacheURL('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
 		}
 		
 		return $html;
@@ -189,13 +182,13 @@ class SiteEndVars {
 		return $arr_theme;
 	}
 	
-	public static function setFeedback($variable, $data, $store = false) {
+	public static function setFeedback($str_variable, $data, $store = false) {
 		
 		if ($store) {
-			self::$arr_feedback['store'][$variable] = $data;
-			SiteStartVars::$arr_feedback[$variable] = $data; // Also update the possible original value
+			self::$arr_feedback['store'][$str_variable] = $data;
+			SiteStartVars::setFeedback($data, $str_variable); // Also update the possible original value
 		} else {
-			self::$arr_feedback['broadcast'][$variable] = $data;
+			self::$arr_feedback['broadcast'][$str_variable] = $data;
 		}
 	}
 	
@@ -211,9 +204,24 @@ class SiteEndVars {
 		static::$is_root_shortcut = $is_root;
 	}
 	
-	public static function setModVariables($mod_id = false, $arr_var_names = [], $overwrite = true) {
+	public static function setRequestVariables($arr_variables, $num_index = false) {
 		
-		if ($overwrite) {
+		if ($num_index !== false) {
+			
+			if ($arr_variables === false) {
+				unset(self::$arr_request_vars[$num_index]);
+			} else {
+				self::$arr_request_vars[$num_index] = $arr_variables;
+			}
+			return;
+		}
+		
+		self::$arr_request_vars = $arr_variables;
+	}
+	
+	public static function setModuleVariables($mod_id = false, $arr_var_names = [], $do_overwrite = true) {
+		
+		if ($do_overwrite) {
 			self::$arr_request_vars[$mod_id] = [];
 		}
 
@@ -231,17 +239,21 @@ class SiteEndVars {
 		}
 	}
 	
-	public static function getLocationVariables($is_canonical = true) {
+	public static function getLocationVariables($mode_location = self::LOCATION_CANONICAL_NATIVE) {
 		
 		$arr = [];
 		
 		if (!self::$arr_request_vars) {
 			return $arr;
 		}
+		
+		if (IS_CMS) {
+			return array_filter(self::$arr_request_vars);
+		}
 				
 		ksort(self::$arr_request_vars);
 		
-		if (static::$shortcut_mod_id && isset(self::$arr_request_vars[static::$shortcut_mod_id]) && !$is_canonical) { // Start with the shortcut variables
+		if (static::$shortcut_mod_id && isset(self::$arr_request_vars[static::$shortcut_mod_id]) && $mode_location == static::LOCATION_REAL) { // Start with the shortcut variables
 			
 			$arr_var_names = self::$arr_request_vars[static::$shortcut_mod_id];
 			unset(self::$arr_request_vars[static::$shortcut_mod_id]);
@@ -255,7 +267,7 @@ class SiteEndVars {
 				continue;
 			}
 			
-			if ($mod_id && (!static::$shortcut_mod_id || static::$shortcut_mod_id != $mod_id || $is_canonical)) {
+			if ($mod_id && (!static::$shortcut_mod_id || static::$shortcut_mod_id != $mod_id || $mode_location != static::LOCATION_REAL)) {
 				$arr[] = $mod_id.'.m';
 			}
 			
@@ -265,7 +277,7 @@ class SiteEndVars {
 
 				if (!is_numeric($var_name)) {
 					
-					if ($cur_var_name != $var_name) {
+					if ($cur_var_name !== $var_name) {
 						$arr[] = $var_name.'.v';
 					}
 					
@@ -285,48 +297,75 @@ class SiteEndVars {
 		return $arr;
 	}
 	
-	public static function getLocation($rel = true, $is_canonical = false) {
+	public static function getLocation($is_relative = true, $mode_location = self::LOCATION_REAL) {
+
+		$arr_location_vars = self::getLocationVariables($mode_location);
 		
-		$location = SiteStartVars::getBasePath(0, $rel);
+		if (IS_CMS) {
+			return (!$is_relative ? URL_BASE_HOME : '/').implode('/', $arr_location_vars);
+		}
 		
-		$arr_location_vars = self::getLocationVariables($is_canonical);
+		$str_location = SiteStartVars::getBasePath(0, $is_relative);
 		
 		if ($arr_location_vars) {
 			
-			if (static::$shortcut_mod_id && !$is_canonical) {
+			if (static::$shortcut_mod_id && $mode_location == static::LOCATION_REAL) {
 				
 				if (static::$is_root_shortcut) {
-					$location = (!$rel ? URL_BASE_HOME : '/').static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
+					$str_location = (!$is_relative ? URL_BASE_HOME : '/').static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
 				} else {
-					$location .= static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
+					$str_location .= static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
 				}
 			} else {
 			
-				$location .= SiteStartVars::$page['name'].'.p/'.implode('/', $arr_location_vars);
+				$str_location .= SiteStartVars::getPage('name').'.p/'.implode('/', $arr_location_vars);
 			}
 		} else {
 
-			if (!(SiteStartVars::$dir['root'] && SiteStartVars::$dir['page_index_id'] == SiteStartVars::$page['id']) || ($is_canonical || (SiteStartVars::$page_name && SiteStartVars::$page_kind == '.c' && SiteStartVars::$page_name != 'commands'))) { // Show page name when it is not the root page, or when it is explicitly requested (canonical or in command)
-				$location .= SiteStartVars::$page['name'];
+			if (!(SiteStartVars::getDirectory('root') && SiteStartVars::getDirectory('page_index_id') == SiteStartVars::getPage('id')) || ($mode_location != static::LOCATION_REAL || (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) && SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.c' && SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) != 'commands'))) { // Show page name when it is not the root page, or when it is explicitly requested (canonical or in command)
+				$str_location .= SiteStartVars::getPage('name');
 			}
 		}
-
-		return $location;
+		
+		if (($mode_location == static::LOCATION_REAL || $mode_location == static::LOCATION_CANONICAL_PUBLIC) && SiteStartVars::getURITranslator() && bitHasMode(SiteStartVars::getURITranslator('mode'), uris::MODE_OUT)) {
+			
+			$str_location_use = substr($str_location, (!$is_relative ? strlen(URL_BASE_HOME) : 1)); // Identifier does not contain any leading information
+			$arr_uri = uris::getURI(SiteStartVars::getURITranslator('id'), uris::MODE_OUT, $str_location_use);
+			
+			if ($arr_uri) {
+				$str_location = (!$is_relative ? URL_BASE_HOME : '/').substr($arr_uri['url'], 1); // Restore leading information
+			}
+		}
+		
+		return $str_location;
 	}
 	
-	public static function getModLocation($mod_id, $arr_var_names = [], $overwrite = true, $rel = true) {
+	public static function getModuleLocation($mod_id, $arr_var_names = [], $do_overwrite = true, $is_relative = true, $do_attach = false) {
 		
-		return Response::addParseDelay(false, function() use ($mod_id, $arr_var_names, $overwrite, $rel) {
+		return Response::addParseDelay(false, function() use ($mod_id, $arr_var_names, $do_overwrite, $is_relative, $do_attach) {
 		
 			$arr_cur_page_module_vars = self::$arr_request_vars[$mod_id];
 			
-			self::setModVariables($mod_id, $arr_var_names, $overwrite);
+			self::setModuleVariables($mod_id, $arr_var_names, $do_overwrite);
 			
-			$location = self::getLocation($rel);
+			$str_location = self::getLocation($is_relative);
+			
+			if ($do_attach) { // Include both real and canonical URLs
+				
+				$arr_location = ['real' => $str_location];
+				
+				$str_location_canonical = self::getLocation($is_relative, static::LOCATION_CANONICAL_NATIVE);
+				
+				if ($str_location_canonical != $str_location) {
+					$arr_location['canonical'] = $str_location_canonical;
+				}
+				
+				$str_location = value2JSON($arr_location);
+			}
 			
 			self::$arr_request_vars[$mod_id] = $arr_cur_page_module_vars;
 			
-			return $location;
+			return $str_location;
 		});
 	}
 	
@@ -355,11 +394,19 @@ class SiteEndVars {
 	public static function checkServerName() {
 		
 		$server_name_custom = self::getServerNameCustom(true);
-		$server_protocol = (SiteStartVars::useHTTPS() && SERVER_SCHEME != 'https://' ? 'https://' : SERVER_SCHEME);
+		$server_protocol = (SiteStartVars::useHTTPS() && SERVER_SCHEME != URI_SCHEME_HTTPS ? URI_SCHEME_HTTPS : SERVER_SCHEME);
 		
 		if (SERVER_NAME_CUSTOM != $server_name_custom || $server_protocol != SERVER_SCHEME) {
 			
 			Response::location($server_protocol.SERVER_NAME_SUB.$server_name_custom.SERVER_NAME_1100CC.self::getLocation());
+		}
+	}
+	
+	public static function checkRequestPolicy() {
+		
+		if (SiteStartVars::inSecureContext() && SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX) {
+			
+			Response::addHeaders('Content-Security-Policy: frame-ancestors \'self\'');
 		}
 	}
 }

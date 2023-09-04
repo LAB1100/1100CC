@@ -43,7 +43,7 @@ class header extends base_module {
 		$logout = new logout;
 		$logout = $logout->contents();
 		
-		$return .= '<a href="'.(SiteStartVars::$login_dir ? SiteStartVars::$login_dir['path'].'/' : '/').'" alt="'.getLabel('name', 'D').'"></a>';
+		$return .= '<a href="'.(SiteStartVars::getDirectory(false, SiteStartVars::DIRECTORY_LOGIN) ? SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN).'/' : '/').'" alt="'.getLabel('name', 'D').'"></a>';
 		
 		$return .= '<div class="search_box">'.$search_box.'</div>';
 		

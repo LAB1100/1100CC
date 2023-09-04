@@ -13,7 +13,7 @@
 
 	SiteStartVars::preloadModules();
 
-	$module = SiteStartVars::$api['module'];
+	$module = SiteStartVars::getAPI('module');
 	$module = new $module;
 		
 	$module->data = [];

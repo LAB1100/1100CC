@@ -27,7 +27,7 @@ class slider extends base_module {
 		
 		$arr_slider = cms_sliders::getSliderSet($this->arr_variables);
 
-		$return = '<span class="icon prev" data-category="full">'.getIcon('prev').'</span>
+		$return = '<button type="button" class="prev"><span class="icon">'.getIcon('prev').'</span></button>
 			<div data-speed="'.$arr_slider['slider']['speed'].'" data-timeout="'.$arr_slider['slider']['timeout'].'" data-effect="'.$arr_slider['slider']['effect'].'">';
 			
 			foreach ($arr_slider['slides'] as $arr_slide) {
@@ -47,7 +47,7 @@ class slider extends base_module {
 			}
 			
 			$return .= '</div>
-			<span class="icon next" data-category="full">'.getIcon('next').'</span>
+			<button type="button" class="next"><span class="icon">'.getIcon('next').'</span></button>
 			<nav class="pager"></nav>';
 		
 		return $return;
@@ -61,10 +61,11 @@ class slider extends base_module {
 			.slider > div:first-of-type > div { display: none; text-align: center; width: 100%; height: 100%: }
 			.slider > div:first-of-type > div:first-child { display: block; }
 			.slider > div:first-of-type > div > img { max-width: 100%; vertical-align: middle; }
-			.slider .icon.prev,
-			.slider .icon.next,
+			.slider button.prev,
+			.slider button.next,
 			.slider .pager { display: none; }
 			
+			.slider > div:first-of-type[data-effect=flow] { cursor: ew-resize; }
 			.slider > div:first-of-type[data-effect=flow] > div { display: block; position: absolute; }
 			
 			.slider > div:first-of-type[data-effect=scroll] { overflow: visible; --slider-image-one: none; --slider-image-two: none; --slider-opacity: 0; }
@@ -77,14 +78,11 @@ class slider extends base_module {
 			.slider > div:first-of-type[data-effect=scroll] > div:not(.flip) > p,
 			.slider > div:first-of-type[data-effect=scroll] > div:not(.flip) > figure > figurecaption { position: absolute; bottom: 20%; left: 20%; right: 20%; margin: 0px; padding: 2em; background-color: #ffffff; }
 			
-			.slider .icon.prev,
-			.slider .icon.next { position: absolute; width: 20px; top: 25px; height: 25px; z-index: 2; cursor: pointer; text-align: center; background-color: #000000; color: #ffffff; }
-			.slider .icon.prev svg,
-			.slider .icon.next svg { height: 1.4rem; }
-			.slider .icon.prev { left: 0px; border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
-			.slider .icon.next { right: 0px; border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
-			.slider .icon.prev:hover,
-			.slider .icon.next:hover { color: #000000; background-color: #ffffff; }
+			.slider button { position: absolute; width: 2rem; top: 25px; height: 2.5rem; z-index: 2; cursor: pointer; text-align: center; color: #ffffff; background-color: #000000; margin: 0px; padding: 0px; border: 0px; border-radius: 0px; }
+			.slider button > .icon svg { height: 55%; }
+			.slider button.prev { left: 0px; border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
+			.slider button.next { right: 0px; border-radius: border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
+			.slider button:hover { color: #000000; background-color: #ffffff; }
 
 			.slider .pager { position: absolute; z-index: 2; bottom: 0px; padding: 0px 2px; height: 20px; line-height: 20px; margin-left: 50%; background-color: #000000; text-align: center; border-top-left-radius: 2px; border-top-right-radius: 2px; }
 			.slider .pager a { display: inline-block; height: 10px; width: 10px; margin: 0px 1px; border-radius: 5px; background-color: #000000; border: 1px solid #ffffff; font-size: 0px; text-decoration: none; }
@@ -272,14 +270,14 @@ class slider extends base_module {
 				
 				var func_idle = function(e) {
 					
-					if (!key_animate_idle) {
+					if (!key_animate_idle || (e.relatedTarget && hasElement(elm[0], e.relatedTarget))) {
 						return;
 					}
 					
 					arr_animate_from.percentage = num_percentage;
 					time_animate_idle = 0;
 					
-					ANIMATOR.animate(func_animate_idle, key_animate_idle);
+					func_animate_idle();
 					
 					elm[0].removeEventListener('mouseout', func_idle);
 					elm[0].removeEventListener('touchend', func_idle);
@@ -316,6 +314,8 @@ class slider extends base_module {
 						}
 						
 						SELF.update(arr_animate_from.percentage);
+						
+						return true;
 					}, key_animate_idle);
 				};
 				
@@ -467,9 +467,7 @@ class slider extends base_module {
 				const elm_target = elms_target.first();
 				
 				new ImagesLoaded(elm_target, function() {
-				
-					elm.height(elm.height());
-					
+		
 					elm_show.cycle({
 						fx: arr_options.effect,
 						timeout: arr_options.timeout,
@@ -478,9 +476,9 @@ class slider extends base_module {
 						activePagerClass: 'active',
 						before: function(elm_cur, elm_next) {
 							const num_height = $(elm_next).height();
-							const num_height_parent = elm.height();
-							if (num_height > num_height_parent) {
-								elm.height(num_height);
+							const num_height_parent = elm_show.height();
+							if (num_height && num_height > num_height_parent) {
+								elm_show.height(num_height);
 							}
 						}
 					});

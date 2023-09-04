@@ -159,32 +159,33 @@ class cms_calendar extends base_module {
 		
 	public static function css() {
 	
-		$return = '.calendar table.month { display: inline-table; vertical-align: top; }
-					.calendar table.month * { box-sizing: border-box; }
-					.calendar table.month th { text-align: center; vertical-align: middle; padding: 5px; }
-					.calendar table.month td { text-align: right; vertical-align: bottom; height: 50px; width: 50px; border: 1px solid #cccccc; padding: 5px; cursor: pointer; }
-					.calendar table.month td:first-child { vertical-align: middle; border: 0px; width: auto; }
-					.calendar table.month td.today { background-color: #f5f5f5; }
-					.calendar table.month td.active { background-color: #e7f2f9; }
-					.calendar table.month td > .indicator { position: absolute; margin-top: -29px; margin-left: 29px; width: 15px; height: 15px; line-height: 15px; text-align: center; font-size: 10px; background-color: #f5f5f5; }
-					.calendar table.month td.today > .indicator { background-color: #e5e3e3; }
-					.calendar table.month td > .indicator.active { background-color: #c0c0c0; color: #ffffff; }
-					.calendar table.month td:hover > .indicator { background-color: #c0c0c0; }
-					.calendar table.month td.active > .indicator { background-color: #009cff; color: #ffffff; }
-					.calendar table.month td > ul.colors { position: absolute; margin-top: -29px; margin-left: -5px; width: 34px; display: table; }
-					.calendar table.month td > ul.colors > li { height: 8px; display: table-cell; }
-					.calendar .day-outside-month { color: #cccccc; vertical-align: top; }
-					.calendar .dynamic-view-day { display: inline-block; margin-left: 10px; }
-					.calendar .dynamic-view-day th:first-child,
-					.calendar .dynamic-view-day td:first-child { width: 10px; padding: 0px; }
-					.calendar .dynamic-view-day th:first-child + th,
-					.calendar .dynamic-view-day td:first-child + td { padding-right: 30px; }
-					
-					#frm-calendar td > .date { display: inline-block; }
-					#frm-calendar .body-content { height: 250px; }
-					#frm-calendar input[name*=reminder_amount] { width: 40px; }
-					#frm-calendar label > input[name=color] + span { width: 15px; height: 15px; }
-					#frm-calendar input[name=color] + span > span { display: block; width: 100%; height: 100%; margin-left: 2px; }';
+		$return = '
+			.calendar table.month { display: inline-table; vertical-align: top; }
+			.calendar table.month * { box-sizing: border-box; }
+			.calendar table.month th { text-align: center; vertical-align: middle; padding: 5px; }
+			.calendar table.month td { text-align: right; vertical-align: bottom; height: 50px; width: 50px; border: 1px solid #cccccc; padding: 5px; cursor: pointer; }
+			.calendar table.month td:first-child { vertical-align: middle; border: 0px; width: auto; }
+			.calendar table.month td.today { background-color: #f5f5f5; }
+			.calendar table.month td.active { background-color: #e7f2f9; }
+			.calendar table.month td > .indicator { position: absolute; margin-top: -29px; margin-left: 29px; width: 15px; height: 15px; line-height: 15px; text-align: center; font-size: 10px; background-color: #f5f5f5; }
+			.calendar table.month td.today > .indicator { background-color: #e5e3e3; }
+			.calendar table.month td > .indicator.active { background-color: #c0c0c0; color: #ffffff; }
+			.calendar table.month td:hover > .indicator { background-color: #c0c0c0; }
+			.calendar table.month td.active > .indicator { background-color: #009cff; color: #ffffff; }
+			.calendar table.month td > ul.colors { position: absolute; margin-top: -29px; margin-left: -5px; width: 34px; display: table; }
+			.calendar table.month td > ul.colors > li { height: 8px; display: table-cell; }
+			.calendar .day-outside-month { color: #cccccc; vertical-align: top; }
+			.calendar .dynamic-view-day { display: inline-block; margin-left: 10px; }
+			.calendar .dynamic-view-day th:first-child,
+			.calendar .dynamic-view-day td:first-child { width: 10px; padding: 0px; }
+			.calendar .dynamic-view-day th:first-child + th,
+			.calendar .dynamic-view-day td:first-child + td { padding-right: 30px; }
+			
+			#frm-calendar td > .date { display: inline-block; }
+			#frm-calendar .body-content { height: 250px; }
+			#frm-calendar input[name*=reminder_amount] { width: 40px; }
+			#frm-calendar label > input[name=color] + span { display: inline-block; width: 15px; height: 15px; }
+		';
 		
 		return $return;
 	}

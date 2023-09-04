@@ -13,6 +13,8 @@ class intf_pages extends pages {
 		static::$label = getLabel('lbl_pages');
 		static::$parent_label = '';
 	}
+	
+	public static function webLocations() {}
 		
 	public function contents() {
 	
@@ -95,7 +97,7 @@ class intf_pages extends pages {
 							if (!$tag_id) {
 								$return .= '<div class="handle"><span class="icon">'.getIcon('handle-grid').'</span></div>';
 							}
-							$return .= '<div class="title"><h3><a target="_blank" href="'.pages::getPageUrl($arr_row).'">'.$arr_row['name'].'</a></h3></div>';
+							$return .= '<div class="title"><h3><a target="_blank" href="'.pages::getPageURL($arr_row).'">'.$arr_row['name'].'</a></h3></div>';
 							if ($arr_row['preview']) {
 								$return .= '<div class="template-preview">'.$arr_row['preview'].'</div>';
 							}
@@ -145,14 +147,7 @@ class intf_pages extends pages {
 				#frm-page #mod-select .template-preview { width: inherit; height: inherit; }
 				#frm-page #mod-select .template-preview td[colspan]:hover, .template-preview td.active { background-color: #4c8efa; }
 				
-				#frm-page #mod-list { display: inline-block; vertical-align: top; margin-left: 25px; }
-				#frm-page #mod-list .mod-list { display: inline-block; vertical-align: top; min-width: 140px; font-size: 12px; }
-				#frm-page #mod-list .mod-list:first-child { margin-left: 0px; }
-				#frm-page #mod-list .mod-list li,
-				#frm-page #mod-list .mod-list > li > h1 { padding: 0px 20px 0px 10px; line-height: 25px; }
-				#frm-page #mod-list .mod-list li.sub { padding: 0px; }
-				#frm-page #mod-list .mod-list > li > ul > li { padding-left: 20px; }
-				#frm-page #mod-list .mod-list li > span > span + span { margin-left: 5px; color: #000000; }';
+				#frm-page #mod-list { display: inline-block; vertical-align: top; margin-left: 25px; }';
 		
 		return $return;
 	}
@@ -225,13 +220,33 @@ class intf_pages extends pages {
 				
 				SCRIPTER.dynamic('#frm-page', function(elm_scripter) {
 					
+					const elm_module_select = elm_scripter.find('#mod-select');
+					const elm_module_list = elm_scripter.find('#mod-list');
+					
+					const elm_select = elm_module_list.find('fieldset > legend + ul select');
+					const elm_shortcut = elm_module_list.find('fieldset > legend + ul + hr + ul');
+					const elm_options = elm_module_list.find('fieldset > ul:last-child');
+					const elm_apply = elm_module_list.find('fieldset + menu > [name=apply]');
+					const elm_cancel = elm_module_list.find('fieldset + menu > [name=cancel]');
+					
+					var func_get_module_active = function() {
+						
+						return elm_module_select.find('.template-preview .active');
+					};
+					var func_close_module_active = function() {
+						
+						const elm_module_active = func_get_module_active();
+
+						elm_module_active.removeClass('active');
+						elm_module_list.hide();
+					};
+					
 					// POPUP INPUT
 					
-					var func_hide_templace_select = function() {
+					var func_hide_template_select = function() {
 					
-						if (!$('#frm-shortcuts-popup').length) {
-							elm_scripter.find('#mod-list').hide();
-						}
+						func_close_module_active();
+
 						var elm_master = elm_scripter.find('select[name=master_page]');
 						var elm_target = elm_scripter.find('[name=template_select]').closest('li');
 						if (elm_master.val()) {
@@ -248,16 +263,16 @@ class intf_pages extends pages {
 						
 						if (elm_url.val() != '') {
 							elm_target.hide();
-							elm_scripter.find('#mod-select').hide();
-							$('#mod-list').hide();
+							elm_module_select.hide();
+							func_close_module_active();
 						} else {
 							elm_target.show();
-							elm_scripter.find('#mod-select').show();
-							func_hide_templace_select();
+							elm_module_select.show();
+							func_hide_template_select();
 						}
 					};
 					
-					func_hide_templace_select();
+					func_hide_template_select();
 					func_hide_mode_select();
 					
 					elm_scripter.on('change', '[name=directory]', function() {
@@ -269,135 +284,173 @@ class intf_pages extends pages {
 							elm_select_master_page.html(html).val(master_page_value);
 							
 							if (master_page_value && !elm_select_master_page.val()) {
-								elm_scripter.find('#mod-select > .template-preview').empty();
+								elm_module_select.children('.template-preview').empty();
 							}
 						});
 					}).on('keyup', 'input[name=url]', function() {
 						func_hide_mode_select();
 					}).on('change', 'select[name=master_page], [name=template_selected]', function() {
-						$(this).quickCommand(elm_scripter.find('#mod-select > .template-preview'));
+						$(this).quickCommand(elm_module_select.children('.template-preview'));
 					}).on('change', 'select[name=master_page]', function() {
-						func_hide_templace_select();
+						func_hide_template_select();
 					}).on('change', '[name=template_select]', function() {
+						func_hide_template_select();
 						elm_scripter.find('[name=template_selected]').val(elm_scripter.find('[name=template_select]:checked').val()).trigger('change');
 					});
 					
 					// POPUP MOD CLICK
-					
-					elm_scripter.on('mouseup', '#mod-select .template-preview td[id^=mod]', function() {
+										
+					elm_module_select.on('mouseup', '.template-preview td[id^=mod]', function() {
 					
 						var cur = $(this);
+
+						elm_module_list.show();
 						
-						$(document).off('.modclick').on('mousedown.modclick', function(e) {
+						const elm_module_active = func_get_module_active();
+						elm_module_active.removeClass('active');
 						
-							if (!($(e.target).closest('#mod-list').length || $('#frm-shortcuts-popup').length || !$(e.target).closest(elm_scripter).length)) {
-								$('#mod-select .template-preview td').removeClass('active');
-								$('#mod-list li').removeClass('active');
-								$('#mod-list li span#mod-option-shortcut').children('span + span').text('None');
-								$(document).off('.modclick');
-							}
-						});
-						
-						elm_scripter.find('#mod-list').show();
 						cur.addClass('active');
-						
+
 						if (cur.attr('mod')) {
 						
-							var cur_parent = elm_scripter.find('#mod-list li span#mod-'+cur.attr('mod')+'').parent('li');
-							cur_parent.addClass('active');
+							elm_select.val(cur.attr('mod'));
+							SCRIPTER.triggerEvent(elm_select, 'change');
+						
+							var elm_target = elm_options.children('li[data-module=\"'+cur.attr('mod')+'\"]');
+							const str_variable = cur.attr('var');
 							
-							if (cur.attr('var')) {
-								if (cur.attr('var').charAt(0) == '{') {
-									var obj = JSON.parse(cur.attr('var'));
+							if (str_variable) {
+							
+								if (str_variable.charAt(0) == '{') {
+								
+									var obj = JSON.parse(str_variable);
 									for (var key in obj) {
-										var target = cur_parent.find('[name=\"'+key+'\"]');
-										if (target.is('[type=checkbox]')) {
-											target.prop('checked', obj[key]);
+										var elm_target_value = elm_target.find('[name=\"'+key+'\"]');
+										if (elm_target_value.is('[type=checkbox]')) {
+											elm_target_value.prop('checked', obj[key]);
 										} else {
-											target.val(obj[key]);
+											elm_target_value.val(obj[key]);
 										}
-										if (target.hasClass('unique')) {
-											target.siblings('[data-group='+target.attr('data-group')+']').prop('disabled', obj[key]);
+										if (elm_target_value.hasClass('unique')) {
+											elm_target_value.siblings('[data-group='+elm_target_value.attr('data-group')+']').prop('disabled', obj[key]);
 										}
 									}
 								} else {
-									var target = cur_parent.find('input, select').first();
-									if (target.is('[type=checkbox]')) {
-										target.prop('checked', cur.attr('var'));
+								
+									var elm_target_value = elm_target.find('input, select').first();
+									if (elm_target_value.is('[type=checkbox]')) {
+										elm_target_value.prop('checked', str_variable);
 									} else {
-										target.val(cur.attr('var'));
+										elm_target_value.val(str_variable);
 									}
 								}
 							}
-							// Trigger change to save new state if there was no possible state before
-							cur_parent.find('input, select').trigger('change');
 							
-							var text = (cur.attr('shortcut') ? cur.attr('shortcut')+(cur.attr('shortcut_root') ? ' - root' : '') : 'None');
-							$('#mod-list li span#mod-option-shortcut').children('span + span').text(text);
+							// Trigger state change
+							runElementSelectorFunction(elm_target, 'input, select', function(elm_found) {
+								SCRIPTER.triggerEvent(elm_found, 'change');
+							});
+							
+							elm_shortcut.find('[name=shortcut]')[0].value = (cur.attr('shortcut') ? cur.attr('shortcut') : '');
+							elm_shortcut.find('[name=shortcut_root]')[0].checked = (cur.attr('shortcut_root') ? true : false);
+						} else {
+						
+							elm_select.val('');
+							SCRIPTER.triggerEvent(elm_select, 'change');
+							
+							elm_shortcut.find('[name=shortcut]')[0].value = '';
+							elm_shortcut.find('[name=shortcut_root]')[0].checked = false;
 						}
 					});
 					
 					// POPUP MOD LIST CLICK
-					
-					var func_get_mod_active = function() {
-						return elm_scripter.find('#mod-select .template-preview .active');
-					};
-					var func_update_mod_html = function() {
-						elm_scripter.find('input[name=html_modules]').val(elm_scripter.find('#mod-select .template-preview').html());
-					};
-					elm_scripter.on('click', '#mod-list li > span:first-child', function() {
-					
-						var cur_parent = $(this).parent('li');
-						var active_mod = func_get_mod_active();
-						active_mod.attr('var', '');
-						// Trigger change to save new state
-						cur_parent.find('input, select').trigger('change');
-						if ($(this).attr('id').split('-')[2] == 'del') {
-							$('#mod-list li').removeClass('active');
-							cur_parent.addClass('active');
-							active_mod.attr({'mod': '', 'var': '', 'shortcut': '', 'shortcut_root': ''}).removeClass('set');
-						} else if ($(this).attr('id').split('-')[2] == 'shortcut') {
-							$('#mod-list li span[id^=mod-option-]').parent('li').removeClass('active');
-							cur_parent.addClass('active');
-							var cur_elm = $(this).children('.shortcut');
-							cur_elm.attr('id', cur_elm.attr('id').split('D')[0]+'D'+elm_scripter.find('[name=directory]').val());
-							cur_elm.data({value: {name: active_mod.attr('shortcut'), root: active_mod.attr('shortcut_root')}, target: function(data) {
-								active_mod.attr({shortcut: data.name, shortcut_root: data.root});
-								var text = (data.name ? data.name+(data.root ? ' - root' : '') : 'None');
-								cur_elm.next('span').text(text);
-								func_update_mod_html();
-							}}).popupCommand();
-						} else {
-							$('#mod-list li').removeClass('active');
-							cur_parent.addClass('active');
-							active_mod.attr('mod', $(this).attr('id').split('-')[1]).addClass('set');
-						}
+
+					var func_update_html_modules = function() {
 						
-						func_update_mod_html();
-					}).on('keyup change', '#mod-list li input, #mod-list li select', function() {
+						const elm_module_active = func_get_module_active();
+						elm_module_active.removeClass('active');
+						
+						const str_html = elm_module_select.children('.template-preview').html();
+						elm_scripter.find('input[name=html_modules]').val(str_html);
+						
+						elm_module_active.addClass('active'); // Restore
+					};
+
+					elm_select.on('change', function() {
+						
+						const elms_target = elm_select.closest('ul').nextAll('ul, hr');
+						
+						if (this.value) {
+							
+							elms_target.removeClass('hide');
+							
+							elm_options.children('li').addClass('hide');
+							elm_options.children('li[data-module=\"'+this.value+'\"]').removeClass('hide');
+						} else {
+						
+							elms_target.addClass('hide');
+						}
+					});
+					
+					elm_options.on('keyup change', 'input, select', function() {
 						
 						var cur = $(this);
 						
 						if (cur.hasClass('unique')) {
 							cur.siblings('[data-group='+cur.attr('data-group')+']').prop('disabled', cur.prop('checked'));
 						}
-						
-						if (!cur.is('[name]')) {
-							if (cur.is('[type=checkbox]')) {
-								var value = (cur.is(':checked') ? cur.val() : 0);
-							} else {
-								var value = cur.val();
-							}
-						} else {
-							var arr = jQuery.map(cur.siblings().addBack().filter('input[type=text], input[type=checkbox]:checked, select').filter(':enabled').not('#var'), function(o) {
-							  return '\"'+o.name+'\":\"'+o.value+'\"'; 
-							});
-							var value = '{'+arr.join(',')+'}';
-						}
+					});
 
-						var active_mod = func_get_mod_active();
-						active_mod.attr('var', value);
-						func_update_mod_html();
+					elm_apply.on('click', function() {
+					
+						const elm_module_active = func_get_module_active();
+						const str_module = elm_select.val();
+
+						if (!str_module) {
+							
+							elm_module_active.attr({'mod': '', 'var': '', 'shortcut': '', 'shortcut_root': ''}).removeClass('set');
+						} else {
+						
+							const elm_options_active = elm_options.children(':not(.hide)');
+							let str_module_variables = '';
+							
+							if (!elm_options_active.find('[name]').length) {
+								
+								const elm_target_value = elm_options_active.find('input, select');
+								if (elm_target_value.is('[type=checkbox]')) {
+									str_module_variables = (elm_target_value.is(':checked') ? elm_target_value.val() : 0);
+								} else {
+									str_module_variables = elm_target_value.val();
+								}
+							} else {
+							
+								var arr = jQuery.map(elm_options_active.find('input[type=text], input[type=number], input[type=checkbox]:checked, select').filter(':enabled').not('#var'), function(o) {
+								  return '\"'+o.name+'\":\"'+o.value+'\"'; 
+								});
+								str_module_variables = '{'+arr.join(',')+'}';
+							}
+
+							elm_module_active.attr('var', str_module_variables);
+							
+							const str_shortcut = elm_shortcut.find('[name=shortcut]')[0].value;
+							
+							if (str_shortcut) {
+								elm_module_active.attr({shortcut: str_shortcut, shortcut_root: (elm_shortcut.find('[name=shortcut_root]')[0].checked ? 1 : '')});
+							} else {
+								elm_module_active.attr({shortcut: '', shortcut_root: ''});
+							}
+														
+							elm_module_active.attr('mod', str_module).addClass('set');
+						}
+						
+						func_update_html_modules();
+						
+						func_close_module_active();
+					});
+					
+					elm_cancel.on('click', function() {
+						
+						func_close_module_active();
 					});
 				});
 		";
@@ -439,7 +492,7 @@ class intf_pages extends pages {
 								
 				$directory_id = $arr['directory_id'];
 				
-				$arr_tags = cms_general::getObjectTags(DB::getTable('TABLE_PAGE_INTERNAL_TAGS'), 'page_id', $id, true);
+				$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_PAGE_INTERNAL_TAGS'), 'page_id', $id, true);
 				
 				$mode = "page_update";
 			} else {
@@ -455,15 +508,15 @@ class intf_pages extends pages {
 			$this->html = '<form id="frm-page" data-method="'.$mode.'">
 				<fieldset><ul>
 					<li>
-						<label>'.getLabel("lbl_title").'</label>
+						<label>'.getLabel('lbl_title').'</label>
 						<div><input type="text" name="title" value="'.strEscapeHTML($arr['title']).'" /></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_name").'</label>
+						<label>'.getLabel('lbl_name').'</label>
 						<div><input type="text" name="name" value="'.strEscapeHTML($arr['name']).'" /></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_directory").'</label>
+						<label>'.getLabel('lbl_directory').'</label>
 						<div>'.(($id && ($arr_directory['page_index_id'] == $id || $arr_directory['page_fallback_id'] == $id)) ? '<span title="'.getLabel('inf_page_is_index_fallback').'">'.($arr_directory['path'] ?: '/').'</span><input type="hidden" name="directory" value="'.$directory_id.'" />' : '<select name="directory" id="y:intf_pages:directory_select-0">'.directories::createDirectoriesDropdown(directories::getDirectories(), $directory_id).'</select>').'</div>
 					</li>
 					<li>
@@ -471,42 +524,102 @@ class intf_pages extends pages {
 						<div><input type="text" name="url" value="'.strEscapeHTML($arr['url']).'" /></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_master_page").'</label>
-						<div><select name="master_page" id="y:intf_pages:mod_select-master">'.cms_general::createDropdown(self::getPageNameList(self::getPagesLimited(0, $directory_id, true, ($mode == "page_update" ? $id : 0)), true, true), $arr['master_id'], true).'</select></div>
+						<label>'.getLabel('lbl_master_page').'</label>
+						<div><select name="master_page" id="y:intf_pages:mod_select-master">'.cms_general::createDropdown(self::getPageNameList(self::getPagesByScope(0, $directory_id, true, ($mode == 'page_update' ? $id : 0)), true, true), $arr['master_id'], true).'</select></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_template").'</label>
-						<div class="templates"><input id="y:intf_pages:mod_select-template" type="hidden" name="template_selected" value="" />'.templates::createTemplatesMenu(templates::getTemplates(), $arr["actual_template_id"]).'</div>
+						<label>'.getLabel('lbl_template').'</label>
+						<div class="templates"><input id="y:intf_pages:mod_select-template" type="hidden" name="template_selected" value="" />'.templates::createTemplatesMenu(templates::getTemplates(), $arr['actual_template_id']).'</div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_html").'</label>
+						<label>'.getLabel('lbl_html').'</label>
 						<div><div class="hide-edit'.(!$arr['html'] ? ' hide' : '').'"><textarea name="html">'.$arr['html'].'</textarea></div><span class="icon" title="'.getLabel('inf_edit_html').'">'.getIcon('html').'</span></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_script").'</label>
+						<label>'.getLabel('lbl_script').'</label>
 						<div><div class="hide-edit'.(!$arr['script'] ? ' hide' : '').'"><textarea name="script">'.$arr['script'].'</textarea></div><span class="icon" title="'.getLabel('inf_edit_script').'">'.getIcon('script').'</span></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_publish").'</label>
-						<div><input type="checkbox" name="publish" value="1"'.($mode == "page_insert" || $arr["publish"] ? ' checked="checked"' : '').'></div>
+						<label>'.getLabel('lbl_publish').'</label>
+						<div><input type="checkbox" name="publish" value="1"'.($mode == 'page_insert' || $arr['publish'] ? ' checked="checked"' : '').'></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_clearance").'</label>
-						<div><input type="checkbox" name="clearance" value="1"'.($arr["clearance"] ? ' checked="checked"' : '').'></div>
+						<label>'.getLabel('lbl_clearance').'</label>
+						<div><input type="checkbox" name="clearance" value="1"'.($arr['clearance'] ? ' checked="checked"' : '').'></div>
 					</li>
 					<li>
-						<label>'.getLabel("lbl_internal_tags").'</label>
+						<label>'.getLabel('lbl_internal_tags').'</label>
 						<div>'.cms_general::createSelectTags($arr_tags, '', !$arr_tags, true).'</div>
 					</li>';
 				$this->html .= '</ul></fieldset>';
 				
-				if ($mode == "page_update" && !$arr["url"]) {
-					$modselector = self::getModSelector($arr['id'], "update");
+				if ($mode == 'page_update' && !$arr['url']) {
+					
+					$html_modselector = self::getModSelector($arr['id'], 'update');
 				}
-				$this->html .= '<div id="mod-select"><div class="template-preview">'.$modselector.'</div></div>';
+				$this->html .= '<div id="mod-select"><div class="template-preview">'.$html_modselector.'</div></div>';
 				
-				$arr_modules = ['option-del' => ['label' => '<span class="icon remove" title="Remove">'.getIcon('min').'</span><span>Remove</span>'], 'option-shortcut' => ['label' => '<span class="icon shortcut" id="y:intf_pages:popup_shortcuts-'.$id.'D0" title="Shortcut">'.getIcon('link').'</span><span>None</span>']]+getModules(DIR_HOME);
-				$this->html .= '<div id="mod-list">'.cms_general::selectModuleList($arr_modules, true, false, 15).'</div>';
+				$arr_modules = getModules(DIR_HOME);
+				
+				$arr_modules_selector = [];
+				$arr_modules_options = [];
+				
+				foreach ($arr_modules as $key => $value) {
+
+					$key::moduleProperties();
+					$str_label = $key::$label;
+					$str_parent_label = $key::$parent_label;
+					
+					if (!$str_label) { // Skip non-interface modules
+						continue;
+					}
+					
+					$arr_modules_selector[] = ['id' => $key, 'name' => ($str_parent_label ? $str_parent_label.cms_general::OPTION_GROUP_SEPARATOR : '').$str_label];
+
+					$arr_module_variables = (method_exists($key, 'moduleVariables') ? $key::moduleVariables() : '');
+											
+					if ($arr_module_variables && is_array($arr_module_variables)) {
+						
+						foreach ($arr_module_variables as $str_name => $html_module_variable) {
+							
+							$arr_modules_options[] = '<li data-module="'.$key.'">
+								<label>'.$str_name.'</label>
+								<div>'.$html_module_variable.'</div>
+							</li>';
+						}
+					} else {
+						
+						$arr_modules_options[] = '<li data-module="'.$key.'">
+							<label>'.getLabel('lbl_options').'</label>
+							<div>'.($arr_module_variables ?: getLabel('lbl_none')).'</div>
+						</li>';
+					}
+				}
+				
+				$this->html .= '<div id="mod-list">'
+					.'<fieldset><legend>'.getLabel('lbl_module').'</legend>'
+						.'<ul>
+							<li>
+								<label></label>
+								<div><select>'.cms_general::createDropdown($arr_modules_selector, false, true).'</select></div>
+							</li>
+						</ul>'
+						.'<hr />'
+						.'<ul>
+							<li>
+								<label>Shortcut</label>
+								<div><input type="text" name="shortcut" value="" /></div>
+							</li>
+							<li>
+								<label>Root</label>
+								<div><input type="checkbox" name="shortcut_root" value="1" /></div>
+							</li>
+						</ul>'
+						.'<hr />'
+						.'<ul>'.arr2String($arr_modules_options, '').'</ul>'
+					.'</fieldset>'
+					.'<menu><input name="apply" type="button" value="'.getLabel('lbl_apply').'" /><input name="cancel" type="button" value="'.getLabel('lbl_cancel').'" /></menu>'
+				.'</div>';
 				
 				$this->html .= '<input name="html_modules" type="hidden" value="" />
 			</form>';
@@ -529,70 +642,18 @@ class intf_pages extends pages {
 			];
 		}
 		
-		if ($method == "popup_shortcuts") {
-		
-			$this->html .= '<form id="frm-shortcuts-popup" data-method="shortcut_get">
-				<fieldset><ul>
-					<li>
-						<label>Name</label>
-						<div><input type="text" name="name" value="'.$value["name"].'" /></div>
-					</li>
-					<li>
-						<label>Root</label>
-						<div><input type="checkbox" name="root" value="1"'.($value["root"] ? 'checked="checked"' : '').'></div>
-					</li>
-				</ul></fieldset>
-			</form>';
-
-		}
-		
 		// POPUP INTERACT
 		
 		if ($method == "directory_select") {
 		
-			$this->html = cms_general::createDropdown(self::getPageNameList(self::getPagesLimited(0, $value, true), true, true), 0, true);
+			$this->html = cms_general::createDropdown(self::getPageNameList(self::getPagesByScope(0, $value, true), true, true), 0, true);
 		}
 		
 		if ($method == "mod_select") {
 
 			$this->html = ((int)$value ? self::getModSelector($value, $id) : '');
 		}
-		
-		if ($method == "shortcut_get") {
-		
-			$name = str2Name($_POST['name']);
-			$root = ($name ? $_POST['root'] : 0);
-			
-			if ($name) {
-				
-				$ids = explode('D', $id);
-				$page_id = $ids[0]; // if editing
-				$directory_id = $ids[1];
-				$root_id = directories::getRootDirectory();
-
-				$res = DB::query("SELECT shortcut
-						FROM ".DB::getTable('TABLE_PAGE_MODULES')." m
-						LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)
-					WHERE m.shortcut = '".DBFunctions::strEscape($name)."'
-					".($page_id ? "AND p.id != ".(int)$page_id : "")."
-					AND (
-						".($directory_id == directories::getRootDirectory() || $root ? 
-							"m.shortcut_root = TRUE OR p.directory_id = ".(int)$root_id
-								: 
-							"m.shortcut_root = FALSE AND p.directory_id = ".(int)$directory_id
-						)."
-					)
-				");
-				
-				if ($res->getRowCount()) {
-					
-					error('Shortcut already exists');
-				}
-			}
-
-			$this->html = ['name' => $name, 'root' => $root];
-		}
-					
+							
 		// QUERY
 	
 		if ($method == "page_insert") {
@@ -611,11 +672,28 @@ class intf_pages extends pages {
 			$page_name = ($_POST['name'] ?: Labels::printLabels(Labels::parseTextVariables($_POST['title'])));
 			$page_name = str2Name($page_name);
 			
-			$id = self::updatePages(0, ['name' => $page_name, 'title' => $_POST['title'], 'directory_id' => $_POST['directory'], 'master_id' => $master_id, 'template_id' => $template_id, 'url' => $url, 'html' => $_POST['html'], 'script' => $_POST['script'], 'publish' => $_POST['publish'], 'clearance' => $_POST['clearance']]);
-						
+			$directory_id = $_POST['directory'];
+			
+			$arr_modules = null;
+
 			if ($_POST['html_modules'] && !$url) {
 				
-				self::parseModuleTable($id, $_POST['html_modules']);
+				$arr_modules = self::parseModuleTable($directory_id, false, $_POST['html_modules']);
+			}
+			
+			$id = self::updatePages(false, ['name' => $page_name, 'title' => $_POST['title'], 'directory_id' => $directory_id, 'master_id' => $master_id, 'template_id' => $template_id, 'url' => $url, 'html' => $_POST['html'], 'script' => $_POST['script'], 'publish' => $_POST['publish'], 'clearance' => $_POST['clearance']]);
+						
+			if (isset($arr_modules)) {
+								
+				foreach ($arr_modules as &$arr_module) {
+					
+					$arr_module['page_id'] = $id;
+					
+					$arr_module = pages::updateModule($arr_module);
+				}
+				unset($arr_module);
+				
+				pages::deleteNotModules($id, $arr_modules);
 			}
 			
 			cms_general::handleTags(DB::getTable('TABLE_PAGE_INTERNAL_TAGS'), 'page_id', $id, $_POST['tags'], true);
@@ -640,11 +718,28 @@ class intf_pages extends pages {
 			$page_name = ($_POST['name'] ?: Labels::printLabels(Labels::parseTextVariables($_POST['title'])));
 			$page_name = str2Name($page_name);
 			
-			self::updatePages($id, ['name' => $page_name, 'title' => $_POST['title'], 'directory_id' => $_POST['directory'], 'master_id' => $master_id, 'template_id' => $template_id, 'url' => $url, 'html' => $_POST['html'], 'script' => $_POST['script'], 'publish' => $_POST['publish'], 'clearance' => $_POST['clearance']]);
-						
+			$directory_id = $_POST['directory'];
+			
+			$arr_modules = null;
+
 			if ($_POST['html_modules'] && !$url) {
 				
-				self::parseModuleTable($id, $_POST['html_modules']);
+				$arr_modules = self::parseModuleTable($directory_id, $id, $_POST['html_modules']);
+			}
+			
+			self::updatePages($id, ['name' => $page_name, 'title' => $_POST['title'], 'directory_id' => $directory_id, 'master_id' => $master_id, 'template_id' => $template_id, 'url' => $url, 'html' => $_POST['html'], 'script' => $_POST['script'], 'publish' => $_POST['publish'], 'clearance' => $_POST['clearance']]);
+						
+			if (isset($arr_modules)) {
+								
+				foreach ($arr_modules as &$arr_module) {
+					
+					$arr_module['page_id'] = $id;
+					
+					$arr_module = pages::updateModule($arr_module);
+				}
+				unset($arr_module);
+				
+				pages::deleteNotModules($id, $arr_modules);
 			}
 			
 			cms_general::handleTags(DB::getTable('TABLE_PAGE_INTERNAL_TAGS'), 'page_id', $id, $_POST['tags'], true);
@@ -661,7 +756,37 @@ class intf_pages extends pages {
 		}
 	}
 	
-	private static function parseModuleTable($id, $html) {
+	private static function checkModuleShortcut($directory_id, $page_id, $str_name, $is_root) {
+
+		if (!$str_name) {
+			return false;
+		}
+			
+		$root_id = directories::getRootDirectory();
+
+		$res = DB::query("SELECT shortcut
+				FROM ".DB::getTable('TABLE_PAGE_MODULES')." m
+				LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)
+			WHERE m.shortcut = '".DBFunctions::strEscape($str_name)."'
+			".($page_id ? "AND p.id != ".(int)$page_id : "")."
+			AND (
+				".($directory_id == directories::getRootDirectory() || $is_root ? 
+					"m.shortcut_root = TRUE OR p.directory_id = ".(int)$root_id
+						: 
+					"m.shortcut_root = FALSE AND p.directory_id = ".(int)$directory_id
+				)."
+			)
+		");
+		
+		if ($res->getRowCount()) {
+			
+			return true;
+		}
+		
+		return false;
+	}
+	
+	private static function parseModuleTable($directory_id, $page_id, $html) {
 	
 		$doc = new DOMDocument();
 		$doc->strictErrorChecking = false;
@@ -671,7 +796,7 @@ class intf_pages extends pages {
 		# remove <html><body></body></html> 
 		$doc->replaceChild($doc->firstChild->firstChild->firstChild, $doc->firstChild);
 		
-		$arr_ids = [];
+		$arr_modules = [];
 		
 		foreach ($doc->getElementsByTagName('td') as $td) {
 			
@@ -682,12 +807,18 @@ class intf_pages extends pages {
 			preg_match('/mod-(\d*)_(\d*)/', $td->getAttribute('id'), $xy);
 			
 			$var = ($td->getAttribute('var') ? DBFunctions::strEscape($td->getAttribute('var')) : '');
-			$shortcut_name = ($td->getAttribute('shortcut') ? str2Name($td->getAttribute('shortcut')) : '');
+			$str_shortcut_name = ($td->getAttribute('shortcut') ? str2Name($td->getAttribute('shortcut')) : '');
+			$is_shortcut_root = (bool)$td->getAttribute('shortcut_root');
 			
-			$arr_ids[] = pages::updateModule(['page_id' => $id, 'x' => $xy[1], 'y' => $xy[2], 'module' => $td->getAttribute('mod'), 'var' => $var, 'shortcut' => $shortcut_name, 'shortcut_root' => $td->getAttribute('shortcut_root')]);
+			if (static::checkModuleShortcut($directory_id, $page_id, $str_shortcut_name, $is_shortcut_root)) {
+					
+				error('Shortcut already exists');
+			}
+			
+			$arr_modules[] = ['x' => $xy[1], 'y' => $xy[2], 'module' => $td->getAttribute('mod'), 'var' => $var, 'shortcut' => $str_shortcut_name, 'shortcut_root' => $is_shortcut_root];
 		}
 		
-		pages::deleteNotModules($id, $arr_ids);
+		return $arr_modules;
 	}
 	
 	private static function getModSelector($id, $kind) {

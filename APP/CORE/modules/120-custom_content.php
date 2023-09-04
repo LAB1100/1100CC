@@ -46,18 +46,47 @@ class custom_content extends base_module {
 		if (!$this->arr_variables) {
 			return false;
 		}
-					
+		
 		$arr = cms_custom_content::getCustomContent((int)$this->arr_variables);
+		
+		// Prepare module variables for special purposes
+		
+		$str_embed_url = false;
+		
+		if ($this->arr_query) {
+			
+			if ($this->arr_query['embed']) { // Customised location/embed solution
+				$str_embed_url = arr2String($this->arr_query['embed'], '/');
+			}
+		} else {
+			
+			if (SiteStartVars::getRequestVariables('embed')) { // Default location/embed solution
+				$str_embed_url = arr2String(SiteStartVars::getRequestVariables('embed'), '/');
+			}
+		}
+		
+		if ($str_embed_url) {
+			
+			$str_embed_url = str_replace(['||', '|', '#=#'], ['#=#', '/', '|'], $str_embed_url); // '|' are the URL path separators, place back '/'
+			$str_embed_url = strEscapeHTML($str_embed_url).'#'; // Add URI fragment for 'commenting out' possible trailing path info
+			Labels::setVariable('embed', '/'.$str_embed_url);
+		} else {
+			Labels::setVariable('embed', '/');
+		}
+		
+		// Parse code
 		
 		if ($arr['script']) {
 			
-			$p = new PhpStringParser();
+			$p = new ParsePHPString();
 			$arr['script'] = trim($p->parse($arr['script']));
 			
 			if ($arr['script']) {
 				SiteEndVars::addScript($arr['script']);
 			}
 		}
+		
+		// Process content
 		
 		$arr['body'] = parseBody($arr['body']);
 		

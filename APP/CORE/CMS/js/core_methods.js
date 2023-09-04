@@ -86,7 +86,7 @@ function Commands() {
 		
 		return setElementData(elm, 'command_id', identifier, true);
 	};
-	this.getID = function(elm, parse) {
+	this.getID = function(elm, do_parse) {
 		
 		var elm = getElement(elm);
 		
@@ -95,7 +95,7 @@ function Commands() {
 			command_id = false;
 		}
 		
-		if (command_id === false && parse) {
+		if (command_id === false && do_parse) {
 			var arr_match = elm.getAttribute('id').match(/([dfxy]):([^:]*):([^-]*)-(.*)/);
 			command_id = arr_match[4];
 		}
@@ -182,13 +182,13 @@ function Commands() {
 			return;
 		}
 		
-		var arr_request = SELF.prepare(cur, {mod: mod_id, method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()});
+		var arr_request = SELF.prepare(cur, {mod: mod_id, method: method, id: command_id, module: module, value: value});
 		
-		FEEDBACK.request(cur, elm, $.ajax({
+		FEEDBACK.request(cur, elm, {
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
-			url: LOCATION.getUrl('command'),
+			url: LOCATION.getURL('command'),
 			data: arr_request.data,
 			processData: false,
 			context: cur,
@@ -310,12 +310,12 @@ function Commands() {
 								
 								SCRIPTER.triggerEvent(elm_form, 'ajaxsubmit');
 								
-								var arr_request = {mod: mod_id, method: new_method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()};
+								var arr_request = {mod: mod_id, method: new_method, id: command_id, module: module, value: value};
 								
 								if (name_submit) {
 									
 									if (name_submit == 'do_discard') {
-										arr_request['is_discard'] = 1;
+										arr_request.is_discard = 1;
 									} else {
 										arr_request[name_submit] = 1;
 									}
@@ -324,11 +324,11 @@ function Commands() {
 								arr_request = SELF.prepare(elm_form, arr_request);
 								var call = false;
 								
-								FEEDBACK.request(elm_popup, elm_popup, $.ajax({
+								FEEDBACK.request(elm_popup, elm_popup, {
 									type: 'POST',
 									contentType: arr_request.contentType,
 									dataType: 'json',
-									url: LOCATION.getUrl('command'),
+									url: LOCATION.getURL('command'),
 									data: arr_request.data,
 									processData: false,
 									context: elm_popup,
@@ -366,7 +366,7 @@ function Commands() {
 											}
 										});
 									}											
-								}));
+								});
 							}
 						} else {
 							
@@ -377,7 +377,7 @@ function Commands() {
 					call_popup(json);
 				});
 			}
-		}));
+		});
 	};
 	
 	this.messageCommand = function(elm, arr_options) {
@@ -436,13 +436,13 @@ function Commands() {
 			return;
 		}
 		
-		var arr_request = SELF.prepare(cur, {mod: mod_id, module: 'cms_general', method: 'get_label', id: msg, feedback: FEEDBACK.getFeedback()});
+		var arr_request = SELF.prepare(cur, {mod: mod_id, module: 'cms_general', method: 'get_label', id: msg});
 
-		FEEDBACK.request(cur, elm, $.ajax({
+		FEEDBACK.request(cur, elm, {
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
-			url: LOCATION.getUrl('command'),
+			url: LOCATION.getURL('command'),
 			data: arr_request.data,
 			processData: false,
 			context: cur,
@@ -478,14 +478,14 @@ function Commands() {
 							return;
 						}
 
-						var arr_request = SELF.prepare(false, {mod: mod_id, method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()});
+						var arr_request = SELF.prepare(false, {mod: mod_id, method: method, id: command_id, module: module, value: value});
 						var call = false;
 						
-						FEEDBACK.request(elm_popup, elm_popup, $.ajax({
+						FEEDBACK.request(elm_popup, elm_popup, {
 							type: 'POST',
 							contentType: arr_request.contentType,
 							dataType: 'json',
-							url: LOCATION.getUrl('command'),
+							url: LOCATION.getURL('command'),
 							data: arr_request.data,
 							processData: false,
 							context: elm_popup,
@@ -502,7 +502,7 @@ function Commands() {
 									});
 								});
 							}
-						}));
+						});
 					});
 					$('<input type="button" value="Cancel" />').appendTo(elm_menu).on('click', function() {
 						obj_overlay.close();
@@ -527,7 +527,7 @@ function Commands() {
 					SCRIPTER.triggerEvent(cur, 'commandintermediate', {elm: elm_popup});
 				});
 			}
-		}));
+		});
 	};
 	
 	this.quickCommand = function(elm, target, arr_options) {
@@ -583,14 +583,14 @@ function Commands() {
 			return;
 		}
 
-		var arr_request = SELF.prepare(cur, {mod: getModID(elm), method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()});
+		var arr_request = SELF.prepare(cur, {mod: getModID(elm), method: method, id: command_id, module: module, value: value});
 		var call = false;
 		
-		FEEDBACK.request(cur, elm, $.ajax({
+		FEEDBACK.request(cur, elm, {
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
-			url: LOCATION.getUrl('command'),
+			url: LOCATION.getURL('command'),
 			data: arr_request.data,
 			processData: false,
 			context: cur,
@@ -610,7 +610,7 @@ function Commands() {
 					});
 				});
 			}
-		}));
+		});
 	};
 	
 	this.formCommand = function(elm, arr_options, e) {
@@ -675,12 +675,12 @@ function Commands() {
 				elm.find('input, select, textarea').prop('disabled', true);
 			}
 			
-			var arr_request = {mod: getModID(elm), method: method, id: command_id, module: module, value: value, feedback: FEEDBACK.getFeedback()};
+			var arr_request = {mod: getModID(elm), method: method, id: command_id, module: module, value: value};
 			
 			if (name_submit) {
 				
 				if (name_submit == 'do_discard') {
-					arr_request['is_discard'] = 1;
+					arr_request.is_discard = 1;
 				} else {
 					arr_request[name_submit] = 1;
 				}
@@ -689,11 +689,11 @@ function Commands() {
 			arr_request = SELF.prepare(elm, arr_request);
 			var call = false;
 			
-			FEEDBACK.request(cur, elm, $.ajax({
+			FEEDBACK.request(cur, elm, {
 				type: 'POST',
 				contentType: arr_request.contentType,
 				dataType: 'json',
-				url: LOCATION.getUrl('command'),
+				url: LOCATION.getURL('command'),
 				data: arr_request.data,
 				processData: false,
 				context: cur,
@@ -732,7 +732,7 @@ function Commands() {
 						});
 					});
 				}
-			}));
+			});
 		};
 
 		if (name_submit != 'do_discard') {
@@ -809,15 +809,20 @@ function Commands() {
 		
 		var elm = $(elm);
 		
-		var is_form = (elm && elm.is('form') ? true : false);
-		var has_object = (typeof arr_request.value === 'object' && arr_request.value !== null);
-		var has_form = (has_object && arr_request.value.forms);
+		const is_form = (elm && elm.is('form') ? true : false);
+		const has_object = (typeof arr_request.value === 'object' && arr_request.value !== null);
+		const has_form = (has_object && arr_request.value.forms);
+		
+		let contentType = null;
+		let data = null;
 			
 		if (is_form || has_form) {
+			
+			let form_collect = null;
 					
 			if (is_form) {
 				
-				var elms_ignore = [];
+				const elms_ignore = [];
 				
 				runElementSelectorFunction(elm[0], '[type=submit][name]:enabled', function(elm_found) { // Make sure FormData procedures really disregard buttons (i.e. polyfill FormData issue)
 					elms_ignore.push(elm_found);
@@ -829,27 +834,44 @@ function Commands() {
 					elms_ignore.push(elm_found);
 				});
 
-				for (var i = 0, len = elms_ignore.length; i < len; i++) {
+				for (let i = 0, len = elms_ignore.length; i < len; i++) {
 					elms_ignore[i].setAttribute('disabled', '');
 				}
 					
-				var form_collect = new FormData(elm[0]);
+				form_collect = new FormData(elm[0]);
 				
-				for (var i = 0, len = elms_ignore.length; i < len; i++) {
+				for (let i = 0, len = elms_ignore.length; i < len; i++) {
 					elms_ignore[i].removeAttribute('disabled');
+				}
+				
+				if (FEEDBACK.getRequestElementName('check') !== 'check') { // When the request wants to change the naming, update existing form element names
+					
+					const form_append = form_collect;
+					form_collect = new FormData();
+					
+					for (const arr_entry of form_append.entries()) {
+						
+						const str_name = arr_entry[0];
+						
+						if (arr_entry[2]) {
+							form_collect.append(FEEDBACK.getRequestElementName(str_name), arr_entry[1], arr_entry[2]);
+						} else {
+							form_collect.append(FEEDBACK.getRequestElementName(str_name), arr_entry[1]);
+						}
+					}
 				}
 			} else {
 				
-				var form_collect = new FormData();
+				form_collect = new FormData();
 			}
 			
 			if (has_form) {
 					
-				for (var i = 0, len = arr_request.value.forms.length; i < len; i++) {
+				for (let i = 0, len = arr_request.value.forms.length; i < len; i++) {
 					
-					var elm_form_append = $(arr_request.value.forms[i]);
+					const elm_form_append = $(arr_request.value.forms[i]);
 					
-					var elms_ignore = [];
+					const elms_ignore = [];
 			
 					runElementSelectorFunction(elm_form_append[0], '[type=submit][name]:enabled', function(elm_found) { // Make sure FormData procedures really disregard buttons (i.e. polyfill FormData issue)
 						elms_ignore.push(elm_found);
@@ -861,36 +883,34 @@ function Commands() {
 						elms_ignore.push(elm_found);
 					});
 					
-					for (var j = 0, len_j = elms_ignore.length; j < len_j; j++) {
+					for (let j = 0, len_j = elms_ignore.length; j < len_j; j++) {
 						elms_ignore[j].setAttribute('disabled', '');
 					}
 					
-					var form_append = new FormData(elm_form_append[0]);
+					const form_append = new FormData(elm_form_append[0]);
 					
-					for (var j = 0, len_j = elms_ignore.length; j < len_j; j++) {
+					for (let j = 0, len_j = elms_ignore.length; j < len_j; j++) {
 						elms_ignore[j].removeAttribute('disabled');
 					}
 					
-					var arr_entries = form_append.entries();
-					
-					for (var arr_entry = arr_entries.next(); !arr_entry.done; arr_entry = arr_entries.next()) {
+					for (const arr_entry of form_append.entries()) {
 						
-						arr_entry = arr_entry.value;
+						const str_name = arr_entry[0];
 						
 						if (arr_entry[2]) {
-							form_collect.append(arr_entry[0], arr_entry[1], arr_entry[2]);
+							form_collect.append(FEEDBACK.getRequestElementName(str_name), arr_entry[1], arr_entry[2]);
 						} else {
-							form_collect.append(arr_entry[0], arr_entry[1]);
+							form_collect.append(FEEDBACK.getRequestElementName(str_name), arr_entry[1]);
 						}
 					}
 				}
 			}
 			
 			if (has_object) {
-					
-				var arr_value = {};
 				
-				for (var key in arr_request.value) {
+				const arr_value = {};
+				
+				for (const key in arr_request.value) {
 					
 					if (key == 'forms') {
 						continue;
@@ -899,33 +919,33 @@ function Commands() {
 					arr_value[key] = arr_request.value[key];
 				}
 				
-				arr_request.json = {value: arr_value, feedback: arr_request.feedback};
+				arr_request.json = {value: arr_value};
 			} else {
 				
-				arr_request.json = {value: arr_request.value, feedback: arr_request.feedback};
+				arr_request.json = {value: arr_request.value};
 			}
 					
-			for (var key in arr_request) {
+			for (const key in arr_request) {
 				
-				if (key == 'value' || key == 'feedback' || key == 'json') {
+				if (key == 'value' || key == 'json') {
 					continue;
 				}
 				
 				if (typeof arr_request[key] === 'object') {
 					arr_request.json[key] = arr_request[key];
 				} else {
-					form_collect.append(key, arr_request[key]);
+					form_collect.append(FEEDBACK.getRequestElementName(key), arr_request[key]);
 				}
 			}
 			
-			form_collect.append('json', JSON.stringify(arr_request.json)); // Finally append the json package
+			form_collect.append(FEEDBACK.getRequestElementName('json'), JSON.stringify(arr_request.json)); // Finally append the json package
 			
-			var contentType = false;
-			var data = form_collect;
+			contentType = FEEDBACK.CONTENT_TYPE_FORM;
+			data = form_collect;
 		} else {
 			
-			var contentType = 'application/json; charset=utf-8';
-			var data = JSON.stringify(arr_request);
+			contentType = FEEDBACK.CONTENT_TYPE_JSON;
+			data = arr_request;
 		}
 		
 		return {contentType: contentType, data: data};
@@ -1078,18 +1098,24 @@ function Commands() {
 						const value = json.do_download[key];
 						
 						if (typeof value === 'object') {
-							call.data.append('json['+key+']', JSON.stringify(value));
+							
+							// Append to JSON in FormData
+							
+							let arr_json = {};
+							if (call.data.has('json')) {
+								arr_json = JSON.parse(call.data.get('json'));
+							}
+							arr_json[key] = value;
+							
+							call.data.append('json', JSON.stringify(arr_json));
 						} else {
 							call.data.append(key, value);
 						}
 					}
 				}
-				
-				const arr_entries = call.data.entries();
-				
-				for (let arr_entry = arr_entries.next(); !arr_entry.done; arr_entry = arr_entries.next()) {
-					
-					arr_entry = arr_entry.value;
+
+				for (const arr_entry of call.data.entries()) {
+
 					let elm_new = null;
 					
 					if (arr_entry[2]) { // File
@@ -1189,25 +1215,29 @@ function Commands() {
 						}
 					}
 				}
-			} else if (target instanceof Array && json.html instanceof Array) {
+			} else {
 				
-				elm_result = $();
+				const func_process_target = function(arr_target_use, arr_settings_use, html_use, arr_validate_use) {
+					
+					const elm_target = $(arr_target_use);
 				
-				for (var i = 0; i < target.length; i++) {
-					
-					var elm_target = $(target[i]);
-					
 					if (elm_target.is("input:not(:button, :submit), textarea")) {
 						
-						elm_target.val(json.html[i]);
+						elm_target.val(html_use);
 						SCRIPTER.triggerEvent(elm_target, 'change');
 						
-						elm_result = elm_result.add(elm_target);
+						return elm_target;
+					} else if (elm_target.is("select") && !arr_settings_use.html) {
+											
+						elm_target.html(html_use);
+						SCRIPTER.triggerEvent(elm_target, 'change');
+						
+						return elm_target;
 					} else {
 						
-						var elm_html = $(json.html[i]).filter('*'); // Only keep elements, not text nodes
+						const elm_html = $(html_use).filter('*'); // Only keep elements, not text nodes
 
-						if (target[i] == 'module') {
+						if (arr_target_use == 'module') {
 							
 							if (IS_CMS) {
 								$(($('[id^=mod-] .tabs > div:visible').length ? '[id^=mod-] .tabs > div:visible' : '[id^=mod-]')).html(elm_html);
@@ -1215,102 +1245,63 @@ function Commands() {
 								elm.closest('.mod').html(elm_html);
 							}
 						} else {
-							
-							if (arr_settings[i].style == 'fade') {
+							if (arr_settings_use.style == 'fade') {
 								elm_html.hide();
 							}
-							if (arr_settings[i].html == 'replace') {
+							if (arr_settings_use.html == 'replace') {
 								elm_target.replaceWith(elm_html);
-							} else if (arr_settings[i].html == 'prepend') {
+							} else if (arr_settings_use.html == 'prepend') {
 								elm_target.prepend(elm_html);
-							} else if (arr_settings[i].html == 'append') {
+							} else if (arr_settings_use.html == 'append') {
 								elm_target.append(elm_html);
-							} else if (arr_settings[i].html == 'before') {
+							} else if (arr_settings_use.html == 'before') {
 								elm_target.before(elm_html);
-							} else if (arr_settings[i].html == 'after') {
+							} else if (arr_settings_use.html == 'after') {
 								elm_target.after(elm_html);
 							} else {
 								elm_target.html(elm_html);
 							}
-							if (arr_settings[i].style == 'fade') {
+							if (arr_settings_use.style == 'fade') {
 								elm_html.fadeIn();
 							}
 						}
 						
 						if (elm_html.length) {
-							
-							if (json.validate && json.validate[i]) {
 								
-								setElementData(elm_html, 'rules', json.validate[i], true);
+							if (arr_validate_use) {
 								
-								var elm_form = elm_html.closest('form');
+								setElementData(elm_html, 'rules', arr_validate_use, true);
+								
+								const elm_form = elm_html.closest('form');
 								
 								if (elm_form.length) {
-									setElementData(elm_form, 'rules', json.validate[i]);
+									setElementData(elm_form, 'rules', arr_validate_use);
 								}
 							}
 							
-							elm_result = elm_result.add(elm_html);
+							return elm_html;
 						}
 					}
-				}
-			} else {
+				};
 				
-				var elm_target = $(target);
+				if (target instanceof Array && json.html instanceof Array) {
+					
+					elm_result = $();
 				
-				if (elm_target.is("input:not(:button, :submit), textarea")) {
-					
-					elm_target.val(json.html);
-					SCRIPTER.triggerEvent(elm_target, 'change');
-					
-					elm_result = elm_target;
+					for (let i = 0; i < target.length; i++) {
+						
+						const elm_target = func_process_target(target[i], arr_settings[i], json.html[i], (json.validate && json.validate[i] ? json.validate[i] : null));
+						
+						if (elm_target) {
+							elm_result = elm_result.add(elm_target);
+						}
+					}
 				} else {
 					
-					var elm_html = $(json.html).filter('*'); // Only keep elements, not text nodes
-
-					if (target == 'module') {
+					const elm_target = func_process_target(target, arr_settings, json.html, json.validate);
 						
-						if (IS_CMS) {
-							$(($('[id^=mod-] .tabs > div:visible').length ? '[id^=mod-] .tabs > div:visible' : '[id^=mod-]')).html(elm_html);
-						} else {
-							elm.closest('.mod').html(elm_html);
-						}
-					} else {
-						if (arr_settings.style == 'fade') {
-							elm_html.hide();
-						}
-						if (arr_settings.html == 'replace') {
-							elm_target.replaceWith(elm_html);
-						} else if (arr_settings.html == 'prepend') {
-							elm_target.prepend(elm_html);
-						} else if (arr_settings.html == 'append') {
-							elm_target.append(elm_html);
-						} else if (arr_settings.html == 'before') {
-							elm_target.before(elm_html);
-						} else if (arr_settings.html == 'after') {
-							elm_target.after(elm_html);
-						} else {
-							elm_target.html(elm_html);
-						}
-						if (arr_settings.style == 'fade') {
-							elm_html.fadeIn();
-						}
-					}
-					
-					if (elm_html.length) {
-							
-						if (json.validate) {
-							
-							setElementData(elm_html, 'rules', json.validate, true);
-							
-							var elm_form = elm_html.closest('form');
-							
-							if (elm_form.length) {
-								setElementData(elm_form, 'rules', json.validate);
-							}
-						}
-						
-						elm_result = elm_html;
+					if (elm_target) {
+						elm_result = elm_target;
 					}
 				}
 			}
@@ -1321,11 +1312,11 @@ function Commands() {
 			
 			if (onStage(elm[0])) {
 				
-				SCRIPTER.runDynamic(elm_result);
+				SCRIPTER.runDynamic(elm_result); // Applied to first element
 				SCRIPTER.triggerEvent(elm, 'ajaxloaded', {elm: elm_result});
 			} else if (elm_container[0] && onStage(elm_container[0])) {
 				
-				SCRIPTER.runDynamic(elm_result);
+				SCRIPTER.runDynamic(elm_result); // Applied to first element
 				SCRIPTER.triggerEvent(elm_container, 'ajaxloaded', {elm: elm_result});
 			} else {
 				
@@ -1515,6 +1506,8 @@ function DataTable(elm, arr_options) {
 	const SELF = this;
 	
 	var arr_options = $.extend({
+		paginate: 6,
+		paginate_middle: 3
 	}, arr_options);
 							
 	var cur = $(elm);
@@ -1592,7 +1585,7 @@ function DataTable(elm, arr_options) {
 				return;
 			}
 			
-			for (var i = 0; i < arr_settings.nr_columns; i++) {
+			for (var i = 0; i < arr_settings.num_columns; i++) {
 			
 				var elm_column = elms_column[i];
 				
@@ -1683,11 +1676,11 @@ function DataTable(elm, arr_options) {
 	// State
 	
 	var arr_command = {method: method, module: module, command_id: command_id, value: value_filter};
-	var arr_settings = {nr_records: false, nr_columns: elms_column.length, search: value_search, arr_order_column: {}, nr_records_start: 0, nr_records_length: 25};
+	var arr_settings = {num_records: false, num_columns: elms_column.length, search: value_search, arr_order_column: {}, num_records_start: 0, num_records_length: 25};
 	
 	var do_sort = false;
 	
-	for (var i = 0; i < arr_settings.nr_columns; i++) {
+	for (var i = 0; i < arr_settings.num_columns; i++) {
 			
 		var elm_column = elms_column[i];
 		
@@ -1717,11 +1710,11 @@ function DataTable(elm, arr_options) {
 
 	elm_results_per_page.on('change', function() {
 		
-		if (parseInt(this.value) == arr_settings.nr_records_length) {
+		if (parseInt(this.value) == arr_settings.num_records_length) {
 			return;
 		}
 		
-		arr_settings.nr_records_length = parseInt(this.value);
+		arr_settings.num_records_length = parseInt(this.value);
 		func_load();
 	});
 	if (has_search) {
@@ -1769,7 +1762,7 @@ function DataTable(elm, arr_options) {
 
 		elms_column = elm_header.children('th');
 		
-		for (var i = 0; i < arr_settings.nr_columns; i++) {
+		for (var i = 0; i < arr_settings.num_columns; i++) {
 			
 			var elm_column = elms_column[i];
 			
@@ -1796,7 +1789,7 @@ function DataTable(elm, arr_options) {
 		
 		elms_column = elm_header.children('th');
 		
-		for (var i = 0; i < arr_settings.nr_columns; i++) {
+		for (var i = 0; i < arr_settings.num_columns; i++) {
 			
 			var elm_column = elms_column[i];
 			
@@ -1850,27 +1843,27 @@ function DataTable(elm, arr_options) {
 				arr_settings_new[key] = arr_settings[key];
 			}
 			
-			var start = 0;
+			var num_start = 0;
 
 			if (what === 'next') {
-				start = arr_settings.nr_records_start + arr_settings.nr_records_length;
+				num_start = arr_settings.num_records_start + arr_settings.num_records_length;
 			} else if (what === 'previous') {
-				start = arr_settings.nr_records_start - arr_settings.nr_records_length;
+				num_start = arr_settings.num_records_start - arr_settings.num_records_length;
 			} else if (what === 'current') {
-				if (arr_settings.nr_records_start) {
-					start = arr_settings.nr_records_start;
+				if (arr_settings.num_records_start) {
+					num_start = arr_settings.num_records_start;
 				}
 			} else if (parseInt(what)) {
-				start = ((what - 1) * arr_settings.nr_records_length);
+				num_start = ((what - 1) * arr_settings.num_records_length);
 			}
 			
-			if (start < 0) {
-				start = 0;
-			} else if (arr_settings.nr_records && (start + arr_settings.nr_records_length) > arr_settings.nr_records) {
-				start = Math.floor(arr_settings.nr_records / arr_settings.nr_records_length) * arr_settings.nr_records_length;
+			if (num_start < 0) { // First page
+				num_start = 0;
+			} else if (arr_settings.num_records && (num_start + arr_settings.num_records_length) > arr_settings.num_records) { // Last page
+				num_start = Math.ceil((arr_settings.num_records - arr_settings.num_records_length) / arr_settings.num_records_length) * arr_settings.num_records_length;
 			}
-									
-			arr_settings_new.nr_records_start = start;
+			
+			arr_settings_new.num_records_start = num_start;
 			
 			elms_column = elm_header.children('th');
 			
@@ -1878,7 +1871,7 @@ function DataTable(elm, arr_options) {
 				
 				arr_settings_new.arr_order_column = {};
 				
-				for (var i = 0; i < arr_settings.nr_columns; i++) {
+				for (var i = 0; i < arr_settings.num_columns; i++) {
 					
 					var elm_column = elms_column[i];
 					
@@ -1906,13 +1899,13 @@ function DataTable(elm, arr_options) {
 				}
 			}
 			
-			var arr_request = COMMANDS.prepare(cur, $.extend({mod: getModID(cur), method: arr_command.method, id: arr_command.command_id, module: arr_command.module, value: arr_command.value, feedback: FEEDBACK.getFeedback()}, arr_settings_new));
+			var arr_request = COMMANDS.prepare(cur, $.extend({mod: getModID(cur), method: arr_command.method, id: arr_command.command_id, module: arr_command.module, value: arr_command.value}, arr_settings_new));
 			
-			FEEDBACK.request(cur, cur, $.ajax({
+			FEEDBACK.request(cur, cur, {
 				type: 'POST',
 				contentType: arr_request.contentType,
 				dataType: 'json',
-				url: LOCATION.getUrl('command'),
+				url: LOCATION.getURL('command'),
 				data: arr_request.data,
 				processData: false,
 				context: cur,
@@ -1928,7 +1921,7 @@ function DataTable(elm, arr_options) {
 
 						if (do_sort) {
 							
-							for (var i = 0; i < arr_settings.nr_columns; i++) {
+							for (var i = 0; i < arr_settings.num_columns; i++) {
 					
 								var elm_column = elms_column[i];
 								
@@ -1957,7 +1950,7 @@ function DataTable(elm, arr_options) {
 						}
 					});
 				}
-			}));
+			});
 		}
 		
 		if (delay) {
@@ -1991,30 +1984,30 @@ function DataTable(elm, arr_options) {
 	
 	var func_draw = function(data) {
 		
-		var nr_records = parseInt(data.total_records);
-		var nr_records_filtered = parseInt(data.total_records_filtered);
+		var num_records = parseInt(data.total_records);
+		var num_records_filtered = parseInt(data.total_records_filtered);
 		
-		var nr_records_end = ((arr_settings.nr_records_start + arr_settings.nr_records_length) > nr_records_filtered || arr_settings.nr_records_length == -1 ? nr_records_filtered : (arr_settings.nr_records_start + arr_settings.nr_records_length));
+		var num_records_end = ((arr_settings.num_records_start + arr_settings.num_records_length) > num_records_filtered || arr_settings.num_records_length == -1 ? num_records_filtered : (arr_settings.num_records_start + arr_settings.num_records_length));
 		
-		arr_settings.nr_records = nr_records_filtered;
+		arr_settings.num_records = num_records_filtered;
 		
-		var nr_pages = (arr_settings.nr_records_length != -1 ? Math.ceil(nr_records_filtered / arr_settings.nr_records_length) : 1);
-		var nr_page_active = (arr_settings.nr_records_start / arr_settings.nr_records_length) + 1;
+		var num_pages = (arr_settings.num_records_length != -1 ? Math.ceil(num_records_filtered / arr_settings.num_records_length) : 1);
+		var num_page_active = (arr_settings.num_records_start / arr_settings.num_records_length) + 1;
 		
 		var str_thousands = ' '; // MEDIUM MATHEMATICAL SPACE
 		
-		if (!nr_records_filtered) {
-			if (nr_records) {
-				var str_count = 'No results from '+formatNumber(nr_records , 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '');
+		if (!num_records_filtered) {
+			if (num_records) {
+				var str_count = '<span>No results</span><span class="count-from"> from '+formatNumber(num_records , 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '')+'</span>';
 			} else {
-				var str_count = 'None';
+				var str_count = '<span>None</span>';
 			}
 		} else {
-			var str_count = formatNumber((arr_settings.nr_records_start + 1), 0, str_thousands, false)+' - '+formatNumber(nr_records_end , 0, str_thousands, false);
-			if (nr_records == nr_records_filtered) {
-				str_count = str_count+' of <strong>'+formatNumber(nr_records, 0, str_thousands, false)+'</strong>'+(data.total_records_info ? data.total_records_info : '');
+			var str_count = formatNumber((arr_settings.num_records_start + 1), 0, str_thousands, false)+' - '+formatNumber(num_records_end , 0, str_thousands, false);
+			if (num_records == num_records_filtered) {
+				str_count = '<span>'+str_count+'</span><span class="count-of"> of <strong>'+formatNumber(num_records, 0, str_thousands, false)+'</strong>'+(data.total_records_info ? data.total_records_info : '')+'</span>';
 			} else {
-				str_count = str_count+' of <strong>'+formatNumber(nr_records_filtered, 0, str_thousands, false)+'</strong>'+(data.total_records_filtered_info ? data.total_records_filtered_info : '')+' from '+formatNumber(nr_records, 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '');
+				str_count = '<span>'+str_count+'</span><span class="count-of"> of <strong>'+formatNumber(num_records_filtered, 0, str_thousands, false)+'</strong>'+(data.total_records_filtered_info ? data.total_records_filtered_info : '')+'</span><span class="count-from"> from '+formatNumber(num_records, 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '')+'</span>';
 			}
 		}
 		
@@ -2024,37 +2017,41 @@ function DataTable(elm, arr_options) {
 	
 		elm_count[0].innerHTML = str_count;
 		
-		var type = (nr_pages <= 6 || nr_page_active <= 4 ? 'start' : (nr_pages > 6 && nr_page_active >= (nr_pages - 3) ? 'end' : 'middle'));
-		var max = (type == 'middle' ? 5 : 6);
-		var count_pages = (nr_pages > max ? max : nr_pages);
+		const num_buttons_total = arr_options.paginate;
+		const num_buttons_middle = arr_options.paginate_middle;
+		
+		var mode_buttons = (num_pages <= num_buttons_total || num_page_active <= (num_buttons_total - 2) ? 'start' : (num_page_active > num_pages - (num_buttons_total - 2) ? 'end' : 'middle'));
+		var num_buttons_max = (mode_buttons == 'middle' ? (num_buttons_middle + 2) : num_buttons_total);
+		var num_buttons = (num_pages > num_buttons_max ? num_buttons_max : num_pages);
 		
 		elm_paginate[0].appendChild(elm_paginate_previous[0]);
 					
-		for (i = 1; i <= count_pages; i++) {
+		for (i = 1; i <= num_buttons; i++) {
 			
-			if (i == max && type != 'end') {
+			if (i == num_buttons_max && num_pages > num_buttons_total && mode_buttons != 'end') {
 				var elm_ellipsis = $('<span></span>');
 				elm_paginate[0].appendChild(elm_ellipsis[0]);
 			}
 			
-			if (i == max) {
-				var nr_page = nr_pages;
+			var num_page = 1;
+			if (i == num_buttons_max) {
+				num_page = num_pages;
 			} else if (i == 1) {
-				var nr_page = 1;
+				num_page = 1;
 			} else {
-				if (type == 'start') {
-					var nr_page = i;
-				} else if (type == 'middle') {
-					var nr_page = Math.floor(nr_page_active - (max / 2)) + i;
-				} else if (type == 'end') {
-					var nr_page = (nr_pages - max) + i;
+				if (mode_buttons == 'start') {
+					num_page = i;
+				} else if (mode_buttons == 'middle') {
+					num_page = Math.floor(num_page_active - (num_buttons_max / 2)) + i;
+				} else if (mode_buttons == 'end') {
+					num_page = (num_pages - num_buttons_max) + i;
 				}
 			}
 				
-			var elm_button = $('<button type="button" value="'+nr_page+'"'+(nr_page_active == nr_page ? ' class="selected"' : '')+'>'+formatNumber(nr_page, 0, str_thousands, false)+'</button>');
+			var elm_button = $('<button type="button" value="'+num_page+'"'+(num_page_active == num_page ? ' class="selected"' : '')+'>'+formatNumber(num_page, 0, str_thousands, false)+'</button>');
 			elm_paginate[0].appendChild(elm_button[0]);
 			
-			if (i == 1 && type != 'start') {
+			if (i == 1 && mode_buttons != 'start') {
 				var elm_ellipsis = $('<span></span>');
 				elm_paginate[0].appendChild(elm_ellipsis[0]);
 			}
@@ -2090,7 +2087,7 @@ function DataTable(elm, arr_options) {
 					}
 				}
 				
-				for (var j = 0, len_j = arr_settings.nr_columns; j < len_j; j++) {
+				for (var j = 0, len_j = arr_settings.num_columns; j < len_j; j++) {
 					
 					var elm_td = $('<td></td>');
 					elm_td = elm_td[0];
@@ -2113,7 +2110,7 @@ function DataTable(elm, arr_options) {
 			}
 		} else {
 			
-			var elm_tr = $('<tr><td colspan="'+arr_settings.nr_columns+'" class="empty">No results.</td></tr>');
+			var elm_tr = $('<tr><td colspan="'+arr_settings.num_columns+'" class="empty">No results.</td></tr>');
 
 			elm_body_new[0].appendChild(elm_tr[0]);
 		}
@@ -2172,7 +2169,7 @@ function DataTable(elm, arr_options) {
 			}
 			
 			var index = elm_target.index();
-			arr_settings.nr_columns--;
+			arr_settings.num_columns--;
 			
 			elm_target.remove();
 		} else {
@@ -2201,7 +2198,7 @@ function DataTable(elm, arr_options) {
 				var elm_before = elm_header.children(selector_before);
 				
 				var index = elm_before.index();
-				arr_settings.nr_columns++;
+				arr_settings.num_columns++;
 				
 				elm_before.before(elm_content);
 			}
@@ -2236,7 +2233,7 @@ function DataTable(elm, arr_options) {
 		
 		var elm_columns = elm_header.children('th');
 			
-		for (var i = index; i < arr_settings.nr_columns; i++) {
+		for (var i = index; i < arr_settings.num_columns; i++) {
 			
 			var elm_column = elm_columns[i];
 			

@@ -36,9 +36,8 @@ class cms_blog_post_comments extends base_module {
 		if (!$arr_blog_posts) {
 			
 			Labels::setVariable('name', getLabel('lbl_blog_comments'));
-			$msg = getLabel('msg_no', 'L', true);
 
-			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+			$return .= '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 		} else {
 					
 			$return .= '<table class="list">
@@ -144,7 +143,7 @@ class cms_blog_post_comments extends base_module {
 				
 		if ($method == "get_blog_posts") {
 			
-			$this->html .= cms_general::createDropdown(cms_blog_posts::getBlogPosts($value), 0, true, "title");
+			$this->html .= cms_general::createDropdown(cms_blog_posts::getBlogPosts($value), 0, true, 'title');
 		}
 		
 		// POPUP

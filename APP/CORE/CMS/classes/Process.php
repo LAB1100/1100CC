@@ -12,54 +12,54 @@ class Process {
 	protected $command;
 	protected $pid;
 
-    public function __construct($cl = false) {
+	public function __construct($cl = false) {
 		
-        if ($cl == false) {
+		if ($cl == false) {
 			return;
 		}
 			
 		$this->command = $cl;
 		
 		$this->open();
-    }
-    
+	}
+	
 	protected function open() {
 		
 		/*
-		 * Do no wait/block (nohub) command
-		 * Redirect standard output (stdout) to /dev/null
-		 * Redirect standard error (2) to standard output (1) (2>&1) 
-		 * Return process ID by shell ($!)
+		* Do no wait/block (nohub) command
+		* Redirect standard output (stdout) to /dev/null
+		* Redirect standard error (2) to standard output (1) (2>&1) 
+		* Return process ID by shell ($!)
 		*/
 		
-        $command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
-        exec($command, $op);
-        
-        $this->setPID((int)$op[0]);
-    }
+		$command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
+		exec($command, $op);
+		
+		$this->setPID((int)$op[0]);
+	}
 
 	public function setPID($pid) {
 		
-        $this->pid = $pid;
-    }
+		$this->pid = $pid;
+	}
 
 	public function getPID() {
 		
-        return $this->pid;
-    }
+		return $this->pid;
+	}
 
 	public function status() {
 		
 		$command = 'ps -p '.$this->pid;
-        
+		
 		exec($command, $op);
-        
+		
 		if (!isset($op[1])) {
 			return false;
 		} else {
 			return true;
 		}
-    }
+	}
 
 	public function start() {
 		
@@ -68,17 +68,17 @@ class Process {
 		} else {
 			return true;
 		}
-    }
+	}
 
 	public function close() {
 		
 		$command = 'kill '.$this->pid;
 		exec($command);
-        
-        if ($this->status() == false) {
+		
+		if ($this->status() == false) {
 			return true;
 		} else {
 			return false;
 		}
-    }
+	}
 }

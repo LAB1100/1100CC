@@ -60,15 +60,17 @@ class cms_dashboards extends base_module {
 						<tbody>';
 							while ($arr_row = $res->fetchAssoc()) {
 								
-								$arr_pages = explode(',', $arr_row['pages']);
-								$arr_directories = array_filter(explode(',', $arr_row['directories']));
+								$arr_pages = str2Array($arr_row['pages'], ',');
+								$arr_directories = array_filter(str2Array($arr_row['directories'], ','));
 								$arr_paths = [];
+								
 								for ($i = 0; $i < count($arr_directories); $i++) {
 									$arr_dir = directories::getDirectories($arr_directories[$i]);
 									if ($arr_dir['id']) {
 										$arr_paths[] = $arr_dir['path'].' / '.$arr_pages[$i];
 									}
 								}
+								
 								$arr_paths = array_unique($arr_paths);
 
 								$return .= '<tr id="x:cms_dashboards:dashboard_id-'.$arr_row['id'].'">

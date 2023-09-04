@@ -54,7 +54,7 @@ class calendar extends base_module {
 			],
 			'module_var' => false,
 			'module_query' => function($arr_result) {
-				return '/day/'.date('d-m-Y', strtotime($arr_result['extra_values'][DB::getTable('TABLE_CALENDAR_EVENTS')]['date'])).'#'.$arr_result['object_link'].'-'.str2URL($arr_result['title']);
+				return 'day/'.date('d-m-Y', strtotime($arr_result['extra_values'][DB::getTable('TABLE_CALENDAR_EVENTS')]['date'])).'#'.$arr_result['object_link'].'-'.str2URL($arr_result['title']);
 			}
 		];
 	}
@@ -188,7 +188,7 @@ class calendar extends base_module {
 							<div>';
 							
 								foreach ($arr_events[$cur_date->format("Y-m-d")] as $value) {
-									$return .= '<dd><span style="background-color: #'.$value["color"].';"></span><span>'.date("H:i", strtotime($value["date"])).' - '.date("H:i", strtotime($value["date_end"])).'</span><a href="'.SiteStartVars::getModUrl($this->mod_id).'day/'.$cur_date->format("d-m-Y").'#'.$value["id"].'-'.str2URL($value["name"]).'">'.strEscapeHTML($value["name"]).'</a></dd>';
+									$return .= '<dd><span style="background-color: #'.$value["color"].';"></span><span>'.date("H:i", strtotime($value["date"])).' - '.date("H:i", strtotime($value["date_end"])).'</span><a href="'.SiteStartVars::getModuleURL($this->mod_id).'day/'.$cur_date->format("d-m-Y").'#'.$value["id"].'-'.str2URL($value["name"]).'">'.strEscapeHTML($value["name"]).'</a></dd>';
 								}
 							$return .= '</div>
 						</div>';
@@ -213,9 +213,9 @@ class calendar extends base_module {
 					.calendar > section > figure.month > figcaption > span,
 					.calendar > section > figure.week > figcaption > span,
 					.calendar > section > figure.day > figcaption > span { position: absolute; left: -50%; width: 100%; font-weight: bold; }
-					.calendar > section > figure > span.range { position: absolute; bottom: -14px; width: 100%; height: 8px; background-color: #444444; }
+					.calendar > section > figure > span.range { position: absolute; bottom: -14px; width: 100%; height: 8px; background-color: var(--back-super); }
 					
-					.calendar > section > figure.month { width: 8px; background-color: #444444; height: 140px; }
+					.calendar > section > figure.month { width: 8px; background-color: var(--back-super); height: 140px; }
 					.calendar > section > figure.month > figcaption { width: 60px; }
 					
 					.calendar > section > figure.week { width: 6px; background-color: #e1e1e1; height: 115px; }
@@ -223,10 +223,10 @@ class calendar extends base_module {
 					
 					.calendar > section > figure.day { width: 8px; height: 100px; }
 					.calendar > section > figure.day > figcaption { display: none; top: -8px; width: 80px; z-index: 1; }
-					.calendar > section > figure.day > figcaption > span { padding: 2px 0px; background-color: #444444; color: #ffffff; }
-					.calendar > section > figure.day > span.today { position: absolute; top: -9px; width: 100%; height: 8px; background-color: #444444; }
+					.calendar > section > figure.day > figcaption > span { padding: 2px 0px; background-color: var(--back-super); color: #ffffff; }
+					.calendar > section > figure.day > span.today { position: absolute; top: -9px; width: 100%; height: 8px; background-color: var(--back-super); }
 					.calendar > section > figure.day:hover > figcaption { display: block; }
-					.calendar > section > figure.day > div { height: 100%; background-color: #f5f5f5; }
+					.calendar > section > figure.day > div { height: 100%; background-color: var(--back); }
 					.calendar > section > figure.day > div > span { display: block; width: 100%; border-top: 1px solid #ffffff; box-sizing:border-box; -moz-box-sizing:border-box; -webkit-box-sizing:border-box; }
 					.calendar > section > figure.day > div > span:first-child { border-top-width: 0px; }
 					
@@ -257,7 +257,7 @@ class calendar extends base_module {
 					.calendar > dl.range dd > span:first-child { display: inline-block; width: 20px; height: 1.26em; margin-left: 0px; }
 					
 					.calendar > dl.day dt > .date:first-child + .time { margin-top: 4px; }
-					.calendar > dl.day dt > .time { margin-top: 2px; color: #444444; }
+					.calendar > dl.day dt > .time { margin-top: 2px; color: var(--text); }
 					.calendar > dl.day dd > h1 { margin-top: 0px; }
 					.calendar > dl.day dd > h1 > span { display: inline-block; vertical-align: text-top; margin-right: 8px; width: 20px; height: 1.26em; }';
 					

@@ -104,7 +104,7 @@ class cms_labels extends base_module {
 			$arr_label = self::getLabel($label);
 		} else {
 			$label = $label_default;
-			$arr_label[SiteStartVars::$language] = $str;
+			$arr_label[SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)] = $str;
 		}
 		
 		$return = '<div class="tabs">
@@ -301,7 +301,7 @@ class cms_labels extends base_module {
 			
 			$arr_labels = static::getLabelList($str_search, $id);
 			
-			$resource = fopen('php://temp/maxmemory:'.(10 * BYTE_MULTIPLIER * BYTE_MULTIPLIER), 'w+');
+			$resource = getStreamMemory();
 			
 			$arr_headers = ['identifier'];
 			
@@ -325,7 +325,7 @@ class cms_labels extends base_module {
 			}
 			
 			rewind($resource);
-			$str = stream_get_contents($resource);
+			$str = read($resource);
 			fclose($resource);
 			
 			$this->html = '<form class="label-import-export">'.static::createLabelExport($id, $str).'</form>';
@@ -348,7 +348,7 @@ class cms_labels extends base_module {
 			
 			$arr_language = cms_language::getLanguage($id);
 						
-			$resource = fopen('php://temp/maxmemory:'.(10 * BYTE_MULTIPLIER * BYTE_MULTIPLIER), 'w+');
+			$resource = getStreamMemory();
 			fwrite($resource, $_POST['csv']);
 			rewind($resource);
 			
@@ -480,7 +480,7 @@ class cms_labels extends base_module {
 				}
 			}
 			
-			$nr_columns = count($arr_sql_columns);
+			$num_columns = count($arr_sql_columns);
 
 			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', $sql_index_body);
 			
@@ -496,7 +496,7 @@ class cms_labels extends base_module {
 				
 				$arr_data[] = $arr_row[0];
 				
-				for ($i = 1; $i < $nr_columns; $i++) {
+				for ($i = 1; $i < $num_columns; $i++) {
 					
 					$arr_data[] = strEscapeHTML($arr_row[$i]);
 				}
@@ -764,12 +764,12 @@ class cms_labels extends base_module {
 		
 			$res = DB::query("(SELECT identifier, label
 				FROM ".DB::getTable("TABLE_CMS_LABELS")."
-				WHERE lang_code = '".SiteStartVars::$language."'
+				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
 				AND identifier = '".DBFunctions::strEscape($labels)."'
 			) UNION ALL (
 				SELECT identifier, label
 					FROM ".DB::getTable("TABLE_CORE_LABELS")."
-				WHERE lang_code = '".SiteStartVars::$language."'
+				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
 					AND identifier = '".DBFunctions::strEscape($labels)."'
 					AND NOT EXISTS (SELECT identifier 
 						FROM ".DB::getTable("TABLE_CMS_LABELS")."
@@ -785,12 +785,12 @@ class cms_labels extends base_module {
 		
 			$res = DB::query("(SELECT identifier, label
 				FROM ".DB::getTable("TABLE_CMS_LABELS")."
-				WHERE lang_code = '".SiteStartVars::$language."'
+				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
 				AND identifier IN ('".$str."')
 			) UNION ALL (
 				SELECT identifier, label
 					FROM ".DB::getTable("TABLE_CORE_LABELS")."
-				WHERE lang_code = '".SiteStartVars::$language."'
+				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
 					AND identifier IN ('".$str."')
 					AND identifier NOT IN (SELECT identifier 
 						FROM ".DB::getTable("TABLE_CMS_LABELS")."
@@ -809,8 +809,8 @@ class cms_labels extends base_module {
 	public static function getLabels($labels) {
 		
 		$arr = [];
-		$lang_default = cms_language::getDefaultLanguage();
-		$lang_default = $lang_default['lang_code'];
+		$str_language_default = cms_language::getDefaultLanguage();
+		$str_language_default = $str_language_default['lang_code'];
 		
 		if (is_string($labels)) {
 
@@ -824,11 +824,11 @@ class cms_labels extends base_module {
 		
 		$sql_labels = implode("','", $arr_labels);
 		
-		if (SiteStartVars::$language) {
+		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)) {
 				
 			$res = DB::query("SELECT lang_code, identifier, label
 							FROM ".DB::getTable('TABLE_CMS_LABELS')."
-						WHERE lang_code = '".SiteStartVars::$language."' AND identifier IN ('".$sql_labels."')");
+						WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."')");
 
 			while ($row = $res->fetchAssoc()) {
 				
@@ -842,7 +842,7 @@ class cms_labels extends base_module {
 				
 				$res = DB::query("SELECT lang_code, identifier, label
 								FROM ".DB::getTable('TABLE_CORE_LABELS')."
-							WHERE lang_code = '".SiteStartVars::$language."' AND identifier IN ('".$sql_labels."')");
+							WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."')");
 
 				while($row = $res->fetchAssoc()) {
 					
@@ -852,13 +852,13 @@ class cms_labels extends base_module {
 			}
 		}
 		
-		if (SiteStartVars::$language != $lang_default && $arr_labels) {
+		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE) != $str_language_default && $arr_labels) {
 			
 			$sql_labels = implode("','", $arr_labels);
 				
 			$res = DB::query("SELECT lang_code, identifier, label
 						FROM ".DB::getTable('TABLE_CMS_LABELS')."
-					WHERE lang_code = '".$lang_default."' AND identifier IN ('".$sql_labels."')");
+					WHERE lang_code = '".$str_language_default."' AND identifier IN ('".$sql_labels."')");
 			
 			while ($row = $res->fetchAssoc()) {
 			
@@ -872,7 +872,7 @@ class cms_labels extends base_module {
 				
 				$res = DB::query("SELECT lang_code, identifier, label
 						FROM ".DB::getTable('TABLE_CORE_LABELS')."
-					WHERE lang_code = '".$lang_default."' AND identifier IN ('".$sql_labels."')
+					WHERE lang_code = '".$str_language_default."' AND identifier IN ('".$sql_labels."')
 				");
 				
 				while ($row = $res->fetchAssoc()) {
@@ -891,11 +891,11 @@ class cms_labels extends base_module {
 			
 			$sql_labels = implode("','", $arr_labels);
 			
-			if (SiteStartVars::$language) {
+			if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)) {
 					
 				$res = DB::query("SELECT lang_code, identifier, label
 						FROM ".DB::getTable('TABLE_SITE_USER_LABELS')."
-					WHERE lang_code = '".SiteStartVars::$language."' AND identifier IN ('".$sql_labels."') AND user_id = ".(int)$user_id
+					WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."') AND user_id = ".(int)$user_id
 				);
 
 				while ($row = $res->fetchAssoc()) {
@@ -905,13 +905,13 @@ class cms_labels extends base_module {
 				}
 			}
 
-			if (SiteStartVars::$language != $lang_default && $arr_labels) {
+			if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE) != $str_language_default && $arr_labels) {
 		
 				$sql_labels = implode("','", $arr_labels);
 				
 				$res = DB::query("SELECT lang_code, identifier, label
 							FROM ".DB::getTable('TABLE_SITE_USER_LABELS')."
-						WHERE lang_code = '".$lang_default."' AND identifier IN ('".$sql_labels."') AND user_id = ".(int)$user_id);
+						WHERE lang_code = '".$str_language_default."' AND identifier IN ('".$sql_labels."') AND user_id = ".(int)$user_id);
 						
 				while ($row = $res->fetchAssoc()) {
 				
@@ -949,7 +949,7 @@ class cms_labels extends base_module {
 			
 			$sql = "SELECT identifier, label
 					FROM ".DB::getTable('TABLE_CMS_LABELS')."
-						WHERE lang_code = '".SiteStartVars::$language."'
+						WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
 						AND (".implode(" OR ", $arr_query_search).")
 			";
 			

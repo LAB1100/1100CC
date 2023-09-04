@@ -497,8 +497,8 @@ class cms_messaging extends base_module {
 								
 		foreach ($arr_users as $user_group_id => $arr_email_vars) {
 			
-			$module_url = pages::getModUrl(pages::getClosestMod('messaging', false, false, $user_group_id));
-			$account_url = pages::getModUrl(pages::getClosestMod('account', false, false, $user_group_id));
+			$module_url = pages::getModuleURL(pages::getClosestModule('messaging', false, false, $user_group_id));
+			$account_url = pages::getModuleURL(pages::getClosestModule('account', false, false, $user_group_id));
 			
 			Labels::setVariable('link', $module_url);
 			Labels::setVariable('link_opt_out', $account_url);

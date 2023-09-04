@@ -24,18 +24,12 @@ class dashboard extends base_module {
 	}
 	
 	public function contents() {
-	
-		if ($this->arr_query[0] == 'jump') {
-			
-			Response::location(pages::getPageUrl(pages::getMods((int)$this->arr_query[1])));
-			die;
-		}	
-			
+				
 		$dashboard_options = cms_dashboards::getDashboards($this->arr_variables);
 		
 		$arr_widgets = cms_dashboards::getWidgets($this->arr_variables, $_SESSION['USER_ID']);
 
-		$arr_modules = pages::getMods(arrValuesRecursive('module_id', $arr_widgets));		
+		$arr_modules = pages::getModules(arrValuesRecursive('module_id', $arr_widgets));		
 		$arr_modules = pages::filterClearance($arr_modules, $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]);
 
 		$arr_columns = [];
@@ -100,13 +94,17 @@ class dashboard extends base_module {
 		$mod->setMod($module_row, $module_row['id']);
 		$mod->setModVariables($module_row['var']);
 		
-		$mod_widget_properties = $mod::widgetProperties();
+		$arr_mod_widget_properties = $mod::widgetProperties();
 		
-		$method = $arr_widget['method'];
-		
-		$return = '<li id="widget-'.$arr_widget['module_id'].'_'.$arr_widget['method'].'" class="mod-spacing widget '.$module_row['module'].($arr_widget['locked'] ? ' locked' : '').((isset($arr_widget['user_min']) && $arr_widget['user_min']) || (!isset($arr_widget['user_min']) && $arr_widget['min']) ? ' min' : '').'">
-			<h3><span>'.$mod_widget_properties[$arr_widget['method']]['label'].'</span><ul><li class="size" title="Toggle"></li>'.($arr_widget['linked'] ? '<li title="Go to module"><a href="'.SiteStartVars::getModUrl($this->mod_id).'jump/'.$arr_widget['module_id'].'" target="_blank"></a></li>' : '').'</ul></h3>
-			<div>'.$mod->$method().'</div>
+		$str_method = $arr_widget['method'];
+		$str_url = false;
+		if ($arr_widget['linked']) {
+			$str_url = pages::getPageURL(pages::getModules((int)$arr_widget['module_id']));
+		}
+
+		$return = '<li id="widget-'.$arr_widget['module_id'].'_'.$str_method.'" class="mod-spacing widget '.$module_row['module'].($arr_widget['locked'] ? ' locked' : '').((isset($arr_widget['user_min']) && $arr_widget['user_min']) || (!isset($arr_widget['user_min']) && $arr_widget['min']) ? ' min' : '').'">
+			<h3><span>'.$arr_mod_widget_properties[$str_method]['label'].'</span><ul><li class="size" title="Toggle"></li>'.($str_url ? '<li title="Go to module"><a href="'.$str_url.'" target="_blank"></a></li>' : '').'</ul></h3>
+			<div>'.$mod->$str_method().'</div>
 		</li>';
 		
 		return $return;

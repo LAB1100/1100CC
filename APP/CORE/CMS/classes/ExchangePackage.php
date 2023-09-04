@@ -104,7 +104,7 @@ class ExchangePackage {
 		$sql_target_id = $arr_sql['target_id'];
 		$sql_target_id = ($sql_target_id === false ? null : $sql_target_id);
 
-		$path_dump = tempnam(Settings::get('path_temporary'), '1100CC');
+		$path_dump = getPathTemporary();
 		
 		$arr_filenames = [];
 				
@@ -308,6 +308,7 @@ class ExchangePackage {
 				$this->archive->add(['sql/'.$filename => $path_dump]);
 				
 				if ($this->do_updates) {
+					
 					status('Table stored: '.$filename.'.');
 				}
 			}
@@ -318,30 +319,37 @@ class ExchangePackage {
 		
 		$arr_files_collect = [];
 		
-		$num_total = count($arr_files);
-		$num_count = 0;
-		
 		if ($this->do_updates) {
+			
+			$num_total = count($arr_files);
+			
 			status('Storing: '.num2String($num_total).' files.');
+			
+			$num_archive_total = $this->archive->getStatistics();
+			
+			$this->archive->getStatistics(function($num_count) use ($num_total, $num_archive_total) {
+				
+				$num_count -= $num_archive_total;
+				
+				if (($num_count % 10) != 0) {
+					return;
+				}
+				
+				status('File stored: '.num2String($num_count).' of '.num2String($num_total).'.');
+			});
 		}
 		
-		foreach ($arr_files as $path_file) {
+		foreach ($arr_files as $str_path_file) {
 			
-			$path_source = DIR_ROOT_STORAGE.DIR_HOME.$path_file;
+			$str_path_source = DIR_ROOT_STORAGE.DIR_HOME.$str_path_file;
 			
-			if (!isPath($path_source)) {
+			if (!isPath($str_path_source)) {
 				continue;
 			}
 			
-			$arr_files_collect['files/'.$path_file] = $path_source;
-			
-			$num_count++;
-			
-			if ($this->do_updates && ($num_count % 10) == 0) {
-				status('Files stored: '.num2String($num_count).' of '.num2String($num_total).'.');
-			}
+			$arr_files_collect['files/'.$str_path_file] = $str_path_source;			
 		}
-		
+				
 		$this->archive->add($arr_files_collect);
 	}
 	

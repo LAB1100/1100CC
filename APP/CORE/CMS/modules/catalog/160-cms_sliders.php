@@ -92,8 +92,8 @@ class cms_sliders extends base_module {
 				<tbody>';
 					while ($arr_row = $res->fetchAssoc()) {
 						
-						$arr_pages = explode(',', $arr_row['pages']);
-						$arr_directories = array_filter(explode(',', $arr_row['directories']));
+						$arr_pages = str2Array($arr_row['pages'], ',');
+						$arr_directories = array_filter(str2Array($arr_row['directories'], ','));
 						$arr_paths = [];
 						
 						for ($i = 0; $i < count($arr_directories); $i++) {

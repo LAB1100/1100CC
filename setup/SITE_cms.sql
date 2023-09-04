@@ -242,6 +242,7 @@ CREATE TABLE `site_tags` (
 
 CREATE TABLE `site_uris` (
   `uri_translator_id` int NOT NULL,
+  `in_out` tinyint NOT NULL DEFAULT '1',
   `identifier` varchar(300) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `url` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `remark` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -251,6 +252,7 @@ CREATE TABLE `site_uris` (
 CREATE TABLE `site_uri_translators` (
   `id` int NOT NULL,
   `name` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `mode` tinyint NOT NULL DEFAULT '1',
   `host_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `delay` int NOT NULL,
   `show_remark` tinyint(1) NOT NULL
@@ -285,8 +287,8 @@ CREATE TABLE `users` (
   `id` int NOT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT '1',
   `group_id` int NOT NULL,
-  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `uname` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `uname` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `parent_id` int NOT NULL,
   `passhash` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -413,7 +415,7 @@ ALTER TABLE `site_tags`
   ADD UNIQUE KEY `name` (`name`);
 
 ALTER TABLE `site_uris`
-  ADD PRIMARY KEY (`uri_translator_id`,`identifier`) USING BTREE,
+  ADD PRIMARY KEY (`uri_translator_id`,`in_out`,`identifier`),
   ADD KEY `service` (`service`);
 
 ALTER TABLE `site_uri_translators`

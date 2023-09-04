@@ -56,7 +56,7 @@ function ResizeSensor(elm, callback, elm_insert) {
 			return elm.style[str_property];
 		}
 	}
-			
+	
 	var elm = getElement(elm);
 	
 	const SELF = this;

@@ -13,18 +13,18 @@ class HomeLogin {
 		
 		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER']);
 		
-		if (SiteStartVars::$page_kind == '.l' && SiteStartVars::$page_name == 'logout') {
+		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.l' && SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) == 'logout') {
 
-			unset($_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID']);
+			unset($_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID']);
 			
 			Response::location(SiteStartVars::getBasePath(1, false));
-		} else if (!empty($_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID']) && !isset($_POST['login_user']) && !isset($_POST['login_ww'])) {
+		} else if (!empty($_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID']) && !isset($_POST['login_user']) && !isset($_POST['login_ww'])) {
 					
 			self::updateLogin();
-		} else if (SiteStartVars::$user_group && isset($_POST['login_user']) && isset($_POST['login_ww'])) {
+		} else if (SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP) && isset($_POST['login_user']) && isset($_POST['login_ww'])) {
 		
 			self::checkLogin($_POST['login_user'], $_POST['login_ww']);
-		} else if (SiteStartVars::$user_group && SiteStartVars::$login_dir['require_login']) {
+		} else if (SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP) && SiteStartVars::getDirectory('require_login', SiteStartVars::DIRECTORY_LOGIN)) {
 			
 			self::toLogin();
 		}
@@ -42,10 +42,10 @@ class HomeLogin {
 		
 		$arr_api_client_user = apis::getClientUserByToken($token);
 				
-		if ($arr_api_client_user && $arr_api_client_user['api_id'] == SiteStartVars::$api['id']) {
+		if ($arr_api_client_user && $arr_api_client_user['api_id'] == SiteStartVars::getAPI('id')) {
 			
 			// Regenerate token when provided unsecure
-			if (SERVER_SCHEME != 'https://') {
+			if (SERVER_SCHEME != URI_SCHEME_HTTPS) {
 				
 				apis::handleClientUser($arr_api_client_user['client_id'], $arr_api_client_user['user_id'], $arr_api_client_user['enabled'], false, true);
 				
@@ -79,26 +79,26 @@ class HomeLogin {
 			
 	private static function toLogin($error = false) {
 		
-		$arr_page = pages::getPages(SiteStartVars::$login_dir['page_fallback_id']);
+		$arr_page = pages::getPages(SiteStartVars::getDirectory('page_fallback_id', SiteStartVars::DIRECTORY_LOGIN));
 
-		if (SiteStartVars::$dir['path'] != SiteStartVars::$login_dir['path'] || SiteStartVars::$page['name'] != $arr_page['name']) {
+		if (SiteStartVars::getDirectory('path') != SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN) || SiteStartVars::getPage('name') != $arr_page['name']) {
 		
 			if (!$error) {
 				$_SESSION['RETURN_TO'] = (!empty($_SERVER['PATH_VIRTUAL']) ? $_SERVER['PATH_VIRTUAL'] : $_SERVER['PATH_INFO']);
 			}
 			
-			Response::location(URL_BASE.ltrim(SiteStartVars::$login_dir['path'], '/').(SiteStartVars::$login_dir['path'] ? '/' : '').$arr_page['name'].'.p'.($error ? '/LOGIN_INCORRECT' : ''));
+			Response::location(URL_BASE.ltrim(SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN), '/').(SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN) ? '/' : '').$arr_page['name'].'.p'.($error ? '/LOGIN_INCORRECT' : ''));
 		}
 	}
 		
 	private static function updateLogin() {
 		
-		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID'], true);
+		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID'], true);
 		
 		if ($_SESSION['CUR_USER']) {
 			
-			$_SESSION['USER_ID'] = $_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID'];
-			$_SESSION['USER_GROUP'] = SiteStartVars::$user_group;
+			$_SESSION['USER_ID'] = $_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID'];
+			$_SESSION['USER_GROUP'] = SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP);
 			
 			if (strtotime($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['last_login']) < strtotime('-1 day')) {
 				
@@ -140,7 +140,7 @@ class HomeLogin {
 		$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_USERS')."
 			WHERE enabled = TRUE
 				AND uname = '".DBFunctions::strEscape($username)."'
-				AND group_id = ".SiteStartVars::$user_group."
+				AND group_id = ".SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)."
 		");
 		
 		$passhash = false;
@@ -155,9 +155,9 @@ class HomeLogin {
 		if ($passhash !== false) {
 			
 			$_SESSION['CUR_USER'] = user_groups::getUserData($arr_user['id'], true);
-			$_SESSION['USER_GROUP'] = SiteStartVars::$user_group;
+			$_SESSION['USER_GROUP'] = SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP);
 			$_SESSION['USER_ID'] = $arr_user['id'];
-			$_SESSION['STORE_'.SiteStartVars::$user_group]['USER_ID'] = $_SESSION['USER_ID'];
+			$_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID'] = $_SESSION['USER_ID'];
 			$arr_ip = Log::getIP();
 			
 			DB::setConnection(DB::CONNECT_CMS);

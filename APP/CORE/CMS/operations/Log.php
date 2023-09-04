@@ -85,12 +85,12 @@ class Log {
 				
 				$label = (is_array($value[1]) ? $value[1][0] : $value[1]);
 				
-				$arr_msgs[] = '<label>'.$label.'</label><span>'.$value[0].'</span>';
+				$arr_msgs[] = '<label>'.$label.'</label><div>'.$value[0].'</div>';
 			}
 
 			if ($arr_msgs || self::$msg) {
 				
-				$msg = '<label></label><span>'.(!self::$msg && $arr_msgs ? 'Report' : self::$msg).'</span>';
+				$msg = '<label></label><div>'.(!self::$msg && $arr_msgs ? 'Report' : self::$msg).'</div>';
 				$str = '<ul><li>'.$msg.'</li>'.($arr_msgs ? '<li>'.implode('</li><li>', $arr_msgs).'</li>' : '').'</ul>';
 			}
 			
@@ -101,8 +101,10 @@ class Log {
 			}
 			
 			if ($arr_options !== null && !is_array($arr_options)) {
+				
 				$arr_options = ['duration' => (int)$arr_options];
 			} else {
+				
 				$arr_options = ($arr_options ?: []);
 			}
 			
@@ -111,6 +113,10 @@ class Log {
 			}
 			
 			$JSON->msg_options = $arr_options;
+			
+			if (MESSAGE !== null) {
+				$JSON->system_msg = '<div class="important"><p><span class="icon">'.getIcon('attention').'</span><span>'.Labels::parseTextVariables(MESSAGE).'</span></p></div>';
+			}
 		}
 		
 		return $JSON;

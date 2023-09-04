@@ -45,9 +45,8 @@ class cms_documentations extends base_module {
 			if ($res->getRowCount() == 0) {
 				
 				Labels::setVariable('name', getLabel('lbl_documentations'));
-				$msg = getLabel('msg_no', 'L', true);
 				
-				$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+				$return .= '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 			} else {
 		
 				$return .= '<table class="list">
@@ -61,8 +60,8 @@ class cms_documentations extends base_module {
 					<tbody>';
 						while ($arr_row = $res->fetchAssoc()) {
 							
-							$arr_pages = explode(',', $arr_row['pages']);
-							$arr_directories = array_filter(explode(',', $arr_row['directories']));
+							$arr_pages = str2Array($arr_row['pages'], ',');
+							$arr_directories = array_filter(str2Array($arr_row['directories'], ','));
 							$arr_paths = [];
 							
 							for ($i = 0; $i < count($arr_directories); $i++) {
@@ -71,6 +70,7 @@ class cms_documentations extends base_module {
 									$arr_paths[] = $arr_dir['path'].' / '.$arr_pages[$i];
 								}
 							}
+							
 							$arr_paths = array_unique($arr_paths);
 							
 							$return .= '<tr id="x:cms_documentations:documentation_id-'.$arr_row['id'].'">
@@ -199,5 +199,10 @@ class cms_documentations extends base_module {
 		}
 			
 		return $arr;
+	}
+	
+	public static function findMainDocumentation($documentation_id) {
+
+		return pages::getClosestModule('documentation', 0, 0, 0, $documentation_id, 'id');
 	}
 }

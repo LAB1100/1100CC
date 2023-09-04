@@ -68,8 +68,8 @@ class cms_forms extends base_module {
 					<tbody>';
 						while ($arr_row = $res->fetchAssoc()) {
 							
-							$arr_pages = explode(',', $arr_row['pages']);
-							$arr_directories = array_filter(explode(',', $arr_row['directories']));
+							$arr_pages = str2Array($arr_row['pages'], ',');
+							$arr_directories = array_filter(str2Array($arr_row['directories'], ','));
 							$arr_paths = [];
 							
 							for ($i = 0; $i < count($arr_directories); $i++) {
@@ -224,8 +224,7 @@ class cms_forms extends base_module {
 			$arr = explode(".", $id);
 			$this->html = self::createSubfieldOption($arr[0], $arr[1]);
 		}
-		
-							
+				
 		// QUERY
 	
 		if ($method == "insert") {
@@ -354,10 +353,13 @@ class cms_forms extends base_module {
 			return self::$arr_field_sub_tables;
 		}
 
-		foreach ((SiteStartVars::$arr_cms_modules ?: SiteStartVars::$arr_modules) as $module => $value) {
-			if (method_exists($module, 'formFieldSubTable')) {
-				self::$arr_field_sub_tables = array_merge(self::$arr_field_sub_tables, $module::formFieldSubTable());
+		foreach (SiteStartVars::getModules(false, DIR_CMS) as $module => $value) {
+			
+			if (!method_exists($module, 'formFieldSubTable')) {
+				continue;
 			}
+			
+			self::$arr_field_sub_tables = array_merge(self::$arr_field_sub_tables, $module::formFieldSubTable());
 		}
 
 		return self::$arr_field_sub_tables;

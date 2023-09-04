@@ -267,7 +267,7 @@ class cms_log extends base_module {
 		
 		if ($method == "del" && $id) {
 			
-			$id = arrParseRecursive($id, 'int');
+			$id = arrParseRecursive($id, TYPE_INTEGER);
 					
 			$res = DB::query("
 				DELETE FROM ".DB::getTable('TABLE_LOG')."

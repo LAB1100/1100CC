@@ -18,7 +18,7 @@ class cms_language extends base_module {
 		static::$parent_label = false;
 	}
 	
-	private static $lang_default = '';
+	private static $arr_language_default = [];
 	
 	public static function getLanguage($table = 'cms', $lang = '') {
 	
@@ -62,12 +62,13 @@ class cms_language extends base_module {
 	
 	public static function getDefaultLanguage($host_name = '') {
 		
-		if (!$host_name && self::$lang_default) {
+		if (!$host_name && self::$arr_language_default) {
 			
-			return self::$lang_default;
+			return self::$arr_language_default;
 		}
 	
-		$res = DB::query("SELECT l.* FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." l
+		$res = DB::query("SELECT l.*
+			FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." l
 			".($host_name ? "LEFT JOIN ".DB::getTable('TABLE_CMS_LANGUAGE_HOSTS')." lh ON (lh.lang_code = l.lang_code AND (
 					(
 						lh.host_name = '".DBFunctions::strEscape($host_name)."'
@@ -86,7 +87,7 @@ class cms_language extends base_module {
 		
 		if (!$host_name) {
 			
-			self::$lang_default = $row;
+			self::$arr_language_default = $row;
 		}
 		
 		return $row;

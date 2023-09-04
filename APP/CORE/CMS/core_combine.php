@@ -56,7 +56,7 @@ class CombineJSCSS {
 				}
 
 				$arr_last_modified[] = filemtime($file);
-				if ($type == 'css') {
+				if ($type == SiteStartVars::MATERIAL_CSS) {
 					$path_check = realpath($file);
 					if (strpos($path_check, DIR_ROOT_CORE) !== false) {
 						$root = DIR_ROOT_CORE;
@@ -94,7 +94,7 @@ class CombineJSCSS {
 		}
 				
 		Response::sendFileHeaders($code, false, [
-			'Content-Type: '.($type == 'js' ? 'application/javascript': 'text/css'),
+			'Content-Type: '.($type == SiteStartVars::MATERIAL_JS ? 'application/javascript': 'text/css'),
 			'ETag: "'.$ie_tag.'"',
 			'Cache-Control: max-age='.self::$cache_length,
 			'1100CC-Cached: '.(int)$create_archive

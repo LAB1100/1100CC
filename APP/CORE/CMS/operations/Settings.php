@@ -18,7 +18,7 @@ class Settings {
 	public static $arr_storage_paths = [DIR_CSS, DIR_JS, DIR_CMS, DIR_UPLOAD];
 	public static $arr_storage_paths_cacheable = ['combine/', 'cache/'];
 				
-	public static function get($setting, $key = false) { // Get a setting following: set or override, and add
+	public static function get($setting, $key = null, $arr_parameters = null) { // Get a setting following: set or override, and add
 		
 		$value = null;
 		
@@ -43,7 +43,8 @@ class Settings {
 		}
 		
 		if (is_callable($value)) {
-			$value = $value();
+			
+			$value = ($arr_parameters ? $value(...$arr_parameters) : $value());
 		}
 		
 		if (isset(self::$arr_add[$setting])) {
@@ -61,7 +62,7 @@ class Settings {
 		self::$arr[$setting] = $value;
 	}
 
-	public static function override($setting, $value, $key = false) {
+	public static function override($setting, $value, $key = null) {
 		
 		if ($key) {
 			self::$arr_override_keys[$setting][$key] = $value;
@@ -71,7 +72,7 @@ class Settings {
 		}
 	}
 	
-	public static function add($setting, $value, $key = false) {
+	public static function add($setting, $value, $key = null) {
 		
 		if ($key) {
 			self::$arr_add[$setting][$key] = $value;

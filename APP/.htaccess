@@ -13,34 +13,37 @@ RewriteEngine On
 
 # Set server state to development or production (default)
 #SetEnv STATE development
-#SetEnv MESSAGE '[L][msg_site_maintenance] [L][msg_site_read_only]'
+#SetEnv MESSAGE '[L][msg_site_maintenance]'
 
 ################################################
 
+# Do optional host/path preprocessing
+RewriteRule ^(.*)$ - [E=HOST:${alias:HOST:%{HTTP_HOST}|%{HTTP_HOST}},E=PATH:${alias:PATH:%{REQUEST_URI}|%{REQUEST_URI}}]
+
 # Redirect www to clean URL, include http or http(s)
 	RewriteBase /
-	RewriteCond %{SERVER_PORT}s%{HTTP_HOST} ^(?:443(s)|[0-9]+s)www\.(.*)$ [NC]
+	RewriteCond %{SERVER_PORT}s%{ENV:HOST} ^(?:443(s)|[0-9]+s)www\.(.*)$ [NC]
 RewriteRule ^(.*)$ http%1://%2/$1 [R=301,L]
 
 # Split the requested host in sections
-	RewriteCond %{HTTP_HOST} (.*?\.?)((?<=^|\.)[be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond %{ENV:HOST} ((?:[^\.|-]*-)*(?:[^\.]*\.)*?)([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond ${alias:%2%4%6%8%9} !=""
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%3%5%7,E=SERVER_NAME_1100CC:%2%3%4%5%6%7%8%9,E=SERVER_NAME_SITE_NAME:%2%4%6%8%9,S=3]
+
+# Split the requested host in sections
+	RewriteCond %{ENV:HOST} ((?:[^\.|-]*-)*(?:[^\.]*\.)*?)([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond ${alias:%2%4%6%7} !=""
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%3%5,E=SERVER_NAME_1100CC:%2%3%4%5%6%7,E=SERVER_NAME_SITE_NAME:%2%4%6%7,S=2]
+
+# Split the requested host in sections
+	RewriteCond %{ENV:HOST} ((?:[^\.|-]*-)*(?:[^\.]*\.)*?)((?<=^|\.)[be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
+	RewriteCond ${alias:%3%5%6} !=""
+RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%2%4,E=SERVER_NAME_1100CC:%2%3%4%5%6,E=SERVER_NAME_SITE_NAME:%3%5%6,S=1]
+
+# Split the requested host in sections
+	RewriteCond %{ENV:HOST} ((?:[^\.]*\.)*?)((?<=^|\.)[be]\.)?([^\.]+\.)([^\.]+)$
 	RewriteCond ${alias:%3%4} !=""
 RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%2,E=SERVER_NAME_1100CC:%2%3%4,E=SERVER_NAME_SITE_NAME:%3%4]
-
-# Split the requested host in sections
-	RewriteCond %{HTTP_HOST} (.*?\.?)((?<=^|\.)[be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
-	RewriteCond ${alias:%3%5%6} !=""
-RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%2%4,E=SERVER_NAME_1100CC:%2%3%4%5%6,E=SERVER_NAME_SITE_NAME:%3%5%6]
-
-# Split the requested host in sections
-	RewriteCond %{HTTP_HOST} (.*?\.?)([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
-	RewriteCond ${alias:%2%4%6%7} !=""
-RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%3%5,E=SERVER_NAME_1100CC:%2%3%4%5%6%7,E=SERVER_NAME_SITE_NAME:%2%4%6%7]
-
-# Split the requested host in sections
-	RewriteCond %{HTTP_HOST} (.*?\.?)([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([be]\.)?([^\.]+\.)([^\.]+)$
-	RewriteCond ${alias:%2%4%6%8%9} !=""
-RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_MODIFIER:%3%5,E=SERVER_NAME_1100CC:%2%3%4%5%6%7%8%9,E=SERVER_NAME_SITE_NAME:%2%4%6%8%9]
 
 RewriteRule ^(.*)$ - [E=SITE_NAME:${alias:%{ENV:SERVER_NAME_SITE_NAME}}]
 
@@ -49,23 +52,23 @@ RewriteRule ^(.*)$ - [E=SITE_NAME:${alias:%{ENV:SERVER_NAME_SITE_NAME}}]
 RewriteRule ^(.*)$ - [PT,R=403]
 
 # Determine custom section
-	RewriteCond %{ENV:SERVER_NAME_SUB} ((?:cms|s[0-9])\.)?((?:[^\.]+\.)*)$
+	RewriteCond %{ENV:SERVER_NAME_SUB} ((?:cms|s[0-9])[\.|-])?((?:[^\.]+\.)*)$
 RewriteRule ^(.*)$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_CUSTOM:%2]
 
 # Redirect if SITE_NAME is not a directory or certificate challenge
 	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME} !-d
-	RewriteCond %{REQUEST_URI} !/\.well-known/acme-challenge/
+	RewriteCond %{ENV:PATH} !/\.well-known/acme-challenge/
 	# Http or http(s)
 	RewriteCond %{SERVER_PORT}s ^(?:443(s)|[0-9]+s)$
-RewriteRule ^(.*)$ http%1://%{ENV:SERVER_NAME_SUB}%{ENV:SERVER_NAME_CUSTOM}%{ENV:SITE_NAME}%{REQUEST_URI} [L,R]
+RewriteRule ^(.*)$ http%1://%{ENV:SERVER_NAME_SUB}%{ENV:SERVER_NAME_CUSTOM}%{ENV:SITE_NAME}%{ENV:PATH} [L,R]
 
 ################################################
 
 # Set CMS location when the host name requests the CMS
-RewriteRule ^(.*)$ - [E=IF_CMS_PATH:,E=PATH:%{REQUEST_URI}]
-	RewriteCond %{HTTP_HOST} ^cms\.
-	RewriteCond %{REQUEST_URI} ^/(?i:CMS/)?(.*)$
-RewriteRule ^(.*)$ - [E=IF_CMS_PATH:/CMS,E=PATH:/%1]
+RewriteRule ^(.*)$ - [E=PATH_CMS:]
+	RewriteCond %{ENV:HOST} ^cms[\.|-]
+	RewriteCond %{ENV:PATH} ^/(?i:CMS/)?(.*)$
+RewriteRule ^(.*)$ - [E=PATH_CMS:/CMS,E=PATH:/%1]
 
 # Only allow access to code when it's the index
 	RewriteCond %{REQUEST_FILENAME} \.php$
@@ -88,27 +91,27 @@ RewriteRule ^(.+)$ - [PT,L]
 
 # If the file exists in the SITE directory, create path
 # Continue if the path is not a file
-	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -f [OR]
+	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -f [OR]
 # Continue if the path is not a symbolic link
-	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -l
-RewriteRule ^(.+)$ /%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} [PT,L]
+	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -l
+RewriteRule ^(.+)$ /%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
 
 # If the file exists in the CORE directory, create path
 # Continue if the path is not a file
-	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:IF_CMS_PATH}%{ENV:PATH} -f [OR]
+	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:PATH_CMS}%{ENV:PATH} -f [OR]
 # Continue if the path is not a symbolic link
-	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:IF_CMS_PATH}%{ENV:PATH} -l
-RewriteRule ^(.+)$ /CORE%{ENV:IF_CMS_PATH}%{ENV:PATH} [PT,L]
+	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:PATH_CMS}%{ENV:PATH} -l
+RewriteRule ^(.+)$ /CORE%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
 
 # If the file exists in the SITE STORAGE directory, create path
 # Continue if the path is not a file
-	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -f [OR]
+	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -f [OR]
 # Continue if the path is not a symbolic link
-	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} -l
-RewriteRule ^(.+)$ /STORAGE/%{ENV:SITE_NAME}%{ENV:IF_CMS_PATH}%{ENV:PATH} [PT,L]
+	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -l
+RewriteRule ^(.+)$ /STORAGE/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
 
 # All other queries get sent to the CORE index as index.php/whatever
-RewriteRule ^(.*)$ /CORE%{ENV:IF_CMS_PATH}/index.php%{ENV:PATH} [L]
+RewriteRule ^(.*)$ /CORE%{ENV:PATH_CMS}/index.php%{ENV:PATH} [L]
 
 ################################################
 
@@ -118,3 +121,6 @@ CGIPassAuth on
 # Allow compression
 AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
 AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml application/javascript application/json
+
+# Set always applicable headers
+Header always set X-Content-Type-Options "nosniff"

@@ -24,6 +24,7 @@ class intf_uris extends uris {
 				$return .= '<table class="display" id="d:intf_uris:uris_data-0">
 					<thead> 
 						<tr>
+							<th><span></span></th>
 							<th class="max" data-sort="desc-0"><span>'.getLabel('lbl_identifier').'</span></th>
 							<th><span>'.getLabel('lbl_url').'</span></th>
 							<th class="limit"><span>'.getLabel('lbl_remark').'</span></th>
@@ -54,7 +55,29 @@ class intf_uris extends uris {
 	
 	public static function js() {
 
-		$return = "";
+		$return = "
+			SCRIPTER.dynamic('#frm-uri', function(elm_scripter) {
+			
+				elm_scripter.on('scripter', function() {
+					
+					SCRIPTER.triggerEvent(elm_scripter.find('input[name^=uri_translator_id]:checked'), 'change');
+				}).on('change', 'input[name^=uri_translator_id]', function() {
+					
+					var elms_target = elm_scripter.find('[name^=in_out]');
+					
+					elms_target.closest('label').addClass('hide');
+					
+					for (let i = 0; i < elms_target.length; i++) {
+						
+						const elm_target = elms_target[i];
+						
+						if (this.dataset['mode_'+elm_target.value]) {
+							elm_target.closest('label').classList.remove('hide');
+						}
+					}
+				});
+			});
+		";
 		
 		return $return;
 	}
@@ -65,18 +88,20 @@ class intf_uris extends uris {
 		
 		if ($method == "edit_uri" || $method == "add_uri") {
 			
+			$arr_uri_translators = static::getURITranslators();
+			$arr_modes = static::getModes();
+			
 			$arr_uri = [];
 			$mode = 'insert_uri';
 			
-			$arr_uri_translators = self::getURITranslators();
-					
 			if ($method == 'edit_uri' && $id) {
 				
 				$arr_id = explode('_', $id);
 				$uri_translator_id = (int)$arr_id[0];
-				$str_identifier = base64_decode($arr_id[1]);
+				$num_in_out = (int)$arr_id[1];
+				$str_identifier = base64_decode($arr_id[2]);
 				
-				$arr_uri = self::getURI($uri_translator_id, $str_identifier, true);
+				$arr_uri = static::getURI($uri_translator_id, $num_in_out, $str_identifier, true);
 				$mode = 'update_uri';
 			}
 								
@@ -87,15 +112,33 @@ class intf_uris extends uris {
 						<div>';
 					
 							if (count($arr_uri_translators) > 1 ) {
+								
+								foreach ($arr_uri_translators as &$arr_uri_translator) {
+									
+									$arr_uri_translator['attr']['data-mode_'.static::MODE_IN] = bitHasMode($arr_uri_translator['mode'], static::MODE_IN);
+									$arr_uri_translator['attr']['data-mode_'.static::MODE_OUT] = bitHasMode($arr_uri_translator['mode'], static::MODE_OUT);
+								}
+								unset($arr_uri_translator);
 						
 								$this->html .= cms_general::createSelectorRadio($arr_uri_translators, 'uri_translator_id', $arr_uri['uri_translator_id']);
 							} else {
 									
 								$arr_uri_translator = current($arr_uri_translators);
 								$this->html .= '<input type="hidden" name="uri_translator_id" value="'.$arr_uri_translator['id'].'" />'.$arr_uri_translator['name'];
+								
+								if (!bitHasMode($arr_uri_translator['mode'], static::MODE_IN)) {
+									unset($arr_modes[static::MODE_IN]);
+								}
+								if (!bitHasMode($arr_uri_translator['mode'], static::MODE_OUT)) {
+									unset($arr_modes[static::MODE_OUT]);
+								}
 							}
 				
 						$this->html .= '<div>
+					</li>
+					<li>
+						<label>'.getLabel('lbl_mode').'</label>
+						<div>'.cms_general::createSelectorRadio($arr_modes, 'in_out', $arr_uri['in_out']).'</div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_identifier').'</label>
@@ -111,14 +154,16 @@ class intf_uris extends uris {
 					</li>
 				</ul></fieldset>
 			</form>';
+			
+			$this->validate = ['uri_translator_id' => 'required', 'in_out' => 'required'];
 		}
 		
 		// DATATABLE
 					
 		if ($method == "uris_data") {
 			
-			$arr_sql_columns = ['u.identifier', 'u.url', 'u.remark', 'u.service'];
-			$arr_sql_columns_as = ['identifier', 'url', 'remark', 'service', 'u.uri_translator_id'];
+			$arr_sql_columns = ['u.in_out', 'u.identifier', 'u.url', 'u.remark', 'u.service'];
+			$arr_sql_columns_as = ['u.in_out', 'u.identifier', 'u.url', 'u.remark', 'u.service', 'u.uri_translator_id'];
 
 			$arr_uri_translators = self::getURITranslators();
 			
@@ -132,17 +177,19 @@ class intf_uris extends uris {
 				LEFT JOIN ".DB::getTable('SITE_URI_TRANSLATORS')." ut ON (ut.id = u.uri_translator_id)
 			";
 
-			$sql_index = 'u.uri_translator_id, u.identifier';
+			$sql_index = 'u.uri_translator_id, u.in_out, u.identifier';
 						
 			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, false, $arr_sql_columns_as, $sql_table, $sql_index);
 			
 			$has_uri_translators = (count($arr_uri_translators) > 1 ? true : false);
+			$arr_modes = static::getModes();
 			
 			while ($arr_row = $arr_datatable['result']->fetchAssoc())	{
 				
 				$arr_data = [];
 				
-				$arr_data['id'] = 'x:intf_uris:uri_id-'.$arr_row['uri_translator_id'].'_'.base64_encode($arr_row['identifier']);
+				$arr_data['id'] = 'x:intf_uris:uri_id-'.$arr_row['uri_translator_id'].'_'.$arr_row['in_out'].'_'.base64_encode($arr_row['identifier']);
+				$arr_data[] = $arr_modes[$arr_row['in_out']]['name'];
 				$arr_data[] = $arr_row['identifier'];
 				$arr_data[] = '<a href="'.self::getURL($arr_row['url'], $arr_uri_translators[$arr_row['uri_translator_id']]['host_name']).'" target="_blank">'.$arr_row['url'].'</a>';
 				$arr_data[] = $arr_row['remark'];
@@ -162,8 +209,14 @@ class intf_uris extends uris {
 		
 		if ($method == "insert_uri" || $method == "update_uri") {
 			
+			$arr_modes = uris::getModes();
+			$num_in_out = (int)$_POST['in_out'];
 			$str_url = $_POST['url'];
 			
+			if (!$arr_modes[$num_in_out]) {
+				error(getLabel('msg_missing_information'));
+			}
+
 			if (!FileGet::getProtocolExternal($str_url)) {
 				
 				if (substr($str_url, 0, 1) != '/') {
@@ -194,10 +247,11 @@ class intf_uris extends uris {
 		if ($method == "insert_uri") {
 
 			$res = DB::query("INSERT INTO ".DB::getTable('SITE_URIS')."
-				(uri_translator_id, identifier, url, remark, service)
+				(uri_translator_id, in_out, identifier, url, remark, service)
 					VALUES
 				(
 					".(int)$_POST['uri_translator_id'].",
+					".(int)$num_in_out.",
 					'".DBFunctions::strEscape($str_identifier)."',
 					'".DBFunctions::strEscape($str_url)."',
 					'".DBFunctions::strEscape($_POST['remark'])."',
@@ -213,18 +267,21 @@ class intf_uris extends uris {
 			
 			$arr_id = explode('_', $id);
 			$uri_translator_id = (int)$arr_id[0];
-			$str_cur_identifier = base64_decode($arr_id[1]);
+			$num_cur_in_out = (int)$arr_id[1];
+			$str_cur_identifier = base64_decode($arr_id[2]);
 		}
 		
 		if ($method == "update_uri" && $id) {
 						
 			$res = DB::query("UPDATE ".DB::getTable('SITE_URIS')." SET
 						uri_translator_id = ".(int)$_POST['uri_translator_id'].",
+						in_out = ".(int)$num_in_out.",
 						identifier = '".DBFunctions::strEscape($str_identifier)."',
 						url = '".DBFunctions::strEscape($str_url)."',
 						remark = '".DBFunctions::strEscape($_POST['remark'])."',
 						service = '".DBFunctions::strEscape($_POST['service'])."'
 				WHERE uri_translator_id = ".(int)$uri_translator_id."
+					AND in_out = ".(int)$num_cur_in_out."
 					AND identifier = '".DBFunctions::strEscape($str_cur_identifier)."'
 			");
 								
@@ -236,6 +293,7 @@ class intf_uris extends uris {
 						
 			$res = DB::query("DELETE FROM ".DB::getTable('SITE_URIS')."
 				WHERE uri_translator_id = ".(int)$uri_translator_id."
+					AND in_out = ".(int)$num_cur_in_out."
 					AND identifier = '".DBFunctions::strEscape($str_cur_identifier)."'
 			");
 			

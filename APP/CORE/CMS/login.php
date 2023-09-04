@@ -11,7 +11,7 @@ class CMSLogin {
 	
 	public static function index() {
 		
-		$str_page = (SiteStartVars::$arr_cms_vars[1] ?? '');
+		$str_page = (SiteStartVars::getRequestVariables(1) ?: '');
 		
 		if ($str_page == 'logout') {
 			

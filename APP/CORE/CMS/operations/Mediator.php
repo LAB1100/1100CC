@@ -326,6 +326,11 @@ class Mediator {
 			STATE
 		];
 		
+		if (SERVER_NAME_1100CC != SERVER_NAME_SITE_NAME) {
+			$arr_signature[] = SERVER_NAME_SITE_NAME;
+			$arr_signature[] = SERVER_NAME_MODIFIER;
+		}
+		
 		$str_signature = arr2String($arr_signature, ';');
 		
 		$process = new Process("php -q ".DIR_ROOT_CORE.DIR_CMS."index.php '".$str_signature."' '".$module."' '".$method."'".($arr_options ? ' '.escapeshellarg(value2JSON($arr_options)) : ''));

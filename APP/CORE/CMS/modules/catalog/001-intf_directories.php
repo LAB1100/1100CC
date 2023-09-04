@@ -41,7 +41,7 @@ class intf_directories extends directories {
 					
 							$return .= '<div class="object'.($new_length > $cur_length ? ' parent' : '').'" id="x:intf_directories:directory_id-'.$cur_dir['id'].'">
 								'.($cur_dir['root'] ? '' : '<div class="handle"><span class="icon">'.getIcon('handle-grid').'</span></div>').'
-								<div class="link"><h3><a target="_blank" href="'.pages::getBaseUrl($cur_dir).'">/ '.$cur_dir['name'].'</a></h3></div>
+								<div class="link"><h3><a target="_blank" href="'.pages::getBaseURL($cur_dir).'">/ '.$cur_dir['name'].'</a></h3></div>
 								<div class="object-info">'
 									.'<span class="icon'.($cur_dir['publish'] ? ' selected' : '').'" title="'.($cur_dir['publish'] ? getLabel('inf_publish_in_header') : getLabel('inf_publish_in_header_not')).'">'.getIcon('globe').'</span>'
 									.'<span class="icon'.($cur_dir['require_login'] && $user_group_name ? ' selected' : '').'" title="'.($cur_dir['require_login'] && $user_group_name ? getLabel('inf_login_required') : getLabel('inf_login_required_not')).'">'.getIcon('clearance').'</span>'

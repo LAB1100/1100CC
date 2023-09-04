@@ -20,6 +20,8 @@ class cms_media extends base_module {
 		static::$parent_label = getLabel('ttl_content');
 	}
 	
+	const DIR_STORAGE_MEDIA = DIR_SITE_STORAGE.DIR_UPLOAD;
+	
 	private static $arr_database_locations = [];
 	
 	public function contents() {
@@ -138,15 +140,17 @@ class cms_media extends base_module {
 			if ((int)$id) {
 				
 				if (is_array($id)) {
+					
 					$arr_media = self::getMedia($id);
 				
 					$mode = 'multi_update';
 					
 					$arr_tags = [];
 				} else {
-					$row = self::getMedia($id);	
 					
-					$arr_tags = cms_general::getObjectTags(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), 'media_id', $id, true);
+					$arr_media_item = self::getMedia($id);	
+					
+					$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), 'media_id', $id, true);
 					
 					$mode = 'update';
 				}
@@ -159,11 +163,11 @@ class cms_media extends base_module {
 			
 			$return_file = '<li>
 				<label>'.getLabel('lbl_label').'</label>
-				<div><input name="label" type="text" value="'.$row['label'].'" placeholder="'.($mode == 'multi_update' ? getLabel('lbl_unchanged') : getLabel('lbl_filename')).'"></div>
+				<div><input name="label" type="text" value="'.$arr_media_item['label'].'" placeholder="'.($mode == 'multi_update' ? getLabel('lbl_unchanged') : getLabel('lbl_filename')).'"></div>
 			</li>
 			<li>		
 				<label>'.getLabel('lbl_description').'</label>		
-				<div><textarea name="description"'.($mode == 'multi_update' ? ' placeholder="'.getLabel('lbl_unchanged').'"' : '').'>'.$row['description'].'</textarea></div>
+				<div><textarea name="description"'.($mode == 'multi_update' ? ' placeholder="'.getLabel('lbl_unchanged').'"' : '').'>'.$arr_media_item['description'].'</textarea></div>
 			</li>
 			<li class="sizing hide">		
 				<label>'.getLabel('lbl_size_max').'</label>		
@@ -182,7 +186,7 @@ class cms_media extends base_module {
 					
 						if ($mode == 'update') {
 							
-							$this->html .= '/'.DIR_CMS.DIR_UPLOAD.$row['directory'].$row['filename'];
+							$this->html .= '/'.DIR_CMS.DIR_UPLOAD.$arr_media_item['directory'].$arr_media_item['filename'];
 						} else if ($mode == 'multi_update') {
 							
 							$this->html .= '<ul class="sorter">';
@@ -233,80 +237,75 @@ class cms_media extends base_module {
 		
 		if ($method == "media_info" && (int)$id) {
 		
-			$res = DB::query("SELECT *
-				FROM ".DB::getTable('TABLE_MEDIA')." WHERE id = ".(int)$id
-			);
-			
-			$row = $res->fetchAssoc();
-			
-			$media_url = '/'.DIR_CMS.DIR_UPLOAD.$row['directory'].$row['filename'];
-			
-			$arr_locations = self::searchMediaLocations($row['filename']);
-			$location_count = array_sum(arrValuesRecursive("count", $arr_locations));
+			$arr_media = self::getMedia($id);
+
+			$arr_locations = self::searchMediaLocations($arr_media['filename']);
+			$num_location_count = array_sum(arrValuesRecursive('count', $arr_locations));
 		
-			$this->html .= '<div class="tabs"><ul>
+			$this->html .= '<div class="tabs">
+				<ul>
 					<li><a href="#tab-media-info-file">'.getLabel('lbl_file').'</a></li>
 					<li><a href="#tab-media-info-prop">'.getLabel('lbl_properties').'</a></li>
-					<li><a href="#tab-media-info-loc">'.getLabel('lbl_location').''.($location_count ? ' ('.$location_count.')' : '').'</a></li>
-					</ul>
-					<div id="tab-media-info-file">';
+					<li><a href="#tab-media-info-loc">'.getLabel('lbl_location').''.($num_location_count ? ' ('.$num_location_count.')' : '').'</a></li>
+				</ul>
+				<div id="tab-media-info-file">';
 			
-			$arr_type = explode('/', $row['type']);
-			if ($arr_type[0] == 'image') {
-				$this->html .= '<img src="'.$media_url.'" />';
-			} else if (in_array('pdf', $arr_type)) {
-				$this->html .= '<embed src="'.$media_url.'" type="application/pdf" />';
-			} else if ($row['type'] == 'audio/mpeg' || $row['type'] == 'audio/mp3') {
-				$this->html .= '<embed type="application/x-shockwave-flash" flashvars="audioUrl='.$media_url.'" src="http://www.google.com/reader/ui/3523697345-audio-player.swf" style="height: 27px;" quality="best"></embed>';
-			}
-				
-			$this->html .= '</div>
-			<div id="tab-media-info-prop">
-				<div class="record"><dl>
-					<li>
-						<dt>'.getLabel('lbl_label').'</dt>
-						<dd>'.$row['label'].'</dd>
-					</li>
-					<li>
-						<dt>'.getLabel('lbl_type').'</dt>
-						<dd>'.$row['type'].'</dd>
-					</li>
-					<li>
-						<dt>'.getLabel('lbl_size').'</dt>
-						<dd>'.bytes2String($row['size']).'</dd>
-					</li>
-					<li>
-						<dt>'.getLabel('lbl_location').'</dt>
-						<dd>'.$media_url.'</dd>
-					</li>
-					<li>
-						<dt>'.getLabel('lbl_description').'</dt>
-						<dd>'.nl2br($row['description']).'</dd>
-					</li>
-				</dl></div>
-			</div>
-			<div id="tab-media-info-loc">
-			<ul>';
+					$enucleate = new EnucleateMedia($arr_media['directory'].$arr_media['filename'], static::DIR_STORAGE_MEDIA, '/'.DIR_CMS.DIR_UPLOAD);
+					$enucleate->setSizing(false, false, false);
+					$this->html .= $enucleate->enucleate(EnucleateMedia::VIEW_HTML, ['enlarge' => false]);
+								
+				$this->html .= '</div>
+				<div id="tab-media-info-prop">
+					<div class="record"><dl>
+						<li>
+							<dt>'.getLabel('lbl_label').'</dt>
+							<dd>'.$arr_media['label'].'</dd>
+						</li>
+						<li>
+							<dt>'.getLabel('lbl_type').'</dt>
+							<dd>'.$arr_media['type'].'</dd>
+						</li>
+						<li>
+							<dt>'.getLabel('lbl_size').'</dt>
+							<dd>'.bytes2String($arr_media['size']).'</dd>
+						</li>
+						<li>
+							<dt>'.getLabel('lbl_location').'</dt>
+							<dd>'.$media_url.'</dd>
+						</li>
+						<li>
+							<dt>'.getLabel('lbl_description').'</dt>
+							<dd>'.nl2br($arr_media['description']).'</dd>
+						</li>
+					</dl></div>
+				</div>
+				<div id="tab-media-info-loc">
+				<ul>';
 			
-			foreach ($arr_locations as $value) {
-				$this->html .= '<li><strong>['.strtoupper($value['table']).']</strong> '.$value['column'].' ('.$value['count'].')</li>';
-			}
-			$this->html .= '</ul>';
-			
-			$this->html .= '</div>
-				</div>';
+					foreach ($arr_locations as $arr_location) {
+						$this->html .= '<li><strong>['.strtoupper($arr_location['table']).']</strong> '.$arr_location['column'].' ('.$arr_location['count'].')</li>';
+					}
+					
+				$this->html .= '</ul>';
+					
+				$this->html .= '</div>
+			</div>';
 		}
 		
 		if ($method == "media_popup") {
 				
+			$arr_type = [];	
+			
 			$res = DB::query("SELECT DISTINCT type FROM ".DB::getTable('TABLE_MEDIA')." AS media");
 									
-			$arr_type = [];	
 			if ($res->getRowCount() > 0) {
-				while ($row = $res->fetchAssoc()) {
-					$arr_tmp = explode('/', $row['type']);
+				
+				while ($arr_row = $res->fetchAssoc()) {
+					
+					$arr_tmp = explode('/', $arr_row['type']);
 					$arr_type[] = $arr_tmp[0]; 
 				}
+				
 				$arr_type = array_unique($arr_type);
 			}
 		
@@ -320,7 +319,12 @@ class cms_media extends base_module {
 					</ul>
 					
 					<div id="tab-media-popup-url">
-						http:// <input name="custom_url" type="text">
+						<fieldset><ul>
+							<li>
+								<label>'.getLabel('lbl_external').'</label>
+								<div><input name="custom_url" type="text" placeholder="https://" /></div>
+							</li>
+						</ul></fieldset>
 					</div>
 					<div id="tab-media-popup-local">
 						<fieldset><ul>
@@ -466,26 +470,8 @@ class cms_media extends base_module {
 			$arr_files = arrRearrangeParams($_FILES['file']);
 		
 			foreach ($arr_files as $file) {
-
-				$file_upload = new FileStore($file, DIR_SITE_STORAGE.DIR_UPLOAD);
 				
-				if ($_POST['sizing_w'] || $_POST['sizing_h']) {
-					$file_upload->imageResize($_POST['sizing_w'], $_POST['sizing_h']);
-				}
-				
-				$arr_result = $file_upload->getDetails();
-				
-				$label = ($_POST['label'] ?: filename2Name($arr_result['name']));
-				
-				$res = DB::query("INSERT INTO ".DB::getTable('TABLE_MEDIA')."
-					(label, description, directory, filename, type, size)
-						VALUES
-					('".DBFunctions::strEscape($label)."', '".DBFunctions::strEscape($_POST['description'])."', '', '".$arr_result['name']."', '".$arr_result['type']."', '".$arr_result['size']."')
-				");
-				
-				$new_id = DB::lastInsertID();
-				
-				cms_general::handleTags(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), 'media_id', $new_id, $_POST['tags'], true);
+				self::addMedia($file, $_POST, $_POST['tags']);
 			}
 						
 			$this->refresh_table = true;
@@ -493,15 +479,9 @@ class cms_media extends base_module {
 		}
 		
 		if ($method == "update" && (int)$id) {
-		
-			$res = DB::query("UPDATE
-					".DB::getTable('TABLE_MEDIA')."
-				SET label = '".DBFunctions::strEscape($_POST['label'])."', description = '".DBFunctions::strEscape($_POST['description'])."'
-				WHERE id = ".(int)$id
-			);
 			
-			cms_general::handleTags(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), "media_id", $id, $_POST['tags'], true);
-			
+			self::updateMedia($id, $_POST, $_POST['tags']);
+
 			if ($_POST['replace_with']) {
 				self::replaceMediaLocations($id, $_POST['replace_with']);
 			}
@@ -512,21 +492,7 @@ class cms_media extends base_module {
 		
 		if ($method == "multi_update" && $id) {
 			
-			$arr_ids = arrParseRecursive($_POST['ids'], 'int');
-			$str_ids = implode(',', $arr_ids);
-			
-			$res = DB::query("
-				UPDATE ".DB::getTable('TABLE_MEDIA')." SET
-					label = ".($_POST['label'] && count($id) > 1 ? "CONCAT('".DBFunctions::strEscape($_POST['label'])."', ' ', LPAD(".DBFunctions::fieldToPosition('id', $arr_ids).", ".strlen((string)count($id)).", '0'))" : ($_POST['label'] ? "'".DBFunctions::strEscape($_POST['label'])."'" : "label")).",
-					description = ".($_POST['description'] ? "'".DBFunctions::strEscape($_POST['description'])."'" : "description")."
-				WHERE id IN (".$str_ids.")
-				ORDER BY ".DBFunctions::fieldToPosition('id', $arr_ids)."
-			");
-			
-			if ($_POST['tags']) {
-				
-				cms_general::handleTags(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), 'media_id', $id, $_POST['tags'], true);
-			}
+			self::updateMedia($_POST['ids'], $_POST, ($_POST['tags'] ?: null));
 			
 			if ($_POST['replace_with']) {
 				
@@ -541,73 +507,172 @@ class cms_media extends base_module {
 		
 		if ($method == "del" && $id) {
 			
-			$id = arrParseRecursive($id, 'int');
-
-			$res_check = DB::query("SELECT
-				id, directory, filename
-					FROM ".DB::getTable('TABLE_MEDIA')."
-				WHERE id IN (".(is_array($id) ? implode(",", $id) : $id).")
-			");
-			
-			while($row_check = $res_check->fetchAssoc()) {
-				
-				if (FileStore::deleteFile(DIR_SITE_STORAGE.DIR_UPLOAD.$row_check['directory'].$row_check['filename'])) {
-					
-					$res = DB::queryMulti("
-						DELETE FROM ".DB::getTable('TABLE_MEDIA_INTERNAL_TAGS')."
-							WHERE media_id = ".(int)$row_check['id']."
-						;
-						DELETE FROM ".DB::getTable('TABLE_MEDIA')."
-							WHERE id = ".(int)$row_check['id']."
-						;
-					");
-				}
-			}
+			self::deleteMedia($id);
 			
 			$this->refresh_table = true;
 			$this->msg = true;
 		}
 		
 		if ($method == "media_select") {
-		
+			
+			$media_id = ((int)$_POST['media_item'] ?: false);
+			
 			if ($_FILES['file']['size']) {
 				
-				$file_upload = new FileStore($_FILES['file'], DIR_SITE_STORAGE.DIR_UPLOAD);
-				
-				if ($_POST['sizing_w'] || $_POST['sizing_h']) {
-					$file_upload->imageResize($_POST['sizing_w'], $_POST['sizing_h']);
-				}
-				
-				$arr_result = $file_upload->getDetails();
-				
-				$label = ($_POST['label'] ?: filename2Name($arr_result['name']));
-									
-				$res = DB::query("INSERT INTO ".DB::getTable('TABLE_MEDIA')."
-					(label, description, directory, filename, type, size)
-						VALUES
-					('".DBFunctions::strEscape($label)."', '".DBFunctions::strEscape($_POST['description'])."', '', '".$arr_result['name']."', '".$arr_result['type']."', '".$arr_result['size']."')
-				");
-				
-				$_POST['media_item'] = DB::lastInsertID();
-				
-				cms_general::handleTags(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), 'media_id', $_POST['media_item'], $_POST['tags'], true);
+				$media_id = self::addMedia($_FILES['file'], $_POST, $_POST['tags']);
 			}
-			
-			if ((int)$_POST['media_item']) {
+						
+			if ($media_id) {
 				
-				$res = DB::query("SELECT directory, filename
-						FROM ".DB::getTable('TABLE_MEDIA')."
-					WHERE id = ".(int)$_POST['media_item']."
-				");
+				$arr_media = self::getMedia($media_id);
 				
-				$row = $res->fetchAssoc();
+				$str_url = ((int)$id ? URL_BASE_HOME : '/').DIR_CMS.DIR_UPLOAD.$arr_media['directory'].$arr_media['filename'];
 				
-				$this->html = ((int)$id ? URL_BASE_HOME : '/').DIR_CMS.DIR_UPLOAD.$row['directory'].$row['filename'];
+				if ($value && $value['cache']) {
+					
+					$str_url_cache = SiteStartVars::getCacheURL('img', [200, 200], $str_url);
+					
+					$this->html = ['url' => $str_url, 'cache' => $str_url_cache];
+				} else {
+				
+					$this->html = $str_url;
+				}
 			} else if ($_POST['custom_url']) {
 				
 				$this->html = $_POST['custom_url'];
 			}
 		}
+	}
+	
+	public static function addMedia($file, $arr_media = [], $arr_tags = []) {
+		
+		$arr_destination = ['directory' => static::DIR_STORAGE_MEDIA.($arr_media['directory'] ?: ''), 'overwrite' => ($arr_media['overwrite'] ?? false)];
+		
+		$file_store = new FileStore($file, $arr_destination);
+		
+		if ($arr_media['sizing_w'] || $arr_media['sizing_h']) {
+			$file_store->imageResize($arr_media['sizing_w'], $arr_media['sizing_h']);
+		}
+		
+		$arr_result = $file_store->getDetails();
+		
+		$str_label = ($arr_media['label'] ?: filename2Name($arr_result['name']));
+		$str_directory = ($arr_result['directory'] != static::DIR_STORAGE_MEDIA ? str_replace(static::DIR_STORAGE_MEDIA, '', $arr_result['directory']) : '');
+		
+		$res = DB::query("INSERT INTO ".DB::getTable('TABLE_MEDIA')."
+			(label, description, directory, filename, type, size)
+				VALUES
+			('".DBFunctions::strEscape($str_label)."', '".DBFunctions::strEscape($arr_media['description'])."', '".DBFunctions::strEscape($str_directory)."', '".DBFunctions::strEscape($arr_result['name'])."', '".DBFunctions::strEscape($arr_result['type'])."', ".(int)$arr_result['size'].")
+			".DBFunctions::onConflict('directory, filename', ['label', 'description', 'type', 'size'])."
+		");
+		
+		$media_id = DB::lastInsertID();
+		
+		if (!$media_id) {
+			
+			$res = DB::query("SELECT id
+					FROM ".DB::getTable('TABLE_MEDIA')."
+				WHERE directory = '".DBFunctions::strEscape($str_directory)."'
+					AND filename = '".DBFunctions::strEscape($arr_result['name'])."'
+			");
+			
+			$media_id = $res->fetchRow();
+			$media_id = $media_id[0];
+		}
+		
+		if (!$media_id) {
+			error(getLabel('msg_error_database_missing_record'));
+		}
+		
+		cms_general::handleTags(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), 'media_id', $media_id, $arr_tags, true);
+		
+		return $media_id;
+	}
+	
+	public static function updateMedia($media_id, $arr_media = [], $arr_tags = null) {
+		
+		if (is_array($media_id)) {
+			
+			$arr_media_ids = arrParseRecursive($media_id, TYPE_INTEGER);
+			$str_sql_ids = implode(',', $arr_media_ids);
+			
+			$str_sql_label = 'label';
+			if ($arr_media['label'] && count($arr_media_ids) > 1) {
+				$str_sql_label = "CONCAT('".DBFunctions::strEscape($arr_media['label'])."', ' ', LPAD(".DBFunctions::fieldToPosition('id', $arr_media_ids).", ".strlen((string)count($arr_media_ids)).", '0'))";
+			} else if ($arr_media['label']) {
+				$str_sql_label = "'".DBFunctions::strEscape($arr_media['label'])."'";
+			}
+			
+			$res = DB::query("
+				UPDATE ".DB::getTable('TABLE_MEDIA')." SET
+					label = ".$str_sql_label.",
+					description = ".($arr_media['description'] ? "'".DBFunctions::strEscape($arr_media['description'])."'" : "description")."
+				WHERE id IN (".$str_sql_ids.")
+				ORDER BY ".DBFunctions::fieldToPosition('id', $arr_media_ids)."
+			");
+		} else {
+
+			$res = DB::query("UPDATE
+					".DB::getTable('TABLE_MEDIA')."
+				SET label = '".DBFunctions::strEscape($arr_media['label'])."', description = '".DBFunctions::strEscape($arr_media['description'])."'
+				WHERE id = ".(int)$media_id
+			);
+			
+			if (!$res->getRowCount()) {
+				error(getLabel('msg_error_database_missing_record'));
+			}
+		}
+		
+		if (isset($arr_tags)) {
+			
+			cms_general::handleTags(DB::getTable('TABLE_MEDIA_INTERNAL_TAGS'), 'media_id', $media_id, $arr_tags, true);
+		}
+	}
+	
+	public static function deleteMedia($media_id) {
+		
+		if (!$media_id) {
+			return false;
+		}
+		
+		$arr_media = self::getMedia((array)$media_id);
+		
+		if (!$arr_media) {
+			return false;
+		}
+		
+		foreach ($arr_media as $arr_media_item) {
+			
+			if (!FileStore::deleteFile(static::DIR_STORAGE_MEDIA.$arr_media_item['directory'].$arr_media_item['filename'])) {
+				continue;
+			}
+			
+			$res = DB::queryMulti("
+				DELETE FROM ".DB::getTable('TABLE_MEDIA_INTERNAL_TAGS')."
+					WHERE media_id = ".(int)$arr_media_item['id']."
+				;
+				DELETE FROM ".DB::getTable('TABLE_MEDIA')."
+					WHERE id = ".(int)$arr_media_item['id']."
+				;
+			");
+		}
+	}
+	
+	public static function replaceMediaLocations($media_id, $str_url) {
+		
+		$arr_media = self::getMedia($media_id);
+		$str_url_target = '/'.DIR_CMS.DIR_UPLOAD.$arr_media['directory'].$arr_media['filename'];
+		
+		$arr_query = [];
+		
+		foreach (self::getMediaDatabaseLocations() as $value) {
+			
+			$arr_query[] = "UPDATE ".$value[0]." SET
+					".$value[1]." = REPLACE(".$value[1].", '".DBFunctions::strEscape($str_url_target)."', '".DBFunctions::strEscape($str_url)."')
+				WHERE ".$value[1]." LIKE '%".DBFunctions::strEscape($str_url_target)."%'";
+		}
+		
+		DB::queryMulti(implode(';', $arr_query));
 	}
 	
 	private static function getFileTypes() {
@@ -625,17 +690,17 @@ class cms_media extends base_module {
 		return $arr;
 	}
 	
-	public static function getMedia($media = 0, $tag = false) {
+	public static function getMedia($media_id = 0, $tag_id = false) {
 	
 		$arr = [];
 		
 		$res = DB::query("SELECT
 			m.*
 				FROM ".DB::getTable('TABLE_MEDIA')." m
-				".($tag ? "LEFT JOIN ".DB::getTable('TABLE_MEDIA_INTERNAL_TAGS')." mt ON (mt.media_id = m.id)" : "")."
+				".($tag_id ? "LEFT JOIN ".DB::getTable('TABLE_MEDIA_INTERNAL_TAGS')." mt ON (mt.media_id = m.id)" : "")."
 			WHERE TRUE
-				".($media ? "AND m.id IN (".(is_array($media) ? implode(',', arrParseRecursive($media, 'int')) : (int)$media).")" : "")."
-				".($tag ? "AND mt.tag_id = ".(int)$tag."" : "")."
+				".($media_id ? "AND m.id IN (".(is_array($media_id) ? implode(',', arrParseRecursive($media_id, TYPE_INTEGER)) : (int)$media_id).")" : "")."
+				".($tag_id ? "AND mt.tag_id = ".(int)$tag_id."" : "")."
 			ORDER BY label
 		");
 		
@@ -643,7 +708,7 @@ class cms_media extends base_module {
 			$arr[$row['id']] = $row;
 		}
 			
-		return (!$media || is_array($media) ? $arr : current($arr));
+		return (!$media_id || is_array($media_id) ? $arr : current($arr));
 	}
 	
 	public static function getMediaTags() {
@@ -709,20 +774,5 @@ class cms_media extends base_module {
 		}
 		
 		return $arr;
-	}
-	
-	public static function replaceMediaLocations($id, $url) {
-		
-		$arr_media = self::getMedia($id);
-		$url_target = '/'.DIR_CMS.DIR_UPLOAD.$arr_media['directory'].$arr_media['filename'];
-		
-		$arr_query = [];
-		
-		foreach (self::getMediaDatabaseLocations() as $value) {
-			
-			$arr_query[] = "UPDATE ".$value[0]." SET ".$value[1]." = REPLACE(".$value[1].", '".DBFunctions::strEscape($url_target)."', '".DBFunctions::strEscape($url)."')";
-		}
-		
-		DB::queryMulti(implode(';', $arr_query));
 	}
 }

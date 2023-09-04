@@ -38,13 +38,18 @@
 	const BYTE_MULTIPLIER = 1024; // Kibibyte vs kilobyte
 	const EOL_1100CC = PHP_EOL;
 	const EOL_EXCHANGE = "\r\n";
-	const CSV_ESCAPE = "\0"; // Empty '' for PHP 7.4+ 
+	const CSV_ESCAPE = "\0"; // Empty '' for PHP 7.4+
+	const SYMBOL_SPACE_TEXT = ' '; // U+2002 - EN SPACE
+	const SYMBOL_SPACE_MATHEMATICAL = ' '; // U+205F - MEDIUM MATHEMATICAL SPACE
 	
 	const TYPE_INTEGER = 'int';
 	const TYPE_FLOAT = 'float';
 	const TYPE_BOOLEAN = 'boolean';
 	const TYPE_STRING = 'string';
 	const TYPE_TEXT = 'text';
+	
+	const URI_SCHEME_HTTP = 'http://';
+	const URI_SCHEME_HTTPS = 'https://';
 	
 	require('operations/Trouble.php');
 	require('operations/Log.php');
@@ -95,7 +100,7 @@
 			$label = ($label ?: 'UPDATE');
 			$header = ($header ?: getLabel('lbl_status'));
 						
-			$str = '<ul><li><label></label><span>'.$header.'</span></li><li><label>'.$label.'</label><span>'.$msg.'</span></li></ul>';
+			$str = '<ul><li><label></label><div>'.$header.'</div></li><li><label>'.$label.'</label><div>'.$msg.'</div></li></ul>';
 		}
 		
 		if ($arr_options !== null && !is_array($arr_options)) {
@@ -203,33 +208,61 @@
 		return $arr_modules;
 	}
 	
-	function getModuleConfiguration($method, $call = true, $level = false, $module = false) {
-		
-		$arr = [];
+	function getModuleConfiguration($method, $do_call = true, $level = false, $module = false) {
 		
 		if ($module) {
+			
+			$value = false;
 
 			if (method_exists($module, $method)) {
-				$arr = ($call ? $module::$method() : $method);
-			}
-		} else {
-			
-			switch ($level) {
-				case DIR_HOME:
-					$arr_modules = (IS_CMS ? getModules(DIR_HOME) : SiteStartVars::$arr_modules);
-					break;
-				case DIR_CMS:
-					$arr_modules = (IS_CMS ? SiteStartVars::$arr_modules : SiteStartVars::$arr_cms_modules);
-					break;
-				default:
-					$arr_modules = SiteStartVars::$arr_modules;
-			}
-
-			foreach ($arr_modules as $module => $value) {
 				
-				if (method_exists($module, $method)) {
-					$arr[$module] = ($call ? $module::$method() : $method);
+				if ($do_call) {
+					
+					$res = $module::$method();
+					
+					if ($res !== null) {
+						$value = $res;
+					}
+				} else {
+				
+					$value = $method;
 				}
+			}
+			
+			return $value;
+		}
+		
+		$arr = [];
+			
+		switch ($level) {
+			case DIR_HOME:
+				$arr_modules = (IS_CMS ? getModules(DIR_HOME) : SiteStartVars::getModules(false, DIR_HOME));
+				break;
+			case DIR_CMS:
+				$arr_modules = SiteStartVars::getModules(false, DIR_CMS);
+				break;
+			default:
+				$arr_modules = SiteStartVars::getModules();
+		}
+
+		foreach ($arr_modules as $module => $value) {
+			
+			if (!method_exists($module, $method)) {
+				continue;
+			}
+			
+			if ($do_call) {
+				
+				$res = $module::$method();
+				
+				if ($res === null) {
+					continue;
+				}
+				
+				$arr[$module] = $res;
+			} else {
+			
+				$arr[$module] = $method;
 			}
 		}
 		
@@ -271,8 +304,8 @@
 		$arr_paths = [
 			DIR_SITE.DIR_CLASSES,
 			DIR_SITE.DIR_CMS.DIR_CLASSES,
-			DIR_CLASSES,
-			DIR_CMS.DIR_CLASSES
+			DIR_CORE.DIR_CLASSES,
+			DIR_CORE.DIR_CMS.DIR_CLASSES
 		];
 		
 		foreach ($arr_paths as $cur_path) {
@@ -391,7 +424,7 @@
 				SiteStartVars::stopSession();
 				
 				// Check if session has loaded elsewhere
-				if ($_SESSION['session'] != SiteStartVars::$session) {
+				if (!SiteStartVars::checkSession()) {
 					$func_abort();
 					exit;
 				}
@@ -438,7 +471,7 @@
 					SiteStartVars::stopSession();
 					
 					// Check if session has loaded elsewhere
-					if ($_SESSION['session'] != SiteStartVars::$session) {
+					if (!SiteStartVars::checkSession()) {
 						$func_abort();
 						exit;
 					}
@@ -505,13 +538,36 @@
 	}
 	
 	function read($str_path) {
-	
-		return file_get_contents($str_path);
+		
+		if (is_resource($str_path)) {
+			return stream_get_contents($str_path);
+		} else {
+			return file_get_contents($str_path);
+		}
 	}
 	
 	function readText($str_path) {
 	
-		return rtrim(file_get_contents($str_path));
+		return rtrim(read($str_path));
+	}
+	
+	function getPathTemporary($str_class = false, $is_directory = false, $str_path = false) {
+		
+		$str_temporary = tempnam(($str_path ?: Settings::get('path_temporary')), ($is_directory ? '_' : '').($str_class ?: '1100CC'));
+		
+		if ($is_directory) {
+			
+			unlink($str_temporary);
+			mkdir($str_temporary, 00700);
+			$str_temporary = $str_temporary.'/';
+		}
+		
+		return $str_temporary;
+	}
+	
+	function getStreamMemory($do_read = true, $num_size = 100) {
+		
+		return fopen('php://temp/maxmemory:'.($num_size * BYTE_MULTIPLIER * BYTE_MULTIPLIER), (!$do_read ? 'w' : 'w+')); // Keep resource in memory until it reaches a certain MB-size, otherwise create a temporary file
 	}
 
 	function generateHash($password) {
@@ -656,7 +712,7 @@
 	
 	function num2String($nr, $decimals = 0) {
 		
-		return number_format($nr, $decimals, '.', ' '); // U+205F - MEDIUM MATHEMATICAL SPACE
+		return number_format($nr, $decimals, '.', SYMBOL_SPACE_MATHEMATICAL);
 	}
 	
 	function numRoundBetter($number, $precision = 0, $mode = PHP_ROUND_HALF_UP, $direction = null) {
@@ -702,10 +758,10 @@
 	
 	function filename2Name($str) {
 		
-		$info = pathinfo($str);
-		$name = basename($str, '.'.$info['extension']);
+		$arr_info = pathinfo($str);
+		$str = basename($str, '.'.$arr_info['extension']);
 		
-		return $name;
+		return $str;
 	}
 
 	function str2Name($str, $str_keep = false) {
@@ -820,7 +876,11 @@
 		return (substr_compare($str, $str_test, $num_str - $num_str_test, $num_str_test) === 0);
 	}
 	
-	function parseValue($value, $what) {
+	function parseValue($value, $what, $keep_null = false) {
+		
+		if ($keep_null && $value === null) {
+			return $value;
+		}
 		
 		switch ($what) {
 			
@@ -834,14 +894,15 @@
 				$value = (bool)$value;
 				break;
 			case TYPE_STRING:
-				if ($value !== null) {
+				$value = (string)$value;
+				if ($value !== '') {
 					$value = trim($value, " \x00..\x1F\x7F"); // Also remove control characters
 					$value = str_replace(["\r\n", "\n"], ' ', $value); // Clear linebreaks
 				}
 				break;
 			case TYPE_TEXT:
-			case 'trim':
-				if ($value !== null) {
+				$value = (string)$value;
+				if ($value !== '') {
 					$value = trim($value, " \x00..\x1F\x7F"); // Also remove control characters
 				}
 				break;
@@ -930,11 +991,13 @@
 	
 		foreach ($arr as $k => $v) {
 			
-			if (($k === $key || $key === false) && isset($arr_values[$v])) {
+			$is_array_v = is_array($v);
+			
+			if (($k === $key || $key === false) && !$is_array_v && isset($arr_values[$v])) {
 				return $v;
 			}
 			
-			if ($v && is_array($v)) { // Recursive
+			if ($v && $is_array_v) { // Recursive
 
 				$value_found = arrHasValuesRecursive($key, $arr_values, $v);
 				
@@ -1025,6 +1088,23 @@
 		return $arr;
 	}
 	
+	function arrSortByArray($arr, $arr_sort) {
+		
+		$arr_sorted = [];
+		
+		foreach ($arr_sort as $key) {
+			
+			if (!isset($arr[$key])) { // Or array_key_exists for all keys
+				continue;
+			}
+			
+			$arr_sorted[$key] = $arr[$key];
+			unset($arr[$key]);
+		}
+		
+		return $arr_sorted + $arr;
+	}
+	
 	function arrInsert(&$arr, $pos, $arr_insert, $before = false) {
 		
 		if (is_int($pos)) {
@@ -1048,7 +1128,32 @@
 		}
 	}
 	
-	function arrMergeValues(...$arrs) {
+	function arrMerge(...$arrs) { // String keys will be overwitten
+		
+		if (count($arrs) == 1) {
+			$arrs = current($arrs);
+		}
+		
+		return array_merge(...$arrs);
+	}
+	
+	function arrMergeKeys(...$arrs) { // All keys will be overwitten
+		
+		if (count($arrs) == 1) {
+			$arrs = current($arrs);
+		}
+		
+		$arr_collect = [];
+		
+		foreach ($arrs as $arr) {
+			
+			$arr_collect += $arr;
+		}
+		
+		return $arr_collect;
+	}
+	
+	function arrMergeValues(...$arrs) {  // Merge arrays: values will be overwitten
 		
 		if (count($arrs) == 1) {
 			$arrs = current($arrs);
@@ -1197,12 +1302,21 @@
 		return ['pattern' => $pattern, 'flags' => $flags, 'template' => $template];
 	}
 	
+	function strRegularExpression($str, $pattern, $flags, $template, $do_process_template = true) {
+		
+		if ($do_process_template) {
+			$template = stripcslashes($template);
+		}
+		
+		return preg_replace('/'.$pattern.'/'.$flags, $template, $str);		
+	}
+	
 	function parseBody($body, $arr_options = []) {
 	
 		// $arr_options = array("extract" => number of paragraphs, "append" => string, "function" => function);
 	
 		if (!$body) {
-			return;
+			return (string)$body;
 		}
 		
 		$body = Labels::parseTextVariables($body);

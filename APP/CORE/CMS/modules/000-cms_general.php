@@ -24,11 +24,12 @@ class cms_general extends base_module {
 	}
 	
 	const OPTION_GROUP_SEPARATOR = ' ||| ';
+	const NAME_GROUP_ITERATOR = 'iterate_';
 		
 	public static function css() {
 	
 		$return = 'img.select { max-width: 200px; max-height: 200px; cursor: pointer; border: 1px dashed #bdbdbd; vertical-align: middle; }
-				img.select[src=""] { display: block; width: 30px; height: 30px; }
+				img.select.empty { width: 30px; height: 30px; }
 		';
 		
 		return $return;
@@ -37,38 +38,78 @@ class cms_general extends base_module {
 	public static function js() {
 	
 		$return = "
-				var labeler = false,
-				IS_CMS = ".(int)IS_CMS.",
-				DIR_CMS = '".DIR_CMS."',
-				URL_BASE_HOME = '".URL_BASE_HOME."';
+			var labeler = false,
+			IS_CMS = ".(int)IS_CMS.",
+			DIR_CMS = '".DIR_CMS."',
+			URL_BASE_HOME = '".URL_BASE_HOME."';
+			
+			const func_select_image_check = function(elm_image) {
 				
-				$(document).on('documentloaded ajaxloaded', function() {
+				var elm_image = getElement(elm_image);
+				
+				if (!elm_image.getAttribute('src')) {
+					elm_image.setAttribute('src', \"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E\");
+					elm_image.classList.add('empty');
+				} else {
+					elm_image.classList.remove('empty');
+				}
+			};
+			
+			$(document).on('documentloaded ajaxloaded', function(e) {
+			
+				if (!getElement(e.detail.elm)) {
+					return;
+				}
+				
+				for (let i = 0, len = e.detail.elm.length; i < len; i++) {
+			
+					const elm = $(e.detail.elm[i]);
+				
 					if (labeler) {
-					
-						var elms_input = $('form textarea[name], form input[type=text][name]').not('.editor');
+				
+						var elms_input = elm.find('form textarea[name], form input[type=text][name]').not('.editor');
 						
 						elms_input.each(function() {
 							new LabelOption(this, {action: 'y:cms_labels:popup_labels-0', tag: 'L'});
 						});
 					}
-				}).on('editorloaded', function(e) {
-					if (labeler) {
-						new LabelOption(e.detail.source, {action: 'y:cms_labels:popup_labels-0', tag: 'L'});
+
+					runElementSelectorFunction(elm, 'img.select', function(elm_found) {
+						func_select_image_check(elm_found);
+					});
+				}
+			}).on('editorloaded', function(e) {
+				if (labeler) {
+					new LabelOption(e.detail.source, {action: 'y:cms_labels:popup_labels-0', tag: 'L'});
+				}
+			}).on('click', 'img.select', function() {
+				
+				const elm_image = $(this);
+				const elm_input = elm_image.prev('input');
+				
+				COMMANDS.setData(elm_input, {cache: true});
+				COMMANDS.setTarget(elm_input, function(data) {
+					
+					var data = (data ? data : '');
+					
+					let src = false;
+					let src_cache = false;
+					if (typeof data == 'object') {
+						src = data.url;
+						src_cache = data.cache;
+					} else {
+						src = data;
+						src_cache = data;
 					}
-				}).on('click', 'img.select', function() {
-					var input = $(this).prev('input');
-					input.data('target', function(html) {
-						$(this).val(html).trigger('change');
-						var target = $(this).next('img');
-						if (target.attr('data-prefix')) {
-							var src = target.attr('data-prefix')+html.replace(/^\//, '');
-						} else {
-							var src = html;
-						}
-						target.attr('src', src);
-					}).popupCommand();
+					elm_input[0].value = src;
+					elm_image[0].setAttribute('src', src_cache);
+					
+					SCRIPTER.triggerEvent(this, 'change');
+					func_select_image_check(elm_image);
 				});
-				";
+				COMMANDS.popupCommand(elm_input);
+			});
+		";
 		
 		return $return;
 	}
@@ -111,7 +152,7 @@ class cms_general extends base_module {
 			
 				$_SESSION['LANGUAGE_SYSTEM'] = $language;
 				
-				Response::location(SiteStartVars::getPageUrl());
+				Response::location(SiteStartVars::getPageURL());
 			}
 		}
 		
@@ -340,7 +381,7 @@ class cms_general extends base_module {
 
 	}
 	
-	public static function selectModuleList($arr_modules, $small = false, $link = true, $max = 9999) {
+	public static function selectModuleList($arr_modules, $do_link = true, $num_limit = 9999) {
 		
 		$cur_parent = '';
 		$count = 0;
@@ -353,21 +394,22 @@ class cms_general extends base_module {
 			
 			if ($value['label']) {
 				
-				$label = $value['label'];
-				$parent_label = $value['parent_label'];
+				$str_label = $value['label'];
+				$str_parent_label = $value['parent_label'];
 			} else {
 				
 				$key::moduleProperties();
-				$label = $key::$label;
-				$parent_label = $key::$parent_label;
+				$str_label = $key::$label;
+				$str_parent_label = $key::$parent_label;
 			}
-			if (!$label) { // Skip non-interface modules
+			
+			if (!$str_label) { // Skip non-interface modules
 				continue;
 			}
 			
 			sub:
 			
-			if ($count % $max == 0) { // new list and closing old
+			if ($count % $num_limit == 0) { // new list and closing old
 				if ($count) {
 					if ($sub) {
 						$return .= '</ul></li>';
@@ -376,27 +418,27 @@ class cms_general extends base_module {
 				}
 				$return .= '<ul class="mod-list">';
 			}
-			if ($cur_parent != $parent_label) {
+			if ($cur_parent != $str_parent_label) {
 				$sub = false;
-				if ($cur_parent != "" && $count % $max != 0) { // close old sub
+				if ($cur_parent != "" && $count % $num_limit != 0) { // close old sub
 					$return .= '</ul></li>';
 				}
-				if ($parent_label != "") { // create sub
-					$return .= '<li class="sub"><h1>'.$parent_label.'</h1><ul>';
+				if ($str_parent_label != "") { // create sub
+					$return .= '<li class="sub"><h1>'.$str_parent_label.'</h1><ul>';
 					$new_sub = true;
 					$sub = true;
 				}
 			} else {
-				if ($count % $max == 0 && $sub) { // continue old sub in new list
+				if ($count % $num_limit == 0 && $sub) { // continue old sub in new list
 					$return .= '<li class="sub"><ul>';
 				}
 			}
 			if (!$new_sub) {
-				$module_var = (method_exists($key, 'moduleVariables') ? $key::moduleVariables() : '');
-				$return .= '<li>'.($link ? '<a href="/'.$key.'/">'.$label.'</a>' : '<span id="mod-'.$key.'">'.$label.'</span>').$module_var.'</li>';
+				
+				$return .= '<li>'.($do_link ? '<a href="/'.$key.'/">'.$str_label.'</a>' : '<span id="mod-'.$key.'">'.$str_label.'</span>').'</li>';
 			}
 			
-			$cur_parent = $parent_label;
+			$cur_parent = $str_parent_label;
 			$count++;
 			
 			if ($new_sub) {
@@ -405,7 +447,7 @@ class cms_general extends base_module {
 			}
 		}
 		
-		if ($cur_parent != "") {
+		if ($cur_parent != '') {
 			$return .= '</ul></li>';
 		}	
 		
@@ -465,7 +507,7 @@ class cms_general extends base_module {
 				
 				$arr_attr = [];
 				
-				if ($arr_option['attr']) {
+				if (isset($arr_option['attr'])) {
 					foreach ($arr_option['attr'] as $key => $value) {
 						$arr_attr[] = $key.'="'.$value.'"';
 					}
@@ -490,7 +532,16 @@ class cms_general extends base_module {
 		$return = '';
 		
 		foreach ($arr as $arr_option) {
-			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
+			
+			$arr_attr = [];
+			
+			if (isset($arr_option['attr'])) {
+				foreach ($arr_option['attr'] as $key => $value) {
+					$arr_attr[] = $key.'="'.$value.'"';
+				}
+			}
+			
+			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
 		}
 		
 		return $return;
@@ -501,21 +552,40 @@ class cms_general extends base_module {
 		$return = '';
 		
 		foreach ($arr as $arr_option) {
-			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
+			
+			$arr_attr = [];
+				
+			if (isset($arr_option['attr'])) {
+				foreach ($arr_option['attr'] as $key => $value) {
+					$arr_attr[] = $key.'="'.$value.'"';
+				}
+			}
+				
+			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
 		}
 		
 		return $return;
 	}
 	
-	public static function createSelectorList($arr, $name, $selected = [], $label_column = 'name', $id_column = 'id') {
+	public static function createSelectorList($arr, $name, $selected = [], $label_column = 'name', $id_column = 'id', $arr_options = []) {
+				
+		$return = '<ul class="select'.($arr_options['diverse'] ? ' diverse' : '').'">';
 		
-		$return = '<ul class="select">';
+		$label_column = ($label_column ?? 'name');
+		$id_column = ($id_column ?? 'id');
 		
 		foreach ($arr as $arr_option) {
 			
 			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
+			$arr_attr = [];
 			
-			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
+			if (isset($arr_option['attr'])) {
+				foreach ($arr_option['attr'] as $key => $value) {
+					$arr_attr[] = $key.'="'.$value.'"';
+				}
+			}
+			
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
 		}
 		
 		$return .= '</ul>';
@@ -523,15 +593,25 @@ class cms_general extends base_module {
 		return ($arr ? $return : '<span>'.getLabel('lbl_none').'</span>');
 	}
 	
-	public static function createSelectorRadioList($arr, $name, $selected = false, $label_column = 'name', $id_column = 'id') {
+	public static function createSelectorRadioList($arr, $name, $selected = false, $label_column = 'name', $id_column = 'id', $arr_options = []) {
+				
+		$return = '<ul class="select'.($arr_options['diverse'] ? ' diverse' : '').'">';
 		
-		$return = '<ul class="select">';
+		$label_column = ($label_column ?? 'name');
+		$id_column = ($id_column ?? 'id');
 		
 		foreach ($arr as $arr_option) {
 			
 			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
+			$arr_attr = [];
 			
-			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
+			if (isset($arr_option['attr'])) {
+				foreach ($arr_option['attr'] as $key => $value) {
+					$arr_attr[] = $key.'="'.$value.'"';
+				}
+			}
+			
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
 		}
 		
 		$return .= '</ul>';
@@ -558,7 +638,7 @@ class cms_general extends base_module {
 	
 	public static function createImageSelector($value, $name = 'img') {
 		
-		return '<input type="hidden" name="'.$name.'" id="y:cms_media:media_popup-0" value="'.$value.'" /><img class="select" src="'.($value ? SiteStartVars::getCacheUrl('img', [200, 200], $value) : '').'" data-prefix="'.SiteStartVars::getCacheUrl('img', [200, 200], '').'" />';
+		return '<input type="hidden" name="'.$name.'" id="y:cms_media:media_popup-0" value="'.$value.'" /><img class="select" src="'.($value ? SiteStartVars::getCacheURL('img', [200, 200], $value) : '').'" />';
 	}
 	
 	public static function createMultiSelect($name, $id, $arr_tags, $id_value = false, $arr_options = []) {
@@ -592,7 +672,11 @@ class cms_general extends base_module {
 	
 	public static function createSorter($arr_rows, $handle = false, $reverse = false, $arr_options = []) {
 		
-		$return = '<ul class="sorter'.($reverse ? ' reverse' : '').($arr_options['full'] ? ' full' : '').'"'.($arr_options['auto_add'] ? ' data-sorter_auto_add="1"' : '').'>';
+		$return = '<ul class="sorter'.($reverse ? ' reverse' : '').($arr_options['full'] ? ' full' : '').($arr_options['diverse'] ? ' diverse' : '').'"'
+			.($arr_options['auto_add'] ? ' data-auto_add="1"' : '')
+			.($arr_options['auto_clean'] ? ' data-auto_clean="1"' : '')
+			.($arr_options['limit'] ? ' data-limit="'.(int)$arr_options['limit'].'"' : '')
+		.'>';
 		
 		$html_handle = '<span class="icon">'.getIcon('updown').'</span>';
 		
@@ -644,7 +728,9 @@ class cms_general extends base_module {
 		return $html;
 	}
 	
-	public static function prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, $sql_body = '', $sql_index_body = '', $sql_where_default = '') {
+	public static function prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, $sql_body = '', $sql_index_body = '', $sql_where_default = '', $arr_interact = null) {
+		
+		$arr_interact = ($arr_interact === null ? $_POST : $arr_interact);
 		
 		$arr_sql_columns = array_values($arr_sql_columns);
 		$arr_sql_columns_search = ($arr_sql_columns_search ? array_values($arr_sql_columns_search) : $arr_sql_columns);
@@ -652,16 +738,16 @@ class cms_general extends base_module {
 					
 		$sql_limit = '';
 		
-		if (isset($_POST['nr_records_start']) && $_POST['nr_records_length'] != '-1') {
+		if (isset($arr_interact['num_records_start']) && $arr_interact['num_records_length'] != '-1') {
 			
-			$sql_limit = "LIMIT ".(int)$_POST['nr_records_length']." OFFSET ".(int)$_POST['nr_records_start'];
+			$sql_limit = "LIMIT ".(int)$arr_interact['num_records_length']." OFFSET ".(int)$arr_interact['num_records_start'];
 		}
 		
 		$sql_order = '';
 		
-		if ($_POST['arr_order_column']) {
+		if ($arr_interact['arr_order_column']) {
 				
-			foreach ($_POST['arr_order_column'] as $nr_order => list($nr_column, $str_direction)) {
+			foreach ($arr_interact['arr_order_column'] as $nr_order => list($nr_column, $str_direction)) {
 				
 				$sql_order .= $arr_sql_columns[$nr_column]." ".DBFunctions::strEscape($str_direction) .", ";
 			}
@@ -675,7 +761,7 @@ class cms_general extends base_module {
 		$sql_where_default = ($sql_where_default ? "WHERE ".$sql_where_default : "");
 		$sql_where = $sql_where_default;
 		
-		$str_search = $_POST['search'];
+		$str_search = $arr_interact['search'];
 		
 		if ($str_search != '')	{
 
@@ -704,7 +790,7 @@ class cms_general extends base_module {
 					}
 				}
 				
-				$sql_where .= $sql_column." LIKE '%".DBFunctions::str2Search($str_search_use)."%' OR ";
+				$sql_where .= DBFunctions::searchMatch($sql_column, $str_search_use)." OR ";
 			}
 			
 			$sql_where = substr_replace($sql_where, '', -3);
@@ -713,8 +799,8 @@ class cms_general extends base_module {
 		
 		for ($i = 0; $i < count($arr_sql_columns); $i++) {
 			
-			$do_search = ($_POST['search_column_'.$i] ?? null);
-			$str_search = ($_POST['searching_column_'.$i] ?? null);
+			$do_search = ($arr_interact['search_column_'.$i] ?? null);
+			$str_search = ($arr_interact['searching_column_'.$i] ?? null);
 			
 			if ($do_search == true && $str_search != '') {
 				
@@ -737,7 +823,7 @@ class cms_general extends base_module {
 					}
 				}
 				
-				$sql_where .= $sql_column." LIKE '%".DBFunctions::str2Search($str_search_use)."%' ";
+				$sql_where .= DBFunctions::searchMatch($sql_column, $str_search_use);
 			}
 		}
 		
@@ -786,40 +872,65 @@ class cms_general extends base_module {
 		return ['output' => $arr_output, 'result' => $result];
 	}
 		
-	public static function createSelectTags($arr_tags, $name = '', $hide = true, $internal = false) {
+	public static function createSelectTags($arr_tags, $name = '', $hide = true, $is_internal = false) {
 		
 		$name = ($name ? $name : 'tags');
 			
-		return '<div class="hide-edit'.($hide ? ' hide' : '').'">'.self::createMultiSelect($name, 'y:cms_general:'.($internal ? 'lookup_internal_tag' : 'lookup_tag').'-0', $arr_tags).'</div><span class="icon" title="'.getLabel('inf_edit_tags').'">'.getIcon('tags').'</span>';
+		return '<div class="hide-edit'.($hide ? ' hide' : '').'">'.self::createMultiSelect($name, 'y:cms_general:'.($is_internal ? 'lookup_internal_tag' : 'lookup_tag').'-0', $arr_tags).'</div><span class="icon" title="'.getLabel('inf_edit_tags').'">'.getIcon('tags').'</span>';
 	}
 	
-	public static function getTags($source_table, $obj_table, $obj_column, $internal = false) {
+	public static function createViewTags($arr_tags, $str_url) {
+		
+		foreach ($arr_tags as $str_tag) {
+
+			$str_tag = Labels::parseTextVariables($str_tag);
+			$str_tag_title = strEscapeHTML(getLabel('lbl_tag').' <strong>'.$str_tag.'</strong>');
+			$str_tag = strEscapeHTML($str_tag);
+				
+			$str_html_tags .= '<a title="'.$str_tag_title.'" href="'.$str_url.str_replace(' ', '+', $str_tag).'" data-tag="'.$str_tag.'">'.$str_tag.'</a>';
+		}
+		
+		$str_html_tags = '<div class="tags content"><span class="icon">'.getIcon('tags').'</span>'.$str_html_tags.'</div>';
+		
+		return $str_html_tags;
+	}
+	
+	public static function getTags($sql_table_source, $sql_table_object, $sql_column_object, $is_internal = false, $arr_tags = false) {
 	
 		$arr = [];
+		
+		$sql_tags = '';
+		
+		if ($arr_tags) {
+			
+			$arr_tags = DBFunctions::arrEscape((!is_array($arr_tags) ? (array)$arr_tags : $arr_tags));
+			$sql_tags = 't.name '.(count($arr_tags) == 1 ? "= '".current($arr_tags)."'" : "IN ('".arr2String($arr_tags, "','")."')");
+		}
 	
-		$res = DB::query("SELECT t.*
-			FROM ".$source_table." s
-			JOIN ".$obj_table." o ON (o.".$obj_column." = s.id)
-			JOIN ".DB::getTable(($internal ? 'TABLE_INTERNAL_TAGS' :'TABLE_TAGS'))." t ON (t.id = o.tag_id)
+		$res = DB::query("SELECT
+			t.*
+				FROM ".$sql_table_source." s
+				JOIN ".$sql_table_object." o ON (o.".$sql_column_object." = s.id)
+				JOIN ".DB::getTable(($is_internal ? 'TABLE_INTERNAL_TAGS' :'TABLE_TAGS'))." t ON (t.id = o.tag_id)
+			".($sql_tags ? "WHERE ".$sql_tags : '')."
 			GROUP BY t.id
 		");
 		
 		while ($arr_row = $res->fetchAssoc()) {
-			
 			$arr[] = $arr_row;
 		}
 		
 		return $arr;
 	}
 	
-	public static function getObjectTags($obj_table, $obj_column, $obj_id, $internal = false) {
+	public static function getTagsByObject($sql_table_object, $sql_column_object, $object_id, $is_internal = false) {
 	
 		$arr_tags = [];
 	
 		$res_tags = DB::query("SELECT t.*
-			FROM ".$obj_table." ot
-			LEFT JOIN ".DB::getTable(($internal ? 'TABLE_INTERNAL_TAGS' :'TABLE_TAGS'))." t ON (t.id = ot.tag_id)
-			WHERE ot.".$obj_column." = ".(int)$obj_id."
+			FROM ".$sql_table_object." ot
+			LEFT JOIN ".DB::getTable(($is_internal ? 'TABLE_INTERNAL_TAGS' :'TABLE_TAGS'))." t ON (t.id = ot.tag_id)
+			WHERE ot.".$sql_column_object." = ".(int)$object_id."
 		");
 		
 		while ($arr_row = $res_tags->fetchAssoc()) {
@@ -830,34 +941,34 @@ class cms_general extends base_module {
 		return $arr_tags;
 	}
 	
-	public static function handleTags($obj_table, $obj_column, $obj_id, $tags, $internal = false) {
+	public static function handleTags($sql_table_object, $sql_column_object, $object_id, $arr_tags, $is_internal = false) {
 	
-		DB::query("DELETE FROM ".$obj_table."
-			WHERE ".$obj_column." IN (".(is_array($obj_id) ? implode(',', $obj_id) : $obj_id).")
+		DB::query("DELETE FROM ".$sql_table_object."
+			WHERE ".$sql_column_object." IN (".(is_array($object_id) ? implode(',', $object_id) : $object_id).")
 		");
 
-		$arr_tags = ($tags ?: []);
+		$arr_tags = ($arr_tags ?: []);
 	
 		$arr_tags_new = [];
 		$arr_tags_save = [];
 		
-		$func_arr_tags_save = function($tag_id) use (&$arr_tags_save, $obj_id) {
+		$func_arr_tags_save = function($tag_id) use (&$arr_tags_save, $object_id) {
 			
 			unset($arr_tags_save[$tag_id]); // Making $value as a $tags-key prevent double input
 			
-			foreach ((is_array($obj_id) ? $obj_id : [$obj_id]) as $cur_obj_id) {
+			foreach ((is_array($object_id) ? $object_id : [$object_id]) as $cur_object_id) {
 				
 				if ($arr_tags_save[$tag_id]) {
-					$arr_tags_save[$tag_id] .= ",";
+					$arr_tags_save[$tag_id] .= ',';
 				}
 				
-				$arr_tags_save[$tag_id] .= "(".$cur_obj_id.", ".(int)$tag_id.")";
+				$arr_tags_save[$tag_id] .= "(".$cur_object_id.", ".(int)$tag_id.")";
 			}
 		};
 		
 		foreach ($arr_tags as $value) {
 			
-			$is_id = (substr($value, 0, 3) == "id_" ? true : false);
+			$is_id = (substr($value, 0, 3) == 'id_' ? true : false);
 			
 			if ($is_id) {
 				$tag_id = substr($value, 3);
@@ -869,7 +980,7 @@ class cms_general extends base_module {
 		}
 		
 		$arr_tags_cur = [];
-		$res = DB::query("SELECT id, name FROM ".DB::getTable(($internal ? 'TABLE_INTERNAL_TAGS' : 'TABLE_TAGS'))."");
+		$res = DB::query("SELECT id, name FROM ".DB::getTable(($is_internal ? 'TABLE_INTERNAL_TAGS' : 'TABLE_TAGS'))."");
 		
 		while ($row = $res->fetchArray()) {
 			$arr_tags_cur[$row['id']] = strtolower($row['name']); // strtolower to make case-insensitive comparisons
@@ -883,14 +994,14 @@ class cms_general extends base_module {
 				
 				$tag_id = array_search(strtolower($value), $arr_tags_cur); // strtolower to make case-insensitive comparisons
 				
-				if ($tag_id == true) { // if tag already exists, add it to the $tags array
+				if ($tag_id) { // if tag already exists, add it to the $tags array
 					
 					$func_arr_tags_save($tag_id);
 				} else {
 					
-					if($value == true && !in_array($value, $arr_tags_check)) { // Ignore the empty value(s) from the array, and check for double inputs.
+					if ($value && !in_array($value, $arr_tags_check)) { // Ignore the empty value(s) from the array, and check for double inputs.
 						
-						$ret = DB::query("INSERT INTO ".DB::getTable(($internal ? 'TABLE_INTERNAL_TAGS' : 'TABLE_TAGS'))." (name) VALUES ('".DBFunctions::strEscape($value)."')");
+						$res = DB::query("INSERT INTO ".DB::getTable(($is_internal ? 'TABLE_INTERNAL_TAGS' : 'TABLE_TAGS'))." (name) VALUES ('".DBFunctions::strEscape($value)."')");
 						
 						$tag_id = DB::lastInsertID();
 						$func_arr_tags_save($tag_id);
@@ -902,7 +1013,7 @@ class cms_general extends base_module {
 		
 		if (count($arr_tags_save)) {
 			
-			$ret = DB::query("INSERT INTO ".$obj_table." (".$obj_column.", tag_id) VALUES ".implode(",", $arr_tags_save)."");
+			$res = DB::query("INSERT INTO ".$sql_table_object." (".$sql_column_object.", tag_id) VALUES ".implode(",", $arr_tags_save)."");
 		}
 	}
 			

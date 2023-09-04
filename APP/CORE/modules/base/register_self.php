@@ -93,9 +93,9 @@ abstract class register_self extends base_module {
 			
 			$user_data = $this->processForm();
 			
-			$str_url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'confirm/';
+			$str_url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false).'confirm/';
 		
-			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->arr_variables['email_as_username'] ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->arr_variables['user_group_id'] ?: SiteStartVars::$user_group), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $str_url);
+			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->arr_variables['email_as_username'] ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->arr_variables['user_group_id'] ?: SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $str_url);
 			
 			user_management::updateUserLinkedData($user['id'], $user_data);
 			

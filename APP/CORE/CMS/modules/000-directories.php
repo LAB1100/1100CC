@@ -31,7 +31,7 @@ class directories extends base_module {
 	
 	public static function getClosestRootedDirectory($directory_id = 0) {
 		
-		$directory_id = ($directory_id ?: SiteStartVars::$dir['id']);
+		$directory_id = ($directory_id ?: SiteStartVars::getDirectory('id'));
 		
 		$res = DB::query("SELECT ad.ancestor_id
 				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." ad
@@ -48,7 +48,7 @@ class directories extends base_module {
 	
 	public static function getParentDirectory($directory_id = 0) {
 		
-		$directory_id = ($directory_id ?: SiteStartVars::$dir['id']);
+		$directory_id = ($directory_id ?: SiteStartVars::getDirectory('id'));
 		
 		$res = DB::query("SELECT ad.ancestor_id
 				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." ad
@@ -225,7 +225,7 @@ class directories extends base_module {
 		
 		foreach ($arr_dirs as $cur_dir) {
 			
-			$arr_path = arrParseRecursive(explode('/', $cur_dir['path']), 'trim');
+			$arr_path = arrParseRecursive(explode('/', $cur_dir['path']), TYPE_TEXT);
 			
 			$cur_path =& $arr_paths;
 			

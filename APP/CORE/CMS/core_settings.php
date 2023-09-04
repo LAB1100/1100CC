@@ -10,11 +10,11 @@
 // 1100CC Server Settings:
 	
 	define('SITE_NAME', strtolower($_SERVER['SITE_NAME'])); // Custom environment variable
-	define('IS_CMS', ($_SERVER['IF_CMS_PATH'] ? 1 : 0)); // Custom environment variable
+	define('IS_CMS', ($_SERVER['PATH_CMS'] ? true : false)); // Custom environment variable
 	define('STATE_PRODUCTION', 0);
 	define('STATE_DEVELOPMENT', 1);
 	define('STATE', (isset($_SERVER['STATE']) && ($_SERVER['STATE'] === 'development' || (int)$_SERVER['STATE'] === STATE_DEVELOPMENT) ? STATE_DEVELOPMENT : STATE_PRODUCTION)); // Custom environment variable
-	define('MESSAGE', ($_SERVER['MESSAGE'] ?? '')); // Custom environment variable
+	define('MESSAGE', ($_SERVER['MESSAGE'] ?? null)); // Custom environment variable
 	define('DIR_STORAGE', 'STORAGE/');
 	define('DIR_CACHE', 'CACHE/');
 	define('DIR_SETTINGS', 'SETTINGS/');
@@ -70,8 +70,13 @@
 	define('SERVER_NAME_BASE', SERVER_NAME_CUSTOM.SERVER_NAME_1100CC);
 	define('SERVER_NAME', SERVER_NAME_SUB.SERVER_NAME_BASE);
 	
-	define('SERVER_NAME_HOME', str_replace('cms.', '', SERVER_NAME));
-	define('SERVER_NAME_CMS', 'cms.'.SERVER_NAME_HOME);
+	if (IS_CMS) {
+		define('SERVER_NAME_HOME', str_replace(['cms.', 'cms-'], '', SERVER_NAME));
+		define('SERVER_NAME_CMS', SERVER_NAME);
+	} else {
+		define('SERVER_NAME_HOME', SERVER_NAME);
+		define('SERVER_NAME_CMS', 'cms.'.SERVER_NAME);
+	}
 
 	$path_database = DIR_ROOT_SETTINGS.DIR_HOME.'database';
 	$path_settings = DIR_ROOT_SETTINGS.DIR_HOME.'settings.php';
@@ -117,7 +122,7 @@
 	// Applied settings
 	
 	if (!isset($_SERVER['SERVER_SCHEME'])) { // Custom environment variable
-		$_SERVER['SERVER_SCHEME'] = (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') ? 'https' : 'http').'://';
+		$_SERVER['SERVER_SCHEME'] = (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) == 'https') ? URI_SCHEME_HTTPS : URI_SCHEME_HTTP);
 	}
 	define('SERVER_SCHEME', $_SERVER['SERVER_SCHEME']);
 	

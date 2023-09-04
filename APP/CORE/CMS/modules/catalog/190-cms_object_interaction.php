@@ -361,18 +361,18 @@ class cms_object_interaction extends base_module {
 					<tr>
 						<td>'.getLabel("lbl_object_interaction_stage").'</td>
 						<td><div class="stage">
-							<img src="'.SiteStartVars::getCacheUrl('img', [1000, 0], $arr['stage']["img"]).'" data-prefix="'.SiteStartVars::getCacheUrl('img', [1000, 0], '').'" />
+							<img src="'.SiteStartVars::getCacheURL('img', [1000, 0], $arr['stage']["img"]).'" data-prefix="'.SiteStartVars::getCacheURL('img', [1000, 0], '').'" />
 							<div id="y:cms_object_interaction:add_stage_object-'.(int)$id.'">'.$str_objects.'</div>
 							<div class="point" title="'.getLabel('inf_view_position_mark').'"></div>
 							<input type="hidden" name="view" value="'.$arr['stage']["view_x"].'_'.$arr['stage']["view_y"].'" />
 						</div></td>
 					</tr>
 					<tr>
-						<td>'.getLabel("lbl_zoom_min").'</td>
+						<td>'.getLabel("lbl_zoom_minimum").'</td>
 						<td><input type="range" min="1" max="100" step="1" /><input type="number" name="zoom_min" value="'.($arr['stage']["zoom_min"] ?: 50).'" /><label>%</label></td>						
 					</tr>
 					<tr>
-						<td>'.getLabel("lbl_zoom_max").'</td>
+						<td>'.getLabel("lbl_zoom_maximum").'</td>
 						<td><input type="range" min="1" max="100" step="1" /><input type="number" name="zoom_max" value="'.($arr['stage']["zoom_max"] ?: 100).'" /><label>%</label></td>						
 					</tr>
 					<tr>

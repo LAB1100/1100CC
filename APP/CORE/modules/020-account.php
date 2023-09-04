@@ -114,7 +114,7 @@ class account extends base_module {
 				$arr_update['uname'] = $_POST['uname'];
 			}
 			
-			$str_url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'update/';
+			$str_url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false).'update/';
 									
 			$update_user = user_management::updateUser($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], true, $arr_update, $_POST['password'], $str_url);
 			
@@ -152,6 +152,6 @@ class account extends base_module {
 	
 	public static function findAccount() {
 	
-		return pages::getClosestMod('account', SiteStartVars::$dir['id'], SiteStartVars::$page['id']);
+		return pages::getClosestModule('account', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
 	}
 }

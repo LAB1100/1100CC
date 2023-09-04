@@ -32,7 +32,7 @@ class object_interaction {
 	
 		if ($this->arr_query[0] == "jump") {
 			
-			Response::location(pages::getPageUrl(pages::getPages((int)$this->arr_query[1])));
+			Response::location(pages::getPageURL(pages::getPages((int)$this->arr_query[1])));
 			die;
 		}
 		
@@ -135,7 +135,7 @@ class object_interaction {
 				".$this->arr['stage']['script']."
 			});";
 
-			$p = new PhpStringParser();
+			$p = new ParsePHPString();
 			$script_custom = $p->parse($script_custom);
 		}
 		
@@ -171,7 +171,7 @@ class object_interaction {
 				$arr_img_options['blur'] = ['amount' => 3];
 				$arr_img_padding[] = 3*2;
 			}
-			$img_url = siteStartVars::getCacheUrl("img", [$img_width, 9999, $arr_img_options], $arr_object['img']);
+			$img_url = siteStartVars::getCacheURL("img", [$img_width, 9999, $arr_img_options], $arr_object['img']);
 			
 			if ($arr_stage_object['effect_hover']) {
 				$img_hover_width = $img_width;
@@ -187,7 +187,7 @@ class object_interaction {
 					$arr_img_hover_options['blur'] = ['amount' => 3];
 					$arr_img_hover_padding[] = 3*2;
 				}
-				$img_hover_url = siteStartVars::getCacheUrl("img", [$img_hover_width, 9999, $arr_img_hover_options], $arr_object['img']);
+				$img_hover_url = siteStartVars::getCacheURL("img", [$img_hover_width, 9999, $arr_img_hover_options], $arr_object['img']);
 			}
 			
 			$value_hotspot = '<div class="hotspot image-effect"'.($info ? ' data-popper="'.$info.'"' : '').'><img src="'.$img_url.'" data-width="'.$img_width.'" data-padding="'.max($arr_img_padding).'"'.($img_hover_url ? ' data-hover-src="'.$img_hover_url.'" data-hover-width="'.$img_hover_width.'" data-hover-padding="'.max($arr_img_hover_padding).'"' : '').' /></div>';
@@ -203,7 +203,7 @@ class object_interaction {
 			$arr_classes[] = 'hover-'.$value;
 		};
 		
-		$value_hotspot = ($arr_object['redirect_page_id'] ? '<a href="'.SiteStartVars::getModUrl($this->mod_id).'jump/'.$arr_object['redirect_page_id'].'">'.$value_hotspot.'</a>' : $value_hotspot);
+		$value_hotspot = ($arr_object['redirect_page_id'] ? '<a href="'.SiteStartVars::getModuleURL($this->mod_id).'jump/'.$arr_object['redirect_page_id'].'">'.$value_hotspot.'</a>' : $value_hotspot);
 
 		return '<div id="object_'.$id.'" class="object'.($arr_classes ? ' '.implode(' ', $arr_classes) : '').'" style="left: '.$arr_object['pos_x'].'%; top: '.$arr_object['pos_y'].'%; width: '.$arr_object['width'].'%; '.implode(' ', $arr_style_extra).'" data-name="'.$arr_object['name'].'">
 			'.$value_hotspot.'

@@ -457,6 +457,9 @@ abstract class DBFunctionsBase {
 	const INDEX_HASH = '';
 	const INDEX_LTF = ''; // Left-to-right index (tree)
 	
+	const SQL_GROUP_SEPERATOR = '$|$'; // Use in queries
+	const SQL_VALUE_SEPERATOR = ':|:'; // Use for storage
+	
 	protected static $count_sql_index = 0;
 	
 	public static function specific($arr_sql, $sql_default = '') {
@@ -592,11 +595,68 @@ abstract class DBFunctionsBase {
 	
 	abstract public static function timeDifference($unit, $field_start, $field_end);
 	
-	abstract public static function regexpMatch($sql, $expression, $flags = false);
+	abstract public static function regexpMatch($sql_field, $expression, $flags = false);
 	
-	public static function fieldToPosition($field, $arr_values) {
+	public static function searchMatch($sql_field, $str, $do_dynamic = true, $do_array = false) {
 		
-		$sql_order = 'CASE '.$field;
+		if ($do_dynamic && trim($str) != '') {
+			
+			$arr_sql = [];
+			$num_pos_quote = strpos($str, '"');
+			
+			if ($num_pos_quote !== false) {
+				
+				$str = preg_replace_callback('/"((?:[^"]|"")*)"/', function($arr_match) use ($sql_field, &$arr_sql) {
+
+					$str_search = str_replace('""', '"', $arr_match[1]); // Remove escapes
+					$sql_search = ' '.static::str2Search($str_search).' ';
+					
+					$sql_field_adapt = 'CONCAT(\' \', '.$sql_field.', \' \')';
+			
+					$arr_sql[$str_search] = $sql_field_adapt.' LIKE \'%'.$sql_search.'%\'';
+					
+					return '';
+				}, $str);
+			}
+
+			$arr_str = explode(' ', $str);
+			
+			foreach ($arr_str as $str_search) {
+				
+				$str_search = trim($str_search);
+				
+				if (!$str_search || isset($arr_sql[$str_search])) {
+					continue;
+				}
+				
+				$sql_search = static::str2Search($str_search);
+				
+				$arr_sql[$str_search] = $sql_field.' LIKE \'%'.$sql_search.'%\'';
+			}
+			
+			if ($do_array) {
+				return $arr_sql;
+			}
+			
+			$sql = '('.arr2String($arr_sql, ' AND ').')';
+			
+			return $sql;
+		}
+		
+		$sql_search = static::str2Search($str);
+		
+		$sql = $sql_field.' LIKE \'%'.$sql_search.'%\'';
+		
+		if ($do_array) {
+			return [$str => $sql];
+		}
+
+		return $sql;
+	}
+	
+	public static function fieldToPosition($sql_field, $arr_values) {
+		
+		$sql_order = 'CASE '.$sql_field;
 		$count = 1;
 
 		foreach ($arr_values as $value) {

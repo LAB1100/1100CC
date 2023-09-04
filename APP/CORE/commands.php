@@ -13,88 +13,125 @@
 	
 	$JSON = Response::getObject();
 	
-	if (empty($_POST['module'])) {
-		
-		// Nothing
-	} else if ($_POST['module'] == 'cms_general') {
+	$is_multi = isset($_POST['multi']);
+	$arr_commands = [];
 	
-		$general = new cms_general;
-		$general->commands($_POST['method'], $_POST['id'], $_POST['value']);
+	if ($is_multi) {
 		
-		$JSON->html = $general->html;
-	
+		$arr_commands = (array)$_POST['multi'];
+		unset($_POST['multi']);
 	} else {
 		
-		$module = $_POST['module'];
-		$method = $_POST['method'];
-
-		// Check if module command really originates from valid source directory and page
+		$arr_commands[] = $_POST;
+	}
+	
+	foreach ($arr_commands as $arr_command) {
 		
-		$res = DB::query("SELECT
-			d.id, m.id AS module_id, m.module, m.var,
-			CASE 
-				WHEN m.page_id = pm2.id THEN 2
-				WHEN m.page_id = pm.id THEN 1
-				ELSE 0
-			END AS parent_level
-				FROM ".DB::getTable('TABLE_PAGES')." p
-				LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm ON (pm.id = p.master_id)
-				LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm2 ON (pm2.id = pm.master_id)
-				JOIN ".DB::getTable('TABLE_DIRECTORIES')." d ON (d.id = p.directory_id)
-				JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.page_id = p.id OR m.page_id = pm.id OR m.page_id = pm2.id)
-			WHERE p.id = ".(int)SiteStartVars::$page['id']."
-				AND m.x = ".(int)SiteStartVars::$page_mod_xy['x']."
-				AND m.y = ".(int)SiteStartVars::$page_mod_xy['y']."
-				AND d.id = ".(int)SiteStartVars::$dir['id']."
-			ORDER BY parent_level ASC
-		");
-
-		if (!$res->getRowCount()) {
+		if ($is_multi) {
 			
-			$page_dir = directories::getDirectories(SiteStartVars::$page['directory_id']);
+			$_POST = [];
 			
-			error('Request originates from invalid path: '.SiteStartVars::$dir['path'].' => '.strEscapeHTML($module).':'.strEscapeHTML($method).' (using: '.str_replace(' ', '', $page_dir['path']).' '.strEscapeHTML($_POST['mod']).')');
+			foreach ($arr_command as $key => $value) {
+				
+				if ($key == 'json') {
+					continue;
+				}
+				
+				$_POST[$key] = $value;
+			}
+			
+			if (!empty($arr_command['json'])) { // Posted data in serialized format, check for JSON data
+			
+				$arr = JSON2Value($arr_command['json']);
+				unset($arr_command['json']);
+				
+				foreach ($arr as $key => $value) {
+					$_POST[$key] = $value;
+				}
+				unset($arr);
+			}
+			
+			$JSON_command = (object)[];
+			$JSON->multi[] =& $JSON_command;
+		} else {
+			
+			$JSON_command =& $JSON;
 		}
 
-		$arr = $res->fetchAssoc();
+		if (empty($arr_command['module'])) {
+			
+			// Nothing
+		} else if ($arr_command['module'] == 'cms_general') {
+		
+			$general = new cms_general;
+			$general->commands($arr_command['method'], $arr_command['id'], $arr_command['value']);
+			
+			$JSON_command->html = $general->html;
+		} else {
+			
+			$module = $arr_command['module'];
+			$method = $arr_command['method'];
+			
+			if ($is_multi) {
+				
+				$arr_page_mod = explode('-', $arr_command['mod']);
+				$arr_mod_xy = explode('_', $arr_page_mod[1]);
+				SiteStartVars::setContext(SiteStartVars::CONTEXT_MODULE_X, $arr_mod_xy[0]);
+				SiteStartVars::setContext(SiteStartVars::CONTEXT_MODULE_Y, $arr_mod_xy[1]);
+			}
 
-		$mod = new $arr['module'];
-		$mod->setMod($arr, $arr['module_id']);
-		$mod->setModVariables($arr['var']);
-		$mod->setModQuery(SiteStartVars::getModVariables($arr['module_id']));
+			// Check if module command really originates from valid source directory and page
+			
+			$res = DB::query("SELECT
+				d.id, m.id AS module_id, m.module, m.var,
+				CASE 
+					WHEN m.page_id = pm2.id THEN 2
+					WHEN m.page_id = pm.id THEN 1
+					ELSE 0
+				END AS parent_level
+					FROM ".DB::getTable('TABLE_PAGES')." p
+					LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm ON (pm.id = p.master_id)
+					LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm2 ON (pm2.id = pm.master_id)
+					JOIN ".DB::getTable('TABLE_DIRECTORIES')." d ON (d.id = p.directory_id)
+					JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.page_id = p.id OR m.page_id = pm.id OR m.page_id = pm2.id)
+				WHERE p.id = ".(int)SiteStartVars::getPage('id')."
+					AND m.x = ".(int)SiteStartVars::getContext(SiteStartVars::CONTEXT_MODULE_X)."
+					AND m.y = ".(int)SiteStartVars::getContext(SiteStartVars::CONTEXT_MODULE_Y)."
+					AND d.id = ".(int)SiteStartVars::getDirectory('id')."
+				ORDER BY parent_level ASC
+			");
 
-		if ($module != 'this' && $module != $arr['module']) { // Targetting module other than source module
-			
-			$module_target = $module;
-			
-			$arr_mod_target = $mod->getExternalModule($module);
-			$arr_mod_target_method = ($arr_mod_target[$method] ?? null);
-			
-			if ($arr_mod_target === null) { // Disallow all
+			if (!$res->getRowCount()) {
 				
-				$module = false;
-			} else if ($arr_mod_target_method === true) { // Allow specific method
+				$arr_page_directory = directories::getDirectories(SiteStartVars::getPage('directory_id'));
 				
-				$module = $module;
-			} else if ($arr_mod_target_method === false) { // Disallow specific method
+				error('Request originates from invalid path: '.SiteStartVars::getDirectory('path').' => '.strEscapeHTML($module).':'.strEscapeHTML($method).' (using: '.str_replace(' ', '', $arr_page_directory['path']).' '.strEscapeHTML($arr_command['mod']).')');
+			}
+
+			$arr = $res->fetchAssoc();
+
+			$mod = new $arr['module'];
+			$mod->setMod($arr, $arr['module_id']);
+			$mod->setModVariables($arr['var']);
+			$mod->setModQuery(SiteStartVars::getModuleVariables($arr['module_id']));
+
+			if ($module != 'this' && $module != $arr['module']) { // Targetting module other than source module
 				
-				$module = false;
-			} else if ($arr_mod_target_method !== null) { // Override
+				$module_target = $module;
 				
-				if ($arr_mod_target_method['module']) {
-					$module = $arr_mod_target_method['module'];
-				}
-				if ($arr_mod_target_method['method']) {
-					$method = $arr_mod_target_method['method'];
-				}
-			} else if (isset($arr_mod_target['*'])) { // Override any
+				$arr_mod_target = $mod->getExternalModule($module);
+				$arr_mod_target_method = ($arr_mod_target[$method] ?? null);
 				
-				$arr_mod_target_method = $arr_mod_target['*'];
-				
-				if ($arr_mod_target_method === false) {
+				if ($arr_mod_target === null) { // Disallow all
 					
 					$module = false;
-				} else {
+				} else if ($arr_mod_target_method === true) { // Allow specific method
+					
+					$module = $module;
+				} else if ($arr_mod_target_method === false) { // Disallow specific method
+					
+					$module = false;
+				} else if ($arr_mod_target_method !== null) { // Override
 					
 					if ($arr_mod_target_method['module']) {
 						$module = $arr_mod_target_method['module'];
@@ -102,67 +139,85 @@
 					if ($arr_mod_target_method['method']) {
 						$method = $arr_mod_target_method['method'];
 					}
+				} else if (isset($arr_mod_target['*'])) { // Override any
+					
+					$arr_mod_target_method = $arr_mod_target['*'];
+					
+					if ($arr_mod_target_method === false) {
+						
+						$module = false;
+					} else {
+						
+						if ($arr_mod_target_method['module']) {
+							$module = $arr_mod_target_method['module'];
+						}
+						if ($arr_mod_target_method['method']) {
+							$method = $arr_mod_target_method['method'];
+						}
+					}
+				} else { // Allow by abstaining
+					
+					$module = $module;
 				}
-			} else { // Allow by abstaining
 				
-				$module = $module;
+				if ($module == false) {
+					
+					error('Module '.$arr['module'].' does not allow relaying '.strEscapeHTML($module_target));
+				} else if ($module != 'this' && $module != $arr['module']) {
+					
+					$mod_target = new $module;
+					$mod_target->setModVariables($arr_mod_target['mod_var']);
+					$mod_target->setModQuery($arr_mod_target['arr_query']);
+					$mod = $mod_target;
+				}
 			}
-			
-			if ($module == false) {
-				
-				error('Module '.$arr['module'].' does not allow relaying '.strEscapeHTML($module_target));
-			} else if ($module != 'this' && $module != $arr['module']) {
-				
-				$mod_target = new $module;
-				$mod_target->setModVariables($arr_mod_target['mod_var']);
-				$mod_target->setModQuery($arr_mod_target['arr_query']);
-				$mod = $mod_target;
-			}
-		}
 
-		if ($method) {
+			if ($method) {
+				
+				if (isset($arr_command['is_confirm'])) {
+					$mod->is_confirm = (bool)$arr_command['is_confirm'];
+				}
+				if (isset($arr_command['is_download'])) {
+					$mod->is_download = (bool)$arr_command['is_download'];
+				}
+				if (isset($arr_command['is_discard'])) {
+					$mod->is_discard = (bool)$arr_command['is_discard'];
+				}
+			}
 			
-			if (isset($_POST['is_confirm'])) {
-				$mod->is_confirm = (bool)$_POST['is_confirm'];
-			}
-			if (isset($_POST['is_download'])) {
-				$mod->is_download = (bool)$_POST['is_download'];
-			}
-			if (isset($_POST['is_discard'])) {
-				$mod->is_discard = (bool)$_POST['is_discard'];
-			}
-		}
-		
-		$JSON->html =& $mod->html;
+			$JSON_command->html =& $mod->html;
 
-		$mod->commands($method, $_POST['id'], $_POST['value']);
-		
-		if ($mod->refresh) {
+			$mod->commands($method, $arr_command['id'], $arr_command['value']);
 			
-			$JSON->html = $mod->contents();
-		}
-		
-		SiteEndVars::checkServerName();
-		
-		$JSON->do_confirm = $mod->do_confirm;
-		$JSON->do_download = $mod->do_download;
-		$JSON->validate = $mod->validate;
-		$JSON->data = $mod->data;
-		$JSON->refresh_table = $mod->refresh_table;
-		$JSON->reset_form = $mod->reset_form;
-		
-		if ($mod->msg) {
-			if ($mod->msg !== true) {
-				Log::setMsg($mod->msg);
-			} else {
-				Log::setMsg(getLabel('msg_success'));
+			if ($mod->refresh) {
+				
+				$JSON_command->html = $mod->contents();
+			}
+			
+			SiteEndVars::checkServerName();
+			
+			$JSON_command->do_confirm = $mod->do_confirm;
+			$JSON_command->do_download = $mod->do_download;
+			$JSON_command->validate = $mod->validate;
+			$JSON_command->data = $mod->data;
+			$JSON_command->refresh_table = $mod->refresh_table;
+			$JSON_command->reset_form = $mod->reset_form;
+			
+			if ($mod->msg) {
+				if ($mod->msg !== true) {
+					Log::setMsg($mod->msg);
+				} else {
+					Log::setMsg(getLabel('msg_success'));
+				}
 			}
 		}
+		
+		unset($JSON_command);
 	}
 
 	SiteStartVars::cooldownModules();
 
-	$JSON->location = ['url' => SiteEndVars::getLocation()];
+	$JSON->location = ['real' => SiteEndVars::getLocation(), 'canonical' => SiteEndVars::getLocation(true, SiteEndVars::LOCATION_CANONICAL_NATIVE)];
 	$JSON->data_feedback = SiteEndVars::getFeedback();
 
 	$JSON = Log::addToObj($JSON);

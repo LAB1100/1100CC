@@ -9,39 +9,60 @@
 
 class ExitPage {
 
-    private $msg;
-    private $header;
-	private $type;
-	private $html;
-	private $title;
+    protected $msg;
+    protected $str_header;
+	protected $str_type;
+	protected $system_msg;
+	protected $str_system_type;
 	
-	private $arr_head_tags = [];
+	protected $str_html;
+	protected $str_title;
+	
+	protected $arr_head_tags = [];
 
-    public function __construct($msg, $header, $type) {
+    public function __construct($msg, $str_header, $str_type) {
 
 		$this->msg = $msg;
-		$this->header = $header;
-		$this->type = $type;
+		$this->str_header = $str_header;
+		$this->str_type = $str_type;
 		
 		$this->addStyle($this->getDefaultStyle());
+    }
+    
+    public function setTitle($str_title) {
+		
+		$this->str_title = $str_title;
+	}
+	
+	public function addHeadTag($tag) {
+	
+		$this->arr_head_tags[] = $tag;
+	}
+	
+	public function setSystem($msg, $str_type) {
+
+		$this->system_msg = $msg;
+		$this->str_system_type = $str_type;
+		
+		$this->addStyle($this->getSystemDefaultStyle());
     }
 	
 	public function getPage() {
 		
 		$this->createPage();
 	
-		return $this->html;
+		return $this->str_html;
 	}
 	
 	protected function createPage() {
 		
-		if ($this->title) {
-			$str_title = $this->title;
+		if ($this->str_title) {
+			$str_title = $this->str_title;
 		} else {
-			$str_title = 'OOPS - '.strtoupper($this->header).' - '.SiteEndVars::getTitle();
+			$str_title = 'OOPS - '.strtoupper($this->str_header).' - '.SiteEndVars::getTitle();
 		}
 		
-		$html = '<!DOCTYPE html>
+		$str_html = '<!DOCTYPE html>
 				<html lang="en">
 					<head>
 					
@@ -50,43 +71,54 @@ class ExitPage {
 					'.$this->getHeadTags().'
 
 				</head>
-				<body id="'.$this->type.'">
+				<body id="'.$this->str_type.'">';
 				
-					<div class="result">
-						<h1>'.$this->header.'</h1>
-						'.$this->msg.'
-					</div>
+					if ($this->system_msg) {
+						
+						$str_html .= '<div class="system">
+							'.$this->system_msg.'
+						</div>';
+					}
 					
-				</body>
+					$str_html .= '<div class="result">
+						<h1>'.$this->str_header.'</h1>
+						'.$this->msg.'
+					</div>';
+					
+				$str_html .= '</body>
 			</html>';
 
-		$this->html = $html;
+		$this->str_html = $str_html;
 	}
 		
 	protected function getDefaultStyle() {
 	
-		$style = '* { -ms-box-sizing: border-box; -moz-box-sizing: border-box; -webkit-box-sizing: border-box; box-sizing: border-box; margin: 0px; padding: 0px; }
-				body,
-				html { height: 100%; }
-				body { padding: 100px; font-family: arial,helvetica,sans-serif; font-size: 12px; background: #ffffff; }
-				
-				body > .result { width: 100%; height: 100%; padding: 50px; line-height: 1; }
-				body > .result > h1 { font-size: 70px; text-transform: uppercase; }
-				body > .result > ul { list-style: none; margin-top: 40px; }
-				
-				body > .result > ul > li { margin-top: 10px; display: flex; flex-flow: row nowrap; align-items: baseline; }
-				body > .result > ul > li:first-child { margin-top: 0px; }
-				body > .result > ul > li > * { vertical-align: top; flex: 0 1 auto; }
-				body > .result > ul > li > label,
-				body > .result > ul > li > span { display: inline-block; }
-				body > .result > ul > li > span { margin-left: 10px; white-space: pre-wrap; }
-				body > .result > ul > li > span > a { color: inherit; text-decoration: underline; }
-				body > .result > ul > li > label,
-				body > .result > ul > li:first-child > span { padding: 5px 10px; font-size: 14px; font-weight: bold; }
-				body > .result > ul > li:first-child > label { min-width: 30px; }
-				body > .result > ul > li:first-child > label::before { content: "\200B"; } ';
+		$str_style = '
+			* { box-sizing: border-box; margin: 0px; padding: 0px; }
+			html { height: 100%; font-size: 62.5%; }
+			body {
+				display: flex; flex-flow: column nowrap; align-content: stretch; align-items: stretch; justify-content: flex-start;
+				height: 100%; line-height: 1.26; padding: 100px; font-family: arial,helvetica,sans-serif; font-size: 12px; font-size: 1.2rem; background: #ffffff; }
+			
+			body > .result { width: 100%; height: 100%; padding: 50px; line-height: 1; }
+			body > .result > h1 { font-size: 7rem; text-transform: uppercase; }
+			body > .result > ul { list-style: none; margin-top: 40px; }
+			
+			body > .result > ul > li { margin-top: 10px; display: flex; flex-flow: row nowrap; align-items: baseline; }
+			body > .result > ul > li:first-child { margin-top: 0px; }
+			body > .result > ul > li > * { vertical-align: top; flex: 0 1 auto; }
+			body > .result > ul > li > label,
+			body > .result > ul > li > div { display: inline-block; }
+			body > .result > ul > li > div { margin-left: 10px; white-space: pre-wrap; }
+			body > .result > ul > li > div > a { color: inherit; text-decoration: underline; }
+			body > .result > ul > li > div code { font-family: monospace; }
+			body > .result > ul > li > label,
+			body > .result > ul > li:first-child > div { padding: 5px 10px; font-size: 1.4rem; font-weight: bold; }
+			body > .result > ul > li:first-child > label { min-width: 30px; }
+			body > .result > ul > li:first-child > label::before { content: "\200B"; }
+		';
 		
-		switch ($this->type) {
+		switch ($this->str_type) {
 			case 'error':
 				$color = '#a00000';
 				$color_reverse = '#ffffff';
@@ -106,14 +138,40 @@ class ExitPage {
 				break;
 		}
 		
-		$style .= '
+		$str_style .= '
 			body { color: '.$color_reverse.'; }
 			body > .result { background-color: '.$color.'; }
 			body > .result > ul > li > label,
-			body > .result > ul > li:first-child > span { background-color: '.$color_reverse.'; color: '.$color.'; }
+			body > .result > ul > li:first-child > div { background-color: '.$color_reverse.'; color: '.$color.'; }
 		';
 		
-		return $style;
+		return $str_style;
+	}
+	
+	protected function getSystemDefaultStyle() {
+	
+		$str_style = '
+			body > .system { position: relative; top: 0px; left: 0px; }
+		';
+		
+		switch ($this->str_system_type) {
+			case 'important':
+				$color = '#ffb400';
+				$color_reverse = '#ffffff';
+				break;
+		}
+		
+		$str_style .= '
+			body > .system > div { box-sizing: border-box; text-align: center; font-size: 1.6rem; color: '.$color_reverse.'; background-color: '.$color.'; }
+			body > .system > div > p:first-child > span.icon { vertical-align: middle; margin-right: 10px; }
+			body > .system > div > p:first-child > span.icon svg { height: 30px; }
+			body > .system > div > p { display: inline-block; vertical-align: middle; margin: 12px 16px; }
+			
+			span.icon { display: inline-block; }
+			span.icon svg { height: 16px; width: auto; fill: currentColor; vertical-align: middle; }
+		';
+		
+		return $str_style;
 	}
 	
 	protected function getHeadTags() {
@@ -127,17 +185,7 @@ class ExitPage {
 		
 		return $return;
 	}
-	
-	public function addHeadTag($tag) {
-	
-		$this->arr_head_tags[] = $tag;
-	}
-	
-	public function setTitle($title) {
 		
-		$this->title = $title;
-	}
-	
 	public function addScript($script, $is_url = false) {
 		
 		if ($is_url) {

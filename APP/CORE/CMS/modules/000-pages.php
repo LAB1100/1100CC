@@ -18,6 +18,28 @@ class pages extends base_module {
 		static::$parent_label = false;
 	}
 	
+	public static function webLocations() {
+		
+		return [
+			'name' => 'pages',
+			'entries' => function() {
+				
+				$arr_pages = static::getPagesByScope(false, false, false, false, null, false);
+				
+				foreach ($arr_pages as $arr_page) {
+					
+					if ($arr_page['require_login'] || $arr_page['clearance']) {
+						continue;
+					}
+					
+					$str_location = static::getPageURL($arr_page, true);
+					
+					yield $str_location;
+				}
+			}
+		];
+	}
+	
 	public static function js() {
 		
 		$return = "$(document).on('change', '[id=y\\\:pages\\\:directory_select-0]', function() {
@@ -61,7 +83,7 @@ class pages extends base_module {
 		
 		if ($method == "return_link") {
 				
-			$this->html = pages::getPageUrl(pages::getPages($_POST['page_id']), true);
+			$this->html = pages::getPageURL(pages::getPages($_POST['page_id']), true);
 		}
 	}
 			
@@ -151,7 +173,7 @@ class pages extends base_module {
 		return $arr;
 	}
 	
-	public static function getModsLimited($root = 0, $directory_id = 0, $module = 0, $var = false, $var_name = false) {
+	public static function getModulesByScope($root = 0, $directory_id = 0, $module = 0, $var = false, $var_name = false) {
 		
 		$root = ($root ?: directories::getRootDirectory());
 		
@@ -195,7 +217,7 @@ class pages extends base_module {
 		return $arr;
 	}
 	
-	public static function getMods($module, $var = false, $var_name = false) {
+	public static function getModules($module, $var = false, $var_name = false) {
 	
 		$is_num_module = (is_numeric($module) || (is_array($module) && is_numeric(current($module))));
 		$is_arr_module = is_array($module);
@@ -240,7 +262,7 @@ class pages extends base_module {
 		return $arr;
 	}
 	
-	public static function getPages($page = 0, $directory_id = 0, $master = false, $selected = 0, $published = false, $clearance = false) {
+	public static function getPages($page = 0, $directory_id = 0, $do_limit_master = false, $selected_page_id = 0, $is_published = null, $is_clearance = null) {
 	
 		$arr = [];
 
@@ -314,17 +336,17 @@ class pages extends base_module {
 					FROM ".DB::getTable('TABLE_PAGES')." p
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm ON (pm.id = p.master_id)
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm2 ON (pm2.id = pm.master_id)
-				WHERE p.id != ".$selected."
+				WHERE p.id != ".(int)$selected_page_id."
 					".($directory_id && is_array($directory_id) ? "AND p.directory_id IN (".implode(",", $directory_id).")": "")."
 					".($directory_id && !is_array($directory_id) ? "AND p.directory_id = ".(int)$directory_id."": "")."
-					".($master ? "AND CASE
+					".($do_limit_master ? "AND CASE
 							WHEN pm.master_id != 0 THEN 2
 							WHEN p.master_id != 0 THEN 1
 							ELSE 0
 						END < 2 AND p.url = ''
 					" : "")."
-					".($published ? "AND p.publish = TRUE": "")."
-					".($clearance ? "AND p.clearance = TRUE": "")."
+					".($is_published !== null ? "AND p.publish = ".($is_published ? 'TRUE' : 'FALSE') : '')."
+					".($is_clearance !== null ? "AND p.clearance = ".($is_clearance ? 'TRUE' : 'FALSE'): '')."
 					ORDER BY p.sort
 			");
 										
@@ -352,7 +374,7 @@ class pages extends base_module {
 		return $arr;
 	}
 	
-	public static function getPagesLimited($root = 0, $directory_id = 0, $master = false, $selected = 0, $published = false, $clearance = false) {
+	public static function getPagesByScope($root = 0, $directory_id = 0, $do_limit_master = false, $selected_page_id = 0, $is_published = null, $is_clearance = null) {
 		
 		$root = ($root ?: directories::getRootDirectory());
 		
@@ -374,17 +396,17 @@ class pages extends base_module {
 				LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.directory_id = cd.ancestor_id)
 				LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm ON (pm.id = p.master_id)
 				LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm2 ON (pm2.id = pm.master_id)
-			WHERE p.id != ".$selected."
+			WHERE p.id != ".(int)$selected_page_id."
 				AND d.ancestor_id = ".$root."
 				".($directory_id ? "AND cd.descendant_id = ".(int)$directory_id."" : "")."
-				".($master ? "AND CASE
+				".($do_limit_master ? "AND CASE
 						WHEN pm.master_id != 0 THEN 2
 						WHEN p.master_id != 0 THEN 1
 						ELSE 0
 					END < 2 AND p.url = ''
 				" : "")."
-				".($published ? "AND p.publish = TRUE": "")."
-				".($clearance ? "AND p.clearance = TRUE": "")."
+				".($is_published !== null ? "AND p.publish = ".($is_published ? 'TRUE' : 'FALSE') : '')."
+				".($is_clearance !== null ? "AND p.clearance = ".($is_clearance ? 'TRUE' : 'FALSE'): '')."
 				AND cd.path_length <= d.path_length
 			ORDER BY cd.path_length DESC, p.sort
 		");
@@ -444,7 +466,7 @@ class pages extends base_module {
 		return (!$is_directory_divided ? $arr[0] : $arr);
 	}
 				
-	public static function getClosestMod($module, $directory_id = 0, $page_id = 0, $group_id = 0, $var = false, $var_name = false) {
+	public static function getClosestModule($module, $directory_id = 0, $page_id = 0, $group_id = 0, $var = false, $var_name = false) {
 	
 		$query = "SELECT
 			m.*, p.directory_id, p.name AS page_name, p.title AS page_title, p.clearance, d.name AS directory_name, d.title AS directory_title, d.require_login, d.user_group_id, ".($directory_id ? "c.path_length" : "0")." AS sub_dir
@@ -612,7 +634,7 @@ class pages extends base_module {
 		return $arr_pages_or_modules;
 	}
 	
-	public static function getBaseUrl($arr) {
+	public static function getBaseURL($arr) {
 			
 		if ($arr) {
 			
@@ -629,7 +651,7 @@ class pages extends base_module {
 		}
 	}
 	
-	public static function getPageUrl($arr, $rel = false) {
+	public static function getPageURL($arr, $is_relative = false) {
 			
 		if ($arr) {
 			
@@ -639,14 +661,14 @@ class pages extends base_module {
 				$arr['path'] = $directory['path'];
 			}
 			
-			return (!$rel ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').($arr['page_name'] ?: $arr['name']).'';
+			return (!$is_relative ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').($arr['page_name'] ?: $arr['name']).'';
 		} else {
 			
 			return false;
 		}
 	}
 	
-	public static function getModUrl($arr, $rel = false, $arr_vars_page = []) {
+	public static function getModuleURL($arr, $is_relative = false, $arr_vars_page = []) {
 			
 		if ($arr) {
 			
@@ -656,14 +678,14 @@ class pages extends base_module {
 				$arr['path'] = $directory['path'];
 			}
 			
-			return (!$rel ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['page_name'].'.p/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '').$arr['id'].'.m/';
+			return (!$is_relative ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['page_name'].'.p/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '').$arr['id'].'.m/';
 		} else {
 			
 			return false;
 		}
 	}
 	
-	public static function getShortcutUrl($arr) {
+	public static function getShortcutURL($arr) {
 			
 		if ($arr) {
 
@@ -686,72 +708,65 @@ class pages extends base_module {
 		}
 	}
 		
-	public static function doShortcut() {
+	public static function getShortcut() {
 		
 		$res = DB::query("SELECT
-			m.id, p.name AS page_name, p.directory_id
+			m.id, m.page_id, p.name AS page_name, p.directory_id
 				FROM ".DB::getTable('TABLE_PAGE_MODULES')." m
-				LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)
-			WHERE m.shortcut='".DBFunctions::strEscape(SiteStartVars::$page_name)."'
-				AND (".(SiteStartVars::$dir['root'] ?
-					"m.shortcut_root = TRUE OR p.directory_id = ".(int)SiteStartVars::$dir['id'].""
+				JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)
+			WHERE m.shortcut = '".DBFunctions::strEscape(SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME))."'
+				AND (".(SiteStartVars::getDirectory('root') ?
+					"m.shortcut_root = TRUE OR p.directory_id = ".(int)SiteStartVars::getDirectory('id').""
 					: 
-					"m.shortcut_root = FALSE AND p.directory_id = ".(int)SiteStartVars::$dir['id'].""
+					"m.shortcut_root = FALSE AND p.directory_id = ".(int)SiteStartVars::getDirectory('id').""
 				).")
 		");
 										
 		if ($res->getRowCount()) {
 		
-			$row = $res->fetchAssoc();
+			$arr = $res->fetchAssoc();
 			
-			$arr_request_vars = SiteStartVars::getModVariables(0);
+			$arr_directory = directories::getDirectories($arr['directory_id']);
+			$arr['path'] = $arr_directory['path'];
 			
-			if ($arr_request_vars) {
-				$url = self::getModUrl($row).implode('/', $arr_request_vars);
-			} else {
-				$url = self::getPageUrl($row);
-			}
-			
-			Response::location($url);
-			exit;
-		} else {
-			
-			self::noPage();
+			return $arr;
 		}
+		
+		return false;
 	}
 	
-	public static function noPage($show = false) {
+	public static function noPage($do_show = false) {
 		
-		$dir_pop = (SiteStartVars::$dir && SiteStartVars::$dir['page_index_id'] && SiteStartVars::$dir['page_index_id'] != SiteStartVars::$page['id'] ? 0 : 1);
+		$num_dir_pop = (SiteStartVars::getDirectory() && SiteStartVars::getDirectory('page_index_id') && SiteStartVars::getDirectory('page_index_id') != SiteStartVars::getPage('id') ? 0 : 1);
 	
-		if (count(SiteStartVars::$arr_dir) <= 10) { // Prevent an possible overload
-			$url = SiteStartVars::getBasePath($dir_pop);
+		if (count(SiteStartVars::getDirectoryClosure()) <= 10) { // Prevent an possible overload
+			$str_url = SiteStartVars::getBasePath($num_dir_pop);
 		} else {
-			$url = '/';
+			$str_url = '/';
 		}
 		
-		$show = ($show || getLabel('show_404', 'D', true) ? true : false);
+		$do_show = ($do_show || getLabel('show_404', 'D', true) ? true : false);
 		
-		if ($show) {
+		if ($do_show) {
 			
-			Labels::setVariable('url', $url);
-			$msg = '<ul>
-					<li><label></label><span>'.getLabel('msg_page_not_found').'</span></li>
-					<li><label>SORRY</label><span>'.getLabel('msg_page_not_found_suggestion').'</span></li>
-					</ul>';
+			Labels::setVariable('url', $str_url);
+			$str_msg = '<ul>
+				<li><label></label><div>'.getLabel('msg_page_not_found').'</div></li>
+				<li><label>SORRY</label><div>'.getLabel('msg_page_not_found_suggestion').'</div></li>
+			</ul>';
 					
 			header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
 					
-			Response::stop(function() use($msg) {
+			Response::stop(function() use($str_msg) {
 				
-					$page = new ExitPage($msg, '404', '404');
+					$page = new ExitPage($str_msg, '404', '404');
 					
 					return $page->getPage();
-				}, (object)['msg' => $msg, 'msg_type' => 'alert']
+				}, (object)['msg' => $str_msg, 'msg_type' => 'alert']
 			);
 		} else {
 			
-			Response::location($url);
+			Response::location($str_url);
 		}
 		
 		exit;

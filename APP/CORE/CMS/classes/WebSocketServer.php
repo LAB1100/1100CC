@@ -412,13 +412,19 @@ abstract class WebSocketServer {
 			$str_response = 'HTTP/1.1 400 Bad Request';
 		}
 		
-		preg_match('/webservice_user_id=([^;]*)/i', $arr_headers['cookie'], $match);
-		$webservice_user_id = $match[1];
-		preg_match('/webservice_passkey=([^;]*)/i', $arr_headers['cookie'], $match);
-		$webservice_passkey = $match[1];
-		$pass = $user->checkPasskey($webservice_user_id, $webservice_passkey);
+		$do_pass = false;
+		
+		if (isset($arr_headers['cookie'])) {
 			
-		if (!$pass) {
+			preg_match('/webservice_user_id=([^;]*)/i', $arr_headers['cookie'], $arr_match);
+			$webservice_user_id = $arr_match[1];
+			preg_match('/webservice_passkey=([^;]*)/i', $arr_headers['cookie'], $arr_match);
+			$webservice_passkey = $arr_match[1];
+			
+			$do_pass = $user->checkPasskey($webservice_user_id, $webservice_passkey);
+		}
+			
+		if (!$do_pass) {
 			$str_response = 'HTTP/1.1 403 Forbidden';
 		}
 

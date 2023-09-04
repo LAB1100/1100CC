@@ -88,7 +88,7 @@ class login extends base_module {
 			$this->validate = ['password' => 'required', 'password_confirm' => ['equalTo' => '#password']];
 		} else if ($method == 'recover') {
 		
-			Labels::setVariable('url_login', SiteStartVars::getPageUrl());
+			Labels::setVariable('url_login', SiteStartVars::getPageURL());
 			
 			$return .= '<h1>'.getLabel('lbl_login_recover').'</h1>
 			
@@ -117,10 +117,10 @@ class login extends base_module {
 				$str_path = SiteStartVars::getBasePath();
 			}
 			
-			$arr_request_vars = SiteStartVars::getModVariables(0);
+			$arr_request_vars = SiteStartVars::getModuleVariables(0);
 			
 			$str_input_error = ($arr_request_vars[0] == 'LOGIN_INCORRECT' ? 'input-error' : '');
-			Labels::setVariable('url_recover_password', SiteStartVars::getModUrl($this->mod_id).'recover/');
+			Labels::setVariable('url_recover_password', SiteStartVars::getModuleURL($this->mod_id).'recover/');
 				
 			$return .= '<h1>'.getLabel('lbl_login').'</h1>
 			
@@ -180,7 +180,7 @@ class login extends base_module {
 			
 			user_management::updateUser($user_id, true, false, $_POST['password']);
 						
-			$url = SiteStartVars::getModUrl($this->mod_id, false, 0, false);
+			$url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false);
 			$url .= ($method == 'welcome' ? 'welcome_confirmed/' : 'recover_confirmed/');
 			
 			Response::location($url);
@@ -192,14 +192,14 @@ class login extends base_module {
 				$dir = directories::getDirectories($this->arr_variables);
 				$user_group_id = $dir['user_group_id'];
 			} else {
-				$user_group_id = SiteStartVars::$dir['user_group_id'];
+				$user_group_id = SiteStartVars::getDirectory('user_group_id');
 			}
 		
 			if (!$_POST['recover_user'] || !$user_group_id) {
 				error(getLabel('msg_missing_information'));
 			}
 			
-			$url = SiteStartVars::getModUrl($this->mod_id, false, 0, false).'recover_confirm/';
+			$url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false).'recover_confirm/';
 						
 			user_management::recoverUser($_POST['recover_user'], $user_group_id, $url);
 			

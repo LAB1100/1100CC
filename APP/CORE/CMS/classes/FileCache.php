@@ -147,11 +147,16 @@ class FileCache {
 	}
 	
 	private function cacheImage() {
-	
+		
+		$arr_settings = Settings::get('cache_image');
+		$str_file_type = ($arr_settings['type'] ?? 'png');
+		$mode_quality = ($arr_settings['quality'] ?? ImageResize::IMAGE_QUALITY_NORMAL);
+
 		ob_start();
 		
 		$resize = new ImageResize();
-		$resize = $resize->resize($this->path_source, 'png', $this->arr_options[0], $this->arr_options[1]);
+		$resize->setOutput($mode_quality);
+		$resize = $resize->resize($this->path_source, $str_file_type, $this->arr_options[0], $this->arr_options[1]);
 		
 		if (!$resize) {
 			echo file_get_contents($this->path_source);
@@ -161,7 +166,7 @@ class FileCache {
 		
 		if (!empty($this->arr_options[2])) {
 			
-			$temp_path = tempnam(Settings::get('path_temporary'), '1100CC');
+			$temp_path = getPathTemporary();
 			$file = fopen($temp_path, 'w');
 			fwrite($file, $this->data);
 			fclose($file);
@@ -264,12 +269,12 @@ class FileCache {
 		}
 	}
 	
-	public function getStringOptions() {
+	public function getOptionsString() {
 		
 		return $this->str_options;
 	}
 	
-	public function getStringUrl() {
+	public function getURLString() {
 		
 		return $this->str_url;
 	}

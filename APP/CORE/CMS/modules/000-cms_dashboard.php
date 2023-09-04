@@ -18,7 +18,7 @@ class cms_dashboard extends base_module {
 		
 	public function contents() {
 		
-		$arr_modules = SiteStartVars::$arr_modules;
+		$arr_modules = SiteStartVars::getModules();
 		$arr_module_widget_properties = self::getModuleWidgetProperties($arr_modules);
 		$arr_widgets_user = self::getWidgetsUser($_SESSION['USER_ID']);
 

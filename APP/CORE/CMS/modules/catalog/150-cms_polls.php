@@ -59,8 +59,8 @@ class cms_polls extends base_module {
 					<tbody>';
 						while ($arr_row = $res->fetchAssoc()) {
 							
-							$arr_pages = explode(',', $arr_row['pages']);
-							$arr_directories = array_filter(explode(',', $arr_row['directories']));
+							$arr_pages = str2Array($arr_row['pages'], ',');
+							$arr_directories = array_filter(str2Array($arr_row['directories'], ','));
 							$arr_paths = [];
 							
 							for ($i = 0; $i < count($arr_directories); $i++) {
@@ -192,5 +192,10 @@ class cms_polls extends base_module {
 		}		
 
 		return ((int)$poll_id ? current($arr) : $arr);
+	}
+	
+	public static function findMainPoll($poll_id) {
+
+		return pages::getClosestModule('poll', 0, 0, 0, $poll_id);
 	}
 }

@@ -125,7 +125,7 @@ class Labels {
 				return $str;
 			};
 			
-			//$str_text = preg_replace_callback('/%5B([LDC])%5D%28((?:[A-Za-z0-9_\-]|%20)+)%29/', $func_parse, $text); // Url encoded tags
+			//$str_text = preg_replace_callback('/%5B([LDC])%5D%28((?:[A-Za-z0-9_\-]|%20)+)%29/', $func_parse, $text); // URL encoded tags
 			
 			$str_text = preg_replace_callback('/\[([LDC])\]\(([A-Za-z0-9_\- ]+)\)/', $func_parse, $str_text);
 		}
@@ -186,7 +186,7 @@ class Labels {
 	
 	public static function getVariable($var) {
 		
-		return self::$arr_vars[$var];
+		return (self::$arr_vars[$var] ?? null);
 	}
 			
 	public static function parseTextVariables($str, $print_labels = false, $print_variables = true) {
@@ -233,7 +233,7 @@ class Labels {
 			return $str;
 		};
 	
-		$str = preg_replace_callback('/%5B([A-Z])%5D%5B((?:[A-Za-z0-9_\-]|%20)+)%5D/', $func_parse, $str); // Url encoded tags
+		$str = preg_replace_callback('/%5B([A-Z])%5D%5B((?:[A-Za-z0-9_\-]|%20)+)%5D/', $func_parse, $str); // URL encoded tags
 		
 		$str = preg_replace_callback('/\[([A-Z])\]\[([A-Za-z0-9_\- ]+)\]/', $func_parse, $str); // [X][VALUE]
 		
@@ -288,7 +288,7 @@ class Labels {
 			$str = preg_replace('/<p>\s*(\[\[[A-Z]+\]\])\s*<\/p>/', '$1', $str);
 		}
 				
-		$str_language = strtoupper(SiteStartVars::$language);
+		$str_language = strtoupper(SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE));
 		
 		$num_pos_start = strpos($str, '[['.$str_language.']]', $num_pos);
 		
@@ -429,16 +429,20 @@ class Labels {
 					
 					if (Response::getFormat() & Response::RENDER_TEXT) {
 						
-						$str = '1100CC '.trim(file_get_contents($path_core));
-						$str .= PHP_EOL.SITE_NAME.(isPath($path_site) ? ' '.trim(file_get_contents($path_site)) : '');
+						$str = '1100CC '.strip_tags(readText($path_core));
+						$str .= PHP_EOL.SITE_NAME.(isPath($path_site) ? ' '.strip_tags(readText($path_site)) : '');
 					} else {
 						
-						$str = '<span>1100CC '.trim(file_get_contents($path_core)).'</span>';
-						$str .= '<span>'.SITE_NAME.(isPath($path_site) ? ' '.trim(file_get_contents($path_site)) : '').'</span>';
+						$str = '<span>1100CC '.readText($path_core).'</span>';
+						$str .= '<span>'.SITE_NAME.(isPath($path_site) ? ' '.readText($path_site) : '').'</span>';
 					}
 				} else {
 					
-					$str = trim((isPath($path_site) ? file_get_contents($path_site) : file_get_contents($path_core)));
+					$str = (isPath($path_site) ? readText($path_site) : readText($path_core));
+					
+					if (Response::getFormat() & Response::RENDER_TEXT) {
+						$str = strip_tags($str);
+					}
 				}
 				
 				break;
@@ -449,11 +453,11 @@ class Labels {
 			
 				if (IS_CMS) {
 					
-					$str = trim(file_get_contents($path_core));
-					$str .= (isPath($path_site) ? PHP_EOL.PHP_EOL.trim(file_get_contents($path_site)) : '');
+					$str = readText($path_core);
+					$str .= (isPath($path_site) ? PHP_EOL.PHP_EOL.readText($path_site) : '');
 				} else {
 					
-					$str = trim((isPath($path_site) ? file_get_contents($path_site) : file_get_contents($path_core)));
+					$str = (isPath($path_site) ? readText($path_site) : readText($path_core));
 				}
 				
 				break;
@@ -462,12 +466,12 @@ class Labels {
 				$path_core = DIR_ROOT_CORE.DIR_CMS.DIR_INFO.'version.txt';
 				$path_site = DIR_ROOT_SITE.DIR_CMS.DIR_INFO.'version.txt';
 				
-				$str = '1100CC '.trim(file_get_contents($path_core));
-				$str .= (isPath($path_site) ? ' / '.SITE_NAME.' '.trim(file_get_contents($path_site)) : '');
+				$str = '1100CC '.strip_tags(readText($path_core));
+				$str .= (isPath($path_site) ? ' / '.SITE_NAME.' '.strip_tags(readText($path_site)) : '');
 				
 				break;
 			case 'language':	
-				$str = SiteStartVars::$language;
+				$str = SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE);
 				break;
 			case 'url_site':
 				$str = URL_BASE;

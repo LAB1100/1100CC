@@ -90,15 +90,15 @@ class WebSocketServerUser {
 				AND (date_active IS NULL OR date_active >= (NOW() - ".DBFunctions::interval(static::$timeout_passkey, 'SECOND')."))
 		");
 		
-		$pass = ($res->getRowCount() ? true : false);
+		$is_valid = ($res->getRowCount() ? true : false);
 		
-		if ($pass) {
+		if ($is_valid) {
 			
 			$this->passkey = $key;
 			$this->passkey_user_id = $user_id;
 		}
 		
-		return $pass;
+		return $is_valid;
 	}
 	
 	public static function getPasskey($user_id) {

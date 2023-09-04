@@ -50,15 +50,14 @@ class intf_apis extends apis {
 		if (!$arr_hosts) {
 			
 			Labels::setVariable('name', getLabel('lbl_server_hosts'));
-			$msg = getLabel('msg_no', 'L', true);
 			
-			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+			$return = '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 		} else {
 			
 			$arr_apis = self::getAPIs();
 			$arr_apis_hosts = self::getAPIHosts();
 
-			$return .= '<form id="f:intf_apis:host_api-0">
+			$return = '<form id="f:intf_apis:host_api-0">
 				<table class="list">
 					<thead>
 						<tr>
@@ -89,12 +88,11 @@ class intf_apis extends apis {
 		if (!$arr_apis) {
 			
 			Labels::setVariable('name', getLabel('lbl_apis'));
-			$msg = getLabel('msg_no', 'L', true);
 			
-			$return .= '<section class="info">'.Labels::printLabels(Labels::parseTextVariables($msg)).'</section>';
+			$return = '<section class="info">'.getLabel('msg_no', 'L', true).'</section>';
 		} else {
 		
-			$return .= '<table class="list">
+			$return = '<table class="list">
 				<thead>
 					<tr>
 						<th class="max"><span>'.getLabel('lbl_name').'</span></th>

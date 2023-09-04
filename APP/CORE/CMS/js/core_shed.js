@@ -82,9 +82,6 @@ document.addEventListener("DOMContentLoaded", function(e) {
 			}
 		}, 300);
 	});
-
-	new DocumentEmbedded();
-	new DocumentEmbeddingListener();
 });
 
 const EOL_1100CC = "\n";
@@ -96,6 +93,8 @@ function getElement(elm) {
 		return elm;
 	} else if (elm instanceof Object) {
 		return elm[0];
+	} else if (typeof elm.ownerDocument !== 'undefined' && elm instanceof elm.ownerDocument.defaultView.Element) { // Owned by an other document/iframe
+		return elm;
 	}
 	
 	return false;
@@ -369,12 +368,11 @@ String.prototype.hashCode = function() {
 
 function serializeArrayByName(elms) {
 	
-	if (elms[0] == undefined) {
+	if (elms instanceof Element) {
 		var elms = [elms];
 	}
 	
-	var arr_output = null;
-	var elms_name = [];
+	const elms_name = [];
 	
 	for (let count_i = 0, len_i = elms.length; count_i < len_i; count_i++) {
 		
@@ -395,169 +393,179 @@ function serializeArrayByName(elms) {
 				elms_name.push(elms_found[count_j]);
 			}
 		}
+	}
+	
+	if (!elms_name.length) {
+		return null;
+	}
 		
-		arr_output = {};
-		const arr_count_key = {};
+	const arr_output = {};
+	const arr_count_key = {};
 
-		for (let count_j = 0, len_j = elms_name.length; count_j < len_j; count_j++) {
-			
-			const elm_name = elms_name[count_j];
-			
-			if (!elm_name.name || elm_name.disabled || ((elm_name.type == 'checkbox' || elm_name.type == 'radio') && !elm_name.checked) || elm_name.type == 'button' || elm_name.type == 'submit') { // Only keep relevant input elements
-				continue;
-			}
+	for (let count_j = 0, len_j = elms_name.length; count_j < len_j; count_j++) {
+		
+		const elm_name = elms_name[count_j];
+		
+		if (!elm_name.name || elm_name.disabled || ((elm_name.type == 'checkbox' || elm_name.type == 'radio') && !elm_name.checked) || elm_name.type == 'button' || elm_name.type == 'submit') { // Only keep relevant input elements
+			continue;
+		}
 
-			// Split up the names into array tiers
-			const arr_parts_all = elm_name.name.split(/\]|\[/);
+		// Split up the names into array tiers
+		const arr_parts_all = elm_name.name.split(/\]|\[/);
+		
+		// We need to remove any blank parts returned by the regex.
+		const arr_parts = [];
+		
+		for (let count_k = 0, len_k = arr_parts_all.length; count_k < len_k; count_k++) {
 			
-			// We need to remove any blank parts returned by the regex.
-			const arr_parts = [];
+			const key = arr_parts_all[count_k];
 			
-			for (let count_k = 0, len_k = arr_parts_all.length; count_k < len_k; count_k++) {
+			if (key != '' || (key == '' && (arr_parts_all[count_k-1] == '' || count_k-1 == 0) && arr_parts_all[count_k+1] == '')) { // Preserve key[]... and ...[key][][key]
+				arr_parts.push(key);
+			}			
+		}
+
+		// Start reference out at the root of the output object
+		let arr_reference = arr_output;
+
+		for (let count_k = 0, len_k = arr_parts.length; count_k < len_k; count_k++) {
+			
+			let key = arr_parts[count_k]; // Set key for ease of use.
+			let value = null;
+			const is_value = (count_k == (len_k-1)); // If we're at the last part, the value comes from the element.
+
+			if (is_value) {
 				
-				const key = arr_parts_all[count_k];
-				
-				if (key != '' || (key == '' && (arr_parts_all[count_k-1] == '' || count_k-1 == 0) && arr_parts_all[count_k+1] == '')) { // Preserve key[]... and ...[key][][key]
-					arr_parts.push(key);
-				}			
-			}
-
-			// Start reference out at the root of the output object
-			let arr_reference = arr_output;
-
-			for (let count_k = 0, len_k = arr_parts.length; count_k < len_k; count_k++) {
-				
-				let key = arr_parts[count_k]; // Set key for ease of use.
-				let value = null;
-				const is_value = (count_k == (len_k-1)); // If we're at the last part, the value comes from the element.
-
-				if (is_value) {
+				if (elm_name.nodeName == 'SELECT') {
 					
-					if (elm_name.nodeName == 'SELECT') {
+					const num_index = elm_name.selectedIndex;
+					const is_array = (elm_name.type == 'select-multiple');
+					value = (is_array ? [] : '');
+					
+					if (num_index >= 0) {
 						
-						const num_index = elm_name.selectedIndex;
-						const is_array = (elm_name.type == 'select-multiple');
-						value = (is_array ? [] : '');
-						
-						if (num_index >= 0) {
-							
-							for (let count_l = num_index, len_l = elm_name.options.length; count_l < len_l; count_l++) {
+						for (let count_l = num_index, len_l = elm_name.options.length; count_l < len_l; count_l++) {
 
-								const elm_option = elm_name.options[count_l];
+							const elm_option = elm_name.options[count_l];
+							
+							if (elm_option.selected && !elm_option.disabled && (elm_option.parentNode.nodeName != 'OPTGROUP' || !elm_option.parentNode.disabled)) {
 								
-								if (elm_option.selected && !elm_option.disabled && (elm_option.parentNode.nodeName != 'OPTGROUP' || !elm_option.parentNode.disabled)) {
-									
-									if (is_array) {
-										value.push(elm_option.value);
-									} else {
-										value = elm_option.value;
-										break;
-									}
+								if (is_array) {
+									value.push(elm_option.value);
+								} else {
+									value = elm_option.value;
+									break;
 								}
 							}
 						}
-					} else {
-						
-						value = elm_name.value;
 					}
 				} else {
 					
-					value = {};
+					value = elm_name.value;
 				}
-
-				if (!key) { // key[]... and ...[key][][key]
-					
-					const identifier = arr_parts.slice(0, count_k).join('|'); // Also account for [yada][ya][da][][yada][hmm]
-					
-					if (arr_count_key[identifier] >= 0) {
-						arr_count_key[identifier]++;
-					} else {
-						arr_count_key[identifier] = 0;
-					}
-					
-					key = arr_count_key[identifier];
-				}
-
-				// Extend output with our temp object at the depth specified by reference.
-				if (!arr_reference[key] || is_value) {
-					arr_reference[key] = value;
-				}
-
-				// Reassign reference to point to this tier, so the next loop can extend it.
-				arr_reference = arr_reference[key];
+			} else {
+				
+				value = {};
 			}
+
+			if (!key) { // key[]... and ...[key][][key]
+				
+				const identifier = arr_parts.slice(0, count_k).join('|'); // Also account for [yada][ya][da][][yada][hmm]
+				
+				if (arr_count_key[identifier] >= 0) {
+					arr_count_key[identifier]++;
+				} else {
+					arr_count_key[identifier] = 0;
+				}
+				
+				key = arr_count_key[identifier];
+			}
+
+			// Extend output with our temp object at the depth specified by reference.
+			if (!arr_reference[key] || is_value) {
+				arr_reference[key] = value;
+			}
+
+			// Reassign reference to point to this tier, so the next loop can extend it.
+			arr_reference = arr_reference[key];
 		}
 	}
 
 	return arr_output;
 }
 
-var counter_array_names = 0;
+var num_iterate_name_groups = 0;
 
-function replaceArrayInName(elms, num_limit) {
+function replaceGroupIteratorInName(elms, num_limit) {
 	
-	if (typeof elms[0] == undefined) {
+	if (elms instanceof Element) {
 		var elms = [elms];
 	}
+	
+	var elms_name = [];
 
-	var codes = [];
+	for (let count_i = 0, len_i = elms.length; count_i < len_i; count_i++) {
+		
+		const elm = elms[count_i];
 
-	for (var count_i = 0, len_i = elms.length; count_i < len_i; count_i++) {
-		
-		var elm = elms[count_i];
-		
-		elms_name = [];
-		
 		if (elm.matches('[name]')) {
 			elms_name.push(elm);
 		}
 		
-		var elms_found = elm.querySelectorAll('[name]');
+		const elms_found = elm.querySelectorAll('[name]');
 		
-		for (var count_j = 0, len_j = elms_found.length; count_j < len_j; count_j++) {
+		for (let count_j = 0, len_j = elms_found.length; count_j < len_j; count_j++) {
 			elms_name.push(elms_found[count_j]);
 		}
+	}
+	
+	if (!elms_name.length) {
+		return;
+	}
+	
+	const regex_iterate = /\[iterate_(?:\d+_)?([^\]]*)\]/g;
+	const arr_codes = [];
+	
+	for (let count_j = 0, len_j = elms_name.length; count_j < len_j; count_j++) {
+	
+		const elm_name = elms_name[count_j];
+
+		let str_name = elm_name.getAttribute('name');
 		
-		for (var count_j = 0, len_j = elms_name.length; count_j < len_j; count_j++) {
+		let num_found = str_name.match(regex_iterate);
+		num_found = (num_found ? num_found.length : 0);
 		
-			var elm_name = elms_name[count_j];
+		if (!num_found) {
+			continue;
+		}
+		
+		if (num_found && /\[\]$/.test(str_name)) { // Account for a final []
+			num_found++;
+		}
 
-			var name = elm_name.getAttribute('name');
-			
-			var num_found = name.match(/\[array_([^\]]*)\]/g);
-			num_found = (num_found ? num_found.length : 0);
-			
-			if (!num_found) {
-				return;
-			}
-			
-			if (num_found && /\[\]$/.test(name)) { // Account for a final []
-				num_found++;
-			}
+		let count = 0;
+		
+		str_name = str_name.replace(regex_iterate, function(match, m1) {
 
-			var count = 0;
-			
-			name = name.replace(/\[array_([^\]]*)\]/g, function(match, m1) {
-
-				if (num_limit && num_limit < (num_found - count)) {
-					
-					count++;
-					return match;
-				}
-
-				if (!codes[m1]) {
-					counter_array_names++;
-					var code = 'js_'+counter_array_names;
-					codes[m1] = code;
-				}
+			if (num_limit && num_limit < (num_found - count)) {
 				
 				count++;
-				return '[array_'+codes[m1]+']';
-			});
+				return match;
+			}
 
-			elm_name.setAttribute('name', name);
-		}
-	};
+			if (!arr_codes[m1]) {
+				
+				num_iterate_name_groups++;
+				const str_code = num_iterate_name_groups.toString()+'_'+m1;
+				arr_codes[m1] = str_code;
+			}
+			
+			count++;
+			return '[iterate_'+arr_codes[m1]+']';
+		});
+
+		elm_name.setAttribute('name', str_name);
+	}
 }
 
 function arrValueByKeyPath(str_path, arr, cur_path) {
@@ -600,7 +608,7 @@ function str2TypedValue(str) {
 
 // GENERAL DOM
 
-$(document).on('documentloaded ajaxloaded', function(e) {
+const func_content_loaded = function(e) {
 
 	if (!getElement(e.detail.elm)) {
 		return;
@@ -617,13 +625,21 @@ $(document).on('documentloaded ajaxloaded', function(e) {
 		
 		FORMMANAGING.createManagers(elm);
 		
+		runElementSelectorFunction(elm, 'select', function(elm_found) {
+			new DropDown(elm_found, {
+				state_empty: elm_found.dataset.state_empty
+			});
+		});
+		
 		runElementSelectorFunction(elm, 'ul.sorter', function(elm_found) {
 			
 			const elm_menu = $(elm_found).closest('li').prev('li').find('menu.sorter');
 			
 			new Sorter(elm_found, {
 				prepend: elm_found.classList.contains('reverse'),
-				auto_add: elm_found.dataset.sorter_auto_add,
+				auto_add: elm_found.dataset.auto_add,
+				auto_clean: elm_found.dataset.auto_clean,
+				limit: elm_found.dataset.limit,
 				elm_menu: (elm_menu.length ? elm_menu[0] : false)
 			});
 		});
@@ -701,7 +717,9 @@ $(document).on('documentloaded ajaxloaded', function(e) {
 		
 		FORMMANAGING.lockManagers(elm);
 	}
-});
+};
+document.addEventListener('documentloaded', func_content_loaded);
+document.addEventListener('ajaxloaded', func_content_loaded);
 
 $(document).on('click', '.hide-edit.hide + *', function() {
 	
@@ -711,9 +729,7 @@ $(document).on('click', '.hide-edit.hide + *', function() {
 	elm_target.children().insertAfter(elm_target);
 	elm_target.remove();
 	cur.remove();
-});
-
-$(document).on('click', 'input[type=checkbox].multi.all', function() {
+}).on('click', 'input[type=checkbox].multi.all', function() {
 	
 	var cur = $(this);
 	var target = cur.closest('table').find('td:nth-child('+(cur.parent().index()+1)+')');
@@ -908,9 +924,9 @@ function Scripter() {
 			
 			if (!event_class) {
 				if (data) {
-					var event_class = CustomEvent;
+					event_class = CustomEvent;
 				} else {
-					var event_class = Event;
+					event_class = Event;
 				}
 			}
 		}
@@ -924,7 +940,7 @@ function Scripter() {
 			obj_event.detail = data;
 		}
 
-		var event = new event_class(type, obj_event);
+		const event = new event_class(type, obj_event);
 		
 		elm.dispatchEvent(event);
 		
@@ -1519,56 +1535,66 @@ var KEYS = new Keys();
 
 function Location() {
 	
-	var obj = this;
+	var SELF = this;
 		
 	var str_host = window.location.protocol+'//'+window.location.host;
 	
 	var str_location = window.location.pathname+window.location.search; // Only relative parth of the location and no client-side hash
-	var str_location_canonical = false; // Holds the real 1100CC location path, when the location path itself could be a shortcut '.s'
+	var str_location_canonical = null; // Holds the real 1100CC location path, when the location path itself could be a shortcut '.s'
 	
 	var str_location_active = str_location;
 	var str_location_canonical_active = false;
 	
 	var has_changed = false;
+	var str_location_target = null;
 	
-	this.getUrl = function(purpose) {
+	this.getURL = function(mode_purpose) {
 	
-		var purpose = (purpose ? purpose : false);
+		var mode_purpose = (mode_purpose ? mode_purpose : false);
+		let str_url = '';
 		
 		if (IS_CMS) {
 			
-			if (purpose == 'command') {
-				var url = '/commands';
-			}		
+			if (mode_purpose == 'command') {
+				str_url = '/commands';
+			} else {
+				str_url = str_location_active;
+			}
 		} else {
 			
-			var arr_path = (str_location_canonical_active ? str_location_canonical_active : str_location_active).split('/');
-			var arr = [];
-			var page_name = false;
-			
-			for (var i = 0; i < arr_path.length; i++) {
+			if (mode_purpose == 'client') {
 				
-				var page = arr_path[i].slice(-2);
+				str_url = str_location_active;
+			} else {
 				
-				if (page == '.p' || page == '.l') { // Request originates from page
-					page_name = arr_path[i].slice(0, -2);
-					arr.push(page_name+(purpose == 'command' ? '.c' : '.p'));
-				} else if (i == arr_path.length-1 && arr_path[i] && !page_name) { // Request originates from page (at url end)
-					page_name = arr_path[i];
-					arr.push(page_name+(purpose == 'command' ? '.c' : '.p'));
-				} else {
-					arr.push(arr_path[i]);
+				let arr_path = (str_location_canonical_active ? str_location_canonical_active : str_location_active).split('/');
+				let arr = [];
+				let str_page_name = false;
+				
+				for (var i = 0; i < arr_path.length; i++) {
+					
+					var str_page = arr_path[i].slice(-2);
+					
+					if (str_page == '.p' || str_page == '.l') { // Request originates from page
+						str_page_name = arr_path[i].slice(0, -2);
+						arr.push(str_page_name+(mode_purpose == 'command' ? '.c' : '.p'));
+					} else if (i == arr_path.length-1 && arr_path[i] && !str_page_name) { // Request originates from page (at url end)
+						str_page_name = arr_path[i];
+						arr.push(str_page_name+(mode_purpose == 'command' ? '.c' : '.p'));
+					} else {
+						arr.push(arr_path[i]);
+					}
 				}
-			}
-			
-			var url = arr.join('/');
-			
-			if (purpose == 'command' && !page_name) { // Request originates from directory
-				url = url+'commands.c';
+				
+				str_url = arr.join('/');
+				
+				if (mode_purpose == 'command' && !str_page_name) { // Request originates from directory
+					str_url = str_url+'commands.c';
+				}
 			}
 		}
 
-		return url;
+		return str_url;
 	};
 	
 	this.getHost = function() {
@@ -1576,7 +1602,7 @@ function Location() {
 		return str_host;
 	};
 	
-	this.getOriginalUrl = function(str_url) { // Parse a chached URL and return the original URL
+	this.getOriginalURL = function(str_url) { // Parse a chached URL and return the original URL
 	
 		var match = str_url.match(/(.*)\/cache\/(?:[^\/]*\/){2}(.*)/i); // Match host and src
 		
@@ -1589,7 +1615,7 @@ function Location() {
 	
 	this.reload = function(value, timeout) {
 		
-		obj.unlock(document.body);
+		SELF.unlock(document.body);
 		
 		var elm_disable = document.querySelectorAll('input, select, textarea');
 
@@ -1600,10 +1626,12 @@ function Location() {
 		has_changed = true;
 		
 		var func = function() {
-				
+			
 			if (value) {
+				str_location_target = value;
 				window.location.replace(value);
 			} else {
+				str_location_target = window.location.href;
 				window.location.reload(false);
 			}
 		}
@@ -1615,39 +1643,74 @@ function Location() {
 		}
 	};
 	
-	this.push = function(value, value_canonical, persist) {
+	this.push = function(value, value_canonical, do_persist) {
 		
-		if (value != str_location_active) {
-						
-			window.history.pushState('', '', value);
-			
-			str_location_active = value;
-			str_location_canonical_active = (value_canonical && value_canonical != value ? value_canonical : false);
-			
-			if (persist) {
-				str_location = str_location_active;
-				str_location_canonical = str_location_canonical_active;
-			}
+		const is_new = (value != str_location_active);
+
+		str_location_active = value;
+		str_location_canonical_active = (value_canonical && value_canonical != value ? value_canonical : false);
+		
+		if (do_persist && (is_new || str_location_canonical === null)) {
+			str_location = str_location_active;
+			str_location_canonical = str_location_canonical_active;
 		}
+		
+		if (!is_new) {
+			return;
+		}
+		
+		window.history.pushState('', '', str_location_active);
+		func_trigger_location(str_location_active, str_location_canonical_active, false);
 	};
 	
-	this.replace = function(value, value_canonical, persist) {
+	this.replace = function(value, value_canonical, do_persist) {
 		
-		if (value != str_location_active) {
+		const is_new = (value != str_location_active);
+
+		str_location_active = value;
+		str_location_canonical_active = (value_canonical && value_canonical != value ? value_canonical : false);
+		
+		if (do_persist && (is_new || str_location_canonical === null)) {
+			str_location = str_location_active;
+			str_location_canonical = str_location_canonical_active;
+		}
+
+		if (!is_new) {
+			return;
+		}
+		
+		const str_location_client = str_location_active + window.location.hash; // Include/retain a possible client-side hash
+		
+		window.history.replaceState('', '', str_location_client);
+		func_trigger_location(str_location_active, str_location_canonical_active, true);
+	};
+	
+	var func_trigger_location = function(str_client, str_canonical, do_replace) {
+		
+		SCRIPTER.triggerEvent(window, 'location', {client: str_client, canonical: str_canonical, replace: do_replace});
+	};
+	
+	window.addEventListener('unload', function() {
+		
+		let str_location_client = str_location_target;
+		
+		if (!str_location_target) {
 			
-			const str_location_client = value + window.location.hash; // Include/retain a possible client-side hash
-			
-			window.history.replaceState('', '', str_location_client);
-			
-			str_location_active = value;
-			str_location_canonical_active = (value_canonical && value_canonical != value ? value_canonical : false);
-			
-			if (persist) {
-				str_location = str_location_active;
-				str_location_canonical = str_location_canonical_active;
+			if (document.activeElement && document.activeElement.href) {
+				str_location_client = document.activeElement.href;
+			} else {
+				str_location_client = window.location.href;
 			}
 		}
-	};
+		
+		str_location_client = SELF.checkLocationDestination(str_location_client);
+		
+		if (str_location_client === true) { // Going external
+			str_location_client = '';
+		}
+		
+		func_trigger_location(str_location_client, false, true);
+	});
 	
 	this.open = function(value) {
 		
@@ -1659,28 +1722,56 @@ function Location() {
 		return has_changed;
 	};
 	
+	this.checkLocationDestination = function(str_url, elm_source) {
+				
+		if (!str_url || str_url.charAt(0) == '#' || (elm_source && elm_source.target == '_blank')) { // Not navigating away
+			return false;
+		}
+		
+		const arr_url = new URL(str_url, window.location.origin);
+		
+		if (arr_url.host != window.location.host) { // Going external
+			return true;
+		}
+		
+		// Remain local
+		 
+		str_location_client = arr_url.pathname+arr_url.search;
+		
+		if (str_location_client == '') {
+			str_location_client = '/';
+		}
+		
+		return str_location_client;
+	};
+	
 	var elm_active = false;
 	
-	this.attach = function(elm, value, focus) {
+	this.attach = function(elm, arr_location_attach, do_focus) {
 		
-		if (value) {
-			elm.dataset.location = value;
+		if (arr_location_attach) {
+			
+			const str_location_attach = (typeof arr_location_attach == 'object' ? JSON.stringify(arr_location_attach) : arr_location_attach);
+			
+			elm.dataset.location = str_location_attach;
 			elm.setAttribute('tabindex', '0');
-		} else {
+		} else if (arr_location_attach === false) {
+			
 			delete elm.dataset.location;
 			elm.removeAttribute('tabindex');
 		}
 		
-		if (focus) {
+		if (do_focus) {
 			
-			target = (value ? elm : elm.closest('form, [tabindex]'));
+			const elm_target = (arr_location_attach ? elm : elm.closest('form, [tabindex]'));
 			
-			if (target) {
-				if (document.activeElement == target) {
+			if (elm_target) {
+				
+				if (document.activeElement == elm_target) {
 					elm_active = false;
 					func_check();
 				} else {
-					SCRIPTER.triggerEvent(target, 'focus');
+					SCRIPTER.triggerEvent(elm_target, 'focus');
 				}
 			}
 		}
@@ -1690,7 +1781,7 @@ function Location() {
 
 		if (document.activeElement && (document.activeElement !== elm_active)) {
 			
-			var elm_match = document.activeElement;
+			let elm_match = document.activeElement;
 			elm_match = (elm_match.matches('[data-location]') ? elm_match : null) || elm_match.closest('[data-location]');
 
 			if (elm_match) {
@@ -1699,11 +1790,13 @@ function Location() {
 					
 					elm_active = elm_match;
 					
-					obj.push(elm_match.dataset.location);
+					const arr_location = JSON.parse(elm_match.dataset.location);
+					
+					SELF.push(arr_location.real, arr_location.canonical);
 				}
 			} else if (elm_active) {
-					
-				obj.push(str_location, str_location_canonical);
+				
+				SELF.push(str_location, str_location_canonical);
 				elm_active = false;
 			}
 		}
@@ -1719,7 +1812,7 @@ function Location() {
 	
 	var func_locked = function (e) {
 		
-		if (!obj.checkLocked(document.body)) {
+		if (!SELF.checkLocked(document.body)) {
 			return;
 		}
 		
@@ -1742,23 +1835,24 @@ function Location() {
 			return;
 		}
 		
-		const url = elm_target.getAttribute('href');
+		const str_url = elm_target.getAttribute('href');
+		const is_navigating = SELF.checkLocationDestination(str_url, elm_target);
 		
-		if (!url || url.charAt(0) == '#' || elm_target.target == '_blank') {
+		if (!is_navigating) {
 			return;
 		}
 
-		const locked = obj.checkLocked(document.body, function(locked) {
+		const is_locked = SELF.checkLocked(document.body, function(is_locked) {
 			
-			if (locked == null) {
+			if (is_locked == null) {
 				return;
 			}
 			
-			obj.unlock(document.body);
-			obj.reload(url);
+			SELF.unlock(document.body);
+			SELF.reload(str_url);
 		});
 		
-		if (locked) {
+		if (is_locked) {
 			
 			e.preventDefault();
 		}
@@ -2012,7 +2106,7 @@ function Location() {
 			
 			return obj_sorted;
 		};
-				
+		
 		const str_identifier = JSON.stringify(func_sort(serializeArrayByName(elm)));
 		
 		return str_identifier;
@@ -2039,27 +2133,28 @@ function DocumentEmbedded() {
 			
 			if (!is_embedded || e.data.initialise) { // Initialise embedded state
 				
-				if (!is_embedded) {
+				initialiseEmbedded();
 				
-					is_embedded = true;
-					document.body.classList.add('framed');
-					new ResizeSensor(document.body, SELF.resizeEmbedding);
-				}
-				
-				SELF.resizeEmbedding(e.data.initialise);
+				SELF.setEmbeddingSize(e.data.initialise);
 			}
 			
 			if (e.data.embedding !== true) {
-			
-				const num_height_view = e.data.embedding.height;
-
-				document.body.style.setProperty('--view-height', num_height_view+'px');
+				
+				if (e.data.embedding.height != undefined) {
+					
+					useEmbeddingSize(e.data.embedding.height);
+				}
+				
+				if (e.data.embedding.location != undefined) {
+					
+					useEmbeddingLocation(e.data.embedding.location);
+				}
 			}
 		}
 		
 		if (e.data.script === true) {
 
-			const str_script = 'if (typeof DocumentEmbedding != \'function\') { '+DocumentEmbedding.toString()+' new DocumentEmbedding(); }';
+			const str_script = 'if (typeof DocumentEmbedding != \'function\') { var DocumentEmbedding = '+DocumentEmbedding.toString()+'; } new DocumentEmbedding();';
 			
 			window.parent.postMessage({script: str_script}, '*');
 		}
@@ -2070,7 +2165,23 @@ function DocumentEmbedded() {
 		window.parent.postMessage({embedded: true, initialise: true}, '*');
 	};
 	
-	this.resizeEmbedding = function(do_initialise) { // Message size to external/parent document
+	var initialiseEmbedded = function() {
+		
+		if (is_embedded) {
+			return;
+		}
+		
+		is_embedded = true;
+		document.body.classList.add('framed');
+		
+		new ResizeSensor(document.body, SELF.setEmbeddingSize);
+		
+		window.addEventListener('location', function(e) {
+			SELF.setEmbeddingLocation(e.detail.client, e.detail.replace);
+		});
+	};
+	
+	this.setEmbeddingSize = function(do_initialise) { // Message size to external/parent document
 		
 		if (num_height_document == document.body.scrollHeight && !do_initialise) {
 			return;
@@ -2080,9 +2191,28 @@ function DocumentEmbedded() {
 		
 		window.parent.postMessage({embedded: {height: num_height_document}, initialise: do_initialise}, '*');
 	};
+	
+	this.setEmbeddingLocation = function(str_location, do_replace) { // Message location to external/parent document
+				
+		window.parent.postMessage({embedded: {location: {client: str_location, replace: do_replace}}}, '*');
+	};
 
 	requestEmbedding();
+	
+	// Apply returned values
+	
+	var useEmbeddingSize = function(num_height) {
+		
+		const num_height_view = num_height;
+
+		document.body.style.setProperty('--view-height', num_height_view+'px');
+	};
+	
+	var useEmbeddingLocation = function(str_location) {
+
+	};
 }
+var DOCUMENTEMBEDDED = new DocumentEmbedded();
 
 function DocumentEmbedding() {
 	
@@ -2091,8 +2221,8 @@ function DocumentEmbedding() {
 	
 	const SELF = this;
 	
-	var num_height_window = 0;
-	const str_selector_frame = 'iframe.resize';
+	var num_height_window = window.innerHeight;
+	const str_selector_frame = 'iframe.resize, iframe.embed';
 
 	window.addEventListener('message', function(e) { // Get size messages from embedded document
 		
@@ -2115,9 +2245,15 @@ function DocumentEmbedding() {
 				
 				if (e.data.embedded !== true) {
 					
-					const num_height_embedded = (!elm_found.height_default || e.data.embedded.height > elm_found.height_default ? e.data.embedded.height : elm_found.height_default);
-				
-					elm_found.style.height = num_height_embedded+'px';
+					if (e.data.embedded.height != undefined) {
+						
+						useEmbeddedSize(elm_found, e.data.embedded.height);
+					}
+					
+					if (e.data.embedded.location != undefined) {
+						
+						useEmbeddedLocation(elm_found, e.data.embedded.location);
+					}
 				}
 			}
 		}
@@ -2143,14 +2279,25 @@ function DocumentEmbedding() {
 		
 		elm_frame.is_embedded = true; // Embedded document is ready and send the parent's view size 
 		
-		SELF.resizeEmbedded(elm_frame);
+		SELF.setEmbeddedSize(elm_frame);
+		SELF.setEmbeddedLocation(elm_frame);
 	};
 	
-	this.resizeEmbedded = function(elm_frame) {
+	this.setEmbeddedSize = function(elm_frame) {
 		
 		const num_height_view = (!elm_frame.height_default ? num_height_window : elm_frame.height_default);
 				
 		elm_frame.contentWindow.postMessage({embedding: {height: num_height_view}}, '*');
+	};
+	
+	this.setEmbeddedLocation = function(elm_frame, str_location) {
+		
+		if (str_location == undefined) {
+			
+			var str_location = window.location.pathname+window.location.search; // Only relative parth of the location and no client-side hash
+		}
+						
+		elm_frame.contentWindow.postMessage({embedding: {location: str_location}}, '*');
 	};
 	
 	this.requestEmbedded = function(elm_frame) {
@@ -2158,8 +2305,20 @@ function DocumentEmbedding() {
 		elm_frame.contentWindow.postMessage({embedding: true, initialise: true}, '*');
 	};
 	
-	this.resizeEmbeddedAll = function(do_initialise) { // Message size to embedded documents
-		
+	this.requestEmbeddedAll = function() {
+			
+		const elms = document.body.querySelectorAll(str_selector_frame);
+
+		for (let i = 0, len = elms.length; i < len; i++) {
+			
+			const elm_frame = elms[i];
+			
+			SELF.requestEmbedded(elm_frame);
+		}
+	};
+	
+	this.setEmbeddedAllSize = function() { // Message size to embedded documents
+	
 		if (num_height_window == window.innerHeight) {
 			return;
 		}
@@ -2172,19 +2331,60 @@ function DocumentEmbedding() {
 			
 			const elm_frame = elms[i];
 			
-			if (do_initialise) {
+			SELF.setEmbeddedSize(elm_frame);
+		}
+	};
+	
+	this.setEmbeddedAllLocation = function(str_location) { // Message location to embedded documents
 				
-				SELF.requestEmbedded(elm_frame);
-			} else if (elm_frame.is_embedded) {
-				
-				SELF.resizeEmbedded(elm_frame);
-			}
+		const elms = document.body.querySelectorAll(str_selector_frame);
+
+		for (let i = 0, len = elms.length; i < len; i++) {
+			
+			const elm_frame = elms[i];
+			
+			SELF.setEmbeddedLocation(elm_frame, str_location);
 		}
 	};
 
-	SELF.resizeEmbeddedAll(true);
+	SELF.requestEmbeddedAll();
 	
-	window.addEventListener('resize', SELF.resizeEmbeddedAll);
+	window.addEventListener('resize', function(e) {
+		SELF.setEmbeddedAllSize();
+	});
+	window.addEventListener('location', function(e) {
+		SELF.setEmbeddedAllLocation(e.detail.client);
+	});
+	
+	// Apply returned values
+	
+	var useEmbeddedSize = function(elm_frame, num_height) {
+	
+		const num_height_embedded = (!elm_frame.height_default || num_height > elm_frame.height_default ? num_height : elm_frame.height_default);
+				
+		elm_frame.style.height = num_height_embedded+'px';
+	};
+	
+	var useEmbeddedLocation = function(elm_frame, arr_location) {
+		
+		if (!DOCUMENTEMBEDDINGLISTENER.checkLocation) {
+			return;
+		}
+		
+		const do_location = DOCUMENTEMBEDDINGLISTENER.checkLocation(arr_location, elm_frame);
+		
+		if (!do_location) {
+			return;
+		}
+		
+		const str_location = arr_location.client;
+		
+		if (arr_location.replace) {
+			window.history.replaceState('', '', str_location);
+		} else {
+			window.history.pushState('', '', str_location);
+		}
+	};
 }
 
 function DocumentEmbeddingListener() {
@@ -2205,11 +2405,42 @@ function DocumentEmbeddingListener() {
 			}
 			
 			this.removeEventListener('message', handler);
-			eval(e.data.script);
+			eval?.('"use strict"; '+e.data.script); // Use global scope, but apply variables in contained scope.
 		}, false);
 		
 	}, false);
+	
+	this.checkLocationEmbed = function(arr_location, elm_frame) { // Default solution, override checkLocation() for custom procedures
+		
+		let str_location = LOCATION.getURL();
+		var regex_embed = new RegExp('(/\\d+\.m)?/embed.v/([^/]*)');
+		
+		if (arr_location.client && arr_location.client != '/') {
+			
+			let str_client = arr_location.client.replace(new RegExp('^/+'), ''); // Trim left '/'
+			str_client = str_client.replaceAll('/', '|'); // Replace '/' with '|', the safe path separators
+			
+			if (regex_embed.test(str_location)) {
+				str_location = str_location.replace(regex_embed, '$1/embed.v/'+str_client);
+			} else {
+				str_location = str_location.replace(new RegExp('/+$'), ''); // Trim right '/'
+				str_location = str_location+'/0.m/embed.v/'+str_client;
+			}
+		} else {
+			
+			if (regex_embed.test(str_location)) {
+				str_location = str_location.replace(regex_embed, '');
+			}
+		}
+		
+		arr_location.client = str_location;
+		
+		return arr_location;
+	};
+	
+	this.checkLocation = this.checkLocationEmbed;
 }
+var DOCUMENTEMBEDDINGLISTENER = new DocumentEmbeddingListener();
 
 function Assets() {
 	
@@ -2601,12 +2832,13 @@ function Assets() {
 			callback(obj_labels[identifier]);
 		} else {
 		
-			FEEDBACK.request(elm, elm, $.ajax({
+			FEEDBACK.request(elm, elm, {
 				type: 'POST',
-				contentType: 'application/json; charset=utf-8',
+				contentType: FEEDBACK.CONTENT_TYPE_JSON,
 				dataType: 'json',
-				url: LOCATION.getUrl('command'),
-				data: JSON.stringify({mod: getModID(elm), module: 'cms_general', method: 'get_label', value: arr}),
+				url: LOCATION.getURL('command'),
+				data: {mod: getModID(elm), module: 'cms_general', method: 'get_label', value: arr},
+				includeFeedback: false,
 				context: elm,
 				async: true,
 				success: function(json) {
@@ -2619,7 +2851,7 @@ function Assets() {
 						callback(json.html);
 					});
 				}
-			}));
+			});
 		}
 	};
 	
@@ -2754,15 +2986,18 @@ function MessageBox(elm) {
 	
 	const SELF = this;
 	
-	var count = 0;
-	var is_hovering = false;
-	var key_animate = false;
-	var time_animate = false;
-	var elm_con = $(elm).children('.result');
+	let num_count = 0;
+	let is_hovering = false;
+	let key_animate = false;
+	let time_animate = false;
+	let elm_con = $(elm).children('.result');
 	
 	if (!elm_con.length) {
 		elm_con = $('<div class="result"></div>').appendTo(elm);
 	}
+	
+	let elm_system = false;
+	let str_system = false;
 		
 	this.add = function(options) {
 		
@@ -2784,9 +3019,11 @@ function MessageBox(elm) {
 		}
 
 		var elm_msg = $(arr_options.msg).clone().wrap('<div/>').parent(); // wrap to return own html
+		
 		if (arr_options.counter) {
-			count++;
-			elm_msg.find('label:first').text("#"+count);
+			
+			num_count++;
+			elm_msg.find('label:first').text("#"+num_count);
 		}
 		
 		elm_box = $('<div class="'+arr_options.type+'"'+(arr_options.identifier ? ' data-identifier="'+arr_options.identifier+'"' : '')+'>'+elm_msg.html()+'</div>');
@@ -2886,18 +3123,18 @@ function MessageBox(elm) {
 			return;
 		}
 		
-		for (var i = 0, len = elms_box.length; i < len; i++) {
+		for (let i = 0, len = elms_box.length; i < len; i++) {
 			
-			var elm_box = elms_box[i];
+			const elm_box = elms_box[i];
 			
 			if (arr_options.timeout === 0) { // Clear
 			
 				SELF.end(elm_box, true);
 			} else {
 				
-				var obj_messagebox = elm_box.messagebox;
+				const obj_messagebox = elm_box.messagebox;
 				
-				var time = arr_options.timeout;
+				let time = arr_options.timeout;
 				
 				if (time == null) { // If no timeout is specified, use the originally defined timeout
 					time = obj_messagebox.duration;
@@ -2944,18 +3181,18 @@ function MessageBox(elm) {
 				time_animate = time;
 			}
 			
-			var time_diff = time - time_animate;
+			const time_difference = time - time_animate;
 			
-			for (var i = 0, len = elms_box.length; i < len; i++) {
+			for (let i = 0, len = elms_box.length; i < len; i++) {
 				
-				var elm_box = elms_box[i];
-				var obj_messagebox = elm_box.messagebox;
+				const elm_box = elms_box[i];
+				const obj_messagebox = elm_box.messagebox;
 				
 				if (!obj_messagebox.active || obj_messagebox.time === false) {
 					continue;
 				}
 								
-				obj_messagebox.time -= time_diff;
+				obj_messagebox.time -= time_difference;
 				
 				if (obj_messagebox.time > 0) {
 					continue;
@@ -3000,6 +3237,27 @@ function MessageBox(elm) {
 	
 	elm_con[0].addEventListener('mouseover', func_over, true);
 	elm_con[0].addEventListener('touchstart', func_over, {capture: true, passive: true});
+	
+	this.checkSystem = function(str_html) {
+	
+		if (str_html) {
+			
+			if (!elm_system) {
+				elm_system = $('<div class="system"></div>').prependTo(document.body);
+			}
+			
+			if (str_html != str_system) {
+				
+				elm_system[0].innerHTML = str_html;
+				str_system = str_html;
+			}
+		} else if (elm_system) {
+
+			$(elm_system).remove();
+			elm_system = false;
+			str_system = false;
+		}
+	};
 }
 
 function MessagePopup(elm, str_message, call_close) {
@@ -3246,112 +3504,115 @@ function resizeDataTable(elm, force) { // Make tables fit
 	
 	var func_calc = function() {
 
-		var elms_column_all = elm.querySelectorAll('thead > tr > th');
-		var elms_cell_all = elm.querySelectorAll('tbody > tr > td');
+		const elms_column_all = elm.querySelectorAll('thead > tr > th');
+		const elms_cell_all = elm.querySelectorAll('tbody > tr > td');
 		
 		elm.classList.remove('resized');
 		
-		for (var i = 0, len = elms_column_all.length; i < len; i++) {
+		for (let i = 0, len = elms_column_all.length; i < len; i++) {
 			elms_column_all[i].style.maxWidth = '';
 		}
-		for (var i = 0, len = elms_cell_all.length; i < len; i++) {
+		for (let i = 0, len = elms_cell_all.length; i < len; i++) {
 			elms_cell_all[i].style.maxWidth = '';
 		}
 	
-		var elm_target = elm.parentNode;
+		const elm_target = elm.parentNode;
 	
-		var arr_style_target = window.getComputedStyle(elm_target);
-		var padding = parseInt(arr_style_target['padding-left']) + parseInt(arr_style_target['padding-right']);
+		const arr_style_target = window.getComputedStyle(elm_target);
+		const num_padding = parseInt(arr_style_target['padding-left']) + parseInt(arr_style_target['padding-right']);
 		
-		var width_target = elm_target.clientWidth - padding;
-		var width_real = elm.scrollWidth;
+		let num_width_target_all = elm_target.clientWidth - num_padding;
+		const num_width_real = elm.scrollWidth;
 		
-		var resize_container = elm.closest('.overlay');
-		var resize = false;
+		const do_resize_container = elm.closest('.overlay');
+		let do_resize = false;
 		
-		if (resize_container) { // If table is inside an overlay, do not try to resize the table but the overlay
+		if (do_resize_container) { // If table is inside an overlay, do not try to resize the table but the overlay
 			
-			if (width_real > width_target) {
+			if (num_width_real > num_width_target_all) {
 				
-				elm.style.maxWidth = width_real+'px';
+				elm.style.maxWidth = num_width_real+'px';
 				
 				// Check if the parent was able to resize to the table's size, if not, resize the table
-				width_target = elm_target.clientWidth - padding;
+				num_width_target_all = elm_target.clientWidth - num_padding;
 				
-				if (width_real > width_target) {
-					resize = true;
+				if (num_width_real > num_width_target_all) {
+					do_resize = true;
 				}
 			} else {
 			
-				elm.style.maxWidth = width_target+'px';
+				elm.style.maxWidth = num_width_target_all+'px';
 			}
 		} else {
 			
-			if (width_real > width_target) {
-				resize = true;
+			if (num_width_real > num_width_target_all) {
+				do_resize = true;
 			}
 		}
 		
-		if (resize) {
+		if (do_resize) {
 	
 			elm.classList.add('resized');
 
-			var elms_column = elm.querySelectorAll('thead > tr > th.limit');
+			let elms_column = elm.querySelectorAll('thead > tr > th.limit');
 			elms_column = (elms_column.length ? elms_column : elms_column_all);
-			var elms_cell = elm.querySelectorAll('tbody > tr > td.limit');
+			let elms_cell = elm.querySelectorAll('tbody > tr > td.limit');
 			elms_cell = (elms_cell.length ? elms_cell : elms_cell_all);
 			
-			var elms_column_no_limit = Array.prototype.filter.call(elms_column_all, function(n) {
+			let elms_column_no_limit = Array.prototype.filter.call(elms_column_all, function(n) {
 				return Array.prototype.indexOf.call(elms_column, n) === -1;
 			});
 			
-			var len_elms_column = elms_column.length;
-			var elm_column_first = elms_column[0];
-			var arr_style_columns = window.getComputedStyle(elm_column_first);
+			let num_len_elms_column = elms_column.length;
+			const elm_column_first = elms_column[0];
+			let arr_style_columns = window.getComputedStyle(elm_column_first);
 			
-			var arr_columns_width = Array.prototype.map.call(elms_column, function(n) {
+			let arr_columns_width = Array.prototype.map.call(elms_column, function(n) {
 				return n.clientWidth;
 			});
-			var arr_columns_no_limit_width = Array.prototype.map.call(elms_column_no_limit, function(n) {
+			let arr_columns_no_limit_width = Array.prototype.map.call(elms_column_no_limit, function(n) {
 				return n.clientWidth;
 			});
 
-			var func_sum_arr = function(arr) {
+			let func_sum_arr = function(arr) {
 				
-				var total = 0;
+				let total = 0;
 				
-				for (var i = 0, len = arr.length; i < len; i++) {
+				for (let i = 0, len = arr.length; i < len; i++) {
 					total += arr[i];
 				}
 				
 				return total;
 			};
 			
-			width_target = width_target - func_sum_arr(arr_columns_no_limit_width);
-			var width_max = arr_style_columns['max-width'];
+			let num_width_target = num_width_target_all - func_sum_arr(arr_columns_no_limit_width);
+			let num_width_column_max = arr_style_columns['max-width'];
 			
-			if (width_max === 'none') { // Find current maximum requested width
+			if (num_width_column_max === 'none') { // Find current maximum requested width
 				
-				width_max = 0;
+				num_width_column_max = 0;
 				
-				for (var i = 0, len = elms_column_all.length; i < len; i++) {
+				for (let i = 0, len = elms_column_all.length; i < len; i++) {
 					
-					var width = elms_column_all[i].clientWidth;
-					width_max = (width > width_max ? width : width_max);
+					const num_width = elms_column_all[i].clientWidth;
+					num_width_column_max = (num_width > num_width_column_max ? num_width : num_width_column_max);
 				}
 			}
 			
-			width_max = parseInt(width_max);
-			var width_max_calc = width_max;
+			num_width_column_max = parseInt(num_width_column_max);
+			let num_width_column_calc = num_width_column_max;
 
-			for (width_max_calc--; func_sum_arr(arr_columns_width) > width_target; width_max_calc--) {
+			for (num_width_column_calc--; func_sum_arr(arr_columns_width) > num_width_target; num_width_column_calc--) {
 				
-				if (width_max_calc == 0) {
+				if (num_width_column_calc == 0) {
 					
 					if (elms_column !== elms_column_all) { // Start over with all columns
 						
-						width_max_calc = width_max;
+						num_width_target = num_width_target_all;
+						num_width_column_calc = num_width_column_max;
 						elms_column = elms_column_all;
+						elms_cell = elms_cell_all;
+						num_len_elms_column = elms_column.length;
 						
 						arr_columns_width = Array.prototype.map.call(elms_column, function(n) {
 							return n.clientWidth;
@@ -3362,22 +3623,22 @@ function resizeDataTable(elm, force) { // Make tables fit
 					}
 				}
 				
-				for (var i = 0; i < len_elms_column; i++) {
+				for (let i = 0; i < num_len_elms_column; i++) {
 					
-					if (arr_columns_width[i] > width_max_calc) {
-						arr_columns_width[i] = width_max_calc;
+					if (arr_columns_width[i] > num_width_column_calc) {
+						arr_columns_width[i] = num_width_column_calc;
 					}
 				}
 			}
 			
-			for (var i = 0, len = elms_cell.length; i < len; i++) {
-				elms_cell[i].style.maxWidth = width_max_calc+'px';
+			for (let i = 0, len = elms_cell.length; i < len; i++) {
+				elms_cell[i].style.maxWidth = num_width_column_calc+'px';
 			}
-			for (var i = 0, len = elms_column.length; i < len; i++) {
-				elms_column[i].style.maxWidth = width_max_calc+'px';
+			for (let i = 0, len = elms_column.length; i < len; i++) {
+				elms_column[i].style.maxWidth = num_width_column_calc+'px';
 			}
 			
-			var elm_heading = elm.querySelector('thead > tr');
+			const elm_heading = elm.querySelector('thead > tr');
 		
 			TOOLTIP.recheckElement(elm_heading, 'th > span');
 		}
@@ -3438,8 +3699,8 @@ function decodeHTMLSpecialChars(str) {
 		'&lt;': '<',
 		'&gt;': '>',
 		'&quot;': '"',
-		'&#x27;': "'",
-		'&#x60;': '`' 
+		'&apos;': "'", '&#039;': "'", '&#x27;': "'",
+		'&#096;': '`', '&#x60;': '`'
 	};
 	
 	var func_escape = function(match) {
@@ -3783,10 +4044,17 @@ function Pulse(elm, arr_options) {
 		
 		var func_run = function() {
 			
-			var pos = cur[0].getBoundingClientRect(); // Get position in relation to the client of animating element
-			var elm_hit = document.elementFromPoint(pos.left+(cur[0].clientWidth/2), pos.top+(cur[0].clientHeight/2)); // Do a hit-test with the coordinates, add 2 to make a hit more certain (IE)
+			let do_tween = true;
 			
-			if (elm_hit && hasElement(cur[0], elm_hit, true)) {
+			if (arr_options.repeat) {
+				
+				const pos = cur[0].getBoundingClientRect(); // Get position in relation to the client of animating element
+				const elm_hit = document.elementFromPoint(pos.left+(cur[0].clientWidth/2), pos.top+(cur[0].clientHeight/2)); // Do a hit-test with the coordinates, add 2 to make a hit more certain (IE)
+			
+				do_tween = (elm_hit && hasElement(cur[0], elm_hit, true));
+			}
+			
+			if (do_tween) {
 
 				tween = new TWEEN.Tween(arr_properties.from)
 					.to(arr_properties.to, arr_options.duration)
@@ -4194,7 +4462,7 @@ var CONTENT = {
 		
 		var arr_parts = elm.getAttribute('name').split(/\]|\[/);
 		arr_parts = $.grep(arr_parts, function(n, i) {
-			return (n != '' && n.indexOf('js_') !== 0 && n.indexOf('array_') !== 0);
+			return (n != '' && n.indexOf('iterate_') !== 0);
 		});
 		var name = arr_parts[arr_parts.length-1];
 		
@@ -5210,6 +5478,95 @@ function FileBrowse(elm) {
 	elm_input_file[0].addEventListener('change', func_change);
 }
 
+function DropDown(elm, arr_options) {
+	
+	const SELF = this;
+	
+	var arr_options = $.extend({
+		state_empty: false
+	}, arr_options);
+	
+	var elm = getElement(elm);
+	
+	if (elm.dropdown || elm.multiple || elm.closest('li.source')) {
+		return;
+	}
+	elm.dropdown = this;
+		
+	const str_placeholder = elm.getAttribute('placeholder');
+	let elm_option_placeholder = false;
+	
+	if (str_placeholder) {
+		elm_option_placeholder = $('<option value="" hidden>'+str_placeholder+'</option>')[0];
+	}
+	
+	let is_empty = false;
+	let has_input = false; // Check if an 'input' event has been fired before the 'change'
+	let do_change = true; // Note if the 'change' event after the 'input' is actually needed
+	
+	const func_state = function(e) {
+	
+		// Manage placeholder
+		
+		if (elm_option_placeholder) {
+
+			if (!onStage(elm_option_placeholder)) {
+				const elm_selected = elm.selectedOptions[0]; // Keep original selection
+				elm.append(elm_option_placeholder);
+				if (elm_selected) {
+					elm_selected.selected = true;
+				}
+			} else if (e && elm.selectedOptions[0].value == '' && is_empty) { // No change to the placeholder
+				e.stopImmediatePropagation();
+				elm_option_placeholder.selected = true;
+				do_change = false;
+				return;
+			}
+		}
+		
+		// Manage state
+		
+		is_empty = (elm.value == '' && !elm.matches(':empty'));
+		
+		if (arr_options.state_empty) {
+			elm.classList.toggle('state-empty', is_empty);
+		}
+		
+		if (elm_option_placeholder) {
+			
+			elm.classList.toggle('state-placeholder', is_empty);
+			if (is_empty) {
+				elm_option_placeholder.selected = true;
+			}
+		}
+		
+		do_change = true;
+	};
+	
+	elm.addEventListener('input', function(e) {
+		
+		has_input = true;
+		
+		func_state(e);
+	});
+		
+	elm.addEventListener('change', function(e) {
+		
+		if (!has_input) {
+			func_state();
+		}
+		has_input = false;
+		
+		if (do_change) {
+			return;
+		}
+		
+		e.stopImmediatePropagation();
+	});
+	
+	func_state();
+}
+
 function RegularExpressionEditor(elm) {
 	
 	const SELF = this;
@@ -5937,32 +6294,37 @@ function Sorter(elm, arr_options) {
 	var arr_options = $.extend({
 		elm_menu: false,
 		prepend: false,
-		auto_add: false
+		auto_add: false,
+		auto_clean: false,
+		state_empty: false,
+		limit: 0
 	}, arr_options || {});
 	
-	var cur = $(elm);
+	var elm = $(elm);
 	
-	if (cur[0].sorter) {
+	if (elm[0].sorter) {
 		return;
 	}
-	cur[0].sorter = this;
+	elm[0].sorter = this;
 	
 	var html_source = false;
 	var arr_html_default = [];
 
-	var elm_source = cur.children('li.source');
+	var elm_source = elm.children('li.source');
 	
 	if (elm_source.length) {
 		elm_source.removeClass('source').remove();
 		var html_source = elm_source[0].outerHTML;
 	}
 	
-	var elms_row = cur.children('li');
+	var elms_row = elm.children('li');
 
 	if (!elm_source.length && !elms_row.length) {
 		return;
 	}
-
+	
+	var selector_handle = '.handle';
+	
 	if (!elm_source.length) {
 		
 		var elm_first = elms_row.first();
@@ -5996,9 +6358,15 @@ function Sorter(elm, arr_options) {
 	}
 	if (arr_options.auto_add) {
 		
-		cur.on('focus.sorter click.sorter', '> li:last-child', function(e) {
+		elm[0].addEventListener('change', function(e) {
 			
-			if ($(e.target).is('[type=button], [type=submit]')) {
+			const elm_row = e.target.closest('.sorter > li:last-child');
+			
+			if (!elm_row) {
+				return;
+			}
+			
+			if (arr_options.auto_clean && func_is_empty_row(elm_row)) {
 				return;
 			}
 			
@@ -6006,18 +6374,54 @@ function Sorter(elm, arr_options) {
 		});
 	}
 	
+	var func_check_state = function() {
+		
+		const elms_children = SELF.getRows();
+	
+		elm[0].classList.remove('state-single', 'state-empty');
+		
+		if (elms_children.length == 1) {
+			elm[0].classList.add('state-single');
+			if (arr_options.state_empty && func_is_empty_row(elms_children[0])) {
+				elm[0].classList.add('state-empty');
+			}
+		}
+	};
+		
+	if (arr_options.auto_clean) {
+
+		elm[0].addEventListener('change', function(e) {
+			
+			const elm_row = e.target.closest('.sorter > li');
+			
+			if (SELF.getRows().length == 1) {
+				return;
+			}
+			if (!func_is_empty_row(elm_row)) {
+				return;
+			}
+			
+			func_remove_rows(elm_row);
+			func_check_state();
+			
+			SCRIPTER.triggerEvent(elm[0], 'removed');
+		});
+	}
+	
 	var func_init = function() {
 		
 		SELF.initSortSorter();
+		
+		func_check_state();
 	};
 	
 	this.initSortSorter = function(generate) {
 		
 		var func_html = function() {
 			
-			ASSETS.getIcons(cur, ['updown'], function(data) {
+			ASSETS.getIcons(elm, ['updown'], function(data) {
 				
-				var elms_row = cur.children('li');
+				var elms_row = $(SELF.getRows());
 			
 				var elm_source = $(html_source);
 				elms_row = elms_row.add(elm_source);
@@ -6038,21 +6442,19 @@ function Sorter(elm, arr_options) {
 		
 		var func_sort = function() {
 			
-			var elms_row = cur.children('li');
+			var elms_row = $(SELF.getRows());
 			var elm_first = elms_row.first();
 			
 			if (!elm_first.children('span').length && !elm_first.find('.handle').length) {
 				return;
 			}
-			
-			var selector_handle = '.handle';
-			
+						
 			var elm_span = elm_first.children('span');
 			if (elm_span.length) {
 				selector_handle = (elm_span.first().is(':last-child') ? '> li > span:last-child' : '> li > span:first-child');
 			}
 			
-			new SortSorter(cur, {
+			new SortSorter(elm, {
 				items: '> li',
 				handle: selector_handle
 			});
@@ -6074,6 +6476,13 @@ function Sorter(elm, arr_options) {
 		html_source = html;
 		is_copy = (is_copy ? is_copy : false);
 	};
+	
+	this.getRows = function() {
+		
+		const elms_children = getElementsSelector(elm[0], ':scope > li');
+		
+		return elms_children;
+	};
 
 	this.addRow = function(arr_options_row) {
 		
@@ -6081,6 +6490,10 @@ function Sorter(elm, arr_options) {
 			focus: true,
 			prepend: arr_options.prepend,
 		}, arr_options_row || {});
+		
+		if (arr_options.limit && SELF.getRows().length == arr_options.limit) {
+			return;
+		}
 					
 		var elm_target = $(html_source);
 		
@@ -6088,25 +6501,27 @@ function Sorter(elm, arr_options) {
 			SELF.resetRow(elm_target);
 		}
 		
-		// Manage dynamic array-in-name setting
+		// Manage dynamic group-iterator-in-name
 		
 		var num_replace = (elm_target.find('ul.sorter').length + 1);
 		var elm_targets = elm_target.find('input, select, textarea');
 		
-		replaceArrayInName(elm_targets, num_replace);
+		replaceGroupIteratorInName(elm_targets, num_replace);
 		
 		// Add new row
 		
 		if (arr_options_row.prepend) {
-			elm_target.prependTo(cur);
+			elm_target.prependTo(elm);
 		} else {
-			elm_target.appendTo(cur);
+			elm_target.appendTo(elm);
 		}
-		
+				
 		if (arr_options_row.focus) {
 			SCRIPTER.triggerEvent(elm_targets.first(), 'focus');
 		}
-		SCRIPTER.triggerEvent(cur, 'ajaxloaded', {elm: elm_target});
+		SCRIPTER.triggerEvent(elm, 'ajaxloaded', {elm: elm_target});
+		
+		func_check_state();
 		
 		return elm_target[0];
 	};
@@ -6120,47 +6535,63 @@ function Sorter(elm, arr_options) {
 		elm_inputs.filter('[type=checkbox], [type=radio]').prop('checked', function () {
 			return this.getAttribute('checked') == 'checked';
 		});
-		elm_inputs.filter('select').prop('selectedIndex', 0);
+		var elms_select = elm_inputs.filter('select');
+		elms_select.children('option[value=""][hidden=""]:last-child').remove(); // Remove dynamic DropDown placeholder
+		elms_select.prop('selectedIndex', 0);
 		elm_row.find('.autocomplete.tags > ul').empty();
+	};
+	
+	var func_is_empty_row = function(elm_check) {
+		
+		return (!$(elm_check).find('input, select:has(option[value=""])').first().val());
+	};
+	
+	var func_remove_rows = function(elms_row) {
+		
+		$(elms_row).remove();
 	};
 	
 	this.clean = function() {
 	
-		var elms_target = cur.children('li');
-		var elms_remove = elms_target.filter(function() {
-			return (!$(this).find('input, select:has(option[value=""])').first().val()); // Empty means the first meaningful element (i.e. any input element or a select with the possibility for '') is empty
+		var elms_row = $(SELF.getRows());
+		var elms_remove = elms_row.filter(function() {
+			return func_is_empty_row(this); // Empty means the first meaningful element (i.e. any input element or a select with the possibility for '') is empty
 		});
 		
-		if (elms_target.length == elms_remove.length) { // Keep at least one item
+		if (elms_row.length == elms_remove.length) { // Keep at least one item
 			elms_remove = elms_remove.slice(1);
 		}
 		
-		elms_remove.remove();
+		func_remove_rows(elms_remove);
+		
+		func_check_state();
 	};
 	
 	this.clear = function() {
 		
-		var elms_target = cur.children('li');
+		var elms_row = SELF.getRows();
 
-		elms_target.remove();
+		func_remove_rows(elms_row);
 		
 		SELF.addRow();
 	};
 	
 	this.reset = function() {
 		
-		var elms_target = cur.children('li');
+		var elms_row = SELF.getRows();
 
-		elms_target.remove();
+		func_remove_rows(elms_row);
 		
 		for (var i = 0, len = arr_html_default.length; i < len; i++) {
 			
 			var elm_target = $(arr_html_default[i]);
 			
-			cur.append(elm_target);
-			
-			SCRIPTER.triggerEvent(cur, 'ajaxloaded', {elm: elm_target});
+			elm.append(elm_target);
+
+			SCRIPTER.triggerEvent(elm, 'ajaxloaded', {elm: elm_target});
 		}
+		
+		func_check_state();
 	};
 	
 	func_init();
@@ -7179,12 +7610,12 @@ function Album(elm, options) {
 		
 		var cur = $(this);
 		
-		var elm_view = $('<div class=\"album-viewer\"><img src=\"\" /><nav></nav></div>');
+		var elm_view = $('<div class=\"album-viewer\"><nav></nav></div>');
 		var elm_nav = elm_view.children('nav');
 		
 		var index = elm.find(selector).index(cur)-1;
 		
-		var elm_nav_nextprev = $('<span class=\"icon prev\" data-category=\"full\"></span><span class=\"icon next\" data-category=\"full\"></span>').on('click', function() {
+		var elm_nav_nextprev = $('<button type=\"button\" class=\"prev\"><span class=\"icon\"></span></button><button type=\"button\" class=\"next\"><span class=\"icon\"></span></button>').on('click', function() {
 
 			index = (index+(this.classList.contains('next') ? 1 : -1));
 			
@@ -7203,23 +7634,51 @@ function Album(elm, options) {
 			
 			LOADER.start(elm_view);
 			
-			var elm_img = (selector == 'figure' ? elm_pick.querySelector('img') : elm_pick);
+			const elm_source = (selector == 'figure' ? elm_pick.querySelector('img, video') : elm_pick);
+			let elm_target = null;
+			
+			if (elm_source) {
+				
+				elm_view.children('img, video').remove();
+				
+				if (elm_source.matches('video')) {
+					
+					elm_target = $(elm_source.outerHTML);
 
-			if (elm_img) {
+					elm_target[0].addEventListener('loadeddata', function() {
+					
+						LOADER.stop(elm_view);
+					});
+					
+					elm_target.prependTo(elm_view);
+				} else {
+					
+					elm_target = $('<img src=\"\" />');
+					const str_url = LOCATION.getOriginalURL(elm_source.getAttribute('src'));
+
+					elm_target[0].addEventListener('load', function() {
+					
+						LOADER.stop(elm_view);
+					});
+					
+					elm_target[0].setAttribute('src', str_url);
+					
+					elm_target.prependTo(elm_view);
+				}
 				
-				var str_url = LOCATION.getOriginalUrl(elm_img.getAttribute('src'));
-				
-				elm_view.children('img').off('load').on('load', function() {
-				
-					LOADER.stop(elm_view);
-				}).attr('src', str_url);
+				if (elm_source.dataset.native_width) {
+					elm_target[0].width = elm_source.dataset.native_width;
+				}
+				if (elm_source.dataset.native_height) {
+					elm_target[0].height = elm_source.dataset.native_height;
+				}
 			}
 			
 			if (selector == 'figure') {
 				
 				elm_view.children('div').remove();
 					
-				var elm_caption = elm_pick.querySelector('figurecaption');
+				const elm_caption = elm_pick.querySelector('figurecaption');
 				
 				if (elm_caption) {
 					
@@ -7230,8 +7689,8 @@ function Album(elm, options) {
 		
 		ASSETS.getIcons(cur, ['prev', 'next'], function(data) {
 		
-			elm_nav_nextprev[0].innerHTML = data.prev;
-			elm_nav_nextprev[1].innerHTML = data.next;
+			elm_nav_nextprev[0].children[0].innerHTML = data.prev;
+			elm_nav_nextprev[1].children[0].innerHTML = data.next;
 		});
 				
 		SCRIPTER.triggerEvent(elm_nav.children('.next'), 'click');

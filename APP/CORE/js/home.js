@@ -53,7 +53,7 @@ $(document).on('click', '[id^=y\\\:cms_general\\\:set_language-]', function() {
 	
 	const elm_source = this;
 	
-	const str_url = LOCATION.getOriginalUrl(elm_source.getAttribute('src'));
+	const str_url = LOCATION.getOriginalURL(elm_source.getAttribute('src'));
 	const elm_img = document.createElement('img');
 
 	elm_img.src = str_url;

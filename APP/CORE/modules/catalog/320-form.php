@@ -92,9 +92,11 @@ class form extends base_module {
 			Log::setMsg(getLabel('msg_success'));
 			
 			if ($arr_form['redirect_page_id']) {
+				
 				$arr_page = pages::getPages($arr_form['redirect_page_id']);
-				Response::location(pages::getPageUrl($arr_page));
+				Response::location(pages::getPageURL($arr_page));
 			} else {
+				
 				$this->reset_form = true;
 			}
 		}

@@ -20,7 +20,7 @@ class newsletter_signup extends base_module {
 		
 		$return .= '<h1>'.getLabel('ttl_newsletter_signup').'</h1>
 			<form id="f:newsletter_signup:signup-0">
-			<p>'.getLabel('txt_newsletter_signup').' <a href="'.SiteStartVars::getPageUrl($arr_link['page_name'], $arr_link['sub_dir']).'">'.getLabel('lnk_archive').'</a></p>
+			<p>'.getLabel('txt_newsletter_signup').' <a href="'.SiteStartVars::getPageURL($arr_link['page_name'], $arr_link['sub_dir']).'">'.getLabel('lnk_archive').'</a></p>
 			<fieldset><ul>		
 				<li><label>'.getLabel('lbl_name').'</label><input name="name" type="text" /></li>
 				<li><label>'.getLabel('lbl_email').'</label><input name="email" type="text" /></li>
