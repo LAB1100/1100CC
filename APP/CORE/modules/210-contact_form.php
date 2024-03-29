@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -22,7 +22,7 @@ class contact_form extends base_module {
 	
 	public function contents() {
 
-		$return = '<form id="f:contact_form:form-0">
+		$return = '<form id="f:contact_form:form-0" autocomplete="on">
 			<fieldset><ul>
 				'.($this->arr_variables['show_text'] ? '<li><label></label><span>'.getLabel('txt_contact_form_info').'</span></li>' : '').'
 				<li><label>'.getLabel('lbl_name').'</label><input name="name" type="text" value="" placeholder="'.getLabel('lbl_name').'" /></li>

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -42,9 +42,9 @@ class logout extends base_module {
 			foreach (self::$arr_elements_extra as $class => $html) {
 				$return .= '<li class="'.$class.'">'.$html.'</li>';
 			}
-			$return .= ($arr_messaging_link && pages::filterClearance([$arr_messaging_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]) ? '<li class="messaging"><a title="'.getLabel('lbl_messaging').'" href="'.SiteStartVars::getPageURL($arr_messaging_link['page_name'], $arr_messaging_link['sub_dir']).'"><span class="icon">'.getIcon('message').'</span>'.($unread_count ? '<sup>'.$unread_count.'</sup>' : '').'</a></li>' : '');
-			$return .= ($arr_account_link && pages::filterClearance([$arr_account_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]) ? '<li class="account"><a title="'.getLabel('lbl_account').'" href="'.SiteStartVars::getPageURL($arr_account_link['page_name'], $arr_account_link['sub_dir']).'"><span class="icon">'.getIcon('settings').'</span></a></li>' : '');
-			$return .= '<li class="logout-button"><span title="'.getLabel('lbl_logout').'" class="a"><span class="icon">'.getIcon('logout').'</span></span></li><li class="logout-options"><span>'.getLabel('lbl_logout').'?</span><span><a href="'.SiteStartVars::getBasePath().'logout.l">'.getLabel('lbl_yes').'</a></span><span>|</span><span class="no a">'.getLabel('lbl_no').'</span></li>';
+			$return .= ($arr_messaging_link && pages::filterClearance([$arr_messaging_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]) ? '<li class="messaging"><a title="'.getLabel('lbl_messaging').'" href="'.SiteStartEnvironment::getPageURL($arr_messaging_link['page_name'], $arr_messaging_link['sub_dir']).'"><span class="icon">'.getIcon('message').'</span>'.($unread_count ? '<sup>'.$unread_count.'</sup>' : '').'</a></li>' : '');
+			$return .= ($arr_account_link && pages::filterClearance([$arr_account_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]) ? '<li class="account"><a title="'.getLabel('lbl_account').'" href="'.SiteStartEnvironment::getPageURL($arr_account_link['page_name'], $arr_account_link['sub_dir']).'"><span class="icon">'.getIcon('settings').'</span></a></li>' : '');
+			$return .= '<li class="logout-button"><span title="'.getLabel('lbl_logout').'" class="a"><span class="icon">'.getIcon('logout').'</span></span></li><li class="logout-options"><span>'.getLabel('lbl_logout').'?</span><span><a href="'.SiteStartEnvironment::getBasePath().'logout.l">'.getLabel('lbl_yes').'</a></span><span>|</span><span class="no a">'.getLabel('lbl_no').'</span></li>';
 			$return .= '</ul>';
 		}
 		

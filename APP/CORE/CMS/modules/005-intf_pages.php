@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -831,14 +831,7 @@ class intf_pages extends pages {
 			$template = templates::getTemplates($page['actual_template_id']);
 			$preview = ($template['preview'] ?: '<div></div>');
 						
-			$doc = new DOMDocument();
-			$doc->strictErrorChecking = false;
-			$doc->loadHTML($preview);
-			# remove <!DOCTYPE 
-			$doc->removeChild($doc->firstChild);
-			# remove <html><body></body></html> 
-			$doc->replaceChild($doc->firstChild->firstChild->firstChild, $doc->firstChild);
-			
+			$doc = new HTMLDocument($preview, false);
 			$domxpath = new DOMXPath($doc);
 			
 			$arr_modules = self::getPageModules($id);
@@ -872,7 +865,7 @@ class intf_pages extends pages {
 				}
 			}
 
-			$preview = $doc->saveHTML();
+			$preview = $doc->getHTML();
 		}
 			
 		$return = $preview;

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -48,6 +48,11 @@
 	const TYPE_STRING = 'string';
 	const TYPE_TEXT = 'text';
 	
+	const MATCH_FULL = 0;
+	const MATCH_START = 1;
+	const MATCH_END = 2;
+	const MATCH_ANY = 3;
+	
 	const URI_SCHEME_HTTP = 'http://';
 	const URI_SCHEME_HTTPS = 'https://';
 	
@@ -58,8 +63,8 @@
 	require('operations/Mediator.php');
 	require('operations/Settings.php');
 	require('operations/Labels.php');
-	require('operations/SiteStartVars.php');
-	require('operations/SiteEndVars.php');
+	require('operations/SiteStartEnvironment.php');
+	require('operations/SiteEndEnvironment.php');
 	
 	function error($msg = '', $code = TROUBLE_ERROR, $suppress = LOG_BOTH, $debug = false, $exception = null) {
 		
@@ -109,8 +114,8 @@
 			$arr_options = ($arr_options ?: []);
 		}
 		
-		if ($arr_options['identifier'] === null) {
-			$arr_options['identifier'] = SiteStartVars::getSessionId(true);
+		if (!isset($arr_options['identifier'])) {
+			$arr_options['identifier'] = SiteStartEnvironment::getSessionId(true);
 		}
 		
 		$arr_status = ['msg' => $str, 'msg_type' => 'status', 'msg_options' => $arr_options];
@@ -236,13 +241,13 @@
 			
 		switch ($level) {
 			case DIR_HOME:
-				$arr_modules = (IS_CMS ? getModules(DIR_HOME) : SiteStartVars::getModules(false, DIR_HOME));
+				$arr_modules = (IS_CMS ? getModules(DIR_HOME) : SiteStartEnvironment::getModules(false, DIR_HOME));
 				break;
 			case DIR_CMS:
-				$arr_modules = SiteStartVars::getModules(false, DIR_CMS);
+				$arr_modules = SiteStartEnvironment::getModules(false, DIR_CMS);
 				break;
 			default:
-				$arr_modules = SiteStartVars::getModules();
+				$arr_modules = SiteStartEnvironment::getModules();
 		}
 
 		foreach ($arr_modules as $module => $value) {
@@ -328,35 +333,40 @@
 		
 		static $arr_icons = [];
 
-		if ($arr_icons[$id] === null) {
-			
-			$path = DIR_CMS.DIR_CSS.'images/icons/'.$id.'.svg';
-			$path = (isPath(DIR_ROOT_SITE.$path) ? DIR_ROOT_SITE.$path : (isPath(DIR_ROOT_CORE.$path) ? DIR_ROOT_CORE.$path : false));
-			
-			$svg = '';
-			
-			if ($path) {
-				$svg = file_get_contents($path);
-				$svg = str_replace(["\n", "\t"], ['', ' '], $svg);
-				$svg = trim($svg);
-			}
-			
-			$arr_icons[$id] = $svg;
+		if (isset($arr_icons[$id])) {
+			return $arr_icons[$id];
 		}
+			
+		$path = DIR_CMS.DIR_CSS.'images/icons/'.$id.'.svg';
+		$path = (isPath(DIR_ROOT_SITE.$path) ? DIR_ROOT_SITE.$path : (isPath(DIR_ROOT_CORE.$path) ? DIR_ROOT_CORE.$path : false));
+		
+		$svg = '';
+		
+		if ($path) {
+			$svg = readSVG($path);
+		}
+		
+		$arr_icons[$id] = $svg;
 		
 		return $arr_icons[$id];
 	}
 	
-	function memoryBoost($num = 1000, $add = false) {
+	function memoryBoost($num_mb = 1000, $do_add = false) {
 		
-		if ($add) {
+		if ($num_mb === false) {
+			
+			ini_set('memory_limit', -1);
+			return;
+		}
+		
+		if ($do_add) {
 			
 			$num_add = str2Bytes(ini_get('memory_limit'));
 						
-			$num += ($num_add / BYTE_MULTIPLIER / BYTE_MULTIPLIER); // To MegaBytes
+			$num_mb += ($num_add / BYTE_MULTIPLIER / BYTE_MULTIPLIER); // To MegaBytes
 		}
 		
-		ini_set('memory_limit', $num.'M');
+		ini_set('memory_limit', $num_mb.'M');
 	}
 	
 	function timeLimit($num_seconds = true) {
@@ -403,9 +413,9 @@
 
 	function onUserPoll($func_poll, $func_abort) {
 		
-		SiteStartVars::checkCookieSupport();
+		SiteStartEnvironment::checkCookieSupport();
 						
-		SiteStartVars::stopSession();
+		SiteStartEnvironment::stopSession();
 		
 		$count = 0;
 		
@@ -420,11 +430,11 @@
 			} else { // Check if the session is still current (more foolproof)
 				
 				// Update session variables
-				SiteStartVars::startSession();
-				SiteStartVars::stopSession();
+				SiteStartEnvironment::startSession();
+				SiteStartEnvironment::stopSession();
 				
 				// Check if session has loaded elsewhere
-				if (!SiteStartVars::checkSession()) {
+				if (!SiteStartEnvironment::checkSession()) {
 					$func_abort();
 					exit;
 				}
@@ -440,14 +450,14 @@
 		}
 				
 		// Not aborted, continue
-		SiteStartVars::startSession();
+		SiteStartEnvironment::startSession();
 	}
 	
 	function onUserPollContinuous($func_poll, $func_abort) { // Keep polling continuously, without sleep, but do keep track of checking state 
 		
-		SiteStartVars::checkCookieSupport();
+		SiteStartEnvironment::checkCookieSupport();
 
-		SiteStartVars::stopSession();
+		SiteStartEnvironment::stopSession();
 		
 		$time = microtime(true);
 		$count = 0;
@@ -467,11 +477,11 @@
 				} else { // Check if the session is still current (more foolproof)
 					
 					// Update session variables
-					SiteStartVars::startSession();
-					SiteStartVars::stopSession();
+					SiteStartEnvironment::startSession();
+					SiteStartEnvironment::stopSession();
 					
 					// Check if session has loaded elsewhere
-					if (!SiteStartVars::checkSession()) {
+					if (!SiteStartEnvironment::checkSession()) {
 						$func_abort();
 						exit;
 					}
@@ -488,7 +498,7 @@
 		}
 				
 		// Not aborted, continue
-		SiteStartVars::startSession();
+		SiteStartEnvironment::startSession();
 	}
 	
 	function variableHasValue($variable, ...$values) {
@@ -536,19 +546,62 @@
 	
 		return ($str_path ? file_exists($str_path) : false);
 	}
+	function isResource($file) {
 	
-	function read($str_path) {
+		return is_resource($file);
+	}
+	
+	function read($file, $do_output = false) {
 		
-		if (is_resource($str_path)) {
-			return stream_get_contents($str_path);
+		if (is_resource($file)) {
+			if (!$do_output) {
+				return stream_get_contents($file);
+			} else {
+				return fpassthru($file);
+			}
 		} else {
-			return file_get_contents($str_path);
+			if (!$do_output) {
+				return file_get_contents($file);
+			} else {
+				return readfile($file);
+			}
 		}
 	}
 	
 	function readText($str_path) {
 	
 		return rtrim(read($str_path));
+	}
+	
+	function readSVG($str_path) {
+		
+		$svg = read($str_path);
+		$svg = str_replace(["\n", "\t"], ['', ' '], $svg);
+		$svg = trim($svg);
+	
+		return $svg;
+	}
+	
+	function resourceSkipBOM($file) {
+		
+		$arr_BOM = ["\xEF\xBB\xBF"];
+		$str_test = fgets($file, 4+1); // BOM can be 4 bytes long
+		$num_offset = 0;
+		$str_found = false;
+		
+		foreach ($arr_BOM as $str_BOM) {
+			
+			if (!strStartsWith($str_test, $str_BOM)) {
+				continue;
+			}
+			
+			$num_offset = strlen($str_BOM);
+			$str_found = $str_BOM;
+		}
+		
+		fseek($file, ($num_offset-4), SEEK_CUR); // Do not rewind
+		
+		return $str_found;
 	}
 	
 	function getPathTemporary($str_class = false, $is_directory = false, $str_path = false) {
@@ -657,18 +710,28 @@
 	
 	function value2JSON($value, $flags = 0, $do_default = true) {
 		
-		$flags = ($do_default ? (JSON_UNESCAPED_UNICODE | $flags) : $flags);
+		$flags = ($do_default ? (JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR | $flags) : $flags);
 		
 		return json_encode($value, $flags);
 	}
 	
 	function JSON2Value($json, $flags = 0, $do_default = true) {
-		
+				
 		$flags = ($do_default ? (JSON_OBJECT_AS_ARRAY | $flags) : $flags);
 		
 		return json_decode($json, null, 512, $flags);
 	}
 	
+	function value2YAML($value, $arr_callbacks = []) {
+				
+		return yaml_emit($value, YAML_ANY_ENCODING, YAML_ANY_BREAK, $arr_callbacks);
+	}
+	
+	function YAML2Value($yaml, $arr_callbacks = []) {
+				
+		return yaml_parse($yaml, 0, $num_docs, $arr_callbacks);
+	}
+
 	function str2Array($str, $separator = '_') {
 		
 		if (!$str) {
@@ -681,6 +744,19 @@
 	function arr2String($arr, $separator = '_') {
 		
 		return implode($separator, $arr);
+	}
+	
+	function arr2StringRecursive($arr, $separator = '_') {
+		
+		$str_path = '';
+		
+		$func_walk = function($v) use (&$str_path, $separator) {
+			$str_path .= ($str_path !== '' ? $separator : '').$v;
+		};
+		
+		array_walk_recursive($arr, $func_walk);
+		
+		return $str_path;
 	}
 				
 	function bytes2String($num_bytes) {
@@ -730,10 +806,10 @@
 		}
 	}
 	function numRoundBetterUp($number, $precision = 0, $mode = PHP_ROUND_HALF_UP) {
-			return numRoundBetter($number, $precision, $mode, true);
+		return numRoundBetter($number, $precision, $mode, true);
 	}
 	function numRoundBetterDown($number, $precision = 0, $mode = PHP_ROUND_HALF_UP) {
-			return numRoundBetter($number, $precision, $mode, false);
+		return numRoundBetter($number, $precision, $mode, false);
 	}
 		
 	function ip2Hex($ip) {
@@ -876,6 +952,53 @@
 		return (substr_compare($str, $str_test, $num_str - $num_str_test, $num_str_test) === 0);
 	}
 	
+	function strMatchesWith($str, $str_test, $mode = MATCH_FULL) {
+
+		return preg_match('/'.($mode == MATCH_FULL || $mode == MATCH_START ? '^' : '').str2Search($str_test).($mode == MATCH_FULL || $mode == MATCH_END ? '$' : '').'/', $str);
+	}
+
+	function str2Search($str) {
+		
+		static $arr_replace = null;
+		if ($arr_replace === null) {
+			$arr_replace = [preg_quote('[*]', '/') => '.*', preg_quote('[*1]', '/') => '.', preg_quote('[*2]', '/') => '..', preg_quote('[*3]', '/') => '...'];
+		}
+		
+		$str = preg_quote($str, '/');
+		$str = strtr($str, $arr_replace);
+		
+		return $str;
+	}
+	
+	function parseRegularExpression($pattern, $flags, $template) {
+		
+		$pattern = trim($pattern);
+		$flags = ($flags ? preg_replace('/[^imsxADU]*/', '', $flags) : '');
+		$template = $template; // Can be empty to replace with an empty string
+		
+		if (!$pattern) {
+			return false;
+		}
+		
+		// Make sure the pattern is not erroneous
+		try {
+			preg_replace('/'.$pattern.'/'.$flags, $template, 'TEST');
+		} catch (Exception $e) {
+			$pattern = preg_quote($pattern, '/');
+		}
+		
+		return ['pattern' => $pattern, 'flags' => $flags, 'template' => $template];
+	}
+	
+	function strRegularExpression($str, $pattern, $flags, $template, $do_process_template = true) {
+		
+		if ($do_process_template) {
+			$template = stripcslashes($template);
+		}
+		
+		return preg_replace('/'.$pattern.'/'.$flags, $template, $str);		
+	}
+	
 	function parseValue($value, $what, $keep_null = false) {
 		
 		if ($keep_null && $value === null) {
@@ -959,9 +1082,14 @@
 		}
 	}
 	
-	function arrValuesRecursive($arr_keys, $arr, &$arr_flat = []) {
+	function arrUniqueValuesRecursive($arr_keys, $arr, &$arr_flat = []) {
 		
-		if (!is_array($arr_keys) && $arr_keys !== false) {
+		return arrValuesRecursive($arr_keys, $arr, $arr_flat, true);
+	}
+	
+	function arrValuesRecursive($arr_keys, $arr, &$arr_flat = [], $do_unique = false) {
+		
+		if ($arr_keys !== false && !is_array($arr_keys)) {
 			$arr_keys = [$arr_keys => true];
 		}
 	
@@ -972,11 +1100,15 @@
 			}
 			
 			if ($arr_keys === false || isset($arr_keys[$k])) {
-				$arr_flat[] = $v;
+				if ($do_unique) {
+					$arr_flat[$v] = $v;
+				} else {
+					$arr_flat[] = $v;
+				}
 			}
 			
 			if (is_array($v)) { // Recursive
-				arrValuesRecursive($arr_keys, $v, $arr_flat);
+				arrValuesRecursive($arr_keys, $v, $arr_flat, $do_unique);
 			}
 		}
 		
@@ -1107,7 +1239,7 @@
 	
 	function arrInsert(&$arr, $pos, $arr_insert, $before = false) {
 		
-		if (is_int($pos)) {
+		if (is_integer($pos)) {
 			
 			array_splice($arr, $pos+1, 0, $arr_insert);
 		} else {
@@ -1130,7 +1262,7 @@
 	
 	function arrMerge(...$arrs) { // String keys will be overwitten
 		
-		if (count($arrs) == 1) {
+		if (!isset($arrs[1])) {
 			$arrs = current($arrs);
 		}
 		
@@ -1139,7 +1271,7 @@
 	
 	function arrMergeKeys(...$arrs) { // All keys will be overwitten
 		
-		if (count($arrs) == 1) {
+		if (!isset($arrs[1])) {
 			$arrs = current($arrs);
 		}
 		
@@ -1155,7 +1287,7 @@
 	
 	function arrMergeValues(...$arrs) {  // Merge arrays: values will be overwitten
 		
-		if (count($arrs) == 1) {
+		if (!isset($arrs[1])) {
 			$arrs = current($arrs);
 		}
 		
@@ -1274,46 +1406,17 @@
 	
 	function createDate($date) {
 		
-		return '<time class="date"><span>'.implode('</span><span>', explode(',', date('d,M,Y', (is_int($date) ? $date : strtotime($date))))).'</span></time>';
+		return '<time class="date"><span>'.implode('</span><span>', explode(',', date('d,M,Y', (is_integer($date) ? $date : strtotime($date))))).'</span></time>';
 	}
 	
 	function createTime($date) {
 		
-		return '<time class="time"><span>'.implode('</span><span>', explode(',', date('H,:,i', (is_int($date) ? $date : strtotime($date))))).'</span></time>';
+		return '<time class="time"><span>'.implode('</span><span>', explode(',', date('H,:,i', (is_integer($date) ? $date : strtotime($date))))).'</span></time>';
 	}
-	
-	function parseRegularExpression($pattern, $flags, $template) {
-		
-		$pattern = trim($pattern);
-		$flags = ($flags ? preg_replace('/[^imsxADU]*/', '', $flags) : '');
-		$template = $template; // Can be empty to replace with an empty string
-		
-		if (!$pattern) {
-			return false;
-		}
-		
-		// Make sure the pattern is not erroneous
-		try {
-			preg_replace('/'.$pattern.'/'.$flags, $template, 'TEST');
-		} catch (Exception $e) {
-			$pattern = preg_quote($pattern, '/');
-		}
-		
-		return ['pattern' => $pattern, 'flags' => $flags, 'template' => $template];
-	}
-	
-	function strRegularExpression($str, $pattern, $flags, $template, $do_process_template = true) {
-		
-		if ($do_process_template) {
-			$template = stripcslashes($template);
-		}
-		
-		return preg_replace('/'.$pattern.'/'.$flags, $template, $str);		
-	}
-	
+
 	function parseBody($body, $arr_options = []) {
 	
-		// $arr_options = array("extract" => number of paragraphs, "append" => string, "function" => function);
+		// $arr_options = array("extract" => number of paragraphs, "sanitise" => boolean, "append" => string, "function" => function);
 	
 		if (!$body) {
 			return (string)$body;
@@ -1330,6 +1433,13 @@
 			$body = FormatTags::parse($body);
 			
 			$format = new FormatHTML($body);
+			
+			if ($arr_options['sanitise']) {
+				if (is_array($arr_options['sanitise'])) {
+					$format->addSanitationValues($arr_options['sanitise']);
+				}
+				$format->sanitise();
+			}
 			
 			if ($arr_options['extract']) {
 				$format->extractParagraphs($arr_options['extract']);

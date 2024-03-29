@@ -67,6 +67,9 @@ legend {
 a, a:link, a:visited, a:active, a:hover, .a { cursor: pointer; color: inherit; text-decoration: none; }
 a:hover, .a:hover { color: var(--highlight); text-decoration: underline; }
 
+a.more, a.more:link, a.more:visited, a.more:active, a.more:hover, .a.more { color: var(--highlight); text-decoration: none; }
+a.more:hover, .a.more:hover { text-decoration: underline; }
+
 ::selection { color: #ffffff; background-color: var(--highlight); text-fill-color: currentColor; -webkit-text-fill-color: currentColor; }
 ::-moz-selection { color: #ffffff; background-color: var(--highlight); text-fill-color: currentColor; -webkit-text-fill-color: currentColor; }
 
@@ -75,16 +78,18 @@ hr { margin: 8px 0px; border: 0px; border-bottom: 4px solid #000000; }
 .mod > *:first-child,
 .mod > *:first-child:not(.toolbox) > *:first-child,
 .mod > *:first-child:not(.toolbox) > *:first-child > *:first-child,
-.mod > *:first-child:empty + *,
-.mod > *:first-child:empty + * > *:first-child,
 .mod > .toolbox + *,
-.mod > .toolbox + *:empty + *,
-.mod > .toolbox + *:empty + * > *:first-child,
 .mod > .toolbox + * > *:first-child,
 .mod > .toolbox + * > *:first-child > *:first-child { margin-top: 0px; }
 .mod > *:last-child,
 .mod > *:last-child > *:last-child,
 .mod > *:last-child > *:last-child > *:last-child { margin-bottom: 0px; }
+.mod > *:first-child:empty + *,
+.mod > *:first-child:empty + * > *:first-child,
+.mod > .toolbox + *:empty + *,
+.mod > .toolbox + *:empty + * > *:first-child { margin-top: 0px; }
+.mod > *:has(+ *:last-child:empty),
+.mod > *:has(+ *:last-child:empty) > *:last-child { margin-bottom: 0px; }
 
 /* Hide any additional html elements added at the end of the document, except named (class) elements */
 .container ~ *:not([class]) { position: absolute; height: 0px; width: 0px; font-size: 0px; overflow: hidden; }
@@ -205,14 +210,10 @@ fieldset > ul > li > label:first-child:empty { padding: 0px; width: 0%; }
 .options fieldset > ul > li > label:first-child + div { display: table-cell; }
 
 time.date,
-time.time { font-family: var(--font-serif); font-size: 1rem; color: #999999; line-height: 1; }
+time.time { font-family: var(--font-serif); font-size: 1.2rem; color: #999999; line-height: 1; }
 time.date span { display: block; text-align: justify; }
-time.date span:first-child { font-size: 1em; }
-time.date span + span { font-size: 1.5em; }
-time.date span + span + span { font-size: 1.2em; }
-time.time span { display: inline-block; margin-left: 2px; line-height: 1; }
-time.time span:first-child { font-size: 1em; margin-left: 0px; }
-time.time span + span  { font-size: 1.2em; }
+time.time span { display: inline-block; }
+time.time span + span { margin-left: 2px; }
 
 /* BBCODE */
 					

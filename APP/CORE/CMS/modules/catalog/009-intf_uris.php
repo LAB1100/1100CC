@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -101,7 +101,7 @@ class intf_uris extends uris {
 				$num_in_out = (int)$arr_id[1];
 				$str_identifier = base64_decode($arr_id[2]);
 				
-				$arr_uri = static::getURI($uri_translator_id, $num_in_out, $str_identifier, true);
+				$arr_uri = static::getURILiteral($uri_translator_id, $num_in_out, $str_identifier);
 				$mode = 'update_uri';
 			}
 								

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -119,7 +119,7 @@ class cms_form_submissions extends base_module {
 		$arr_forms = cms_forms::getForms();
 		$use_form_id = key($arr_forms);
 				
-		$form_submission_id = (int)SiteStartVars::getRequestVariables(2);
+		$form_submission_id = (int)SiteStartEnvironment::getRequestVariables(2);
 			
 		if ($form_submission_id) {
 
@@ -129,7 +129,7 @@ class cms_form_submissions extends base_module {
 				
 				$use_form_id = $arr_form_submission['submission']['form_id'];
 								
-				SiteEndVars::addScript("SCRIPTER.static('#mod-cms_form_submissions', function(elm_scripter) {
+				SiteEndEnvironment::addScript("SCRIPTER.static('#mod-cms_form_submissions', function(elm_scripter) {
 					
 					var elm_toolbox = getContainerToolbox(elm_scripter);
 					var elm_command = $('<div id=\"y:cms_form_submissions:view-".$form_submission_id." \"></div>').appendTo(elm_toolbox);
@@ -336,11 +336,11 @@ class cms_form_submissions extends base_module {
 			$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_FORM_SUBMISSION_INTERNAL_TAGS'), 'form_submission_id', $id, true);
 
 			$return = '<div class="record"><dl>
-				<li>
+				<div>
 					<dt>'.getLabel('lbl_form').'</dt>
 					<dd>'.strEscapeHTML($arr_form_set['details']['name']).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt></dt>
 					<dd>
 						<table><tr>';
@@ -381,25 +381,25 @@ class cms_form_submissions extends base_module {
 			
 					$return .= '</tr></table>
 					</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_date').'</dt>
 					<dd>'.date('d-m-Y H:i:s', strtotime($arr_form_submission['submission']['date'])).'</dd>
-				</li>';
+				</div>';
 				if ($arr_form_submission['submission']['referral_url']) {
-					$return .= '<li>
+					$return .= '<div>
 						<dt>'.getLabel('lbl_referral_url').'</dt>
 						<dd>'.$arr_form_submission['submission']['referral_url'].'</dd>
-					</li>';
+					</div>';
 				}
-				$return .= '<li>
+				$return .= '<div>
 					<dt>'.getLabel('lbl_url').'</dt>
 					<dd>'.$arr_form_submission['submission']['url'].'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_user').'</dt>
 					<dd>'.cms_log::getLoggedUser($arr_form_submission['submission']['log_user_id']).'</dd>
-				</li>
+				</div>
 			</dl></div>';
 			
 			if ($method == "view") {

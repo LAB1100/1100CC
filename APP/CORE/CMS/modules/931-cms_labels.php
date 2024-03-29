@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -65,7 +65,7 @@ class cms_labels extends base_module {
 						<tr>
 							<th class="max"><span>Identifier</span></th>';
 							
-							$arr_language = cms_language::getLanguage('core');
+							$arr_language = cms_language::getLanguage(false, 'core');
 							
 							foreach($arr_language as $lang_code => $arr_row) {
 								
@@ -104,7 +104,7 @@ class cms_labels extends base_module {
 			$arr_label = self::getLabel($label);
 		} else {
 			$label = $label_default;
-			$arr_label[SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)] = $str;
+			$arr_label[SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)] = $str;
 		}
 		
 		$return = '<div class="tabs">
@@ -250,7 +250,7 @@ class cms_labels extends base_module {
 							
 			$this->html = '<form class="label-popup" data-method="select_label">
 				'.$this->createLabel($value['selected'], $value['type'], 'auto_'.($value['module'] ?: 'x').'_'.$value['name'].'_'.uniqid()).'
-				<input class="hide" type="submit" name="" value="" />
+				<input class="hide" type="submit" value="" />
 				<input type="submit" data-tab="save" name="save" value="'.getLabel('lbl_save').'" />
 				<input type="submit" data-tab="select" name="select" value="'.getLabel('lbl_select').'" />
 			</form>';
@@ -267,7 +267,7 @@ class cms_labels extends base_module {
 				$mode = ($id == 'cms' ? 'insert_label_cms' : 'insert_label_core');
 			}
 			
-			$arr_lang = cms_language::getLanguage(($mode == 'insert_label_core' || $mode == 'update_label_core' ? 'core' : 'cms'));
+			$arr_lang = cms_language::getLanguage(false, ($mode == 'insert_label_core' || $mode == 'update_label_core' ? 'core' : 'cms'));
 								
 			$this->html = '<form class="label-popup" data-method="'.$mode.'">
 				
@@ -295,7 +295,7 @@ class cms_labels extends base_module {
 		
 		if ($method == "export") {
 			
-			$arr_language = cms_language::getLanguage($id);
+			$arr_language = cms_language::getLanguage(false, $id);
 			
 			$str_search = ($value['search'] ?? false);
 			
@@ -328,7 +328,10 @@ class cms_labels extends base_module {
 			$str = read($resource);
 			fclose($resource);
 			
-			$this->html = '<form class="label-import-export">'.static::createLabelExport($id, $str).'</form>';
+			$this->html = '<form class="label-import-export">'
+				.static::createLabelExport($id, $str)
+				.'<input type="submit" value="'.getLabel('lbl_close').'" />'
+			.'</form>';
 		}
 		
 		if ($method == "import") {
@@ -346,7 +349,7 @@ class cms_labels extends base_module {
 				return;
 			}
 			
-			$arr_language = cms_language::getLanguage($id);
+			$arr_language = cms_language::getLanguage(false, $id);
 						
 			$resource = getStreamMemory();
 			fwrite($resource, $_POST['csv']);
@@ -407,7 +410,7 @@ class cms_labels extends base_module {
 					
 		if ($method == "data_labels") {
 			
-			$arr_language = cms_language::getLanguage(($id == 'cms' || $id == 'select' ? 'cms' : 'core'));
+			$arr_language = cms_language::getLanguage(false, ($id == 'cms' || $id == 'select' ? 'cms' : 'core'));
 			
 			$arr_sql_columns_search = false;
 			$arr_sql_columns_as = false;
@@ -574,35 +577,6 @@ class cms_labels extends base_module {
 		}
 	}
 	
-	public static function addLabel($str_identifier, $arr_values, $table = 'cms', $user_id = false) {
-				
-		$arr_language = cms_language::getLanguage(($table == 'cms' || $table == 'user' ? 'cms' : 'core'));
-		$table_name = ($table == 'user' ? 'TABLE_SITE_USER_LABELS' : ($table == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS'));
-		
-		$str_identifier = str2Label($str_identifier);
-		
-		foreach ($arr_language as $str_lang_code => $arr_language_settings) {
-			
-			if ($arr_values[$str_lang_code]) {
-				
-				$res = DB::query("INSERT INTO ".DB::getTable($table_name)."
-					(identifier, lang_code, label".($table == 'user' ? ", user_id" : "").")
-						VALUES
-					('".DBFunctions::strEscape($str_identifier)."', '".DBFunctions::strEscape($str_lang_code)."', '".DBFunctions::strEscape($arr_values[$str_lang_code])."'".($table == 'user' ? ", ".(int)$user_id : "").")");
-			}
-		}
-	}
-	
-	public static function delLabel($str_identifier, $table = 'cms', $user_id = false) {
-		
-		$table_name =  ($table == 'user' ? 'TABLE_SITE_USER_LABELS' : ($table == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS'));
-		
-		$res = DB::query("DELETE FROM ".DB::getTable($table_name)."
-			WHERE identifier = '".DBFunctions::strEscape($str_identifier)."'
-				".($table == 'user' ? "AND user_id = ".(int)$user_id : "")
-		);
-	}
-	
 	public static function getLabel($str_identifier, $table = 'cms', $user_id = false) {
 						
 		$arr = [];
@@ -643,9 +617,32 @@ class cms_labels extends base_module {
 		return $arr;
 	}
 	
+	public static function addLabel($str_identifier, $arr_values, $table = 'cms', $user_id = false) {
+				
+		$arr_language = cms_language::getLanguage(false, ($table == 'cms' || $table == 'user' ? 'cms' : 'core'));
+		$table_name = ($table == 'user' ? 'TABLE_SITE_USER_LABELS' : ($table == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS'));
+		
+		$str_identifier = str2Label($str_identifier);
+		
+		if ($str_identifier === '') {
+			return false;
+		}
+		
+		foreach ($arr_language as $str_lang_code => $arr_language_settings) {
+			
+			if ($arr_values[$str_lang_code]) {
+				
+				$res = DB::query("INSERT INTO ".DB::getTable($table_name)."
+					(identifier, lang_code, label".($table == 'user' ? ", user_id" : "").")
+						VALUES
+					('".DBFunctions::strEscape($str_identifier)."', '".DBFunctions::strEscape($str_lang_code)."', '".DBFunctions::strEscape($arr_values[$str_lang_code])."'".($table == 'user' ? ", ".(int)$user_id : "").")");
+			}
+		}
+	}
+	
 	public static function addLabelList($arr_labels, $table = 'cms', $user_id = false) {
 				
-		$arr_language = cms_language::getLanguage(($table == 'cms' || $table == 'user' ? 'cms' : 'core'));
+		$arr_language = cms_language::getLanguage(false, ($table == 'cms' || $table == 'user' ? 'cms' : 'core'));
 		$table_name = ($table == 'user' ? 'TABLE_SITE_USER_LABELS' : ($table == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS'));
 		
 		$arr_sql = [];
@@ -653,6 +650,10 @@ class cms_labels extends base_module {
 		foreach ($arr_labels as $str_identifier => $arr_label) {
 			
 			$str_identifier = str2Label($str_identifier);
+			
+			if ($str_identifier === '') {
+				continue;
+			}
 			
 			$arr_row = [];
 			
@@ -672,10 +673,21 @@ class cms_labels extends base_module {
 				(identifier, lang_code, label".($table == 'user' ? ", user_id" : "").")
 					VALUES
 				".implode(',', $arr_sql)."
+				".DBFunctions::onConflict('identifier, lang_code', ['label'])."
 			");
 		}
 	}
-	
+
+	public static function delLabel($str_identifier, $table = 'cms', $user_id = false) {
+		
+		$table_name =  ($table == 'user' ? 'TABLE_SITE_USER_LABELS' : ($table == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS'));
+		
+		$res = DB::query("DELETE FROM ".DB::getTable($table_name)."
+			WHERE identifier = '".DBFunctions::strEscape($str_identifier)."'
+				".($table == 'user' ? "AND user_id = ".(int)$user_id : "")
+		);
+	}
+
 	public static function clearLabelList($table = 'cms', $user_id = false) {
 		
 		$table_name = ($table == 'user' ? 'TABLE_SITE_USER_LABELS' : ($table == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS'));
@@ -764,12 +776,12 @@ class cms_labels extends base_module {
 		
 			$res = DB::query("(SELECT identifier, label
 				FROM ".DB::getTable("TABLE_CMS_LABELS")."
-				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
+				WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."'
 				AND identifier = '".DBFunctions::strEscape($labels)."'
 			) UNION ALL (
 				SELECT identifier, label
 					FROM ".DB::getTable("TABLE_CORE_LABELS")."
-				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
+				WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."'
 					AND identifier = '".DBFunctions::strEscape($labels)."'
 					AND NOT EXISTS (SELECT identifier 
 						FROM ".DB::getTable("TABLE_CMS_LABELS")."
@@ -785,12 +797,12 @@ class cms_labels extends base_module {
 		
 			$res = DB::query("(SELECT identifier, label
 				FROM ".DB::getTable("TABLE_CMS_LABELS")."
-				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
+				WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."'
 				AND identifier IN ('".$str."')
 			) UNION ALL (
 				SELECT identifier, label
 					FROM ".DB::getTable("TABLE_CORE_LABELS")."
-				WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
+				WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."'
 					AND identifier IN ('".$str."')
 					AND identifier NOT IN (SELECT identifier 
 						FROM ".DB::getTable("TABLE_CMS_LABELS")."
@@ -824,11 +836,11 @@ class cms_labels extends base_module {
 		
 		$sql_labels = implode("','", $arr_labels);
 		
-		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)) {
+		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)) {
 				
 			$res = DB::query("SELECT lang_code, identifier, label
 							FROM ".DB::getTable('TABLE_CMS_LABELS')."
-						WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."')");
+						WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."')");
 
 			while ($row = $res->fetchAssoc()) {
 				
@@ -842,7 +854,7 @@ class cms_labels extends base_module {
 				
 				$res = DB::query("SELECT lang_code, identifier, label
 								FROM ".DB::getTable('TABLE_CORE_LABELS')."
-							WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."')");
+							WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."')");
 
 				while($row = $res->fetchAssoc()) {
 					
@@ -852,7 +864,7 @@ class cms_labels extends base_module {
 			}
 		}
 		
-		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE) != $str_language_default && $arr_labels) {
+		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE) != $str_language_default && $arr_labels) {
 			
 			$sql_labels = implode("','", $arr_labels);
 				
@@ -891,11 +903,11 @@ class cms_labels extends base_module {
 			
 			$sql_labels = implode("','", $arr_labels);
 			
-			if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)) {
+			if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)) {
 					
 				$res = DB::query("SELECT lang_code, identifier, label
 						FROM ".DB::getTable('TABLE_SITE_USER_LABELS')."
-					WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."') AND user_id = ".(int)$user_id
+					WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."' AND identifier IN ('".$sql_labels."') AND user_id = ".(int)$user_id
 				);
 
 				while ($row = $res->fetchAssoc()) {
@@ -905,7 +917,7 @@ class cms_labels extends base_module {
 				}
 			}
 
-			if (SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE) != $str_language_default && $arr_labels) {
+			if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE) != $str_language_default && $arr_labels) {
 		
 				$sql_labels = implode("','", $arr_labels);
 				
@@ -949,7 +961,7 @@ class cms_labels extends base_module {
 			
 			$sql = "SELECT identifier, label
 					FROM ".DB::getTable('TABLE_CMS_LABELS')."
-						WHERE lang_code = '".SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)."'
+						WHERE lang_code = '".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)."'
 						AND (".implode(" OR ", $arr_query_search).")
 			";
 			

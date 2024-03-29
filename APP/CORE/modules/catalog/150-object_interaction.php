@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -139,12 +139,12 @@ class object_interaction {
 			$script_custom = $p->parse($script_custom);
 		}
 		
-		SiteEndVars::addScript("$(document).ready(function() {
+		SiteEndEnvironment::addScript("$(document).ready(function() {
 			".$script.$script_custom."
 		});");
 
 		if ($style_objects) {
-			SiteEndVars::addStyle($style_objects);
+			SiteEndEnvironment::addStyle($style_objects);
 		}
 				
 		$return .= '<div id="stage_'.$this->arr['stage']['id'].'"></div><div class="objects">'.$str_objects.'</div>';
@@ -203,7 +203,7 @@ class object_interaction {
 			$arr_classes[] = 'hover-'.$value;
 		};
 		
-		$value_hotspot = ($arr_object['redirect_page_id'] ? '<a href="'.SiteStartVars::getModuleURL($this->mod_id).'jump/'.$arr_object['redirect_page_id'].'">'.$value_hotspot.'</a>' : $value_hotspot);
+		$value_hotspot = ($arr_object['redirect_page_id'] ? '<a href="'.SiteStartEnvironment::getModuleURL($this->mod_id).'jump/'.$arr_object['redirect_page_id'].'">'.$value_hotspot.'</a>' : $value_hotspot);
 
 		return '<div id="object_'.$id.'" class="object'.($arr_classes ? ' '.implode(' ', $arr_classes) : '').'" style="left: '.$arr_object['pos_x'].'%; top: '.$arr_object['pos_y'].'%; width: '.$arr_object['width'].'%; '.implode(' ', $arr_style_extra).'" data-name="'.$arr_object['name'].'">
 			'.$value_hotspot.'

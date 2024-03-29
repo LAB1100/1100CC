@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,13 +13,14 @@ class Response {
 	const OUTPUT_JSON = 2;
 	const OUTPUT_JSONP = 4 + 2;
 	const OUTPUT_TEXT = 8;
+	const OUTPUT_CSV = 16;
 	
-	const RENDER_HTML = 16;
-	const RENDER_XML = 32;
-	const RENDER_LINKED_DATA = 64;
-	const RENDER_TEXT = 128;
+	const RENDER_HTML = 32;
+	const RENDER_XML = 64;
+	const RENDER_LINKED_DATA = 128;
+	const RENDER_TEXT = 256;
 	
-	const PARSE_PRETTY = 256;
+	const PARSE_PRETTY = 512;
 	
 	private static $do_output_updates = null; // true, null, false
 	
@@ -31,14 +32,21 @@ class Response {
 	private static $response_sent = 0;
 	private static $disable_encoding = false;
 	private static $format = self::OUTPUT_XML | self::RENDER_HTML;
+	private static $format_settings = null;
 	private static $arr_headers = [];
 	
 	private static $arr_parse_callbacks = [];
+	private static $arr_hold_parse_callbacks = [];
 	private static $arr_parse_delays = [];
 	private static $arr_parse_post_identifiers = [];
 	private static $arr_parse_post_options = [];
 	private static $do_clear_parse = false;
 	private static $format_hold = null;
+	private static $format_settings_hold = null;
+	
+	const PARSE_METHOD = 1;
+	const PARSE_DELAY = 2;
+	const PARSE_POST = 4;
 	
 	public static function setOutputUpdates(?bool $do_output = true) {
 		
@@ -121,7 +129,7 @@ class Response {
 				$str = $str_close.$str;
 			}
 
-			if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_DOWNLOAD) {
+			if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_DOWNLOAD) {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
 					header('Content-Type: text/html;charset=utf-8');
@@ -185,14 +193,12 @@ class Response {
 		}
 		
 		if (bitHasMode(self::$format, self::OUTPUT_XML)) {
-							
+			
 			if (!self::$buffer_sent && !self::$stream_sent) {
-				
 				header('Content-Type: text/html;charset=utf-8');
 			}
 			
 			if (is_callable($index)) {
-				
 				$index = $index();
 			}
 			
@@ -201,12 +207,11 @@ class Response {
 				$str = self::encode($index);
 				
 				if (self::$stream_sent) {
-					
 					$str = self::$str_stream_close.$str;
 				}
 			} else {
 				
-				$str = self::parse($index, (self::$response_sent > 1 || ((Mediator::getShutdown() & (Mediator::SHUTDOWN_INIT_UNDETERMINED | Mediator::SHUTDOWN_INIT_SYSTEM)) ? false : true))); // Also prevent errors originating from parsing functions
+				$str = self::parse($index, (self::$response_sent > 1 || (Mediator::getShutdown() & (Mediator::SHUTDOWN_INIT_UNDETERMINED | Mediator::SHUTDOWN_INIT_SYSTEM)) ? self::PARSE_POST : null)); // Also prevent errors originating from parsing functions
 				$str = self::output($str);
 				
 				if (self::$stream_sent) {
@@ -227,7 +232,6 @@ class Response {
 		} else {
 							
 			if (is_callable($dynamic)) {
-				
 				$dynamic = $dynamic();
 			}
 			
@@ -243,7 +247,7 @@ class Response {
 				}
 			} else {
 				
-				$str = self::parse($dynamic, (self::$response_sent > 1 || ((Mediator::getShutdown() & (Mediator::SHUTDOWN_INIT_UNDETERMINED | Mediator::SHUTDOWN_INIT_SYSTEM)) ? false : true))); // Also prevent errors originating from parsing functions
+				$str = self::parse($dynamic, (self::$response_sent > 1 || (Mediator::getShutdown() & (Mediator::SHUTDOWN_INIT_UNDETERMINED | Mediator::SHUTDOWN_INIT_SYSTEM)) ? self::PARSE_POST : null)); // Also prevent errors originating from parsing functions
 				$str = self::output($str);
 				
 				if (self::$stream_sent) {
@@ -264,7 +268,7 @@ class Response {
 				}
 			}
 			
-			if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_DOWNLOAD) {
+			if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_DOWNLOAD) {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
 					header('Content-Type: text/html;charset=utf-8');
@@ -310,9 +314,9 @@ class Response {
 
 			$str_buffer = str_pad('', 4096, ' ');
 			
-			$request_state = SiteStartVars::getRequestState();
+			$request_state = SiteStartEnvironment::getRequestState();
 
-			if ($request_state == SiteStartVars::REQUEST_COMMAND || $request_state == SiteStartVars::REQUEST_DOWNLOAD) {
+			if ($request_state == SiteStartEnvironment::REQUEST_COMMAND || $request_state == SiteStartEnvironment::REQUEST_DOWNLOAD) {
 
 				$str_buffer = '[PROCESS]'.$str_buffer.'[-PROCESS]';
 
@@ -327,7 +331,7 @@ class Response {
 		
 		if ($response) {
 
-			$str = self::parse($response, false);
+			$str = self::parse($response, self::PARSE_POST);
 			$str = self::output($str);
 			
 			$str = '[PROCESS]'.$str.'[-PROCESS]';
@@ -347,35 +351,59 @@ class Response {
 		flush();
 	}
 	
-	public static function encode($value) {
+	public static function location($url) {
 		
-		if (!$value || self::$disable_encoding || (bitHasMode(self::$format, self::OUTPUT_XML, self::OUTPUT_TEXT) && is_string($value))) {
-			return $value;
-		}
-		
-		$is_string = is_string($value);
-		
-		if (bitHasMode(self::$format, self::PARSE_PRETTY)) {
-			$str = value2JSON($value, JSON_PRETTY_PRINT);
-		} else {
-			$str = value2JSON($value);
-		}
-		
-		if ($is_string) { // In case $value is not an e.g. object/array, but a string, remove the added ""
-			$str = substr($str, 1, -1);
-		}
-		
-		return $str;
-	}
+		if (is_array($url)) {
 			
+			$object = static::getObject();
+			
+			if (!isset($object->location)) {
+				$object->location = [];
+			}
+			
+			$object->location += $url;
+
+			return;
+		}
+
+		self::stop(function() use ($url) {
+				
+				header('Location: '.$url);
+				exit;
+			}, function() use ($url) {
+				
+				if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_API) {
+					
+					header('Location: '.$url);
+					exit;
+				}
+								
+				$JSON = (object)[];
+				$JSON->location = ['reload' => true, 'real' => $url];
+				$JSON = Log::addToObj($JSON);
+				
+				return $JSON;
+			}
+		);
+	}
+	
 	public static function setFormat($format) {
 		
 		self::$format = $format;
+		self::$format_settings = null;
+	}
+	public static function setFormatSettings($settings) {
+		
+		self::$format_settings = $settings;
 	}
 	
 	public static function getFormat() {
 		
 		return self::$format;
+	}
+	public static function getFormatSettings() {
+		
+		return self::$format_settings;
 	}
 	
 	public static function holdFormat($do_hold = false) { // Quick store and release of format
@@ -387,11 +415,58 @@ class Response {
 			}
 
 			self::$format_hold = self::$format;
+			self::$format_settings_hold = self::$format_settings;
 		} else if (self::$format_hold !== null) {
 			
 			self::$format = self::$format_hold;
-			self::$format_hold = null;
+			self::$format_settings = self::$format_settings_hold;
+			
+			self::$format_hold = self::$format_settings = null;
 		}		
+	}
+
+	public static function encode($value) {
+		
+		if (!$value || self::$disable_encoding || (bitHasMode(self::$format, self::OUTPUT_XML, self::OUTPUT_TEXT) && is_string($value))) {
+			return $value;
+		}
+		
+		if (bitHasMode(self::$format, self::OUTPUT_CSV)) {
+			return self::encodeCSV($value);
+		}
+		
+		return self::encodeJSON($value);
+	}
+	
+	public static function encodeJSON($value) {
+		
+		$is_string = is_string($value);
+		
+		if (bitHasMode(self::$format, self::PARSE_PRETTY)) {
+			$value = value2JSON($value, JSON_PRETTY_PRINT);
+		} else {
+			$value = value2JSON($value);
+		}
+		
+		if ($is_string) { // In case $value is not an e.g. object/array, but a string, remove the added ""
+			$value = substr($value, 1, -1);
+		}
+		
+		return $value;
+	}
+	
+	public static function encodeCSV($value) {
+		
+		$is_csv = (strpos($value, "\n", -1) !== false);
+		
+		if ($is_csv) { // Do not work on full CSV
+			return $value;
+		}
+		
+		$str_escape = (self::$format_settings ?? '"');
+		$value = str_replace($str_escape, $str_escape.$str_escape, $value);
+		
+		return $value;
 	}
 	
 	public static function decode($str, $is_object = false) {
@@ -400,20 +475,45 @@ class Response {
 			return $str;
 		}
 		
-		if (!$is_object) { // In case $str is not an object/array, but a string, add ""
+		if (bitHasMode(self::$format, self::OUTPUT_CSV)) {	
+			return self::decodeCSV($str, $is_object);
+		}
+		
+		return self::decodeJSON($str, $is_object);
+	}
+	
+	public static function decodeJSON($str, $is_object = false) {
+		
+		if (!$is_object) { // In case $str is not an encoded object/array, but a string, add ""
 			$str = '"'.$str.'"';
 		}
 		
-		$value = json_decode($str);
-		
-		return $value;
+		return json_decode($str);
 	}
 	
-	public static function addParse($function) {
+	public static function decodeCSV($str, $is_object = false) {
 		
-		$id = array_push(self::$arr_parse_callbacks, $function);
+		$is_csv = (strpos($str, "\n", -1) !== false);
 		
-		return $id;
+		if ($is_csv) { // Do not work on full CSV
+			return $str;
+		}
+		
+		$str_escape = (self::$format_settings ?? '"');
+		$str = str_replace($str_escape.$str_escape, $str_escape, $str);
+		
+		return $str;
+	}
+	
+	public static function addParse($function, $identifier = false) {
+		
+		if ($identifier !== false) {
+			self::$arr_parse_callbacks[$identifier] = $function;
+		} else {
+			$identifier = array_push(self::$arr_parse_callbacks, $function);
+		}
+		
+		return $identifier;
 	}
 	
 	public static function addParseDelay($str, $function, $post = false) {
@@ -473,11 +573,11 @@ class Response {
 		}
 	}
 	
-	public static function setAutoClearParse($do = false) { // Auto-clear Parse Delays when used
+	public static function holdParse($identifier, $do_hold) {
 		
-		self::$do_clear_parse = $do;
+		self::$arr_hold_parse_callbacks[$identifier] = ($do_hold ? true : null);
 	}
-	
+		
 	private static function clearParse() {
 		
 		self::$arr_parse_delays = [];
@@ -486,23 +586,31 @@ class Response {
 		self::$arr_parse_post_identifiers = [];
 	}
 	
-	public static function parse($value, $callbacks = true) {
+	public static function setClearParseAuto($do_clear = false) { // Auto-clear Parse Delays when used
+		
+		self::$do_clear_parse = $do_clear;
+	}
+	
+	public static function parse($value, $mode = null) {
 		
 		$value = self::encode($value);
 		
 		$value = Labels::printLabels($value, true);
 		
-		if ($callbacks) {
+		if ($mode === null || bitHasMode($mode, self::PARSE_METHOD)) {
 
-			foreach (self::$arr_parse_callbacks as $key => $function) {
-				
-				$value = $function($value);
+			foreach (self::$arr_parse_callbacks as $key => $function) {				
+				$value = self::parseMethod($key, $value);
 			}
-			
+		}
+		
+		if ($mode === null || bitHasMode($mode, self::PARSE_DELAY)) {
 			$value = self::parseDelay($value);
 		}
 		
-		$value = self::parsePost($value);
+		if ($mode === null || bitHasMode($mode, self::PARSE_POST)) {
+			$value = self::parsePost($value);
+		}
 		
 		if (bitHasMode(self::$format, self::RENDER_XML)) {
 			$value = strEscapeXMLEntities($value);
@@ -534,6 +642,17 @@ class Response {
 		}
 		
 		return $value;
+	}
+	
+	public static function parseMethod($identifier, $value) {
+		
+		if (isset(self::$arr_hold_parse_callbacks[$identifier])) {
+			return $value;
+		}
+		
+		$function = self::$arr_parse_callbacks[$identifier];
+		
+		return $function($value);
 	}
 	
 	public static function parseDelay($value) {
@@ -617,15 +736,15 @@ class Response {
 			if ($arr_options['case']) {
 				$str = ($arr_options['case'] == 'upper' ? strtoupper($str) : strtolower($str));
 			}	
-			if ($arr_options['limit'] !== null) {
+			if (isset($arr_options['limit'])) {
 				
-				$limited = false;
+				$is_limited = false;
 				
 				if (!$arr_options['limit']) {
 					
 					if ($str != '') {
 						
-						$limited = true;
+						$is_limited = true;
 						$str = '';
 					}
 				} else if (strpos($str, '<') !== false) {
@@ -662,7 +781,7 @@ class Response {
 							
 							if ($stop) {
 								
-								$limited = true;
+								$is_limited = true;
 							} else {
 								
 								$value .= $char;
@@ -681,10 +800,10 @@ class Response {
 				} else if (mb_strlen($str) > $arr_options['limit']) {
 				
 					$str = mb_substr($str, 0, $arr_options['limit']);
-					$limited = true;
+					$is_limited = true;
 				}
 				
-				if ($arr_options['affix'] && $limited) {
+				if ($arr_options['affix'] && $is_limited) {
 					
 					$str = $str.$arr_options['affix'];
 				}
@@ -718,7 +837,7 @@ class Response {
 	
 	public static function sendHeaders() {
 		
-		SiteEndVars::checkRequestPolicy();
+		SiteEndEnvironment::checkRequestPolicy();
 		
 		foreach (static::$arr_headers as $header) {
 			header($header);
@@ -731,12 +850,20 @@ class Response {
 		
 		if ($file) {
 			
-			try {
-				$is_file = is_file($file);
-			} catch (Exception $e) {
-				$is_file = false;
+			$is_file = false;
+			$is_resource = false;
+			$num_size = 0;
+			
+			if (is_string($file) && is_file($file)) {
+				$is_file = true;
+				$num_size = filesize($file);
+			} else if (is_resource($file)) {
+				$is_resource = true;
+				$arr_stat = fstat($file);
+				$num_size = $arr_stat['size'];
+			} else {
+				$num_size = strlen($file);
 			}
-			$num_size = ($is_file ? filesize($file) : mb_strlen($file, '8bit'));
 			
 			$filename = (!is_bool($download) ? $download : basename($file));
 			
@@ -756,7 +883,11 @@ class Response {
 					$type = FileStore::getExtensionMIMEType(FileStore::getFilenameExtension($filename));
 					
 					if (!$type) {
-						$type = $finfo->buffer($file);
+						if ($is_resource) {
+							$type = $finfo->buffer(stream_get_contents($file, 100));
+						} else {
+							$type = $finfo->buffer(substr($file, 0, 100));
+						}
 					}
 				}
 
@@ -790,28 +921,5 @@ class Response {
 		foreach	($arr_headers as $header) {
 			header($header);
 		}
-	}
-	
-	public static function location($url) {
-
-		self::stop(function() use ($url) {
-				
-				header('Location: '.$url);
-				exit;
-			}, function() use ($url) {
-				
-				if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_API) {
-					
-					header('Location: '.$url);
-					exit;
-				}
-								
-				$JSON = (object)[];
-				$JSON->location = ['reload' => true, 'real' => $url];
-				$JSON = Log::addToObj($JSON);
-				
-				return $JSON;
-			}
-		);
 	}
 }

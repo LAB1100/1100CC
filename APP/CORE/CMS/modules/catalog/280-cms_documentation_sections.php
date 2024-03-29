@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -622,7 +622,7 @@ class cms_documentation_sections extends base_module {
 		$arr_documentation_sections = static::getDocumentationSections($documentation_id);
 		$arr_documentation_section = $arr_documentation_sections[$documentation_section_id];
 		
-		$str_url_documentation = SiteStartVars::getShortestModuleURL($arr_mod['id'], false, $arr_mod['shortcut'], $arr_mod['shortcut_root'], 0, true);
+		$str_url_documentation = SiteStartEnvironment::getShortestModuleURL($arr_mod['id'], false, $arr_mod['shortcut'], $arr_mod['shortcut_root'], 0, true);
 		
 		$url_section = $str_url_documentation.$arr_documentation_section['id'].'/'.$arr_documentation_section['name'];
 		Labels::setVariable('url_documentation', $str_url_documentation);
@@ -647,12 +647,12 @@ class cms_documentation_sections extends base_module {
 				if ($use_documentation_id) {
 
 					$arr_mod_external = documentation::findMainDocumentation($use_documentation_id);
-					$str_url_documentation = SiteStartVars::getModuleURL($arr_mod_external['id'], $arr_mod_external['page_name'], $arr_mod_external['sub_dir'], true); // Make sure to not use shortcut URLs
+					$str_url_documentation = SiteStartEnvironment::getModuleURL($arr_mod_external['id'], $arr_mod_external['page_name'], $arr_mod_external['sub_dir'], true); // Make sure to not use shortcut URLs
 					
 					$arr_documentation_sections = static::getDocumentationSections($use_documentation_id);
 				} else if ($use_documentation_section_id != $documentation_section_id) {
 					
-					$str_url_documentation = SiteStartVars::getModuleURL($arr_mod['id'], false, 0, true); // Make sure to not use shortcut URLs
+					$str_url_documentation = SiteStartEnvironment::getModuleURL($arr_mod['id'], false, 0, true); // Make sure to not use shortcut URLs
 				}
 				
 				$arr_use_documentation_section = $arr_documentation_sections[$use_documentation_section_id];

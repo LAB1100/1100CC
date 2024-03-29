@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -354,8 +354,9 @@ class cms_dashboards extends base_module {
 		}
 		
 		if ($arr_widgets) {
+			
 			usort($arr, function($a, $b) {
-				return $a['x'].'_'.$a['y'] > $b['x'].'_'.$b['y'];
+				return $a['x'].'_'.$a['y'] <=> $b['x'].'_'.$b['y'];
 			});
 		}
 		

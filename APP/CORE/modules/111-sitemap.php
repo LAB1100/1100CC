@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,9 +16,9 @@ class sitemap extends base_module {
 
 	public function contents() {
 
-		$directory_id = SiteStartVars::getDirectory('id');
+		$directory_id = SiteStartEnvironment::getDirectory('id');
 
-		if (SiteStartVars::getDirectory('require_login') && SiteStartVars::getDirectory('user_group_id') && (empty($_SESSION['USER_GROUP']) || SiteStartVars::getDirectory('user_group_id') != $_SESSION['USER_GROUP'])) {
+		if (SiteStartEnvironment::getDirectory('require_login') && SiteStartEnvironment::getDirectory('user_group_id') && (empty($_SESSION['USER_GROUP']) || SiteStartEnvironment::getDirectory('user_group_id') != $_SESSION['USER_GROUP'])) {
 
 			$directory_id = directories::getParentDirectory();
 		}

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -37,9 +37,9 @@ abstract class api extends base_module {
 		
 		$this->setConfig();
 				
-		$html_form_configuration = $this->contentsFormConfiguration();
+		$str_html_form = $this->contentsForm();
 		
-		if ($html_form_configuration) {
+		if ($str_html_form) {
 			
 			$return = '<div class="tabs">
 				<ul>
@@ -48,14 +48,7 @@ abstract class api extends base_module {
 				</ul>
 				
 				<div>
-					
-					<form id="f:'.static::class.':configuration-0">
-						'.$html_form_configuration.'
-						<menu class="options">
-							<input type="submit" value="'.getLabel('lbl_save').'" />
-						</menu>
-					</form>
-					
+					'.$str_html_form.'					
 				</div>
 				
 				<div>
@@ -67,6 +60,24 @@ abstract class api extends base_module {
 			$return = $this->contentsClients();
 		}
 				
+		return $return;
+	}
+	
+	public function contentsForm() {
+		
+		$str_html_configuration = $this->contentsFormConfiguration();
+		
+		if (!$str_html_configuration) {
+			return false;
+		}
+		
+		$return = '<form id="f:'.static::class.':configuration-0">
+			'.$str_html_configuration.'
+			<menu class="options">
+				<input type="submit" value="'.getLabel('lbl_save').'" />
+			</menu>
+		</form>';
+		
 		return $return;
 	}
 	
@@ -206,18 +217,18 @@ abstract class api extends base_module {
 		$return = '<h2>'.($this->mode == static::CLIENT_USERS_MODE_CHILD_CHILD ? strEscapeHTML($arr_client['user_name']).' - ' : '').strEscapeHTML($arr_client['name']).'</h2>';
 
 		$return .= '<div class="record"><dl>
-			<li>
+			<div>
 				<dt>'.getLabel('lbl_valid_period').'</dt>
 				<dd>'.$str_time_amount.'</dd>
-			</li>
-			<li>
+			</div>
+			<div>
 				<dt>'.getLabel('lbl_identifier').'</dt>
 				<dd><pre>'.strEscapeHTML($arr_client['id']).'</pre></dd>
-			</li>
-			<li>
+			</div>
+			<div>
 				<dt>'.getLabel('lbl_passkey').' (secret)</dt>
 				<dd><pre>'.strEscapeHTML($arr_client['secret']).'</pre></dd>
-			</li>
+			</div>
 		</dl></div>';
 		
 		return $return;
@@ -292,23 +303,23 @@ abstract class api extends base_module {
 			
 		$return .= '<div class="record"><dl>';
 			if (variableHasValue($this->mode, static::CLIENT_USERS_MODE_CHILD_CHILD, static::CLIENT_USERS_MODE_PARENT_CHILD, static::CLIENT_USERS_MODE_ROOT_CHILD)) {
-				$return .= '<li>
+				$return .= '<div>
 					<dt>'.getLabel('lbl_user').'</dt>
 					<dd>'.strEscapeHTML($arr_client_user['user_name']).'</dd>
-				</li>';
+				</div>';
 			}
-			$return .= '<li>
+			$return .= '<div>
 				<dt>'.getLabel('lbl_date_start').'</dt>
 				<dd>'.date('d-m-Y H:i:s', strtotime($arr_client_user['date'])).'</dd>
-			</li>
-			<li>
+			</div>
+			<div>
 				<dt>'.getLabel('lbl_date_end').'</dt>
 				<dd>'.($arr_client_user['date_valid'] ? date('d-m-Y H:i:s', strtotime($arr_client_user['date_valid'])) : '∞').'</dd>
-			</li>
-			<li>
+			</div>
+			<div>
 				<dt>'.getLabel('lbl_passkey').' (token)</dt>
 				<dd><pre>'.strEscapeHTML($arr_client_user['token']).'</pre></dd>
-			</li>
+			</div>
 		</dl></div>';
 		
 		return $return;
@@ -318,8 +329,9 @@ abstract class api extends base_module {
 	
 		$class = static::class;
 	
-		$return = '.mod.'.$class.' input[name*=time_amount],
-					.mod.'.$class.' input[name*=time_amount] { width: 40px; }';
+		$return = '
+			.mod.'.$class.' input[name*=time_amount] { width: 60px; }
+		';
 		
 		return $return;
 	}
@@ -610,6 +622,11 @@ abstract class api extends base_module {
 			
 			$this->processFormConfiguration();
 			
+			$str_html_form = $this->contentsForm();
+		
+			if ($str_html_form) {
+				$this->html = $str_html_form;
+			}
 			$this->msg = true;
 		}
 		

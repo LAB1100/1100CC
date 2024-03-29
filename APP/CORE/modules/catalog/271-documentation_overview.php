@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -29,7 +29,7 @@ class documentation_overview extends base_module {
 		$arr_documentation = cms_documentations::getDocumentations($documentation_id);
 		
 		$arr_documentation_vars = documentation::findMainDocumentation($documentation_id);
-		$arr_documentation_vars['mod_vars'] = SiteStartVars::getModuleVariables($arr_documentation_vars['id']);
+		$arr_documentation_vars['mod_vars'] = SiteStartEnvironment::getModuleVariables($arr_documentation_vars['id']);
 	
 		$arr_documentation_sections = cms_documentation_sections::getDocumentationSections($documentation_id, false, true);
 		$arr_documentation_section_ids = [];
@@ -77,7 +77,7 @@ class documentation_overview extends base_module {
 				$html_identation .= '<span class="indentation"></span>';
 			}
 			
-			$str_url_documentation = SiteStartVars::getModuleURL($arr_documentation_vars['id'], $arr_documentation_vars['page_name'], $arr_documentation_vars['sub_dir'], true);
+			$str_url_documentation = SiteStartEnvironment::getModuleURL($arr_documentation_vars['id'], $arr_documentation_vars['page_name'], $arr_documentation_vars['sub_dir'], true);
 			$str_url_section = $str_url_documentation.$documentation_section_id.'/'.$arr_documentation_section['name'];
 			
 			$return .= '<a '.($active ? 'class="active"' : '').' href="'.$str_url_section.'">'
@@ -124,7 +124,7 @@ class documentation_overview extends base_module {
 		if ($id) {
 			return pages::getClosestModule('documentation_overview', 0, 0, 0, $id, 'id');
 		} else {
-			return pages::getClosestModule('documentation_overview', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'), 0, $id, 'id');
+			return pages::getClosestModule('documentation_overview', SiteStartEnvironment::getDirectory('id'), SiteStartEnvironment::getPage('id'), 0, $id, 'id');
 		}
 	}
 }

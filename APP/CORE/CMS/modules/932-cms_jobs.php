@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -327,7 +327,7 @@ class cms_jobs extends base_module {
 			return false;
 		} else {
 		
-			$arr = JSON2Value($arr_row['options']);
+			$arr = ($arr_row['options'] ? JSON2Value($arr_row['options']) : []);
 			$arr['process_id'] = $arr_row['process_id'];
 			$arr['date_executed'] = [
 				'previous' => $arr_row['date_executed'],
@@ -693,13 +693,13 @@ class cms_jobs extends base_module {
 			return false;
 		}
 
-		SiteStartVars::stopSession();
+		SiteStartEnvironment::stopSession();
 
 		$do = Mediator::setLock($module.$method, $key);
 		
 		if (!$do) {
 			
-			SiteStartVars::startSession();
+			SiteStartEnvironment::startSession();
 			return;
 		}
 		
@@ -707,7 +707,7 @@ class cms_jobs extends base_module {
 			
 			Mediator::removeLock($module.$method);
 			DB::setConnection();
-			SiteStartVars::startSession();
+			SiteStartEnvironment::startSession();
 		};
 		
 		try {

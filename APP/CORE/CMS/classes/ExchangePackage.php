@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -341,7 +341,12 @@ class ExchangePackage {
 		
 		foreach ($arr_files as $str_path_file) {
 			
-			$str_path_source = DIR_ROOT_STORAGE.DIR_HOME.$str_path_file;
+			if (is_array($str_path_file)) {
+				$str_path_source = DIR_ROOT_STORAGE.DIR_HOME.$str_path_file['source'];
+				$str_path_file = $str_path_file['target'];
+			} else {
+				$str_path_source = DIR_ROOT_STORAGE.DIR_HOME.$str_path_file;
+			}
 			
 			if (!isPath($str_path_source)) {
 				continue;

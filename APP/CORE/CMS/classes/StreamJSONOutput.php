@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -50,17 +50,24 @@ class StreamJSONOutput {
 	
 	public function open($obj) {
 		
-		if ($this->use_parse_simple) {
-			$str = static::parse($obj);
+		if ($obj) {
+
+			if ($this->use_parse_simple) {
+				$str = static::parse($obj);
+			} else {
+				$str = Response::parse($obj);
+				$str = Response::output($str);
+			}
+			
+			// Open ..."[STREAM]"... => ...?
+			$pos = strpos($str, $this->str_identifier);
+			$this->str_stream_close = substr($str, $pos + strlen($this->str_identifier) + 1);
+			$str = substr($str, 0, $pos - 1);
 		} else {
-			$str = Response::parse($obj);
-			$str = Response::output($str);
+			
+			$str = '';
 		}
 		
-		// Open ..."[STREAM]"... => ...?
-		$pos = strpos($str, $this->str_identifier);
-		$this->str_stream_close = substr($str, $pos + strlen($this->str_identifier) + 1);
-		$str = substr($str, 0, $pos - 1);
 		$str = $str.$this->str_open;
 		
 		fwrite($this->resource, $str);

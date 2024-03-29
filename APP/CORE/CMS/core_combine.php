@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -56,7 +56,7 @@ class CombineJSCSS {
 				}
 
 				$arr_last_modified[] = filemtime($file);
-				if ($type == SiteStartVars::MATERIAL_CSS) {
+				if ($type == SiteStartEnvironment::MATERIAL_CSS) {
 					$path_check = realpath($file);
 					if (strpos($path_check, DIR_ROOT_CORE) !== false) {
 						$root = DIR_ROOT_CORE;
@@ -94,7 +94,7 @@ class CombineJSCSS {
 		}
 				
 		Response::sendFileHeaders($code, false, [
-			'Content-Type: '.($type == SiteStartVars::MATERIAL_JS ? 'application/javascript': 'text/css'),
+			'Content-Type: '.($type == SiteStartEnvironment::MATERIAL_JS ? 'application/javascript': 'text/css'),
 			'ETag: "'.$ie_tag.'"',
 			'Cache-Control: max-age='.self::$cache_length,
 			'1100CC-Cached: '.(int)$create_archive

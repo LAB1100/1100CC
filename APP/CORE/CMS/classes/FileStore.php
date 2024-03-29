@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -452,16 +452,35 @@ class FileStore {
 		return true;
 	}
 	
-	public static function readFile($str_path, $str_filename, $do_delete = false) {
+	public static function readFile($file, $str_filename, $do_delete = false) {
 		
 		ob_end_clean();
 		
-		Response::sendFileHeaders($str_path, $str_filename);
+		Response::sendFileHeaders($file, $str_filename);
 		
-		readfile($str_path);
+		read($file, true);
 		
 		if ($do_delete) {
-			static::deleteFile($str_path);
+			static::deleteFile($file);
 		}
+	}
+	
+	public static function getDataURL($file, $str_mime = false) {
+		
+		$is_file = (isResource($file) || isPath($file));
+		
+		if (!$str_mime) {
+			
+			if ($is_file) {
+				$str_mime = mime_content_type($file);
+			} else {
+				$str_mime = 'application/octet-stream';
+			}
+		}
+		
+		$str_encode = ($is_file ? read($file) : $file);
+		$str_encode = base64_encode($str_encode);
+		
+		return 'data:'.$str_mime.';base64,'.$str_encode;
 	}
 }

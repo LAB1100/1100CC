@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -65,7 +65,7 @@ class FileCache {
 	}
 		
 	public function cache() {
-				
+		
 		if (!$this->create_archive || ($this->create_archive && !isPath($this->path_destination))) {
 			
 			$this->is_new = true;
@@ -84,8 +84,15 @@ class FileCache {
 			
 			if ($this->external_protocol) {
 				
-				$this->external_file = new FileGet($this->url);
+				$arr_settings = [];
+				
+				if ($this->create_archive) {
+					$arr_settings['redirect'] = 4; // Allow for more redirects when caching
+				}
+
+				$this->external_file = new FileGet($this->url, $arr_settings);
 				$this->external_file->load();
+				
 				$this->path_source = $this->external_file->getPath();
 			} else {
 				
@@ -139,7 +146,7 @@ class FileCache {
 		if ($this->external_file) {
 			$this->external_file->abort();
 		}
-		if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX) {
+		if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX) {
 			pages::noPage();
 		} else {
 			error(getLabel('msg_not_found'));

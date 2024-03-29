@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -50,6 +50,6 @@ class search_box extends base_module {
 	
 	public static function findSearch() {
 	
-		return pages::getClosestModule('search', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
+		return pages::getClosestModule('search', SiteStartEnvironment::getDirectory('id'), SiteStartEnvironment::getPage('id'));
 	}
 }

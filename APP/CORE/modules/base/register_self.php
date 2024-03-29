@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -43,7 +43,7 @@ abstract class register_self extends base_module {
 			
 			$return = '<h1>'.self::$label.'</h1>
 			
-			<form id="f:'.static::class.':user_add-0">
+			<form id="f:'.static::class.':user_add-0" autocomplete="on">
 				<fieldset><ul>
 					<li><label>'.getLabel('lbl_name_display').'</label><input name="name" type="text" /></li>
 					'.(!$this->arr_variables['email_as_username'] ? '<li><label>'.getLabel('lbl_username').'</label><input name="uname" type="text" /></li>' : '').'
@@ -93,9 +93,9 @@ abstract class register_self extends base_module {
 			
 			$user_data = $this->processForm();
 			
-			$str_url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false).'confirm/';
+			$str_url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false).'confirm/';
 		
-			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->arr_variables['email_as_username'] ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->arr_variables['user_group_id'] ?: SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $str_url);
+			$user = user_management::addUser(false, ['name' => $_POST['name'], 'uname' => ($this->arr_variables['email_as_username'] ? $_POST['email'] : $_POST['uname']), 'group_id' => ($this->arr_variables['user_group_id'] ?: SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)), 'parent_id' => (int)$user_data['parent_id'], 'email' => $_POST['email']], $_POST['password'], $str_url);
 			
 			user_management::updateUserLinkedData($user['id'], $user_data);
 			

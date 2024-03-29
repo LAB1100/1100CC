@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -294,7 +294,7 @@ class cms_blog_posts extends base_module {
 		if ($method == "data_blog_posts") {
 			
 			$arr_sql_columns = ['draft', 'title', 'cu.name', 'date'];
-			$arr_sql_columns_search = ['', 'title', 'cu.name', DBFunctions::castAs('date', DBFunctions::CAST_TYPE_STRING)];
+			$arr_sql_columns_search = ['', 'title', 'cu.name', DBFunctions::castAs('date', DBFunctions::CAST_TYPE_STRING), 'body'];
 			$arr_sql_columns_as = ['draft', 'title', 'cms_user_id', 'cu.name AS cms_user_name', 'date', 'bp.id'];
 			
 			$arr_blogs = cms_blogs::getBlogs();

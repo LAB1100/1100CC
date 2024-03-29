@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -20,20 +20,20 @@ class cms_language extends base_module {
 	
 	private static $arr_language_default = [];
 	
-	public static function getLanguage($table = 'cms', $lang = '') {
+	public static function getLanguage($str_lang_code = false, $str_table = 'cms') {
 	
-		$table = ($table == 'cms' ? 'TABLE_CMS_LANGUAGE' : 'TABLE_CORE_LANGUAGE'); 
+		$str_table = ($str_table == 'cms' ? 'TABLE_CMS_LANGUAGE' : 'TABLE_CORE_LANGUAGE'); 
 	
 		$arr = [];
 
-		if (!empty($lang)) {
+		if ($str_lang_code) {
 			
-			$res = DB::query("SELECT * FROM ".DB::getTable($table)." AS language WHERE lang_code = '".DBFunctions::strEscape($lang)."'");			
+			$res = DB::query("SELECT * FROM ".DB::getTable($str_table)." AS language WHERE lang_code = '".DBFunctions::strEscape($str_lang_code)."'");			
 			
-			$arr = $res->fetchAssoc();			
+			$arr = ($res->fetchAssoc() ?: []);			
 		} else {
 			
-			$res = DB::query("SELECT * FROM ".DB::getTable($table)." AS language ORDER BY".($table == 'TABLE_CMS_LANGUAGE' ? " is_default DESC," : "")." lang_code");
+			$res = DB::query("SELECT * FROM ".DB::getTable($str_table)." AS language ORDER BY".($str_table == 'TABLE_CMS_LANGUAGE' ? " is_default DESC," : "")." lang_code");
 			
 			while ($row = $res->fetchAssoc()) {
 				
@@ -44,12 +44,28 @@ class cms_language extends base_module {
 		return $arr;
 	}
 	
+	public static function getLanguageSelectable($str_lang_code = false) {
+	
+		$arr_languages = static::getLanguage($str_lang_code);
+		
+		foreach ($arr_languages as $lang_code => $arr_language) {
+			
+			if (!$arr_language['is_user_selectable']) {
+				unset($arr_languages[$lang_code]);
+			}
+		}
+		
+		return $arr_languages;
+	}
+	
 	public static function getLanguageHosts() {
 		
 		$arr = [];
 
-		$res = DB::query("SELECT lh.* FROM ".DB::getTable('TABLE_CMS_LANGUAGE_HOSTS')." lh
-							JOIN ".DB::getTable('TABLE_CMS_LANGUAGE')." l ON (l.lang_code = lh.lang_code)
+		$res = DB::query("SELECT
+				lh.*
+			FROM ".DB::getTable('TABLE_CMS_LANGUAGE_HOSTS')." lh
+			JOIN ".DB::getTable('TABLE_CMS_LANGUAGE')." l ON (l.lang_code = lh.lang_code)
 		");
 		
 		while($row = $res->fetchAssoc()){

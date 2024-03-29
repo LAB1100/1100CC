@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class contact_map extends base_module {
 		
 		$return = '<div data-address="'.getLabel('address', 'D').' '.getLabel('address_nr', 'D').'" data-city="'.getLabel('city', 'D').'" data-country="'.getLabel('country', 'D').'"></div>';
 		
-		SiteEndVars::addScript('http://maps.google.com/maps/api/js?sensor=false', true);
+		SiteEndEnvironment::addScript('http://maps.google.com/maps/api/js?sensor=false', true);
 				
 		return $return;
 	}

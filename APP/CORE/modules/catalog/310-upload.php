@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -33,7 +33,7 @@ class upload extends base_module {
 	public static function css() {
 	
 		$return = '
-			.upload dl > li > dt { font-weight: bold; }
+			.upload dl > div > dt { font-weight: bold; }
 		';
 		
 		return $return;
@@ -62,9 +62,9 @@ class upload extends base_module {
 						
 			$this->html = '<h2>'.getLabel('lbl_result').'</h2>
 			<div class="record"><dl>
-				<li><dt>URL</dt><dd><a href="'.URL_BASE.DIR_UPLOAD.$arr_result['name'].'">'.URL_BASE.DIR_UPLOAD.$arr_result['name'].'</a></dd></li>
-				<li><dt>Size</dt><dd>'.bytes2String($arr_result['size']).'</dd></li>
-				<li><dt>Type</dt><dd>'.$arr_result['type'].'</dd></li>
+				<div><dt>URL</dt><dd><a href="'.URL_BASE.DIR_UPLOAD.$arr_result['name'].'">'.URL_BASE.DIR_UPLOAD.$arr_result['name'].'</a></dd></div>
+				<div><dt>Size</dt><dd>'.bytes2String($arr_result['size']).'</dd></div>
+				<div><dt>Type</dt><dd>'.$arr_result['type'].'</dd></div>
 			</dl></div>';
 			
 			msg(getLabel('msg_file_upload_successful').' Name: '.$arr_result['name'].' Size: '.bytes2String($arr_result['size']).' Type: '.$arr_result['type'], 'UPLOAD');

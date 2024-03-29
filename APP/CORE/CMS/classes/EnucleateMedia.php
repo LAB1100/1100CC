@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -125,7 +125,7 @@ class EnucleateMedia {
 						
 						if ($this->use_cache) {
 							
-							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.SiteStartVars::getCacheURL('img', [($this->width ?: $this->num_cache_width), ($this->height ?: false)], $this->path_enucleate.$this->path_file).'" />';
+							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.SiteStartEnvironment::getCacheURL('img', [($this->width ?: $this->num_cache_width), ($this->height ?: false)], $this->path_enucleate.$this->path_file).'" />';
 						} else {
 							
 							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.$this->path_enucleate.$this->path_file.'" />';
@@ -155,6 +155,9 @@ class EnucleateMedia {
 						}
 						if ($arr_options['loop']) {
 							$str_html_options .= ' loop="1"';
+						}
+						if ($arr_options['muted'] || $arr_options['autoplay']) {
+							$str_html_options .= ' muted="1"';
 						}
 						$str_html_sizing = ($this->height ? ' height="'.$this->height.'"' : '').($this->width ? ' width="'.$this->width.'"' : '');
 						

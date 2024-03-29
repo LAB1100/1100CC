@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -38,34 +38,35 @@ class blog_post_comments extends base_module {
 	public function contents() {
 
 		$arr_link = blog::findMainBlog();
-		$arr_query = SiteStartVars::getModuleVariables($arr_link['id']);
+		$arr_query = SiteStartEnvironment::getModuleVariables($arr_link['id']);
 		
 		$blog_post_id = ($arr_query && $arr_query[0] ? (int)$arr_query[0] : false);
 
-		if ($blog_post_id) {
-				
-			$return .= '<h1>'.getLabel('ttl_comments').'</h1>
-			<span class="a">'.getLabel('lbl_add_comment').'</span>
-			
-			<form id="f:blog_post_comments:add_comment-'.$blog_post_id.'">
-				<fieldset><ul>
-					<li><label>'.getLabel('lbl_name').'</label><input type="text" name="name" value="'.($_SESSION['CUR_USER'] ? $_SESSION['CUR_USER'][TABLE_USER]['uname'] : '').'" /></li>
-					<li><label>'.getLabel('lbl_comment').'</label><textarea name="body"></textarea></li>
-					<li><label></label><div><input type="submit" value="Ok" class="invalid" /><input type="submit" value="'.getLabel('lbl_add_comment').'" /><input type="submit" value="Ok" class="invalid" /></div></li>
-				</ul></fieldset>
-			</form>
-			
-			<div>';
-			
-			$arr_blog_post_comments = cms_blog_post_comments::getBlogPostComments($blog_post_id);
-			
-			foreach ($arr_blog_post_comments as $arr_blog_post_comment) {
-			
-				$return .= self::createComment($arr_blog_post_comment);
-			}
-			
-			$return .= '</div>';
+		if (!$blog_post_id) {
+			return '';
 		}
+						
+		$return = '<h1>'.getLabel('lbl_comments').'</h1>
+		<span class="more a">'.getLabel('lbl_add_comment').'</span>
+		
+		<form id="f:blog_post_comments:add_comment-'.$blog_post_id.'" autocomplete="on">
+			<fieldset><ul>
+				<li><label>'.getLabel('lbl_name').'</label><input type="text" name="name" value="'.($_SESSION['CUR_USER'] ? $_SESSION['CUR_USER'][TABLE_USER]['uname'] : '').'" /></li>
+				<li><label>'.getLabel('lbl_comment').'</label><textarea name="body"></textarea></li>
+				<li><label></label><div><input type="submit" value="Ok" class="invalid" /><input type="submit" value="'.getLabel('lbl_add_comment').'" /><input type="submit" value="Ok" class="invalid" /></div></li>
+			</ul></fieldset>
+		</form>
+		
+		<div>';
+		
+		$arr_blog_post_comments = cms_blog_post_comments::getBlogPostComments($blog_post_id);
+		
+		foreach ($arr_blog_post_comments as $arr_blog_post_comment) {
+		
+			$return .= self::createComment($arr_blog_post_comment);
+		}
+		
+		$return .= '</div>';
 
 		return $return;
 	}
@@ -85,8 +86,7 @@ class blog_post_comments extends base_module {
 				.blog_post_comments time span:first-child + span + span { display: inline-block; font-size: 11px; line-height: 11px; }
 				.blog_post_comments time span:first-child ~ span { margin-left: 3px; }
 
-				.blog_post_comments > span.a { display: block; text-decoration: none; color: #009cff; }
-				.blog_post_comments > span.a:hover { text-decoration: underline; }
+				.blog_post_comments > span.a.more { display: block; }
 				
 				.blog_post_comments form { display: none; margin: 20px 0px; }
 				.blog_post_comments form textarea { height: 100px; }
@@ -123,7 +123,7 @@ class blog_post_comments extends base_module {
 			}
 			
 			$arr_link = blog::findMainBlog();
-			$arr_query = SiteStartVars::getModuleVariables($arr_link['id']);
+			$arr_query = SiteStartEnvironment::getModuleVariables($arr_link['id']);
 			
 			if (!$arr_query[0]) {
 				error(getLabel('msg_missing_information'));
@@ -135,28 +135,33 @@ class blog_post_comments extends base_module {
 				(".(int)$arr_query[0].", '".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['body'])."', NOW(), ".Log::addToUserDB().")
 			");
 			
+			$comment_id = DB::lastInsertID();
+			$arr_comment = cms_blog_post_comments::getBlogPostComment($comment_id);
+			
+			$str_html_comment = self::createComment($arr_comment);
+			
 			$this->reset_form = true;
-			$this->html = self::createComment(cms_blog_post_comments::getBlogPostComment(DB::lastInsertID()));
+			$this->html = $str_html_comment;
 		}
 	}
 	
 	private static function createComment($arr_comment) {
 	
-		$poster = ($arr_comment['pingback'] ? '<a href="'.strEscapeHTML($arr_comment['source']).'" target="_blank">'.strEscapeHTML($arr_comment['name']).'</a>' : strEscapeHTML($arr_comment['name']));
+		$str_poster = ($arr_comment['pingback'] ? '<a href="'.strEscapeHTML($arr_comment['source']).'" target="_blank">'.strEscapeHTML($arr_comment['name']).'</a>' : strEscapeHTML($arr_comment['name']));
 				
-		$html_comment = strEscapeHTML($arr_comment['body']);
-		$html_comment = parseBody($html_comment);
+		$str_html_comment = strEscapeHTML($arr_comment['body']);
+		$str_html_comment = parseBody($str_html_comment);
 		
-		$return .= '<div class="comment'.($arr_comment['pingback'] ? ' pingback' : '').'">
+		$str_html = '<div class="comment'.($arr_comment['pingback'] ? ' pingback' : '').'">
 			<div><a id="'.($arr_comment['pingback'] ? 'ping' : 'comment').'_'.$arr_comment['id'].'"></a>'.createDate($arr_comment['added']).'</div>
-			<div><cite>'.$poster.'</cite><div class="body">'.$html_comment.'</div></div>
+			<div><cite>'.$str_poster.'</cite><div class="body">'.$str_html_comment.'</div></div>
 		</div>';
 		
-		return $return;
+		return $str_html;
 	}
 		
 	public static function findBlogPostComments() {
 
-		return pages::getClosestModule('blog_post_comments', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
+		return pages::getClosestModule('blog_post_comments', SiteStartEnvironment::getDirectory('id'), SiteStartEnvironment::getPage('id'));
 	}
 }

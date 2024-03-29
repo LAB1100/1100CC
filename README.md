@@ -75,7 +75,7 @@ Apart from a [LAMP](https://en.wikipedia.org/wiki/LAMP_(software_bundle)) server
 
 #### PHP
 
-1100CC requires PHP 7.3+.
+1100CC requires PHP 8.0+.
 
 #### Mailserver
 

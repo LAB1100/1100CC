@@ -2,12 +2,12 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-class SiteEndVars {
+class SiteEndEnvironment {
 	
 	protected static $arr_head_tags = [];
 	protected static $arr_titles = [];
@@ -18,9 +18,10 @@ class SiteEndVars {
 	protected static $str_image = false;
 	protected static $arr_theme = [];
 	
-	protected static $arr_request_vars = [];
+	protected static $arr_request_variables = [];
 	protected static $arr_server_name_custom = [];
 	protected static $arr_feedback = [];
+	protected static $arr_modifier_variables = [];
 	
 	protected static $shortcut_mod_id = false;
 	protected static $str_shortcut_name = false;
@@ -74,7 +75,7 @@ class SiteEndVars {
 	
 	public static function getTitle() {
 
-		array_unshift(self::$arr_titles, getLabel('title', 'D'), (SiteStartVars::getDirectory() ? SiteStartVars::getDirectory('title') : ''), (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) ? SiteStartVars::getPage('title') : ''));
+		array_unshift(self::$arr_titles, getLabel('title', 'D'), (SiteStartEnvironment::getDirectory() ? SiteStartEnvironment::getDirectory('title') : ''), (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME) ? SiteStartEnvironment::getPage('title') : ''));
 		self::$arr_titles = array_filter(self::$arr_titles);
 		
 		return Labels::parseTextVariables(implode(' | ', self::$arr_titles));
@@ -153,10 +154,10 @@ class SiteEndVars {
 		$html = '';
 		
 		foreach ([16, 32, 96, 128, 196] as $num_size) {
-			$html .= '<link rel="icon" type="image/png" href="'.SiteStartVars::getCacheURL('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
+			$html .= '<link rel="icon" type="image/png" href="'.SiteStartEnvironment::getCacheURL('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
 		}
 		foreach ([57, 60, 72, 76, 114, 120, 144, 152] as $num_size) {
-			$html .= '<link rel="apple-touch-icon" href="'.SiteStartVars::getCacheURL('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
+			$html .= '<link rel="apple-touch-icon" href="'.SiteStartEnvironment::getCacheURL('img', [$num_size, $num_size], $str_image, (IS_CMS ? DIR_CMS : false)).'" sizes="'.$num_size.'x'.$num_size.'" />';
 		}
 		
 		return $html;
@@ -186,7 +187,7 @@ class SiteEndVars {
 		
 		if ($store) {
 			self::$arr_feedback['store'][$str_variable] = $data;
-			SiteStartVars::setFeedback($data, $str_variable); // Also update the possible original value
+			SiteStartEnvironment::setFeedback($data, $str_variable); // Also update the possible original value
 		} else {
 			self::$arr_feedback['broadcast'][$str_variable] = $data;
 		}
@@ -209,61 +210,59 @@ class SiteEndVars {
 		if ($num_index !== false) {
 			
 			if ($arr_variables === false) {
-				unset(self::$arr_request_vars[$num_index]);
+				unset(self::$arr_request_variables[$num_index]);
 			} else {
-				self::$arr_request_vars[$num_index] = $arr_variables;
+				self::$arr_request_variables[$num_index] = $arr_variables;
 			}
 			return;
 		}
 		
-		self::$arr_request_vars = $arr_variables;
+		self::$arr_request_variables = $arr_variables;
 	}
 	
-	public static function setModuleVariables($mod_id = false, $arr_var_names = [], $do_overwrite = true) {
+	public static function setModuleVariables($mod_id = false, $arr_variables = [], $do_overwrite = true) {
 		
 		if ($do_overwrite) {
-			self::$arr_request_vars[$mod_id] = [];
+			self::$arr_request_variables[$mod_id] = [];
 		}
 
-		foreach ($arr_var_names as $var_name => $var) {
-							
-			if (!is_numeric($var_name)) {
-				if ($var === false) {
-					unset(self::$arr_request_vars[$mod_id][$var_name]);
-				} else {
-					self::$arr_request_vars[$mod_id][$var_name] = array_merge((array)self::$arr_request_vars[$mod_id][$var_name], (array)$var);
-				}
+		foreach ($arr_variables as $var_name => $var) {
+			
+			if ($var === false) {
+				unset(self::$arr_request_variables[$mod_id][$var_name]);
+			} else if (!is_integer($var_name)) {
+				self::$arr_request_variables[$mod_id][$var_name] = array_merge((array)self::$arr_request_variables[$mod_id][$var_name], (array)$var);
 			} else {
-				self::$arr_request_vars[$mod_id][] = $var;
+				self::$arr_request_variables[$mod_id][] = $var;
 			}
 		}
 	}
-	
+
 	public static function getLocationVariables($mode_location = self::LOCATION_CANONICAL_NATIVE) {
 		
 		$arr = [];
 		
-		if (!self::$arr_request_vars) {
+		if (!self::$arr_request_variables) {
 			return $arr;
 		}
 		
 		if (IS_CMS) {
-			return array_filter(self::$arr_request_vars);
+			return array_filter(self::$arr_request_variables);
 		}
 				
-		ksort(self::$arr_request_vars);
+		ksort(self::$arr_request_variables);
 		
-		if (static::$shortcut_mod_id && isset(self::$arr_request_vars[static::$shortcut_mod_id]) && $mode_location == static::LOCATION_REAL) { // Start with the shortcut variables
+		if (static::$shortcut_mod_id && isset(self::$arr_request_variables[static::$shortcut_mod_id]) && $mode_location == static::LOCATION_REAL) { // Start with the shortcut variables
 			
-			$arr_var_names = self::$arr_request_vars[static::$shortcut_mod_id];
-			unset(self::$arr_request_vars[static::$shortcut_mod_id]);
+			$arr_variables = self::$arr_request_variables[static::$shortcut_mod_id];
+			unset(self::$arr_request_variables[static::$shortcut_mod_id]);
 			
-			self::$arr_request_vars = [static::$shortcut_mod_id => $arr_var_names] + self::$arr_request_vars;
+			self::$arr_request_variables = [static::$shortcut_mod_id => $arr_variables] + self::$arr_request_variables;
 		}
 		
-		foreach (self::$arr_request_vars as $mod_id => $arr_var_names) {
+		foreach (self::$arr_request_variables as $mod_id => $arr_variables) {
 			
-			if (!$arr_var_names) {
+			if (!$arr_variables) {
 				continue;
 			}
 			
@@ -273,7 +272,7 @@ class SiteEndVars {
 			
 			$cur_var_name = false;
 			
-			foreach ((array)$arr_var_names as $var_name => $var) {
+			foreach ((array)$arr_variables as $var_name => $var) {
 
 				if (!is_numeric($var_name)) {
 					
@@ -297,40 +296,69 @@ class SiteEndVars {
 		return $arr;
 	}
 	
-	public static function getLocation($is_relative = true, $mode_location = self::LOCATION_REAL) {
-
-		$arr_location_vars = self::getLocationVariables($mode_location);
+	public static function setModifierVariable($str_name, $str_value) { // Pass overall site modifiers e.g. language / output formats
 		
-		if (IS_CMS) {
-			return (!$is_relative ? URL_BASE_HOME : '/').implode('/', $arr_location_vars);
+		if ($str_value === null) {
+			unset(self::$arr_modifier_variables[$str_name]);
+		} else {
+			self::$arr_modifier_variables[$str_name] = $str_value;
+		}
+	}
+	
+	
+	public static function getModifierVariables($str_name = false) {
+		
+		if ($str_name) {
+			return (self::$arr_modifier_variables[$str_name] ?? null);
 		}
 		
-		$str_location = SiteStartVars::getBasePath(0, $is_relative);
+		return self::$arr_modifier_variables;
+	}
+	
+	public static function getLocation($is_relative = true, $mode_location = self::LOCATION_REAL) {
+
+		$arr_location_variables = self::getLocationVariables($mode_location);
+		$arr_modifier_variables = self::getModifierVariables();
+		$str_modifier_variables = '';
 		
-		if ($arr_location_vars) {
+		if ($arr_modifier_variables) {
+			$str_modifier_variables = '?'.rawurldecode(http_build_query($arr_modifier_variables));
+		}
+		
+		if (IS_CMS) {
+			return (!$is_relative ? URL_BASE_HOME : '/').implode('/', $arr_location_variables).$str_modifier_variables;
+		}
+		
+		$str_location = SiteStartEnvironment::getBasePath(0, $is_relative);
+		
+		if ($arr_location_variables) {
 			
 			if (static::$shortcut_mod_id && $mode_location == static::LOCATION_REAL) {
 				
 				if (static::$is_root_shortcut) {
-					$str_location = (!$is_relative ? URL_BASE_HOME : '/').static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
+					$str_location = (!$is_relative ? URL_BASE_HOME : '/').static::$str_shortcut_name.'.s/'.implode('/', $arr_location_variables);
 				} else {
-					$str_location .= static::$str_shortcut_name.'.s/'.implode('/', $arr_location_vars);
+					$str_location .= static::$str_shortcut_name.'.s/'.implode('/', $arr_location_variables);
 				}
 			} else {
 			
-				$str_location .= SiteStartVars::getPage('name').'.p/'.implode('/', $arr_location_vars);
+				$str_location .= SiteStartEnvironment::getPage('name').'.p/'.implode('/', $arr_location_variables);
 			}
 		} else {
 
-			if (!(SiteStartVars::getDirectory('root') && SiteStartVars::getDirectory('page_index_id') == SiteStartVars::getPage('id')) || ($mode_location != static::LOCATION_REAL || (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) && SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.c' && SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) != 'commands'))) { // Show page name when it is not the root page, or when it is explicitly requested (canonical or in command)
-				$str_location .= SiteStartVars::getPage('name');
+			if (!(SiteStartEnvironment::getDirectory('root') && SiteStartEnvironment::getDirectory('page_index_id') == SiteStartEnvironment::getPage('id')) || ($mode_location != static::LOCATION_REAL || (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME) && SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.c' && SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME) != 'commands'))) { // Show page name when it is not the root page, or when it is explicitly requested (canonical or in command)
+				$str_location .= SiteStartEnvironment::getPage('name');
 			}
 		}
 		
-		if (($mode_location == static::LOCATION_REAL || $mode_location == static::LOCATION_CANONICAL_PUBLIC) && SiteStartVars::getURITranslator() && bitHasMode(SiteStartVars::getURITranslator('mode'), uris::MODE_OUT)) {
+		if ($str_modifier_variables) {
+			$str_location .= $str_modifier_variables;
+		}
+		
+		if (($mode_location == static::LOCATION_REAL || $mode_location == static::LOCATION_CANONICAL_PUBLIC) && SiteStartEnvironment::getURITranslator() && bitHasMode(SiteStartEnvironment::getURITranslator('mode'), uris::MODE_OUT)) {
 			
 			$str_location_use = substr($str_location, (!$is_relative ? strlen(URL_BASE_HOME) : 1)); // Identifier does not contain any leading information
-			$arr_uri = uris::getURI(SiteStartVars::getURITranslator('id'), uris::MODE_OUT, $str_location_use);
+			$arr_uri = uris::getURI(SiteStartEnvironment::getURITranslator('id'), uris::MODE_OUT, $str_location_use);
 			
 			if ($arr_uri) {
 				$str_location = (!$is_relative ? URL_BASE_HOME : '/').substr($arr_uri['url'], 1); // Restore leading information
@@ -340,13 +368,13 @@ class SiteEndVars {
 		return $str_location;
 	}
 	
-	public static function getModuleLocation($mod_id, $arr_var_names = [], $do_overwrite = true, $is_relative = true, $do_attach = false) {
+	public static function getModuleLocation($mod_id, $arr_variables = [], $do_overwrite = true, $is_relative = true, $do_attach = false) {
 		
-		return Response::addParseDelay(false, function() use ($mod_id, $arr_var_names, $do_overwrite, $is_relative, $do_attach) {
+		return Response::addParseDelay(false, function() use ($mod_id, $arr_variables, $do_overwrite, $is_relative, $do_attach) {
 		
-			$arr_cur_page_module_vars = self::$arr_request_vars[$mod_id];
+			$arr_cur_page_module_vars = self::$arr_request_variables[$mod_id];
 			
-			self::setModuleVariables($mod_id, $arr_var_names, $do_overwrite);
+			self::setModuleVariables($mod_id, $arr_variables, $do_overwrite);
 			
 			$str_location = self::getLocation($is_relative);
 			
@@ -363,7 +391,7 @@ class SiteEndVars {
 				$str_location = value2JSON($arr_location);
 			}
 			
-			self::$arr_request_vars[$mod_id] = $arr_cur_page_module_vars;
+			self::$arr_request_variables[$mod_id] = $arr_cur_page_module_vars;
 			
 			return $str_location;
 		});
@@ -394,7 +422,7 @@ class SiteEndVars {
 	public static function checkServerName() {
 		
 		$server_name_custom = self::getServerNameCustom(true);
-		$server_protocol = (SiteStartVars::useHTTPS() && SERVER_SCHEME != URI_SCHEME_HTTPS ? URI_SCHEME_HTTPS : SERVER_SCHEME);
+		$server_protocol = (SiteStartEnvironment::useHTTPS() && SERVER_SCHEME != URI_SCHEME_HTTPS ? URI_SCHEME_HTTPS : SERVER_SCHEME);
 		
 		if (SERVER_NAME_CUSTOM != $server_name_custom || $server_protocol != SERVER_SCHEME) {
 			
@@ -404,7 +432,7 @@ class SiteEndVars {
 	
 	public static function checkRequestPolicy() {
 		
-		if (SiteStartVars::inSecureContext() && SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX) {
+		if (SiteStartEnvironment::inSecureContext() && SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX) {
 			
 			Response::addHeaders('Content-Security-Policy: frame-ancestors \'self\'');
 		}

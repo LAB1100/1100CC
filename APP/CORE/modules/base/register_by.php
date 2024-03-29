@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -22,9 +22,10 @@ abstract class register_by extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return = '<select>';
-		$return .= user_groups::createUserGroupsDropdown(user_groups::getUserGroups());
-		$return .= '</select>';
+		$return = '<select name="user_group_id">'
+			.user_groups::createUserGroupsDropdown(user_groups::getUserGroups())
+		.'</select>'
+		.'<input type="checkbox" name="allow_uname" value="1" title="'.getLabel('lbl_allow').' '.getLabel('lbl_uname').'" />';
 		
 		return $return;
 	}
@@ -108,6 +109,10 @@ abstract class register_by extends base_module {
 						$return .= '<li>
 							<label>'.getLabel('lbl_name_display').'</label>
 							<input name="name" type="text" value="'.strEscapeHTML($this->arr_user[DB::getTableName('TABLE_USERS')]['name']).'" />
+						</li>
+						<li>
+							<label>'.getLabel('lbl_username').'</label>
+							'.($this->arr_variables['allow_uname'] ? '<input name="uname" type="text" value="'.strEscapeHTML($this->arr_user[DB::getTableName('TABLE_USERS')]['uname']).'" placeholder="'.getLabel('lbl_email').'" />' : '<span>'.($this->arr_user[DB::getTableName('TABLE_USERS')]['uname'] ?: getLabel('lbl_email')).'</span>').'
 						</li>
 						<li>
 							<label>'.getLabel('lbl_email').'</label>
@@ -308,7 +313,7 @@ abstract class register_by extends base_module {
 				".($this->main_table ? "LEFT JOIN ".$this->main_table." ON (".$this->main_table.".user_id = ".$sql_index.")" : "")."
 			";
 
-			if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
+			if ($this->arr_variables['user_group_id'] && $this->arr_variables['user_group_id'] != $_SESSION['USER_GROUP']) {
 				$sql_where = "u.parent_id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'];
 			} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']) {
 				$sql_where = "u.parent_id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
@@ -364,13 +369,19 @@ abstract class register_by extends base_module {
 			$this->checkAuthorisedUserId();
 
 			$parent_id = 0;
-			if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
+			if ($this->arr_variables['user_group_id'] && $this->arr_variables['user_group_id'] != $_SESSION['USER_GROUP']) {
 				$parent_id = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'];
 			} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']) {
 				$parent_id = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id'];
 			}
+			
+			$arr_update = ['name' => $_POST['name'], 'uname' => $_POST['email'], 'email' => $_POST['email'], 'group_id' => $this->arr_variables['user_group_id'], 'parent_id' => $parent_id];
+			
+			if ($this->arr_variables['allow_uname'] && $_POST['uname']) {
+				$arr_update['uname'] = $_POST['uname'];
+			}
 
-			$arr_user = user_management::addUser(true, ['name' => $_POST['name'], 'uname' => $_POST['email'], 'email' => $_POST['email'], 'group_id' => $this->arr_variables, 'parent_id' => $parent_id], false, (bool)$_POST['send_mail']);
+			$arr_user = user_management::addUser(true, $arr_update, false, (bool)$_POST['send_mail']);
 			
 			$this->arr_user = user_groups::getUserData($arr_user['id']);
 			
@@ -396,8 +407,14 @@ abstract class register_by extends base_module {
 			$str_password = ((int)$_POST['send_mail'] == user_management::MAIL_ACCOUNT_PASSWORD ? generateRandomString(10) : false); // Reset the password, force old password invalid
 			
 			$this->arr_user = user_groups::getUserData($id);
+						
+			$arr_update = ['name' => $_POST['name'], 'email' => $_POST['email']];
+			
+			if ($this->arr_variables['allow_uname'] && $_POST['uname']) {
+				$arr_update['uname'] = $_POST['uname'];
+			}
 
-			user_management::updateUser($user_id, $_POST['enabled'], ['name' => $_POST['name'], 'uname' => $this->arr_user[DB::getTableName('TABLE_USERS')]['uname'], 'email' => $_POST['email']], $str_password, (int)$_POST['send_mail']);
+			user_management::updateUser($user_id, $_POST['enabled'], $arr_update, $str_password, (int)$_POST['send_mail']);
 			
 			$user_data = $this->process();
 			$user_data += $this->processForm();
@@ -468,7 +485,7 @@ abstract class register_by extends base_module {
 			return;
 		}
 
-		if ($this->arr_variables && $this->arr_variables != $_SESSION['USER_GROUP']) {
+		if ($this->arr_variables['user_group_id'] && $this->arr_variables['user_group_id'] != $_SESSION['USER_GROUP']) {
 			
 			$is_valid = user_management::checkUserIds($id, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], 'parent');
 		} else if ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['parent_id']) {

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -127,10 +127,10 @@ class cms_admin extends base_module {
 		$return = '<form id="f:cms_admin:update-0">
 
 			<div class="record options"><dl>
-				<li>
+				<div>
 					<dt>'.getLabel('lbl_available').'</dt>
 					<dd><span class="icon">'.getIcon((isPath(Settings::getUpdatePath()) ? 'tick' : 'min')).'</span></dd>
-				</li>
+				</div>
 			</dl></div>
 			
 			<menu><input type="submit" value="'.getLabel('lbl_update').'" /></menu>

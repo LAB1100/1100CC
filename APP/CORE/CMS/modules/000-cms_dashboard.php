@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class cms_dashboard extends base_module {
 		
 	public function contents() {
 		
-		$arr_modules = SiteStartVars::getModules();
+		$arr_modules = SiteStartEnvironment::getModules();
 		$arr_module_widget_properties = self::getModuleWidgetProperties($arr_modules);
 		$arr_widgets_user = self::getWidgetsUser($_SESSION['USER_ID']);
 

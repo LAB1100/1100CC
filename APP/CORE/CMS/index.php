@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -71,7 +71,7 @@
 		}
 	}
 	
-	Response::setFormat((SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX ? Response::OUTPUT_XML : Response::OUTPUT_JSON) | Response::RENDER_HTML);
+	Response::setFormat((SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX ? Response::OUTPUT_XML : Response::OUTPUT_JSON) | Response::RENDER_HTML);
 	
 	require('login.php');
 	
@@ -100,43 +100,44 @@
 	}
 	
 	// Prepare
-	SiteStartVars::setRequestVariables($arr_path_info);
-	SiteStartVars::setModules(getModules());
+	SiteStartEnvironment::setRequestVariables($arr_path_info);
+	SiteStartEnvironment::setModules(getModules());
 	
 	DB::setConnection(DB::CONNECT_HOME);
 	
 	Labels::setSystemLabels();
 	
-	// Sytem Language
-	$arr_language_default = cms_language::getDefaultLanguage();
-	SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $arr_language_default['lang_code']);
+	// Language system
+	SiteStartEnvironment::checkLanguage();
 	
 	// Async		
 	if ($run_module && $run_method) {
 		
 		DB::setConnection(DB::CONNECT_CMS, true);
 		
+		Response::setFormat(Response::OUTPUT_TEXT);
+		
 		Mediator::runModuleMethod($run_module, $run_method, $arr_run_options);
 		exit;
 	}
 	
-	SiteStartVars::checkRequestOptions();
+	SiteStartEnvironment::checkRequestOptions();
 	
 	if ($str_path_start == 'combine') {
 
 		require('core_combine.php');
-		SiteStartVars::setMaterial();
+		SiteStartEnvironment::setMaterial();
 		
 		$type = ($arr_path_info[2] ?? '');
 		
-		if ($type != SiteStartVars::MATERIAL_JS && $type != SiteStartVars::MATERIAL_CSS) {
+		if ($type != SiteStartEnvironment::MATERIAL_JS && $type != SiteStartEnvironment::MATERIAL_CSS) {
 			pages::noPage(true);
 		}
 		
-		$arr_modules = SiteStartVars::getModules();
+		$arr_modules = SiteStartEnvironment::getModules();
 		$ie_tag = ($arr_path_info[3] ?? '');
 
-		CombineJSCSS::combine(SiteStartVars::getMaterial($type), $arr_modules, $type, $ie_tag);
+		CombineJSCSS::combine(SiteStartEnvironment::getMaterial($type), $arr_modules, $type, $ie_tag);
 		
 		exit;
 	} else if ($str_path_start == 'cache') {
@@ -148,7 +149,7 @@
 		exit;
 	} 
 	
-	SiteStartVars::requestSecure();
+	SiteStartEnvironment::requestSecure();
 	
 	// Special page
 	if ($str_path_start == 'script') {
@@ -167,11 +168,11 @@
 	}
 	
 	// Session
-	SiteStartVars::startSession();
+	SiteStartEnvironment::startSession();
 	
 	// Virtual path
 	if ($str_path_start == 'commands') {
-		$_SERVER['PATH_VIRTUAL'] = '/'.($_POST['module'] ?? $_POST['multi'][0]['module']).'/';
+		$_SERVER['PATH_VIRTUAL'] = '/'.($_POST['module'] ?? $_POST['multi'][0]['module'] ?? '').'/';
 	}
 	
 	// Login
@@ -182,11 +183,7 @@
 	DB::setConnection(DB::CONNECT_CMS, true);
 
 	// Language
-	if (!empty($_SESSION['LANGUAGE_SYSTEM'])) {
-		SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE_SYSTEM']);
-	} else if (!empty($_SESSION['CUR_USER']['lang_code'])) {
-		SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $_SESSION['CUR_USER']['lang_code']);
-	}
+	SiteStartEnvironment::checkLanguageSession();
 	
 	// Return page
 	$str_path_last = ($arr_path_info[count($arr_path_info)-1] ?? '');
@@ -197,7 +194,7 @@
 		
 		// Feedback
 		if ($_POST['feedback']) {
-			SiteStartVars::setFeedback($_POST['feedback']);
+			SiteStartEnvironment::setFeedback($_POST['feedback']);
 		}
 		
 		require('commands.php');
@@ -215,15 +212,15 @@
 		}
 		
 		$str_title = getLabel('title', 'D').' | 1100CC';
-		$str_image = SiteEndVars::getImage();
-		$arr_theme = SiteEndVars::getTheme();
+		$str_image = SiteEndEnvironment::getImage();
+		$arr_theme = SiteEndEnvironment::getTheme();
 							
 		$arr_images = [];
 
 		foreach ([64, 96, 128, 192, 256, 512] as $nr_size) {
 			
 			$arr_images[] = [
-				'src' => SiteStartVars::getCacheURL('img', [$nr_size, $nr_size], $str_image, DIR_CMS),
+				'src' => SiteStartEnvironment::getCacheURL('img', [$nr_size, $nr_size], $str_image, DIR_CMS),
 				'type' => 'image/png',
 				'sizes' => $nr_size.'x'.$nr_size
 			];
@@ -258,14 +255,14 @@
 		
 		if ($str_path_start == 'login') {
 			
-			SiteEndVars::checkServerName();
+			SiteEndEnvironment::checkServerName();
 			
 			require('core_combine.php');
-			SiteStartVars::setMaterial();
+			SiteStartEnvironment::setMaterial();
 					
 			$html_body = '<div id="cms-login">
 			
-				<form method="post" action="/">			
+				<form method="post" action="/" autocomplete="on">			
 					<label>'.getLabel('lbl_username').'</label>
 					<input name="login_user" type="text"'.(($arr_path_info[2] ?? '') == 'LOGIN_INCORRECT' ? ' class="input-error"' : '').' />
 					<label>'.getLabel('lbl_password').'</label>
@@ -280,15 +277,15 @@
 			$str_url = '/login/';
 		} else {
 			
-			SiteStartVars::preloadModules();
+			SiteStartEnvironment::preloadModules();
 			
-			$str_module = (SiteStartVars::getRequestVariables(1) ?? '');
+			$str_module = (SiteStartEnvironment::getRequestVariables(1) ?? '');
 			
-			if (!$str_module || !SiteStartVars::getModules($str_module)) {
+			if (!$str_module || !SiteStartEnvironment::getModules($str_module)) {
 				
 				$str_module = 'cms_dashboard';
 
-				SiteEndVars::setRequestVariables($str_module, 1);
+				SiteEndEnvironment::setRequestVariables($str_module, 1);
 			}
 			
 			$str_mod_identifier = 'mod-'.$str_module;
@@ -303,23 +300,23 @@
 				$JSON->validate[$str_mod_identifier] = $class->validate;
 			}
 			
-			SiteEndVars::checkServerName();
+			SiteEndEnvironment::checkServerName();
 
-			$JSON->data_feedback = SiteEndVars::getFeedback();
+			$JSON->data_feedback = SiteEndEnvironment::getFeedback();
 			$JSON = Log::addToObj($JSON);
 			if (Settings::get('timing') === true) {
 				$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
 			}
-			SiteEndVars::addScript("PARSE = function() {"
+			SiteEndEnvironment::addScript("PARSE = function() {"
 				."return JSON.parse(".value2JSON(value2JSON($JSON)).");"
 			."};");
 			
 			require('core_combine.php');
-			SiteStartVars::setMaterial();
+			SiteStartEnvironment::setMaterial();
 			
 			$html_body = '<div id="cms-menu" class="section">
 				<h1>'.getLabel('lbl_modules').'</h1>
-				'.cms_general::selectModuleList(SiteStartVars::getModules()).'
+				'.cms_general::selectModuleList(SiteStartEnvironment::getModules()).'
 				<div id="lab1100">'
 					.'<span><strong>1100CC</strong> is developed by</span>'
 					.'<a href="https://lab1100.com" target="_blank"></a>'
@@ -337,10 +334,10 @@
 		
 		$str_url_manifest = $str_url.'manifest';
 		
-		$arr_theme = SiteEndVars::getTheme();
-		$str_image = SiteEndVars::getImage();
+		$arr_theme = SiteEndEnvironment::getTheme();
+		$str_image = SiteEndEnvironment::getImage();
 		$str_url_image = URL_BASE.ltrim($str_image, '/');
-		$html_icons = SiteEndVars::getIcons();
+		$html_icons = SiteEndEnvironment::getIcons();
 
 		$html = '<!DOCTYPE html>'.EOL_1100CC
 		.'<html lang="en">'.EOL_1100CC
@@ -351,14 +348,14 @@
 				.'<meta name="theme-color" content="'.$arr_theme['theme_color'].'">'
 				.'<link rel="manifest" href="'.$str_url_manifest.'" crossOrigin="use-credentials" />';
 				
-				$version = CombineJSCSS::getVersion(SiteStartVars::getMaterial(SiteStartVars::MATERIAL_CSS), SiteStartVars::getModules());
+				$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_CSS), SiteStartEnvironment::getModules());
 				$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" />';
-				$version = CombineJSCSS::getVersion(SiteStartVars::getMaterial(SiteStartVars::MATERIAL_JS), SiteStartVars::getModules());
+				$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_JS), SiteStartEnvironment::getModules());
 				$html .= '<script type="text/javascript" src="/combine/js/'.$version.'"></script>';
 				
 				if ($str_path_start != 'login') {
 					
-					$html .= SiteEndVars::getHeadTags();
+					$html .= SiteEndEnvironment::getHeadTags();
 					$html .= '<noscript>'
 						.'<meta http-equiv="refresh" content="0;url=/script" />'
 					.'</noscript>';
@@ -398,7 +395,7 @@
 		.'</html>';
 		
 		if ($str_path_start != 'login') {
-			SiteStartVars::cooldownModules();
+			SiteStartEnvironment::cooldownModules();
 		}
 
 		Response::stop($html, false);

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -76,12 +76,12 @@ class blog extends base_module {
 		}
 		
 		$blog_post_id = (int)$this->arr_query[0];
-		$str_blog_url = SiteStartVars::getShortestModuleURL($this->mod_id, false, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root'], 0, false);
+		$str_blog_url = SiteStartEnvironment::getShortestModuleURL($this->mod_id, false, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root'], 0, false);
 		
-		SiteEndVars::addHeadTag('<link rel="alternate" title="RSS Feed" type="application/rss+xml" href="'.$str_blog_url.'rss" />');
-		Response::addHeaders('X-Pingback: '.SiteStartVars::getModuleURL($this->mod_id, false, 0, false).'pingback');
+		SiteEndEnvironment::addHeadTag('<link rel="alternate" title="RSS Feed" type="application/rss+xml" href="'.$str_blog_url.'rss" />');
+		Response::addHeaders('X-Pingback: '.SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false).'pingback');
 		
-		SiteEndVars::setModuleVariables($this->mod_id);
+		SiteEndEnvironment::setModuleVariables($this->mod_id);
 		
 		$str_html = '';
 		
@@ -90,7 +90,7 @@ class blog extends base_module {
 			$arr_blog_post = cms_blog_posts::getBlogPosts($this->arr_variables['id'], $blog_post_id);
 			
 			if (!$arr_blog_post) {
-				Response::location(SiteStartVars::getPageURL());
+				Response::location(SiteStartEnvironment::getPageURL());
 			}
 			
 			$str_html .= $this->createBlogPost($arr_blog_post);
@@ -98,29 +98,29 @@ class blog extends base_module {
 			$str_title = Labels::parseTextVariables($arr_blog_post['title']);
 			$str_title_url = str2URL($str_title);
 			
-			SiteEndVars::addTitle($str_title);
-			SiteEndVars::setType('article');
+			SiteEndEnvironment::addTitle($str_title);
+			SiteEndEnvironment::setType('article');
 			
 			if ($arr_blog_post['abstract']) {
-				SiteEndVars::addDescription($arr_blog_post['abstract']);
+				SiteEndEnvironment::addDescription($arr_blog_post['abstract']);
 			}
 			
 			if ($arr_blog_post['tags']) {
 				
 				$arr_tags = $arr_blog_post['tags'];
 				
-				SiteEndVars::addKeywords($arr_tags);
+				SiteEndEnvironment::addKeywords($arr_tags);
 				
 				foreach ($arr_tags as $str_tag) {
-					SiteEndVars::addContentIdentifier('tag', $str_tag);
+					SiteEndEnvironment::addContentIdentifier('tag', $str_tag);
 				}
 			}
 			
 			if ($this->arr_mod['shortcut']) {
-				SiteEndVars::setShortcut($this->mod_id, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root']);
+				SiteEndEnvironment::setShortcut($this->mod_id, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root']);
 			}
 			
-			SiteEndVars::setModuleVariables($this->mod_id, [$arr_blog_post['id'], $str_title_url]);
+			SiteEndEnvironment::setModuleVariables($this->mod_id, [$arr_blog_post['id'], $str_title_url]);
 		}
 									
 		$arr_comments_link = blog_post_comments::findBlogPostComments();
@@ -143,14 +143,14 @@ class blog extends base_module {
 					$str_tag_view = Labels::parseTextVariables($str_tag);
 					$str_tag_url = str_replace(' ', '+', $str_tag);
 				
-					SiteEndVars::addTitle(getLabel('lbl_tag'));
-					SiteEndVars::addTitle($str_tag_view);
+					SiteEndEnvironment::addTitle(getLabel('lbl_tag'));
+					SiteEndEnvironment::addTitle($str_tag_view);
 					
-					SiteEndVars::addContentIdentifier('tag', $str_tag);
-					SiteEndVars::setModuleVariables($this->mod_id, ['tag', $str_tag_url]);
+					SiteEndEnvironment::addContentIdentifier('tag', $str_tag);
+					SiteEndEnvironment::setModuleVariables($this->mod_id, ['tag', $str_tag_url]);
 					
 					if ($this->arr_mod['shortcut']) {
-						SiteEndVars::setShortcut($this->mod_id, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root']);
+						SiteEndEnvironment::setShortcut($this->mod_id, $this->arr_mod['shortcut'], $this->arr_mod['shortcut_root']);
 					}
 				} else {
 					
@@ -167,7 +167,7 @@ class blog extends base_module {
 				$num_start = ($num_start > 0 ? $num_start : 0);
 				
 				if ($num_start) {
-					SiteEndVars::setModuleVariables($this->mod_id, ['go', $num_start], false);
+					SiteEndEnvironment::setModuleVariables($this->mod_id, ['go', $num_start], false);
 				}
 			}
 			
@@ -189,7 +189,7 @@ class blog extends base_module {
 					$str_html .= '<h1>'.getLabel('ttl_latest_blog_posts').'</h1>';
 				}
 			
-				$arr_link = ['page_name' => SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME), 'id' => $this->mod_id];
+				$arr_link = ['page_name' => SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME), 'id' => $this->mod_id];
 				
 				foreach ($arr_posts as $arr_post) {
 					$str_html .= self::createBlogPostPreview($arr_post, $arr_link, $arr_comments_link);
@@ -201,14 +201,14 @@ class blog extends base_module {
 					
 					if ($num_total > $num_end) {
 						
-						$str_html_next_prev .= '<a class="prev" href="'.SiteStartVars::getModuleURL($this->mod_id).($str_tag ? 'tag/'.strEscapeHTML($str_tag_url).'/' : '').'go/'.$num_end.'">'
+						$str_html_next_prev .= '<a class="prev" href="'.SiteStartEnvironment::getModuleURL($this->mod_id).($str_tag ? 'tag/'.strEscapeHTML($str_tag_url).'/' : '').'go/'.$num_end.'">'
 							.'<span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span>'
 							.'<span>'.getLabel('lbl_previous').'</span>'
 						.'</a>';
 					}
 					if (($num_end - $num_limit) > 0) {
 						
-						$str_html_next_prev .= '<a class="next" href="'.SiteStartVars::getModuleURL($this->mod_id).($str_tag ? 'tag/'.strEscapeHTML($str_tag_url).'/' : '').'go/'.$num_next.'">'
+						$str_html_next_prev .= '<a class="next" href="'.SiteStartEnvironment::getModuleURL($this->mod_id).($str_tag ? 'tag/'.strEscapeHTML($str_tag_url).'/' : '').'go/'.$num_next.'">'
 							.'<span>'.getLabel('lbl_next').'</span>'
 							.'<span class="icon" data-category="increase">'.getIcon('next').getIcon('next').'</span>'
 						.'</a>';	
@@ -228,23 +228,20 @@ class blog extends base_module {
 		$return = '.blog {  }
 				.blog > article { position: relative; overflow: hidden; margin-top: 20px; }
 				.blog > article + h1 { margin-top: 25px; }
-				.blog > article > time { display: inline-block; vertical-align: top; width: 50px; padding: 8px; box-sizing: border-box; }
-				.blog > article > h1 { display: inline-block; vertical-align: top; margin: 0px; margin-left: 10px; margin-top: 10px; width: calc(100% - 60px); box-sizing: border-box; }
+				.blog > article > time { display: inline-block; vertical-align: top; padding: 8px; }
+				.blog > article > h1 { display: inline-block; vertical-align: top; margin: 0px; margin-left: 10px; margin-top: 10px; max-width: calc(100% - 100px); box-sizing: border-box; }
 				.blog > article > h1 > a,
 				.blog > article > h1 > a:hover { text-decoration: none; color: #000000; }
+				.blog > article > cite { display: block; }
 				.blog > article > section.body { margin-top: 15px; }
-				.blog > article > section.body .more { margin-left: 4px; color: #009cff; }
+				.blog > article > section.body .more { margin-left: 4px; }
 				.blog > article > div.tags { margin-top: 15px; }
 				.blog > article > a { display: block; text-align: right; white-space: nowrap; }
-				.blog > article > a > span { display: inline-block; }
+				.blog > article > a > span { display: inline-block; text-decoration: inherit; }
 				.blog > article > a > span + span { margin-left: 5px; }
-				.blog > article > a,
-				.blog > article > section.body a.more { text-decoration: none; color: #009cff; }
-				.blog > article > a:hover span,
-				.blog > article > section.body a.more:hover { text-decoration: underline; }
 				.blog .nextprev { text-align: center; margin: 40px 0px 0px 0px;	font-size: 14px; font-weight: bold; }
 				.blog .nextprev > a > span.icon svg { height: 0.9em; }
-				.blog .nextprev > a > span.icon { color: #009cff; }
+				.blog .nextprev > a > span.icon { color: var(--highlight); }
 				.blog .nextprev > a > span + span { margin-left: 10px; }
 				.blog .nextprev > a > span:not(.icon) { vertical-align: middle; }
 				.blog .nextprev > a.prev + a.next { margin-left: 40px; }';
@@ -281,7 +278,7 @@ class blog extends base_module {
 				$arr_content_identifiers['tag'][$str_tag] = $str_tag;
 			}
 			
-			$str_html_tags = cms_general::createViewTags($arr_tags, SiteStartVars::getModuleURL($this->mod_id).'tag/');
+			$str_html_tags = cms_general::createViewTags($arr_tags, SiteStartEnvironment::getModuleURL($this->mod_id).'tag/');
 		}
 		
 		$html = '<article'.($arr_content_identifiers ? ' data-content="'.createContentIdentifier($arr_content_identifiers).'"' : '').'>'
@@ -298,10 +295,19 @@ class blog extends base_module {
 	public static function createBlogPostPreview($arr_post, $arr_link, $arr_comments_link) {
 		
 		$str_title = Labels::parseTextVariables($arr_post['title']);
+		$str_url_base = '';
+		$str_url_title = '';
 		
-		$str_title_url = ($arr_link ? SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$arr_post['id'].'/'.str2URL($str_title) : '');
+		if ($arr_link) {
+			
+			$str_url_base = SiteStartEnvironment::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']);
+			$str_url_title = $str_url_base.$arr_post['id'].'/'.str2URL($str_title);
+		}
 		
-		$str_body = parseBody($arr_post['body'], ['extract' => $arr_post['para_preview'], 'append' => ($arr_post['para_preview'] ? ($arr_link ? '<a href="'.$str_title_url.'" class="more" title="'.getLabel('lbl_read_more').'">[....]</a>' : '<span class="more">[....]</span>') : '')]);
+		$str_body = parseBody($arr_post['body'], [
+			'extract' => $arr_post['para_preview'],
+			'append' => ($arr_post['para_preview'] ? ($str_url_title ? '<a href="'.$str_url_title.'" class="more" title="'.getLabel('lbl_read_more').'">[....]</a>' : '<span class="more">[....]</span>') : '')
+		]);
 		
 		$arr_content_identifiers = [];
 		$str_html_tags = '';
@@ -313,7 +319,7 @@ class blog extends base_module {
 				$arr_content_identifiers['tag'][$str_tag] = $str_tag;
 			}
 			
-			$str_html_tags = cms_general::createViewTags($arr_tags, SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'tag/');
+			$str_html_tags = cms_general::createViewTags($arr_tags, ($str_url_base ? $str_url_base.'tag/' : false));
 		}
 		
 		$str_title = strEscapeHTML($str_title);
@@ -321,9 +327,9 @@ class blog extends base_module {
 		
 		if ($arr_link) {
 			
-			$str_title = '<a href="'.$str_title_url.'">'.$str_title.'</a>';
+			$str_title = '<a href="'.$str_url_title.'">'.$str_title.'</a>';
 			$str_url_text = '<span>'.getLabel('lbl_read_more').'</span>'.($arr_comments_link ? '<span>'.getLabel('lbl_comment').'</span>' : '');
-			$str_link = '<a href="'.$str_title_url.'">'.$str_url_text.'</a>';
+			$str_link = '<a class="more" href="'.$str_url_title.'">'.$str_url_text.'</a>';
 		}
 			
 		$html = '<article class="preview"'.($arr_content_identifiers ? ' data-content="'.createContentIdentifier($arr_content_identifiers).'"' : '').'>'
@@ -363,14 +369,14 @@ class blog extends base_module {
 				$str_body = $arr_post['body'];
 				$str_body = parseBody($str_body, ['extract' => $arr_post['para_preview'], 'append' => ($arr_post['para_preview'] ? '<span class="more">.....</span>' : '')]);
 				
-				$arr_link = ['page_name' => SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME), 'id' => $this->mod_id];
+				$arr_link = ['page_name' => SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME), 'id' => $this->mod_id];
 				
-				$str_link = SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir'], false).$arr_post['id'].'/'.str2URL($arr_post['title']);
+				$str_link = SiteStartEnvironment::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir'], false).$arr_post['id'].'/'.str2URL($arr_post['title']);
 			
 				$html .= '<item>
 					<title>'.strEscapeXML(Labels::parseTextVariables($arr_post['title'])).'</title>
 					<description>'.$str_body.'</description>
-					<pubDate>'.date('r', strtotime($arr['date'])).'</pubDate>
+					<pubDate>'.date('r', strtotime($arr_post['date'])).'</pubDate>
 					<link>'.$str_link.'</link>
 					<guid>'.$str_link.'</guid>
 				</item>';
@@ -387,7 +393,7 @@ class blog extends base_module {
 		if ($id) {
 			return pages::getClosestModule('blog', 0, 0, 0, $id, 'id');
 		} else {
-			return pages::getClosestModule('blog', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'), 0, $id, 'id');
+			return pages::getClosestModule('blog', SiteStartEnvironment::getDirectory('id'), SiteStartEnvironment::getPage('id'), 0, false, false);
 		}
 	}
 }

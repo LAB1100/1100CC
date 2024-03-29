@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -33,7 +33,8 @@ class FileGet {
 		'timeout' => 10,
 		'timeout_connect' => 5,
 		'headers' => false,
-		'secure' => true
+		'secure' => true,
+		'redirect' => null
 	];
 	
 	protected static $arr_external_protocols = ['http', 'https', 'ftp'];
@@ -47,7 +48,7 @@ class FileGet {
 		
 		$this->async = $async;
 	}
-			
+	
 	public function load() {
 		
 		if ($this->mode_protocol == static::PROTOCOL_LOCAL) {
@@ -61,7 +62,7 @@ class FileGet {
 			
 			$this->path = $this->storeExternalSource();
 		}
-			
+		
 		if (!$this->path) {
 			return false;
 		}
@@ -111,11 +112,13 @@ class FileGet {
 	public function setConfiguration($arr_settings = [], $do_overwrite = false) {
 		
 		if ($do_overwrite) {
-			
 			$this->arr_settings = $arr_settings;
 		} else if ($arr_settings) {
-
 			$this->arr_settings = array_merge($this->arr_settings, $arr_settings);
+		}
+		
+		if (isset($this->arr_settings['redirect'])) {
+			 $this->num_redirect = (int)$this->arr_settings['redirect'];
 		}
 	}
 	
@@ -143,6 +146,7 @@ class FileGet {
 		$has_result = true;
 		
 		$str_url = ($this->url_redirect ?: $this->url);
+		$str_url = str_replace(' ', '%20', $str_url); // Keep possible spaces in URL
 		
 		$curl = curl_init($str_url);
 		
@@ -210,7 +214,7 @@ class FileGet {
 				$do_continue = true;
 				
 				$arr_matches = [];
-				preg_match('/^(Location:|URI:)/', $str_header, $arr_matches);
+				preg_match('/^(Location:|URI:)/i', $str_header, $arr_matches);
 				
 				if ($arr_matches) {
 					

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -243,7 +243,16 @@ class FormatTags {
 			//[quote=Author]Text[/quote]
 			'quote' => [
 				'/\[quote(?:=(.+?))?\]\s*([\s\S]+?)\s*\[\/quote\]\s*/i',
-				'<blockquote><header>\1</header>\2</blockquote>'
+				function($arr_matches) {
+					
+					$arr_header = explode('::', $arr_matches[1]);
+					$str_header = ($arr_header[0] ?? '');
+					if (isset($arr_header[1])) {
+						$str_header = '<a href="'.strEscapeHTML($arr_header[1]).'"'.(!uris::isURLInternal($arr_header[1]) ? ' target="_blank"' : '').'>'.$str_header.'</a>';
+					}
+					
+					return '<blockquote>'.($str_header ? '<header>'.$str_header.'</header>' : '').$arr_matches[2].'</blockquote>';
+				}
 			],
 			'url_raw_all' => [
 				'/(?<=\A|[^=\]>\'"a-z0-9])((http|ftp|https|ftps|irc):\/\/[^<>\s]+)/i',
@@ -278,7 +287,7 @@ class FormatTags {
 
 			//[quote=Author]Text[/quote]
 			$arr_code = self::$arr_codes_special['quote'];
-			$quote = preg_replace($arr_code[0], $arr_code[1], $quote);
+			$quote = preg_replace_callback($arr_code[0], $arr_code[1], $quote);
 
 			$s = substr($s, 0, $pos_open).$quote.substr($s, $pos_close + 8);
 		}

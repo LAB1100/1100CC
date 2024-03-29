@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -45,19 +45,12 @@ class account extends base_module {
 			
 		} else {
 			
-			$arr_languages = cms_language::getLanguage();
-			
-			foreach ($arr_languages as $lang_code => $arr_language) {
-				
-				if (!$arr_language['is_user_selectable']) {
-					unset($arr_languages[$lang_code]);
-				}
-			}
-			
+			$arr_languages = cms_language::getLanguageSelectable();
+						
 			$arr_settings = getModuleConfiguration('accountSettings');
 				
 			$return .= '<h1>Account Setup</h1>
-			<form id="f:account:account_update-0">
+			<form id="f:account:account_update-0" autocomplete="on">
 				<fieldset><ul>
 					<li><label>'.getLabel('lbl_name_display').'</label>'.($this->arr_variables['allow_name'] ? '<input name="name" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name'].'</span>').'</li>
 					<li><label>'.getLabel('lbl_username').'</label>'.($this->arr_variables['allow_uname'] ? '<input name="uname" type="text" value="'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'" />' : '<span>'.$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['uname'].'</span>').'</li>
@@ -114,13 +107,13 @@ class account extends base_module {
 				$arr_update['uname'] = $_POST['uname'];
 			}
 			
-			$str_url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false).'update/';
+			$str_url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false).'update/';
 									
 			$update_user = user_management::updateUser($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], true, $arr_update, $_POST['password'], $str_url);
 			
 			if ($_POST['lang_code']) {
 				
-				$arr_language = cms_language::getLanguage('cms', $_POST['lang_code']);
+				$arr_language = cms_language::getLanguage($_POST['lang_code']);
 				
 				if ($arr_language['is_user_selectable']) {
 					
@@ -152,6 +145,6 @@ class account extends base_module {
 	
 	public static function findAccount() {
 	
-		return pages::getClosestModule('account', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
+		return pages::getClosestModule('account', SiteStartEnvironment::getDirectory('id'), SiteStartEnvironment::getPage('id'));
 	}
 }

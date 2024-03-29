@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -33,7 +33,7 @@ class form extends base_module {
 		
 		$return .= '<h1>'.Labels::parseTextVariables($arr_form_set['details']['name']).'</h1>';
 		
-		$return .= '<form id="f:form:post-'.$arr_form_set['details']['id'].'">';
+		$return .= '<form id="f:form:post-'.$arr_form_set['details']['id'].'" autocomplete="on">';
 						
 		$return .= $this->createForm();
 		
@@ -112,7 +112,7 @@ class form extends base_module {
 			$return .= '<div class="body">'.parseBody($arr_form_set['details']['text']).'</div>';
 		}
 		if ($arr_form_set['details']['script']) {
-			SiteEndVars::addScript($arr_form_set['details']['script']);
+			SiteEndEnvironment::addScript($arr_form_set['details']['script']);
 		}
 		$return .= '<fieldset><ul>';
 		

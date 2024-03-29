@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,7 +18,7 @@ class cms_general extends base_module {
 	}
 	public static function modulePreload() {
 		
-		SiteEndVars::addScript("
+		SiteEndEnvironment::addScript("
 			var labeler = ".(int)$_SESSION['CUR_USER']['labeler'].";
 		");
 	}
@@ -144,15 +144,20 @@ class cms_general extends base_module {
 					
 		if ($method == "set_language") {
 		
-			$language = ($value ?: $id);
+			$str_language = ($value ?: $id);
+			$str_cur_language = $_SESSION['LANGUAGE_SYSTEM'];
 			
-			$cur_language = $_SESSION['LANGUAGE_SYSTEM'];
-			
-			if ($language != $cur_language) {
-			
-				$_SESSION['LANGUAGE_SYSTEM'] = $language;
+			if ($str_language != $str_cur_language) {
 				
-				Response::location(SiteStartVars::getPageURL());
+				$arr_language = cms_language::getLanguage($str_language);
+				
+				if ($arr_language['lang_code']) {
+					$_SESSION['LANGUAGE_SYSTEM'] = $arr_language['lang_code'];
+				} else {
+					unset($_SESSION['LANGUAGE_SYSTEM']);
+				}
+				
+				Response::location(SiteStartEnvironment::getPageURL());
 			}
 		}
 		
@@ -638,7 +643,7 @@ class cms_general extends base_module {
 	
 	public static function createImageSelector($value, $name = 'img') {
 		
-		return '<input type="hidden" name="'.$name.'" id="y:cms_media:media_popup-0" value="'.$value.'" /><img class="select" src="'.($value ? SiteStartVars::getCacheURL('img', [200, 200], $value) : '').'" />';
+		return '<input type="hidden" name="'.$name.'" id="y:cms_media:media_popup-0" value="'.$value.'" /><img class="select" src="'.($value ? SiteStartEnvironment::getCacheURL('img', [200, 200], $value) : '').'" />';
 	}
 	
 	public static function createMultiSelect($name, $id, $arr_tags, $id_value = false, $arr_options = []) {
@@ -887,7 +892,7 @@ class cms_general extends base_module {
 			$str_tag_title = strEscapeHTML(getLabel('lbl_tag').' <strong>'.$str_tag.'</strong>');
 			$str_tag = strEscapeHTML($str_tag);
 				
-			$str_html_tags .= '<a title="'.$str_tag_title.'" href="'.$str_url.str_replace(' ', '+', $str_tag).'" data-tag="'.$str_tag.'">'.$str_tag.'</a>';
+			$str_html_tags .= '<a title="'.$str_tag_title.'" href="'.($str_url ? $str_url.str_replace(' ', '+', $str_tag) : '#').'" data-tag="'.$str_tag.'">'.$str_tag.'</a>';
 		}
 		
 		$str_html_tags = '<div class="tags content"><span class="icon">'.getIcon('tags').'</span>'.$str_html_tags.'</div>';

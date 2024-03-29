@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -144,7 +144,7 @@ function getElementsSelector(elm, selector) {
 	
 		const elms_find = elm.querySelectorAll(selector);
 		
-		if (elms_find) {
+		if (elms_find.length) {
 			elms_new = elms_find;
 		}
 	}
@@ -771,7 +771,7 @@ $(document).on('click', '.hide-edit.hide + *', function() {
 	var cur = $(this);
 	var url = cur.attr('data-href');
 	
-	window.open(url, '_blank');
+	LOCATION.open(url);
 }).on('command', '[id^=y\\\:cms_general\\\:preview-]', function() {
 	
 	var elm_target = $(this).parent('menu').parent().find('textarea.editor');
@@ -1537,7 +1537,7 @@ function Location() {
 	
 	var SELF = this;
 		
-	var str_host = window.location.protocol+'//'+window.location.host;
+	var str_host = window.location.origin;
 	
 	var str_location = window.location.pathname+window.location.search; // Only relative parth of the location and no client-side hash
 	var str_location_canonical = null; // Holds the real 1100CC location path, when the location path itself could be a shortcut '.s'
@@ -1567,7 +1567,9 @@ function Location() {
 				str_url = str_location_active;
 			} else {
 				
-				let arr_path = (str_location_canonical_active ? str_location_canonical_active : str_location_active).split('/');
+				const arr_url = new URL((str_location_canonical_active ? str_location_canonical_active : str_location_active), SELF.getHost());
+				
+				let arr_path = arr_url.pathname.split('/');
 				let arr = [];
 				let str_page_name = false;
 				
@@ -1591,6 +1593,8 @@ function Location() {
 				if (mode_purpose == 'command' && !str_page_name) { // Request originates from directory
 					str_url = str_url+'commands.c';
 				}
+				
+				str_url = str_url+arr_url.search;
 			}
 		}
 
@@ -1728,7 +1732,7 @@ function Location() {
 			return false;
 		}
 		
-		const arr_url = new URL(str_url, window.location.origin);
+		const arr_url = new URL(str_url, SELF.getHost());
 		
 		if (arr_url.host != window.location.host) { // Going external
 			return true;
@@ -2412,19 +2416,24 @@ function DocumentEmbeddingListener() {
 	
 	this.checkLocationEmbed = function(arr_location, elm_frame) { // Default solution, override checkLocation() for custom procedures
 		
-		let str_location = LOCATION.getURL();
+		const arr_url = new URL(LOCATION.getURL(), LOCATION.getHost());
+		let str_location = arr_url.pathname; // Only need the path
+		
 		var regex_embed = new RegExp('(/\\d+\.m)?/embed.v/([^/]*)');
 		
 		if (arr_location.client && arr_location.client != '/') {
 			
-			let str_client = arr_location.client.replace(new RegExp('^/+'), ''); // Trim left '/'
-			str_client = str_client.replaceAll('/', '|'); // Replace '/' with '|', the safe path separators
+			const arr_url_client = new URL(arr_location.client, LOCATION.getHost());
+			let str_location_client = arr_url_client.pathname; // Only need the path, no passing of search/hash
+			
+			str_location_client = str_location_client.replace(new RegExp('^/+'), ''); // Trim left '/'
+			str_location_client = str_location_client.replaceAll('/', '|'); // Replace '/' with '|', the safe path separators
 			
 			if (regex_embed.test(str_location)) {
-				str_location = str_location.replace(regex_embed, '$1/embed.v/'+str_client);
+				str_location = str_location.replace(regex_embed, '$1/embed.v/'+str_location_client);
 			} else {
 				str_location = str_location.replace(new RegExp('/+$'), ''); // Trim right '/'
-				str_location = str_location+'/0.m/embed.v/'+str_client;
+				str_location = str_location+'/0.m/embed.v/'+str_location_client;
 			}
 		} else {
 			
@@ -2433,7 +2442,7 @@ function DocumentEmbeddingListener() {
 			}
 		}
 		
-		arr_location.client = str_location;
+		arr_location.client = str_location+arr_url.search+arr_url.hash;
 		
 		return arr_location;
 	};
@@ -5714,7 +5723,15 @@ function FormManager(elm, arr_options) {
 		return;
 	}
 	elm.formmanager = this;
-					
+	
+	// Tweaking
+	
+	if (!elm.hasAttribute('autocomplete')) {
+		elm.autocomplete = 'off';
+	}
+	
+	// Listeners
+			
 	elm.addEventListener('ajaxsubmit', function(e) {
 	
 		runElementSelectorFunction(elm, 'ul.sorter', function(elm_found) {

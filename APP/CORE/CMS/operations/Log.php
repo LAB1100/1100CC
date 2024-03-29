@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -35,7 +35,7 @@ class Log {
 
 		self::$arr_msg[] = [$msg, $label, $suppress, $debug, $type, $arr_options];
 		
-		if (SiteStartVars::isProcess()) { // Store immediately, do not wait for exit (can be a long time, if ever!)
+		if (SiteStartEnvironment::isProcess()) { // Store immediately, do not wait for exit (can be a long time, if ever!)
 			self::addToDB();
 		}
 	}
@@ -44,7 +44,7 @@ class Log {
 					
 		$arr_msgs = [];
 		
-		if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_API) {
+		if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_API) {
 			
 			foreach (self::$arr_msg as $value) {
 				
@@ -67,7 +67,7 @@ class Log {
 			if ($arr_msgs) {
 				
 				$JSON->msg = $arr_msgs;
-			}			
+			}
 		} else {
 			
 			$type = 'attention';
@@ -109,7 +109,7 @@ class Log {
 			}
 			
 			if (!isset($arr_options['clear'])) {
-				$arr_options['clear'] = ['identifier' => SiteStartVars::getSessionId(true)];
+				$arr_options['clear'] = ['identifier' => SiteStartEnvironment::getSessionId(true)];
 			}
 			
 			$JSON->msg_options = $arr_options;
@@ -134,10 +134,9 @@ class Log {
 			
 			try {
 				
-				if (DB::isActive()) {
+				if (Settings::isInitialised()) {
 					
 					if (getLabel('logging', 'D', true)) {
-					
 						self::addToDBSQL();
 					}
 					
@@ -247,41 +246,42 @@ class Log {
 	
 	public static function addToUserDB() {
 		
-		if (!self::$log_user_id) {
-			
-			$sql_user_id = 0;
-			$sql_user_class = 0;
-		
-			if (!empty($_SESSION['USER_ID'])) {
-				
-				$sql_user_id = $_SESSION['USER_ID'];
-				$sql_user_class = ($_SESSION['USER_GROUP'] ? 3 : ($_SESSION['CORE'] ? 1 : 2));
-			}
-			
-			if (SiteStartVars::isProcess()) {
-				
-				$arr_ip = false;
-				$url = URL_BASE;
-				$referral_url = '';
-			} else {
-				
-				$arr_ip = self::getIP();
-				$url = URL_BASE.ltrim(($_SERVER['PATH_VIRTUAL'] ? $_SERVER['PATH_VIRTUAL'].' (V)' : $_SERVER['PATH_INFO']), '/');
-				$referral_url = ($_SESSION['REFERER_URL'] ?? '');
-			}
-			
-			DB::setConnection(DB::CONNECT_CMS);
-			
-			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_LOG_USERS')."
-				(user_id, user_class, ip, ip_proxy, url, referral_url)
-					VALUES
-				(".(int)$sql_user_id.", ".(int)$sql_user_class.", ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").", ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''").", '".DBFunctions::strEscape($url)."', '".DBFunctions::strEscape($referral_url)."')
-			");
-			
-			self::$log_user_id = DB::lastInsertID();
-			
-			DB::setConnection();
+		if (self::$log_user_id) {
+			return self::$log_user_id;
 		}
+		
+		$sql_user_id = 0;
+		$sql_user_class = 0;
+		
+		if (!empty($_SESSION['USER_ID'])) {
+			
+			$sql_user_id = $_SESSION['USER_ID'];
+			$sql_user_class = ($_SESSION['USER_GROUP'] ? 3 : ($_SESSION['CORE'] ? 1 : 2));
+		}
+		
+		if (SiteStartEnvironment::isProcess()) {
+			
+			$arr_ip = false;
+			$url = URL_BASE;
+			$referral_url = '';
+		} else {
+			
+			$arr_ip = self::getIP();
+			$url = URL_BASE.ltrim(($_SERVER['PATH_VIRTUAL'] ? $_SERVER['PATH_VIRTUAL'].' (V)' : $_SERVER['PATH_INFO']), '/');
+			$referral_url = ($_SESSION['REFERER_URL'] ?? '');
+		}
+		
+		DB::setConnection(DB::CONNECT_CMS);
+		
+		$res = DB::query("INSERT INTO ".DB::getTable('TABLE_LOG_USERS')."
+			(user_id, user_class, ip, ip_proxy, url, referral_url)
+				VALUES
+			(".(int)$sql_user_id.", ".(int)$sql_user_class.", ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").", ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''").", '".DBFunctions::strEscape($url)."', '".DBFunctions::strEscape($referral_url)."')
+		");
+		
+		self::$log_user_id = DB::lastInsertID();
+		
+		DB::setConnection();
 		
 		return self::$log_user_id;
 	}

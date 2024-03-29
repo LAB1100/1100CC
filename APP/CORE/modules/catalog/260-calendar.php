@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -188,7 +188,7 @@ class calendar extends base_module {
 							<div>';
 							
 								foreach ($arr_events[$cur_date->format("Y-m-d")] as $value) {
-									$return .= '<dd><span style="background-color: #'.$value["color"].';"></span><span>'.date("H:i", strtotime($value["date"])).' - '.date("H:i", strtotime($value["date_end"])).'</span><a href="'.SiteStartVars::getModuleURL($this->mod_id).'day/'.$cur_date->format("d-m-Y").'#'.$value["id"].'-'.str2URL($value["name"]).'">'.strEscapeHTML($value["name"]).'</a></dd>';
+									$return .= '<dd><span style="background-color: #'.$value["color"].';"></span><span>'.date("H:i", strtotime($value["date"])).' - '.date("H:i", strtotime($value["date_end"])).'</span><a href="'.SiteStartEnvironment::getModuleURL($this->mod_id).'day/'.$cur_date->format("d-m-Y").'#'.$value["id"].'-'.str2URL($value["name"]).'">'.strEscapeHTML($value["name"]).'</a></dd>';
 								}
 							$return .= '</div>
 						</div>';

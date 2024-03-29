@@ -2,14 +2,14 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 // 1100CC Framework:
 
-	SiteStartVars::preloadModules();
+	SiteStartEnvironment::preloadModules();
 	
 	$JSON = Response::getObject();
 	
@@ -76,8 +76,8 @@
 				
 				$arr_page_mod = explode('-', $arr_command['mod']);
 				$arr_mod_xy = explode('_', $arr_page_mod[1]);
-				SiteStartVars::setContext(SiteStartVars::CONTEXT_MODULE_X, $arr_mod_xy[0]);
-				SiteStartVars::setContext(SiteStartVars::CONTEXT_MODULE_Y, $arr_mod_xy[1]);
+				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_X, $arr_mod_xy[0]);
+				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_Y, $arr_mod_xy[1]);
 			}
 
 			// Check if module command really originates from valid source directory and page
@@ -94,18 +94,18 @@
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm2 ON (pm2.id = pm.master_id)
 					JOIN ".DB::getTable('TABLE_DIRECTORIES')." d ON (d.id = p.directory_id)
 					JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.page_id = p.id OR m.page_id = pm.id OR m.page_id = pm2.id)
-				WHERE p.id = ".(int)SiteStartVars::getPage('id')."
-					AND m.x = ".(int)SiteStartVars::getContext(SiteStartVars::CONTEXT_MODULE_X)."
-					AND m.y = ".(int)SiteStartVars::getContext(SiteStartVars::CONTEXT_MODULE_Y)."
-					AND d.id = ".(int)SiteStartVars::getDirectory('id')."
+				WHERE p.id = ".(int)SiteStartEnvironment::getPage('id')."
+					AND m.x = ".(int)SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_MODULE_X)."
+					AND m.y = ".(int)SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_MODULE_Y)."
+					AND d.id = ".(int)SiteStartEnvironment::getDirectory('id')."
 				ORDER BY parent_level ASC
 			");
 
 			if (!$res->getRowCount()) {
 				
-				$arr_page_directory = directories::getDirectories(SiteStartVars::getPage('directory_id'));
+				$arr_page_directory = directories::getDirectories(SiteStartEnvironment::getPage('directory_id'));
 				
-				error('Request originates from invalid path: '.SiteStartVars::getDirectory('path').' => '.strEscapeHTML($module).':'.strEscapeHTML($method).' (using: '.str_replace(' ', '', $arr_page_directory['path']).' '.strEscapeHTML($arr_command['mod']).')');
+				error('Request originates from invalid path: '.SiteStartEnvironment::getDirectory('path').' => '.strEscapeHTML($module).':'.strEscapeHTML($method).' (using: '.str_replace(' ', '', $arr_page_directory['path']).' '.strEscapeHTML($arr_command['mod']).')');
 			}
 
 			$arr = $res->fetchAssoc();
@@ -113,7 +113,7 @@
 			$mod = new $arr['module'];
 			$mod->setMod($arr, $arr['module_id']);
 			$mod->setModVariables($arr['var']);
-			$mod->setModQuery(SiteStartVars::getModuleVariables($arr['module_id']));
+			$mod->setModQuery(SiteStartEnvironment::getModuleVariables($arr['module_id']));
 
 			if ($module != 'this' && $module != $arr['module']) { // Targetting module other than source module
 				
@@ -194,7 +194,7 @@
 				$JSON_command->html = $mod->contents();
 			}
 			
-			SiteEndVars::checkServerName();
+			SiteEndEnvironment::checkServerName();
 			
 			$JSON_command->do_confirm = $mod->do_confirm;
 			$JSON_command->do_download = $mod->do_download;
@@ -215,15 +215,16 @@
 		unset($JSON_command);
 	}
 
-	SiteStartVars::cooldownModules();
+	SiteStartEnvironment::cooldownModules();
 
-	$JSON->location = ['real' => SiteEndVars::getLocation(), 'canonical' => SiteEndVars::getLocation(true, SiteEndVars::LOCATION_CANONICAL_NATIVE)];
-	$JSON->data_feedback = SiteEndVars::getFeedback();
+	$JSON->data_feedback = SiteEndEnvironment::getFeedback();
 
 	$JSON = Log::addToObj($JSON);
 	$JSON->timestamp = date('c');
 	if (Settings::get('timing') === true) {
 		$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
 	}
+	
+	Response::location(['real' => SiteEndEnvironment::getLocation(), 'canonical' => SiteEndEnvironment::getLocation(true, SiteEndEnvironment::LOCATION_CANONICAL_NATIVE)]);
 	
 	Response::stop('', $JSON);

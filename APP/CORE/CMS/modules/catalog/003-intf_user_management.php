@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -132,22 +132,12 @@ class intf_user_management extends user_management {
 		if ($method == "edit" || $method == "add") {
 			
 			$arr_user = [];
-			$str_url_account = false;
-		
+
 			if ($method == "edit" && (int)$id) {
 			
 				$arr_user = user_groups::getUserData($id, true);
-				$arr_user_account = user_management::getUserAccount($id);
-				
 				$user_group_id = $arr_user[DB::getTableName('TABLE_USERS')]['group_id'];
-				
-				if ($arr_user_account['passkey']) {
-					
-					$arr_mod = pages::getClosestModule('login', 0, 0, $user_group_id);
-					
-					$str_url_account = pages::getModuleURL($arr_mod).'welcome/'.$id.'/'.$arr_user_account['passkey'];
-				}
-				
+
 				$mode = "update";
 			} else if ($method == "add" && (int)$id) {
 				
@@ -157,6 +147,18 @@ class intf_user_management extends user_management {
 			} else {
 				
 				error('missing ID');
+			}
+			
+			$arr_module_account = pages::getClosestModule('login', 0, 0, $user_group_id);
+			$str_url_account = false;
+			
+			if ($mode == 'update') {
+			
+				$arr_user_account = user_management::getUserAccount($id);
+				
+				if ($arr_user_account['passkey'] && $arr_module_account) {
+					$str_url_account = pages::getModuleURL($arr_module_account).'welcome/'.$id.'/'.$arr_user_account['passkey'];
+				}
 			}
 
 			$arr_user_group = user_groups::getUserGroups($user_group_id);
@@ -231,6 +233,10 @@ class intf_user_management extends user_management {
 							if ($mode == 'update') {
 								
 								$arr_email_options = [['id' => '', 'name' => getLabel('lbl_no').' '.getLabel('lbl_email')], ['id' => static::MAIL_ACCOUNT, 'name' => getLabel('lbl_send_account'), 'title' => getLabel('inf_send_account_confirmation')], ['id' => static::MAIL_ACCOUNT_PASSWORD, 'name' => getLabel('lbl_send_account_password'), 'title' => getLabel('inf_send_account_confirmation')]];
+								
+								if (!$arr_module_account) {
+									unset($arr_email_options[2]);
+								}
 								
 								$this->html .= cms_general::createSelectorRadioList($arr_email_options, 'send_mail');
 							} else {
@@ -376,7 +382,8 @@ class intf_user_management extends user_management {
 			$res = DB::query("SELECT
 				".DBFunctions::strEscape($arr_database_table_column[2])." AS id, ".DBFunctions::strEscape($arr_database_table_column[3])." AS var
 					FROM ".DBFunctions::strEscape($arr_database_table_column[0]).".".DBFunctions::strEscape($arr_database_table_column[1])." s
-				".($value == "?" ? "" : "WHERE ".DBFunctions::strEscape($arr_database_table_column[3])." LIKE '%".$value."%'")."
+				".($value == "?" ? "" : "WHERE ".DBFunctions::strEscape($arr_database_table_column[3])." LIKE '%".DBFunctions::strEscape($value)."%'")."
+				LIMIT 25
 			");
 	
 			while ($row = $res->fetchAssoc()) {

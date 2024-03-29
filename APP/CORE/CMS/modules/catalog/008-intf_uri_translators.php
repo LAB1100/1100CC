@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -112,7 +112,7 @@ class intf_uri_translators extends uris {
 						$return .= '<tr id="x:intf_uri_translators:uri_translator_id-'.$uri_translator_id.'">
 							<td>'.$arr_uri_translator['name'].'</td>
 							<td>'.$str_mode.'</td>
-							<td>'.($arr_uri_translator['host_name'] ? $arr_uri_translator['host_name'] : SERVER_NAME_SITE_NAME).'</td>
+							<td>'.($arr_uri_translator['host_name'] ? $arr_uri_translator['host_name'] : '<i>'.SERVER_NAME_SITE_NAME.'</i>').'</td>
 							<td>'.($arr_uri_translator['delay'] ? ((int)$arr_uri_translator['delay']/1000).' '.getLabel('unit_seconds') : '<span class="icon" data-category="status">'.getIcon('min').'</span>').'</td>
 							<td><span class="icon" data-category="status">'.getIcon(($arr_uri_translator['show_remark'] ? 'tick' : 'min')).'</span></td>
 							<td><input type="button" class="data edit popup edit_uri_translator" value="edit" /><input type="button" class="data del msg del_uri_translator" value="del" /></td>

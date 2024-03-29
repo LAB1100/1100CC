@@ -2,15 +2,16 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class FormatHTML {
 	
-	private $html = '';
-	private $doc = false;
+	protected $html = '';
+	protected $doc = false;
+	protected $arr_sanitise = false;
 	
 	public $count_paragraphs = 0;
 	public $count_elements_removed = 0;
@@ -26,12 +27,12 @@ class FormatHTML {
 			$this->handleNewlines();
 		}
 		
-		$this->doc = self::openHTMLDocument($this->html);
+		$this->doc = new HTMLDocument($this->html);
 	}
 	
 	public function getHTML() {
 		
-		$this->html = self::closeHTMLDocument($this->doc);
+		$this->html = $this->doc->getHTML();
 		
 		$this->html = str_replace("  ", " &#160;", $this->html); // Maintain spacing
 		$this->html = str_replace("\t", '<span class="tab"></span>', $this->html); // Tab
@@ -41,7 +42,7 @@ class FormatHTML {
 	
 	public function getXHTML() {
 		
-		$this->html = self::closeXHTMLDocument($this->doc);
+		$this->html = $this->doc->getXHTML();
 		
 		$this->html = str_replace("  ", " &#160;", $this->html); // Maintain spacing
 		$this->html = str_replace("\t", '<span class="tab"></span>', $this->html); // Tab
@@ -76,13 +77,15 @@ class FormatHTML {
 	}
 	
 	public function addToLastParagraph($content) {
-	
-		$frag = $this->doc->createDocumentFragment(); // create fragment
-		$frag->appendXML($content); // insert arbitary html into the fragment
+
+		$nodes_p = $this->doc->firstChild->getElementsByTagName('p');
+		$node_p = $nodes_p->item($nodes_p->length-1);
 		
-		$target = $this->doc->firstChild;
-		$p = $target->getElementsByTagName('p');
-		$p->item($p->length-1)->appendChild($frag);
+		if (!$node_p) {
+			return;
+		}
+		
+		$this->doc->addToNode($node_p, $content);
 	}
 	
 	public function cacheImages() {
@@ -98,15 +101,89 @@ class FormatHTML {
 			
 				if ($width || $height) {
 					
-					$img->setAttribute('src', SiteStartVars::getCacheURL('img', [$width, $height], $url));
+					$img->setAttribute('src', SiteStartEnvironment::getCacheURL('img', [$width, $height], $url));
 				}
 			}
 		}
 	}
-	
-	private function hasUntaggedContent() {
+
+	public function sanitise() { // Only light sanitising for nonchalant input
+
+		$target = $this->doc->firstChild;
 		
-		$doc = self::openHTMLDocument($this->html);
+		if (!$target->hasChildNodes()) {
+			return;
+		}
+		
+		if (!$this->arr_sanitise) {
+			$this->arr_sanitise = static::getSanitationValues();
+		}
+
+		$func_walk = function ($element) use (&$func_walk) {
+			
+			foreach ($element->childNodes as $child) {
+				
+				$str_node = $child->nodeName;
+				
+				if ($str_node == '#text') {
+					continue;
+				}
+				
+				if (!isset($this->arr_sanitise['elements'][$str_node])) {
+					
+					$node_text = $this->doc->createTextNode($this->doc->saveHTML($child));
+					$element->replaceChild($node_text, $child);
+					//$child->parentNode->removeChild($child);
+					
+					continue;
+				}
+				
+				if ($child->hasAttributes()) {
+					
+					for ($i = $child->attributes->length - 1; $i >= 0; $i--) { // Need to go over list in reversed order to keep pointer on removal
+					
+						$attribute = $child->attributes->item($i);
+						
+						if (isset($this->arr_sanitise['attributes'][$attribute->nodeName]) || strStartsWith($attribute->nodeName, 'data-')) {
+							continue;
+						}
+						
+						$child->removeAttributeNode($attribute);
+					}
+				}
+				
+				$func_walk($child);
+			}
+		};
+		
+		$func_walk($target);
+	}
+	
+	public function addSanitationValues($arr_sanitise, $do_override = false) {
+		
+		if ($do_override) {
+			
+			$this->arr_sanitise = ['elements' => ($arr_sanitise['elements'] ?: []), 'attributes' => ($arr_sanitise['attributes'] ?: [])];
+			
+			return;
+		}
+		
+		if (!$this->arr_sanitise) {
+			$this->arr_sanitise = static::getSanitationValues();
+		}
+		
+		if (!empty($arr_sanitise['elements'])) {
+			$this->arr_sanitise['elements'] += $arr_sanitise['elements'];
+		}
+		
+		if (!empty($arr_sanitise['attributes'])) {
+			$this->arr_sanitise['attributes'] += $arr_sanitise['attributes'];
+		}
+	}
+	
+	protected function hasUntaggedContent() {
+		
+		$doc = new HTMLDocument($this->html);
 		
 		$target = $doc->firstChild;
 		$arr_remove = [];
@@ -123,55 +200,16 @@ class FormatHTML {
 			$comment->parentNode->removeChild($comment);
 		}
 
-		return (str_replace("\n" , "", self::closeHTMLDocument($doc)) != '');
+		return (str_replace("\n" , "", $doc->getHTML()) != '');
 	}
 	
-	private function handleNewlines() {
+	protected function handleNewlines() {
 	
 		$this->html = preg_replace("/>\s*\n+/si", '><OutputNewline>', $this->html); // Keep and clean newlines between tags
 		$this->html = nl2br($this->html); // Add the newlines
 		$this->html = str_replace('<OutputNewline>', "\n", $this->html); // Restore newlines in output
 	}
-	
-	public static function openHTMLDocument($html) {
-	
-		$html = '<div>'.$html.'</div>'; // Wrap in <div>
-
-		$doc = new DOMDocument();
-		$doc->strictErrorChecking = false;
 		
-		try {
-			$doc->loadHTML('<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body>'.$html.'</body></html>');
-		} catch (Exception $e) {
-			
-		}
-		
-		// Remove <!DOCTYPE 
-		$doc->removeChild($doc->firstChild);
-		// Remove <html><head></head><body></body></html> 
-		$doc->replaceChild($doc->firstChild->lastChild->firstChild, $doc->firstChild);
-		
-		return $doc;
-	}
-	
-	public static function closeHTMLDocument($doc) {
-	
-		$html = $doc->saveHTML($doc->firstChild); // Read from first child to prevent character encoding
-
-		$html = substr($html, 5, -6); // Remove wrapper <div>
-
-		return $html;
-	}
-	
-	public static function closeXHTMLDocument($doc) {
-
-		$html = $doc->saveXML($doc->firstChild); // Read from first child to prevent character encoding
-		
-		$html = substr($html, 5, -6); // Remove wrapper <div>
-
-		return $html;
-	}
-	
 	public static function getTextContent($text) {
 		
 		// replace <br> with spaces so that Text<br>Text becomes two words
@@ -331,5 +369,71 @@ class FormatHTML {
 		$pee = trim($pee);
 		
 		return $pee;
+	}
+	
+	public static function getSanitationValues() {
+		
+		$arr_elements = [
+			'h1' => true,
+			'h2' => true,
+			'h3' => true,
+			'h4' => true,
+			'hr' => true,
+			'em' => true,
+			'strong' => true,
+			'sub' => true,
+			'sup' => true,
+			'small' => true,
+			'mark' => true,
+			'dfn' => true,
+			'cite' => true,
+			'abbr' => true,
+			'del' => true,
+			'b' => true,
+			'i' => true,
+			's' => true,
+			'div' => true,
+			'span' => true,
+			'br' => true,
+			'pre' => true,
+			'code' => true,
+			'a' => true,
+			'p' => true,
+			'figure' => true,
+			'figurecaption' => true,
+			'blockquote' => true,
+			'q' => true,
+			'ul' => true,
+			'ol' => true,
+			'li' => true,
+			'dl' => true,
+			'dd' => true,
+			'dt' => true,
+			'table' => true,
+			'thead' => true,
+			'tbody' => true,
+			'tfoot' => true,
+			'tr' => true,
+			'th' => true,
+			'td' => true,
+			'caption' => true,
+			'img' => true,
+			'video' => true,
+			'iframe' => true
+		];
+		
+		$arr_attributes = [
+			'id' => true,
+			'class' => true,
+			'href' => true,
+			'src' => true,
+			'target' => true,
+			'width' => true,
+			'height' => true,
+			'title' => true,
+			'cite' => true
+		];
+
+		return ['elements' => $arr_elements, 'attributes' => $arr_attributes];
 	}
 }

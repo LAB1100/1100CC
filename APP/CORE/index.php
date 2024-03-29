@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -80,38 +80,44 @@
 	}
 	
 	// Prepare
-	SiteStartVars::setModules(getModules(DIR_CMS), DIR_CMS);
-	SiteStartVars::setModules(getModules());
+	SiteStartEnvironment::setModules(getModules(DIR_CMS), DIR_CMS);
+	SiteStartEnvironment::setModules(getModules());
 	
 	DB::setConnection(DB::CONNECT_HOME);
 	
 	Labels::setSystemLabels();
 		
 	// Process request
+	SiteStartEnvironment::checkRequestOptions();
+	SiteStartEnvironment::setModifierVariables($_GET);
 	
-	SiteStartVars::setURITranslator(uris::getURITranslatorHosts(SERVER_NAME) ?: false);
-	SiteStartVars::setAPI(apis::getAPIHosts(SERVER_NAME) ?: false);
+	// URI
+	SiteStartEnvironment::setURITranslator(uris::getURITranslatorHosts(SERVER_NAME) ?: false);
 	
-	SiteStartVars::checkRequestOptions();
-	
-	if (SiteStartVars::getURITranslator()) {
+	if (SiteStartEnvironment::getURITranslator()) {
 				
-		SiteStartVars::setRequestVariables($arr_path_info);
+		SiteStartEnvironment::setRequestVariables($arr_path_info);
 		
 		// Request
 		require('uri.php');
 
-		$arr_path_info = SiteStartVars::getRequestVariables();
+		$arr_path_info = SiteStartEnvironment::getRequestVariables();
 		$str_path_start = ($arr_path_info[1] ?? '');
 		
-		SiteStartVars::setRequestVariables();
+		SiteStartEnvironment::setRequestVariables();
 	}
 	
-	if (SiteStartVars::getAPI()) {
+	// Language
+	SiteStartEnvironment::checkLanguage();
+	
+	// Output
+	SiteStartEnvironment::setAPI(apis::getAPIHosts(SERVER_NAME) ?: false);
+	
+	if (SiteStartEnvironment::getAPI()) {
 				
 		Response::setFormat(Response::OUTPUT_JSON | Response::PARSE_PRETTY);
 		
-		$arr_api = SiteStartVars::getAPI();
+		$arr_api = SiteStartEnvironment::getAPI();
 		
 		$JSON = Response::getObject();
 	
@@ -179,7 +185,7 @@
 		
 		$JSON->authenticated = (isset($_SESSION) && $_SESSION['USER_ID'] ? true : false);
 		
-		SiteStartVars::setRequestVariables(($str_path_start ? array_slice($arr_path_info, 1) : []));
+		SiteStartEnvironment::setRequestVariables(($str_path_start ? array_slice($arr_path_info, 1) : []));
 
 		// Request
 		require('api.php');
@@ -187,18 +193,18 @@
 	} else if ($str_path_start == 'combine') {
 		
 		require('./CMS/core_combine.php');
-		SiteStartVars::setMaterial();
+		SiteStartEnvironment::setMaterial();
 		
 		$type = ($arr_path_info[2] ?? '');
 		
-		if ($type != SiteStartVars::MATERIAL_JS && $type != SiteStartVars::MATERIAL_CSS) {
+		if ($type != SiteStartEnvironment::MATERIAL_JS && $type != SiteStartEnvironment::MATERIAL_CSS) {
 			pages::noPage(true);
 		}
 		
-		$arr_modules = SiteStartVars::getModules();
+		$arr_modules = SiteStartEnvironment::getModules();
 		$ie_tag = ($arr_path_info[3] ?? '');
 
-		CombineJSCSS::combine(SiteStartVars::getMaterial($type), $arr_modules, $type, $ie_tag);
+		CombineJSCSS::combine(SiteStartEnvironment::getMaterial($type), $arr_modules, $type, $ie_tag);
 		
 		exit;
 	} else if ($str_path_start == 'cache') {
@@ -210,7 +216,7 @@
 		exit;
 	} else {
 		
-		Response::setFormat((SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX ? Response::OUTPUT_XML : Response::OUTPUT_JSON) | Response::RENDER_HTML);
+		Response::setFormat((SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX ? Response::OUTPUT_XML : Response::OUTPUT_JSON) | Response::RENDER_HTML);
 		
 		if (getLabel('throttle', 'D', true)) {
 			
@@ -252,11 +258,11 @@
 			
 			preg_match("/(.+)\.(p|c|s|l|e|manifest)$/", $str_page, $arr_match);
 			
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_PAGE_NAME, $arr_match[1]); // Substring '.c.p.s.l.e.manifest'
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_PAGE_KIND, '.'.$arr_match[2]); // Store '.c.p.s.l.e.manifest'
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_PAGE_NAME, $arr_match[1]); // Substring '.c.p.s.l.e.manifest'
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_PAGE_KIND, '.'.$arr_match[2]); // Store '.c.p.s.l.e.manifest'
 		} else {
 			
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_PAGE_KIND, '.p'); // Assume .p
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_PAGE_KIND, '.p'); // Assume .p
 		}
 							
 		// Directory
@@ -274,19 +280,19 @@
 			$arr_page_variables = [];			
 		}
 		
-		SiteStartVars::setDirectoryClosure(array_slice($arr_directory, 1));
-		SiteStartVars::setDirectory(directories::traceDirectoryPath($arr_directory));
-		SiteStartVars::setPageVariables($arr_page_variables);
+		SiteStartEnvironment::setDirectoryClosure(array_slice($arr_directory, 1));
+		SiteStartEnvironment::setDirectory(directories::traceDirectoryPath($arr_directory));
+		SiteStartEnvironment::setPageVariables($arr_page_variables);
 		
-		if (!SiteStartVars::getDirectory()) { // No directory
+		if (!SiteStartEnvironment::getDirectory()) { // No directory
 			
 			pages::noPage();
 		}
 		
 		// Special page
-		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.e') {
+		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.e') {
 					
-			if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) == 'script') {
+			if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME) == 'script') {
 				
 				Log::setMsg(getLabel('msg_no_script_support'));
 				msg(getLabel('msg_enable_script'), 'SORRY', LOG_CLIENT);
@@ -294,32 +300,38 @@
 				
 			$obj = Log::addToObj(Response::getObject());
 			
-			$page = new ExitPage($obj->msg, SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME), SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME));
+			if (!isset($obj->msg)) {
+				
+				msg(getLabel('lbl_not_available'), 'SORRY', LOG_CLIENT);
+				Log::addToObj($obj);
+			}
+			
+			$page = new ExitPage($obj->msg, SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME), SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME));
 
 			Response::stop($page->getPage(), '');
 		}
 		
 		// Page
-		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.c') {
+		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.c') {
 			
-			$arr_page_mod = explode('-', ($_POST['mod'] ?? $_POST['multi'][0]['mod']));
+			$arr_page_mod = explode('-', ($_POST['mod'] ?? $_POST['multi'][0]['mod'] ?? ''));
 			
 			$page_id = (int)$arr_page_mod[0];
 			if ($page_id) {
 				$arr_page = pages::getPages($page_id);
-				if (SiteStartVars::getDirectory('id') == $arr_page['directory_id']) {
-					SiteStartVars::setPage($arr_page);
+				if (SiteStartEnvironment::getDirectory('id') == $arr_page['directory_id']) {
+					SiteStartEnvironment::setPage($arr_page);
 				}
 			}
 			
 			$arr_mod_xy = explode('_', $arr_page_mod[1]);
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_MODULE_X, $arr_mod_xy[0]);
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_MODULE_Y, $arr_mod_xy[1]);
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_X, $arr_mod_xy[0]);
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_Y, $arr_mod_xy[1]);
 
-			$_SERVER['PATH_VIRTUAL'] = SiteEndVars::getLocation(true, SiteEndVars::LOCATION_CANONICAL_NATIVE);
+			$_SERVER['PATH_VIRTUAL'] = SiteEndEnvironment::getLocation(true, SiteEndEnvironment::LOCATION_CANONICAL_NATIVE);
 		} else {
 			
-			if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.s') { // Shortcut
+			if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.s') { // Shortcut
 				
 				$arr_shortcut = pages::getShortcut();
 				
@@ -333,49 +345,49 @@
 					$arr_directory = [''];
 				}
 				
-				SiteStartVars::setDirectoryClosure(array_slice($arr_directory, 1));
-				SiteStartVars::setDirectory(directories::getDirectories($arr_shortcut['directory_id']));
+				SiteStartEnvironment::setDirectoryClosure(array_slice($arr_directory, 1));
+				SiteStartEnvironment::setDirectory(directories::getDirectories($arr_shortcut['directory_id']));
 
-				SiteStartVars::setContext(SiteStartVars::CONTEXT_PAGE_NAME, $arr_shortcut['page_name']); // Substring '.c.p.s.l.e.manifest'
-				SiteStartVars::setContext(SiteStartVars::CONTEXT_PAGE_KIND, '.p'); // Store '.c.p.s.l.e.manifest'
-				SiteStartVars::setPage(pages::getPages($arr_shortcut['page_id']));
+				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_PAGE_NAME, $arr_shortcut['page_name']); // Substring '.c.p.s.l.e.manifest'
+				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_PAGE_KIND, '.p'); // Store '.c.p.s.l.e.manifest'
+				SiteStartEnvironment::setPage(pages::getPages($arr_shortcut['page_id']));
 				
-				$arr_page_variables = SiteStartVars::getRequestVariables();
+				$arr_page_variables = SiteStartEnvironment::getRequestVariables();
 				
 				if ($arr_page_variables) {
 					array_unshift($arr_page_variables, $arr_shortcut['id'].'.m');
 				}
 				
-				SiteStartVars::setPageVariables($arr_page_variables);
+				SiteStartEnvironment::setPageVariables($arr_page_variables);
 			} else if ($str_page) { // Page match
 				
-				SiteStartVars::setPage(pages::getPages(SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME), SiteStartVars::getDirectory('id')));
-			} else if (SiteStartVars::getDirectory('page_index_id')) { // Try directory index
+				SiteStartEnvironment::setPage(pages::getPages(SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME), SiteStartEnvironment::getDirectory('id')));
+			} else if (SiteStartEnvironment::getDirectory('page_index_id')) { // Try directory index
 				
-				SiteStartVars::setPage(pages::getPages(SiteStartVars::getDirectory('page_index_id')));
+				SiteStartEnvironment::setPage(pages::getPages(SiteStartEnvironment::getDirectory('page_index_id')));
 			}
 		}
 		
-		if (!SiteStartVars::getPage() && SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) != '.l') { // No page
+		if (!SiteStartEnvironment::getPage() && SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) != '.l') { // No page
 		
 			pages::noPage();
 		}
 		
 		// Login prepare
-		$user_groups = array_filter(explode('/', SiteStartVars::getDirectory('user_group')));
+		$user_groups = array_filter(explode('/', SiteStartEnvironment::getDirectory('user_group')));
 
 		if (count($user_groups)) {
 			
-			SiteStartVars::requestSecure();
+			SiteStartEnvironment::requestSecure();
 			$dir_key = array_keys($user_groups);
 			$dir_key = end($dir_key);
 			$arr_login_directory = array_slice($arr_directory, 0, $dir_key+1);
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_USER_GROUP, end($user_groups));
-			SiteStartVars::setDirectory(directories::traceDirectoryPath($arr_login_directory), SiteStartVars::DIRECTORY_LOGIN);
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_USER_GROUP, end($user_groups));
+			SiteStartEnvironment::setDirectory(directories::traceDirectoryPath($arr_login_directory), SiteStartEnvironment::DIRECTORY_LOGIN);
 		}
 				
 		// Session
-		SiteStartVars::startSession();
+		SiteStartEnvironment::startSession();
 				
 		// Login
 		HomeLogin::index();
@@ -384,35 +396,25 @@
 			Log::updateRequestState(Log::IP_STATE_APPROVED);
 		}
 		
-		// Language
-		if (!empty($_SESSION['LANGUAGE_SYSTEM'])) {
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE_SYSTEM']);
-		} else if (!empty($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code'])) {
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code']);
-		} else {
-			if (empty($_SESSION['LANGUAGE_DEFAULT'])) {
-				$arr_language_default = cms_language::getDefaultLanguage(SERVER_NAME_SITE_NAME);
-				$_SESSION['LANGUAGE_DEFAULT'] = $arr_language_default['lang_code'];
-			}
-			SiteStartVars::setContext(SiteStartVars::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE_DEFAULT']);
-		}
+		// Language session/user
+		SiteStartEnvironment::checkLanguageSession();
 		
 		// Clearance
-		if (!pages::filterClearance([SiteStartVars::getPage()], ($_SESSION['USER_GROUP'] ?? null), ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] ?? null))) { // User has no clearance for page
+		if (!pages::filterClearance([SiteStartEnvironment::getPage()], ($_SESSION['USER_GROUP'] ?? null), ($_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')] ?? null))) { // User has no clearance for page
 			pages::noPage(); // No clearance, no page
 		}
 		
 		// Return page
-		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.c') {
+		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.c') {
 			
 			// Feedback
 			if ($_POST['feedback']) {
-				SiteStartVars::setFeedback($_POST['feedback']);
+				SiteStartEnvironment::setFeedback($_POST['feedback']);
 			}
-					
+			
 			require('commands.php');
 			
-		} else if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.manifest') {
+		} else if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.manifest') {
 						
 			$str_url = implode('/', $arr_path_info);
 			$str_url = (substr($str_url, -9) === '.manifest' ? substr($str_url, 0, -9) : str_replace('.manifest', '.p', $str_url));
@@ -422,36 +424,36 @@
 				
 			if (!$json) {
 				
-				SiteStartVars::preloadModules();
+				SiteStartEnvironment::preloadModules();
 				
-				$arr_modules = pages::getPageModules(SiteStartVars::getPage('id'));
+				$arr_modules = pages::getPageModules(SiteStartEnvironment::getPage('id'));
 
 				foreach ($arr_modules as $arr_module) {
 						
 					$mod = new $arr_module['module'];
 					$mod->setMod($arr_module, $arr_module['id']);
 					$mod->setModVariables($arr_module['var']);
-					$mod->setModQuery(SiteStartVars::getModuleVariables($arr_module['id']));
+					$mod->setModQuery(SiteStartEnvironment::getModuleVariables($arr_module['id']));
 
 					$mod->contents();
 				}
 				
-				SiteEndVars::checkServerName();
+				SiteEndEnvironment::checkServerName();
 				
-				$str_url = SiteEndVars::getLocation(true, SiteEndVars::LOCATION_CANONICAL_NATIVE);
+				$str_url = SiteEndEnvironment::getLocation(true, SiteEndEnvironment::LOCATION_CANONICAL_NATIVE);
 				$str_identifier = 'manifest_'.str2Label($str_url);
 				
-				$str_title = SiteEndVars::getTitle();
-				$str_description = SiteEndVars::getDescription();
-				$str_image = SiteEndVars::getImage();
-				$arr_theme = SiteEndVars::getTheme();
+				$str_title = SiteEndEnvironment::getTitle();
+				$str_description = SiteEndEnvironment::getDescription();
+				$str_image = SiteEndEnvironment::getImage();
+				$arr_theme = SiteEndEnvironment::getTheme();
 									
 				$arr_images = [];
 
 				foreach ([64, 96, 128, 192, 256, 512] as $nr_size) {
 					
 					$arr_images[] = [
-						'src' => SiteStartVars::getCacheURL('img', [$nr_size, $nr_size], $str_image),
+						'src' => SiteStartEnvironment::getCacheURL('img', [$nr_size, $nr_size], $str_image),
 						'type' => 'image/png',
 						'sizes' => $nr_size.'x'.$nr_size
 					];
@@ -468,7 +470,7 @@
 					'display' => 'standalone'
 				];
 				
-				SiteStartVars::cooldownModules();
+				SiteStartEnvironment::cooldownModules();
 				
 				Response::setFormat(Response::OUTPUT_JSON);
 				
@@ -484,43 +486,36 @@
 			echo $json;
 			
 			exit;
-		} else if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.p') {
+		} else if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.p') {
 		
 			if (!isset($_SESSION['PAGE_LOADED'])) {
 				$_SESSION['PAGE_LOADED'] = 0;
-				$_SESSION['LANDING_PAGE'] = SiteStartVars::getPage(); // Store landing page
+				$_SESSION['LANDING_PAGE'] = SiteStartEnvironment::getPage(); // Store landing page
 			}
 			if ($_SERVER['HTTP_REFERER'] && strpos($_SERVER['HTTP_REFERER'], URL_BASE) === false) {
 				$_SESSION['REFERER_URL'] = $_SERVER['HTTP_REFERER']; // Store referer url
 			}
 			$_SESSION['PAGE_LOADED']++;
 		
-			if (SiteStartVars::getPage('url')) {
+			if (SiteStartEnvironment::getPage('url')) {
 				
-				$arr_location_vars = SiteEndVars::getLocationVariables(SiteEndVars::LOCATION_CANONICAL_NATIVE);
+				$arr_location_vars = SiteEndEnvironment::getLocationVariables(SiteEndEnvironment::LOCATION_CANONICAL_NATIVE);
 				
 				if ($arr_location_vars) {
-					Response::location(rtrim(SiteStartVars::getPage('url'), '/').'/'.implode('/', $arr_location_vars));
+					Response::location(rtrim(SiteStartEnvironment::getPage('url'), '/').'/'.implode('/', $arr_location_vars));
 				} else {
-					Response::location(SiteStartVars::getPage('url'));
+					Response::location(SiteStartEnvironment::getPage('url'));
 				}
 			}
 			
-			SiteStartVars::preloadModules();
+			SiteStartEnvironment::preloadModules();
 
-			$template = templates::getTemplates(SiteStartVars::getPage('actual_template_id'));
-										
-			$doc = new DOMDocument();
-			$doc->strictErrorChecking = false;
-			$doc->loadHTML('<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body>'.$template['html'].'</body></html>');
-			// Remove <!DOCTYPE 
-			$doc->removeChild($doc->firstChild);
-			// Remove <html><head></head><body></body></html> 
-			$doc->replaceChild($doc->firstChild->lastChild->firstChild, $doc->firstChild);
+			$template = templates::getTemplates(SiteStartEnvironment::getPage('actual_template_id'));
 			
+			$doc = new HTMLDocument($template['html'], false);
 			$domxpath = new DOMXPath($doc);
 			
-			$arr_modules = pages::getPageModules(SiteStartVars::getPage('id'));
+			$arr_modules = pages::getPageModules(SiteStartEnvironment::getPage('id'));
 			
 			$JSON = Response::getObject();
 
@@ -534,7 +529,7 @@
 					$mod = new $arr_module['module'];
 					$mod->setMod($arr_module, $arr_module['id']);
 					$mod->setModVariables($arr_module['var']);
-					$mod->setModQuery(SiteStartVars::getModuleVariables($arr_module['id']));
+					$mod->setModQuery(SiteStartEnvironment::getModuleVariables($arr_module['id']));
 
 					$content = $mod->contents();
 					
@@ -542,9 +537,7 @@
 					
 					if ($content) {
 						
-						$frag = $doc->createDocumentFragment(); // create fragment
-						$frag->appendXML($content); // insert arbitary html into the fragment
-						$doc_select->item(0)->appendChild($frag);
+						$doc->addToNode($doc_select->item(0), $content);
 						
 						if (isset($mod->validate)) {
 							$JSON->validate[$str_mod_identifier] = $mod->validate;
@@ -553,39 +546,41 @@
 				}
 			}
 			
-			SiteEndVars::checkServerName();
+			SiteEndEnvironment::checkServerName();
 
-			$html_body = $doc->saveHTML();
+			$html_body = $doc->getHTML();
 			
-			$JSON->data_feedback = SiteEndVars::getFeedback();
-			$JSON->location = ['replace' => true, 'real' => SiteEndVars::getLocation(), 'canonical' => SiteEndVars::getLocation(true, SiteEndVars::LOCATION_CANONICAL_NATIVE)]; // Make sure the resulting location is clean
+			$JSON->data_feedback = SiteEndEnvironment::getFeedback();
 			$JSON = Log::addToObj($JSON);
 			if (Settings::get('timing') === true) {
 				$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
 			}
-			SiteEndVars::addScript("PARSE = function() {"
+			
+			Response::location(['replace' => true, 'real' => SiteEndEnvironment::getLocation(), 'canonical' => SiteEndEnvironment::getLocation(true, SiteEndEnvironment::LOCATION_CANONICAL_NATIVE)]); // Make sure the resulting location is clean
+			
+			SiteEndEnvironment::addScript("PARSE = function() {"
 				."return JSON.parse(".value2JSON(value2JSON($JSON)).");"
 			."};");
 
-			if (SiteStartVars::getPage('script')) {
-				SiteEndVars::addScript(SiteStartVars::getPage('script'));
+			if (SiteStartEnvironment::getPage('script')) {
+				SiteEndEnvironment::addScript(SiteStartEnvironment::getPage('script'));
 			}
 			
 			require('./CMS/core_combine.php');
-			SiteStartVars::setMaterial();
+			SiteStartEnvironment::setMaterial();
 										
-			$str_title = Response::addParseDelay(SiteEndVars::getTitle(), 'strEscapeHTML');
+			$str_title = Response::addParseDelay(SiteEndEnvironment::getTitle(), 'strEscapeHTML');
 			$str_name = Response::addParseDelay(getLabel('name', 'D'), 'strEscapeHTML');
-			$str_description = Response::addParseDelay(SiteEndVars::getDescription(), 'strEscapeHTML');
-			$str_keywords = strEscapeHTML(SiteEndVars::getKeywords());
-			$arr_theme = SiteEndVars::getTheme();
+			$str_description = Response::addParseDelay(SiteEndEnvironment::getDescription(), 'strEscapeHTML');
+			$str_keywords = strEscapeHTML(SiteEndEnvironment::getKeywords());
+			$arr_theme = SiteEndEnvironment::getTheme();
 			
-			$str_url_canonical_native = SiteEndVars::getLocation(false, SiteEndVars::LOCATION_CANONICAL_NATIVE);
+			$str_url_canonical_native = SiteEndEnvironment::getLocation(false, SiteEndEnvironment::LOCATION_CANONICAL_NATIVE);
 			$str_url_manifest = (strpos($str_url_canonical_native, '.p') !== false ? str_replace('.p', '.manifest', $str_url_canonical_native) : $str_url_canonical_native.'.manifest');
-			$str_url_canonical_public = SiteEndVars::getLocation(false, SiteEndVars::LOCATION_CANONICAL_PUBLIC);
-			$str_url = SiteEndVars::getLocation(false);
+			$str_url_canonical_public = SiteEndEnvironment::getLocation(false, SiteEndEnvironment::LOCATION_CANONICAL_PUBLIC);
+			$str_url = SiteEndEnvironment::getLocation(false);
 			
-			$str_image = SiteEndVars::getImage();
+			$str_image = SiteEndEnvironment::getImage();
 			$str_url_image = URL_BASE.ltrim($str_image, '/');
 			
 			$str_identifier = 'html_icons_'.str2Label($str_image);
@@ -593,7 +588,7 @@
 				
 			if (!$html_icons) {
 
-				$html_icons = SiteEndVars::getIcons();
+				$html_icons = SiteEndEnvironment::getIcons();
 				
 				Settings::setShare($str_identifier, $html_icons, 60);
 			}
@@ -609,7 +604,7 @@
 					.'<meta property="og:title" content="'.$str_title.'" />'
 					.'<meta property="og:site_name" content="'.$str_name.'" />'
 					.'<meta property="og:description" content="'.$str_description.'" />'
-					.'<meta property="og:type" content="'.SiteEndVars::getType().'" />'
+					.'<meta property="og:type" content="'.SiteEndEnvironment::getType().'" />'
 					// Linking
 					.'<link rel="canonical" href="'.$str_url_canonical_public.'" />'
 					.($str_url != $str_url_canonical_public ? '<link rel="shortlink" href="'.$str_url.'" />' : '')
@@ -619,16 +614,16 @@
 					.'<meta property="og:image" content="'.$str_url_image.'" />'
 					// Theme
 					.'<meta name="theme-color" content="'.$arr_theme['theme_color'].'">'
-					.'<link rel="manifest" href="'.$str_url_manifest.'"'.(SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP) ? ' crossOrigin="use-credentials"' : '').' />'
+					.'<link rel="manifest" href="'.$str_url_manifest.'"'.(SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP) ? ' crossOrigin="use-credentials"' : '').' />'
 					.'<meta name="apple-mobile-web-app-capable" content="yes">'
 					.'<meta name="apple-mobile-web-app-status-bar-style" content="black">';
 					// CSS & JS
-					$version = CombineJSCSS::getVersion(SiteStartVars::getMaterial(SiteStartVars::MATERIAL_CSS), SiteStartVars::getModules());
+					$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_CSS), SiteStartEnvironment::getModules());
 					$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" />';
-					$version = CombineJSCSS::getVersion(SiteStartVars::getMaterial(SiteStartVars::MATERIAL_JS), SiteStartVars::getModules());
+					$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_JS), SiteStartEnvironment::getModules());
 					$html .= '<script type="text/javascript" src="/combine/js/'.$version.'"></script>';
 					// Other
-					$html .= SiteEndVars::getHeadTags();
+					$html .= SiteEndEnvironment::getHeadTags();
 					
 					if (getLabel('analytics_account', 'D', true)) {
 						
@@ -641,22 +636,22 @@
 				$html .= EOL_1100CC.'</head>'.EOL_1100CC;
 				
 				$arr_dir_classes = [];
-				foreach (explode('/', SiteStartVars::getDirectory('path')) as $value) {
+				foreach (explode('/', SiteStartEnvironment::getDirectory('path')) as $value) {
 					if ($value) {
 						$arr_dir_classes[] = 'dir-'.$value;
 					}
 				}
 				
-				$str_content_identifier = SiteEndVars::getContentIdentifier();
+				$str_content_identifier = SiteEndEnvironment::getContentIdentifier();
 				
-				$html .= '<body id="page-'.SiteStartVars::getPage('id').'" class="page-'.SiteStartVars::getPage('name').($arr_dir_classes ? ' '.implode(' ', $arr_dir_classes) : '').'"'.($str_content_identifier ? ' data-content="'.$str_content_identifier.'"' : '').'>'.EOL_1100CC
+				$html .= '<body id="page-'.SiteStartEnvironment::getPage('id').'" class="page-'.SiteStartEnvironment::getPage('name').($arr_dir_classes ? ' '.implode(' ', $arr_dir_classes) : '').'"'.($str_content_identifier ? ' data-content="'.$str_content_identifier.'"' : '').'>'.EOL_1100CC
 					.$html_body
-					.Labels::parseTextVariables(SiteStartVars::getPage('html'))
+					.Labels::parseTextVariables(SiteStartEnvironment::getPage('html'))
 					.getLabel('html', 'D')
 				.EOL_1100CC.'</body>'.EOL_1100CC
 			.'</html>';
 			
-			SiteStartVars::cooldownModules();
+			SiteStartEnvironment::cooldownModules();
 			
 			Response::stop($html, false);
 		} else {

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -49,42 +49,47 @@ class blog_preview extends base_module {
 		if ($this->arr_variables['type'] == 'preview') {
 		
 			$arr_comments_link = blog_post_comments::findBlogPostComments();
+			$arr_blog_posts = cms_blog_posts::getBlogPosts($arr_blog_options['id'], false, $this->arr_variables['limit']);
 		
-			foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], false, $this->arr_variables['limit']) as $row) {
+			foreach ($arr_blog_posts as $arr_blog_post) {
 				
-				$return .= blog::createBlogPostPreview($row, $arr_link, $arr_comments_link, $arr_comments_link);
+				$return .= blog::createBlogPostPreview($arr_blog_post, $arr_link, $arr_comments_link, $arr_comments_link);
 			}
 			
 			$total = cms_blog_posts::getBlogPostsCount($arr_blog_options['id']);
 			
 			if ($total > $this->arr_variables['limit']) {
 				
-				$next_prev .= '<a class="prev" href="'.SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'go/'.$this->arr_variables['limit'].'"><span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span><span>'.getLabel('lbl_previous').'</span></a>';
+				$next_prev .= '<a class="prev" href="'.SiteStartEnvironment::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).'go/'.$this->arr_variables['limit'].'"><span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span><span>'.getLabel('lbl_previous').'</span></a>';
 				
 				$return .= '<nav class="nextprev">'.$next_prev.'</nav>';
 			}
 		} else if ($this->arr_variables['type'] == 'titles') {
-		
-			$return .= '<h1>'.($this->arr_variables['id'] ? strEscapeHTML(Labels::parseTextVariables($arr_blog_options['name'])) : getLabel('ttl_posts')).'</h1>'
-			.'<ul>';
 			
-				foreach (cms_blog_posts::getBlogPosts($arr_blog_options['id'], false, $this->arr_variables['limit'], 0, false) as $row) {
+			$arr_blog_posts = cms_blog_posts::getBlogPosts($arr_blog_options['id'], false, $this->arr_variables['limit'], 0, false);
+		
+			$return .= '<h1>'.($this->arr_variables['id'] ? strEscapeHTML(Labels::parseTextVariables($arr_blog_options['name'])) : getLabel('lbl_posts')).'</h1>'
+			.'<ul>';
+
+				foreach ($arr_blog_posts as $arr_blog_post) {
 					
-					$title = Labels::parseTextVariables($row['title']);
-					$return .= '<li><a title="'.strEscapeHTML($title).'" href="'.SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['id'].'/'.str2URL($title).'"><span></span><span>'.strEscapeHTML($title).'</span></a></li>';
+					$title = Labels::parseTextVariables($arr_blog_post['title']);
+					$return .= '<li><a title="'.strEscapeHTML($title).'" href="'.SiteStartEnvironment::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$arr_blog_post['id'].'/'.str2URL($title).'"><span></span><span>'.strEscapeHTML($title).'</span></a></li>';
 				}
 				
 			$return .= '</ul>';
 		} else if ($this->arr_variables['type'] == 'comments') {
-		
-			$return .= '<h1>'.($this->arr_variables['id'] ? strEscapeHTML(Labels::parseTextVariables($arr_blog_options['name'])).' ' : '').getLabel('ttl_comments').'</h1>'
+			
+			$arr_blog_post_comments = cms_blog_post_comments::getBlogComments($arr_blog_options['id'], $this->arr_variables['limit']);
+			
+			$return .= '<h1>'.($this->arr_variables['id'] ? strEscapeHTML(Labels::parseTextVariables($arr_blog_options['name'])).' ' : '').getLabel('lbl_comments').'</h1>'
 			.'<ul>';
 			
-				foreach (cms_blog_post_comments::getBlogComments($arr_blog_options['id'], $this->arr_variables['limit']) as $row) {
+				foreach ($arr_blog_post_comments as $arr_comment) {
 					
-					$return .= '<li><a title="'.strEscapeHTML($row['name']).' on '.date('d-m-y H:i', strtotime($row['added'])).'" href="'.SiteStartVars::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$row['blog_post_id'].'/'.str2URL(Labels::parseTextVariables($row['blog_post_title'])).'#'.$row['id'].'">
+					$return .= '<li><a title="'.strEscapeHTML($arr_comment['name']).' on '.date('d-m-y H:i', strtotime($arr_comment['added'])).'" href="'.SiteStartEnvironment::getModuleURL($arr_link['id'], $arr_link['page_name'], $arr_link['sub_dir']).$arr_comment['blog_post_id'].'/'.str2URL(Labels::parseTextVariables($arr_comment['blog_post_title'])).'#'.$arr_comment['id'].'">
 						<span></span>
-						<span><span>'.strEscapeHTML($row['name']).':</span><span>'.strEscapeHTML($row['body']).'</span></span></a>
+						<span><span>'.strEscapeHTML($arr_comment['name']).':</span><span>'.strEscapeHTML($arr_comment['body']).'</span></span></a>
 					</li>';
 				}
 				

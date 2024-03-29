@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -52,7 +52,7 @@ class DB extends DBBase {
 				case 1040:
 				case 1203:
 				case 2002:
-					if (SiteStartVars::getRequestState() == SiteStartVars::REQUEST_INDEX) {
+					if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX) {
 						error('Too many users. Please press the refresh button in your browser to retry.');
 					} else {
 						error('The server load is very high at the moment.');
@@ -440,7 +440,6 @@ class DBFunctions extends DBFunctionsBase {
 	public static function onConflict($key, $arr_values, $sql_other = false) {
 		
 		if (!$arr_values && !$sql_other) {
-			
 			return 'ON CONFLICT ('.$key.') DO NOTHING';
 		}
 		
@@ -503,6 +502,15 @@ class DBFunctions extends DBFunctionsBase {
 		$sql = 'EXTRACT(EPOCH FROM ('.$field_end.' - '.$field_start.'))'.$sql_adjust;
 		
 		return $sql;
+	}
+	
+	public static function timeNow($do_transaction = false) {
+		
+		if ($do_transaction) {
+			return 'TRANSACTION_TIMESTAMP()'; // Transaction init time
+		}
+		
+		return 'STATEMENT_TIMESTAMP()'; // Statement time
 	}
 	
 	public static function regexpMatch($sql_field, $expression, $flags = false) {

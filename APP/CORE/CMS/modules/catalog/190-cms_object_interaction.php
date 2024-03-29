@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -361,7 +361,7 @@ class cms_object_interaction extends base_module {
 					<tr>
 						<td>'.getLabel("lbl_object_interaction_stage").'</td>
 						<td><div class="stage">
-							<img src="'.SiteStartVars::getCacheURL('img', [1000, 0], $arr['stage']["img"]).'" data-prefix="'.SiteStartVars::getCacheURL('img', [1000, 0], '').'" />
+							<img src="'.SiteStartEnvironment::getCacheURL('img', [1000, 0], $arr['stage']["img"]).'" data-prefix="'.SiteStartEnvironment::getCacheURL('img', [1000, 0], '').'" />
 							<div id="y:cms_object_interaction:add_stage_object-'.(int)$id.'">'.$str_objects.'</div>
 							<div class="point" title="'.getLabel('inf_view_position_mark').'"></div>
 							<input type="hidden" name="view" value="'.$arr['stage']["view_x"].'_'.$arr['stage']["view_y"].'" />

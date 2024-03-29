@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -378,14 +378,7 @@ class intf_templates extends templates {
 				$id = $row['Auto_increment'];
 			}
 			
-			$doc = new DOMDocument();
-			$doc->strictErrorChecking = false;
-			$doc->loadHTML('<div id="template-'.$id.'" class="container">'.$_POST['html'].'</div>');
-			# remove <!DOCTYPE 
-			$doc->removeChild($doc->firstChild);
-			# remove <html><body></body></html> 
-			$doc->replaceChild($doc->firstChild->firstChild->firstChild, $doc->firstChild);
-
+			$doc = new HTMLDocument('<div id="template-'.$id.'" class="container">'.$_POST['html'].'</div>', false);
 			$root = $doc->firstChild;
 			
 			$arr_boxes = [];
@@ -596,7 +589,7 @@ class intf_templates extends templates {
 			}
 			$preview_table .= '</table>';
 
-			$clean_html .= $doc->saveHTML();
+			$clean_html .= $doc->getHTML();
 		}
 		
 		if ($method == "template_insert") {

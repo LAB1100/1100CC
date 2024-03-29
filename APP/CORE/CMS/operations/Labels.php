@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -27,11 +27,11 @@ class Labels {
 		}
 		self::$arr_labels_last[$code] = $code;
 		
-		if (DB::isActive()) {
-			return ($go_now ? self::printLabels($code) : $code);
-		} else {
-			return ($go_now ? false : $code);
+		if ($go_now) {
+			return (Settings::isInitialised() ? self::printLabels($code) : false);
 		}
+		
+		return $code;
 	}
 	
 	public static function printLabels($value, $encode = false) {
@@ -58,7 +58,7 @@ class Labels {
 			
 			$arr_to_lookup = [];
 			
-			while (self::$arr_identifiers && DB::isActive()) {
+			while (self::$arr_identifiers && Settings::isInitialised()) {
 				
 				// Store identifiers and reset class identifiers to prevent loop
 				$arr_identifiers = self::$arr_identifiers;
@@ -125,9 +125,9 @@ class Labels {
 				return $str;
 			};
 			
-			//$str_text = preg_replace_callback('/%5B([LDC])%5D%28((?:[A-Za-z0-9_\-]|%20)+)%29/', $func_parse, $text); // URL encoded tags
+			//$str_text = preg_replace_callback('/%5B([LDC])%5D%28((?:[A-Za-z0-9_\-]|%20)+(?:\|.*?)?)%29/', $func_parse, $text); // URL encoded tags
 			
-			$str_text = preg_replace_callback('/\[([LDC])\]\(([A-Za-z0-9_\- ]+)\)/', $func_parse, $str_text);
+			$str_text = preg_replace_callback('/\[([LDC])\]\(([A-Za-z0-9_\- ]+(?:\|[^\)]*)?)\)/', $func_parse, $str_text);
 		}
 		
 		$str_text = static::clearContainers($str_text);
@@ -167,7 +167,7 @@ class Labels {
 		
 		$str = (self::$arr_system_labels[$value] ?? $value);
 		
-		$str = preg_replace('/\[([A-Z])\]\{([A-Za-z0-9_\- ]+)\}/', '[\1][\2]', $str); // Turn 'broken' tags {} to unlocked [] to be parsed
+		$str = preg_replace('/\[([A-Z])\]\{([A-Za-z0-9_\- ]+(?:\|[^\}]*)?)\}/', '[\1][\2]', $str); // Turn 'broken' tags {} to unlocked [] to be parsed
 		$str = self::parseTextVariables($str);
 		
 		return $str;
@@ -178,7 +178,7 @@ class Labels {
 		$str = $value;
 		
 		if ($value !== false && strpos($str, '](') !== false) {
-			$str = preg_replace('/\[([A-Z])\]\(([A-Za-z0-9_\- ]+)\)/', '[\1][\2]', $str); // Turn locked tags () to unlocked [] to be parsed
+			$str = preg_replace('/\[([A-Z])\]\(([A-Za-z0-9_\- ]+(?:\|[^\)]*)?)\)/', '[\1][\2]', $str); // Turn locked tags () to unlocked [] to be parsed
 		}
 		
 		self::$arr_vars[$var] = $str;
@@ -201,16 +201,30 @@ class Labels {
 		// Parse variables
 		$func_parse = function($arr_match) use ($print_labels, $print_variables) {
 			
-			if ($arr_match[1] == 'L' || $arr_match[1] == 'D' || $arr_match[1] == 'C') {
+			$str_type = $arr_match[1];
+			$str_identifier = $arr_match[2];
+						
+			if ($str_type == 'L' || $str_type == 'D' || $str_type == 'C') {
 				
-				$str = self::getLabel($arr_match[2], $arr_match[1], $print_labels);
-			} else if ($arr_match[1] == 'V') {
+				$str = self::getLabel($str_identifier, $str_type, $print_labels);
+			} else if ($str_type == 'V') {
 				
-				$str_parsed = (self::$arr_vars[$arr_match[2]] ?? '');
+				$pos = strpos($str_identifier, '|');
+				if ($pos !== false) {
+					
+					$str_default = substr($str_identifier, $pos + 1);
+					$str_identifier = substr($str_identifier, 0, $pos);
+					
+					if (!isset(self::$arr_vars[$str_identifier])) {
+						self::$arr_vars[$str_identifier] = $str_default;
+					}
+				}
+								
+				$str_parsed = (self::$arr_vars[$str_identifier] ?? '');
 				
 				if ($str_parsed === false) {
 					
-					$str = '['.$arr_match[1].']['.$arr_match[2].']'; // Keep tag for later parsing
+					$str = '['.$str_type.']['.$str_identifier.']'; // Keep tag for later parsing
 				} else {
 					
 					$str_parsed = self::parseTextVariables($str_parsed, $print_labels, $print_variables);
@@ -218,24 +232,24 @@ class Labels {
 					if ($print_variables) {
 						$str = $str_parsed;
 					} else {
-						$str = '['.$arr_match[1].']['.$arr_match[2].']'; // Keep tag for later parsing
+						$str = '['.$str_type.']['.$str_identifier.']'; // Keep tag for later parsing
 					}
 				}
-			} else if ($arr_match[1] == 'S') {
+			} else if ($str_type == 'S') {
 				
-				$str = self::getServerVariable($arr_match[2]);
+				$str = self::getServerVariable($str_identifier);
 			}
 			
 			if ($str == '') {
-				$str = '['.$arr_match[1].']{'.$arr_match[2].'}'; // Return 'broken' tag
+				$str = '['.$str_type.']{'.$str_identifier.'}'; // Return 'broken' tag
 			}
 			
 			return $str;
 		};
 	
-		$str = preg_replace_callback('/%5B([A-Z])%5D%5B((?:[A-Za-z0-9_\-]|%20)+)%5D/', $func_parse, $str); // URL encoded tags
+		$str = preg_replace_callback('/%5B([A-Z])%5D%5B((?:[A-Za-z0-9_\-]|%20)+(?:\|.*?)?)%5D/', $func_parse, $str); // URL encoded tags
 		
-		$str = preg_replace_callback('/\[([A-Z])\]\[([A-Za-z0-9_\- ]+)\]/', $func_parse, $str); // [X][VALUE]
+		$str = preg_replace_callback('/\[([A-Z])\]\[([A-Za-z0-9_\- ]+(?:\|[^\]]*)?)\]/', $func_parse, $str); // [X][VALUE]
 		
 		return $str;
 	}
@@ -288,7 +302,7 @@ class Labels {
 			$str = preg_replace('/<p>\s*(\[\[[A-Z]+\]\])\s*<\/p>/', '$1', $str);
 		}
 				
-		$str_language = strtoupper(SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE));
+		$str_language = strtoupper(SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE));
 		
 		$num_pos_start = strpos($str, '[['.$str_language.']]', $num_pos);
 		
@@ -471,7 +485,7 @@ class Labels {
 				
 				break;
 			case 'language':	
-				$str = SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE);
+				$str = SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE);
 				break;
 			case 'url_site':
 				$str = URL_BASE;

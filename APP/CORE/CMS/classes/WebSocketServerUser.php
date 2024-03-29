@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -122,8 +122,8 @@ class WebSocketServerUser {
 		
 		if ($arr_passkey) {
 			
-			SiteStartVars::setCookie('webservice_user_id', $user_id, true);
-			SiteStartVars::setCookie('webservice_passkey', $arr_passkey['passkey'], true);
+			SiteStartEnvironment::setCookie('webservice_user_id', $user_id, true);
+			SiteStartEnvironment::setCookie('webservice_passkey', $arr_passkey['passkey'], true);
 			
 			return $arr_passkey['passkey'];
 		} else {

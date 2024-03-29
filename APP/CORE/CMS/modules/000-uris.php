@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -65,7 +65,7 @@ class uris extends base_module {
 		return ($host_name ? current($arr) : $arr);
 	}
 	
-	public static function getURI($uri_translator_id, $num_mode, $str_identifier, $do_literal = false) {
+	public static function getURI($uri_translator_id, $num_mode, $str_identifier) {
 				
 		if ($str_identifier == '') {
 			
@@ -93,25 +93,46 @@ class uris extends base_module {
 				FROM ".DB::getTable('SITE_URIS')." u
 				LEFT JOIN ".DB::getTable('SITE_URI_TRANSLATORS')." ut ON (ut.id = u.uri_translator_id)
 			WHERE ".$sql_where."
-			LIMIT 1
 		");
 
+		$arr = [];
+		
+		while ($arr_uri = $res->fetchAssoc()) {
+			
+			$is_regex = (substr($arr_uri['identifier'], 0, 1) == ':');
+			
+			if (!$is_regex) { // Full match
+				
+				$arr = $arr_uri;
+				break;
+			}
+			
+			$arr['identifier'] = ($arr['identifier'] ? ' + ' : '').$arr_uri['identifier'];
+			$arr['remark'] = ($arr['remark'] ? EOL_1100CC : '').$arr_uri['remark'];
+				
+			$str_identifier = preg_replace('<'.substr($arr_uri['identifier'], 1).'>', $arr_uri['url'], $str_identifier); // '<>' as delimiter, as they are not normally used in URLs
+			
+			$arr['url'] = $str_identifier;
+		}
+				
+		return $arr;
+	}
+	
+	public static function getURILiteral($uri_translator_id, $num_mode, $str_identifier) {
+						
+		$res = DB::query("SELECT
+			u.uri_translator_id, u.in_out, u.identifier, u.url, u.remark, u.service
+				FROM ".DB::getTable('SITE_URIS')." u
+				LEFT JOIN ".DB::getTable('SITE_URI_TRANSLATORS')." ut ON (ut.id = u.uri_translator_id)
+			WHERE u.uri_translator_id = ".(int)$uri_translator_id."
+				AND u.in_out = ".(int)$num_mode."
+				AND u.identifier = '".DBFunctions::strEscape($str_identifier)."'
+			LIMIT 1
+		");
+		
 		$arr = $res->fetchAssoc();
 		
-		if (!$arr) {
-			return [];
-		}
-		
-		$is_regex = (substr($arr['identifier'], 0, 1) == ':');
-		
-		if ($is_regex) {
-			
-			if (!$do_literal) {
-				$arr['url'] = preg_replace('<'.substr($arr['identifier'], 1).'>', $arr['url'], $str_identifier); // '<>' as delimiter, as they are not normally used in URLs
-			}
-		}
-	
-		return $arr;
+		return ($arr ?: []);
 	}
 	
 	public static function getURL($str, $host_name = false) {

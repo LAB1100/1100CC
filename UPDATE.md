@@ -132,9 +132,11 @@ ALTER TABLE `cms_language` CHANGE `user` `is_user_selectable` TINYINT(1) NOT NUL
 
 ## VERSION 10.6
 
-Install/enable the Apache module 'headers'.
+Install/enable the Apache module: headers.
 
 Update 1100CC [1100CC.core_labels.en.sql](/setup/1100CC.core_labels.en.sql).
+
+---
 
 Run SQL queries in database ?SITE?_cms:
 
@@ -198,4 +200,27 @@ ALTER TABLE `def_feed_entries`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `def_media` ADD UNIQUE(`directory`, `filename`); 
+```
+
+## VERSION 10.7
+
+Install/enable the PHP module: yaml.
+
+Update 1100CC [1100CC.core_labels.en.sql](/setup/1100CC.core_labels.en.sql).
+
+---
+
+Update custom configuration files in `./1100CC/APP/SETTINGS` when applicable: the classes SiteStartVars and SiteEndVars have been renamed, e.g. run:
+
+```bash
+find -L /var/1100CC/APP/SETTINGS -type f -name '*.php' -exec sed -i 's/SiteStartVars/SiteStartEnvironment/g' {} \; &&
+find -L /var/1100CC/APP/SETTINGS -type f -name '*.php' -exec sed -i 's/SiteEndVars/SiteEndEnvironment/g' {} \;
+```
+
+---
+
+Run SQL queries in database ?SITE?_cms:
+
+```sql
+ALTER TABLE `cms_language` ADD `host_canonical` VARCHAR(100) NOT NULL AFTER `label`;
 ```

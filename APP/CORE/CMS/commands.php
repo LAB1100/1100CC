@@ -2,14 +2,14 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 // 1100CC Framework:
 
-	SiteStartVars::preloadModules();
+	SiteStartEnvironment::preloadModules();
 					
 	$JSON = Response::getObject();
 	
@@ -85,7 +85,7 @@
 				$JSON_command->html = $class->contents();
 			}
 			
-			SiteEndVars::checkServerName();
+			SiteEndEnvironment::checkServerName();
 			
 			$JSON_command->do_confirm = $class->do_confirm;
 			$JSON_command->do_download = $class->do_download;
@@ -106,9 +106,9 @@
 		unset($JSON_command);
 	}
 	
-	SiteStartVars::cooldownModules();
+	SiteStartEnvironment::cooldownModules();
 	
-	$JSON->data_feedback = SiteEndVars::getFeedback();
+	$JSON->data_feedback = SiteEndEnvironment::getFeedback();
 	
 	$JSON = Log::addToObj($JSON);
 	$JSON->timestamp = date('c');

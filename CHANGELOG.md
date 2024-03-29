@@ -62,4 +62,13 @@ Initial release.
 * Back-end: Added new class ParseXML2JSON to have full control over serialising XML to JSON.
 * Various fixes, modernisation, and overall streamlining.
 
+## VERSION 10.7
+
+* JSON/Object Traversal: Extended the class TraverseJSON to be able to include custom text in a Path's collection using the special operator '+'. YAML is now a supported format to provide JSON-compatible syntax.
+* File Archive: Improved the class FileArchive to dynamically write and read files and folders on-the-fly.
+* Response HTML: Moved all interaction and transformation relating to (X)HTML to its own class HTMLDocument.
+* .htaccess: Improved parsing of HOST to be able to control all its aspects through the alias map.
+* Response: Added OUTPUT_CSV to be able to apply the dynamic processing of Response to CSV output as well. Improved location and header handling wherever requested within 1100CC.
+* Various fixes, modernisation, and overall streamlining.
+
 ## VERSION x.x

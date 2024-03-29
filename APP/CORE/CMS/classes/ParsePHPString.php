@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -14,7 +14,7 @@ class ParsePHPString {
 		'getLabel'
 	];
 	protected static $arr_classes_allowed = [
-		'Labels', 'SiteStartVars', 'SiteEndVars', 'cms_general'
+		'Labels', 'SiteStartEnvironment', 'SiteEndEnvironment', 'cms_general'
 	];
 	protected $variables;
 	protected $safe;

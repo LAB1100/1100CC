@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -25,7 +25,7 @@
 	define('DIR_SITE_CACHE', str_replace('CORE', DIR_CACHE.SITE_NAME, DIR_CORE));
 	define('DIR_SITE_SETTINGS', str_replace('CORE', DIR_SETTINGS.SITE_NAME, DIR_CORE));
 	
-	define('DIR_ROOT', str_replace(['CMS/', 'CMS\\', 'CORE/', 'CORE\\'], '', DIR_CORE));
+	define('DIR_ROOT', str_replace(['CMS/', 'CORE/'], '', DIR_CORE));
 	define('DIR_ROOT_CORE', DIR_ROOT.'CORE/');
 	define('DIR_ROOT_SITE', DIR_ROOT.SITE_NAME.'/');
 	define('DIR_ROOT_STORAGE', DIR_ROOT.DIR_STORAGE);
@@ -80,7 +80,6 @@
 
 	$path_database = DIR_ROOT_SETTINGS.DIR_HOME.'database';
 	$path_settings = DIR_ROOT_SETTINGS.DIR_HOME.'settings.php';
-	$path_various = DIR_ROOT_SETTINGS.DIR_HOME.'various.php';
 
 	$str_database = 'mysql';
 	
@@ -89,10 +88,8 @@
 	}
 	
 	if ($str_database == 'postgresql') {
-		
 		require('operations/DBPostgresql.php');
 	} else {
-		
 		require('operations/DBMysql.php');
 	}
 
@@ -110,15 +107,11 @@
 	// SITE settings
 	
 	if (!isPath($path_settings)) {
-		exit('1100CC is missing settings.');
+		error('1100CC is missing settings.');
 	}
 	
 	require($path_settings);
-	
-	if (isPath($path_various)) {
-		require($path_various);
-	}
-	
+		
 	// Applied settings
 	
 	if (!isset($_SERVER['SERVER_SCHEME'])) { // Custom environment variable

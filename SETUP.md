@@ -31,6 +31,8 @@ To create a new site/application in the 1100CC installation, do the following:
 Make sure the following Apache modules are enabled:
 * rewrite
 * headers
+* deflate
+* proxy_fcgi (optional)
 * ssl (optional)
 
 Include and adjust the following VirtualHost configuration to your Apache config to direct all relevant traffic (hosts and HTTP/80 and or HTTPS/443) to the 1100CC `./APP` root directory:
@@ -60,10 +62,21 @@ Include and adjust the following VirtualHost configuration to your Apache config
 		Require all granted
 	</Directory>
 </VirtualHost>
-``` 
+```
+
+When using PHP-FPM, make sure the connection with the server is flushed:
+
+```apache
+<IfModule proxy_fcgi_module>
+	<Proxy fcgi://localhost>
+		ProxySet flushpackets=on
+	</Proxy>
+</IfModule>
+```
 
 When your Linux distrubiton applies SELinux:
  - Apache needs write access (i.e. httpd_sys_rw_content_t) to the `./APP/CACHE` and `./APP/STORAGE` directories.
+ - Apache needs access to run programs independently (i.e. httpd_execmem)
  - Make sure to allow Apache to use the mailserver (i.e. httpd_can_network_connect, httpd_can_sendmail).
 
 ### PHP
@@ -77,9 +90,10 @@ When your Linux distrubiton applies SELinux:
 * curl
 * zip
 * xmlrpc
-* libapache2-mod
+* fpm or libapache2-mod
 * intl
 * bcmath
+* yaml
 
 ### Database
 

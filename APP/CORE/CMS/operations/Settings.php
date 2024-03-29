@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -150,5 +150,10 @@ class Settings {
 		$str_path = DIR_ROOT_STORAGE.DIR_HOME.DIR_CMS.DIR_PRIVATE.'update/';
 		
 		return $str_path.($do_file ? 'update.php' : '');
+	}
+	
+	public static function isInitialised() { // 1100CC is fully loaded
+		
+		return (DB::isActive() && class_exists('cms_details', false));
 	}
 }

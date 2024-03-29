@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -11,7 +11,7 @@ class CMSLogin {
 	
 	public static function index() {
 		
-		$str_page = (SiteStartVars::getRequestVariables(1) ?: '');
+		$str_page = (SiteStartEnvironment::getRequestVariables(1) ?: '');
 		
 		if ($str_page == 'logout') {
 			
@@ -71,7 +71,7 @@ class CMSLogin {
 	
 	private static function checkLogin($username, $password) {
 	
-		SiteStartVars::checkCookieSupport();
+		SiteStartEnvironment::checkCookieSupport();
 		
 		$username = (is_string($username) ? $username : '');
 		$password = (is_string($password) ? $password : '');

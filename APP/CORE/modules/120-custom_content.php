@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -60,18 +60,16 @@ class custom_content extends base_module {
 			}
 		} else {
 			
-			if (SiteStartVars::getRequestVariables('embed')) { // Default location/embed solution
-				$str_embed_url = arr2String(SiteStartVars::getRequestVariables('embed'), '/');
+			if (SiteStartEnvironment::getRequestVariables('embed')) { // Default location/embed solution
+				$str_embed_url = arr2String(SiteStartEnvironment::getRequestVariables('embed'), '/');
 			}
 		}
 		
 		if ($str_embed_url) {
-			
+						
 			$str_embed_url = str_replace(['||', '|', '#=#'], ['#=#', '/', '|'], $str_embed_url); // '|' are the URL path separators, place back '/'
-			$str_embed_url = strEscapeHTML($str_embed_url).'#'; // Add URI fragment for 'commenting out' possible trailing path info
+			$str_embed_url = strEscapeHTML($str_embed_url); // Add URI fragment for 'commenting out' possible trailing path info
 			Labels::setVariable('embed', '/'.$str_embed_url);
-		} else {
-			Labels::setVariable('embed', '/');
 		}
 		
 		// Parse code
@@ -82,7 +80,7 @@ class custom_content extends base_module {
 			$arr['script'] = trim($p->parse($arr['script']));
 			
 			if ($arr['script']) {
-				SiteEndVars::addScript($arr['script']);
+				SiteEndEnvironment::addScript($arr['script']);
 			}
 		}
 		
@@ -91,14 +89,28 @@ class custom_content extends base_module {
 		$arr['body'] = parseBody($arr['body']);
 		
 		if ($arr['description']) {
-			SiteEndVars::addDescription(strEscapeHTML($arr['description']));
+			SiteEndEnvironment::addDescription(strEscapeHTML($arr['description']));
 		}
 		if ($arr['tags']) {
-			SiteEndVars::addKeywords(explode(',', $arr['tags']));
+			SiteEndEnvironment::addKeywords(explode(',', $arr['tags']));
 		}
 		
-		$arr['style'] = (!$arr['style'] || $arr['style'] == 'default' ? 'body' : $arr['style']);
-		$this->style = $arr['style'];
+		$str_style = 'body';
+		
+		if ($arr['style']) {
+			
+			$arr_style = str2Array($arr['style'], ' ');
+			
+			if ($arr_style[0] == 'default') {
+				$arr_style[0] = 'body';
+			} else if ($arr_style[0] == 'none') {
+				unset($arr_style[0]);
+			}
+			
+			$str_style = arr2String($arr_style, ' ');
+		}
+
+		$this->style = $str_style;
 		
 		$return = $arr['body'];
 								

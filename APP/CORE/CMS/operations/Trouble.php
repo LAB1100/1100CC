@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -383,7 +383,7 @@ class Trouble {
 		}*/
 		
 		// Coding style: Ignore undefined array indexes. Make sure to poperly check essential arrays, but ignore possible subsequent exceptions.
-		if (strStartsWith($msg, 'Undefined array key') || strStartsWith($msg, 'Trying to access array offset on value of type')) {
+		if (strStartsWith($msg, 'Undefined array key') || strStartsWith($msg, 'Trying to access array offset on')) {
 			$code = E_NOTICE;
 		}
 		if (strStartsWith($msg, 'Undefined index:') || strStartsWith($msg, 'Undefined offset:')) { // PHP 7.x

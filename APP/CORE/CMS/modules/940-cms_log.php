@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -175,26 +175,26 @@ class cms_log extends base_module {
 			$this->html = '<div class="log-info">
 				<h2 class="type-'.$row['type'].'">'.$row['label'].'</h2>
 				<div class="record"><dl>
-					<li>
+					<div>
 						<dt>'.getLabel('lbl_date').'</dt>
 						<dd>'.date('d-m-Y H:i:s', strtotime($row['date'])).'</dd>
-					</li>
-					<li>
+					</div>
+					<div>
 						<dt>'.getLabel('lbl_message').'</dt>
 						<dd><pre>'.strEscapeHTML($row['msg']).'</pre></dd>
-					</li>
-					'.($row['debug'] ? '<li>
+					</div>
+					'.($row['debug'] ? '<div>
 						<dt>Debug</dt>
 						<dd><pre>'.strEscapeHTML($row['debug']).'</pre></dd>
-					</li>' : '').'
-					'.($row['url'] ? '<li>
+					</div>' : '').'
+					'.($row['url'] ? '<div>
 						<dt>URL</dt>
 						<dd>'.$row['url'].'</dd>
-					</li>' : '').'
-					<li>
+					</div>' : '').'
+					<div>
 						<dt>'.getLabel('lbl_user').'</dt>
 						<dd>'.self::getLoggedUser($row['log_user_id']).'</dd>
-					</li>
+					</div>
 				</dl></div>
 			</div>';
 		}

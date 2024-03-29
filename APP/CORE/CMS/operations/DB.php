@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -595,6 +595,8 @@ abstract class DBFunctionsBase {
 	
 	abstract public static function timeDifference($unit, $field_start, $field_end);
 	
+	abstract public static function timeNow($do_transaction = false);
+	
 	abstract public static function regexpMatch($sql_field, $expression, $flags = false);
 	
 	public static function searchMatch($sql_field, $str, $do_dynamic = true, $do_array = false) {
@@ -717,13 +719,13 @@ abstract class DBFunctionsBase {
 			foreach ($arr_tables as $arr_table) {
 				
 				DB::queryMulti("
-					CREATE TEMPORARY TABLE IF NOT EXISTS cleanup_cache (
+					DROP ".(DB::ENGINE_IS_MYSQL ? 'TEMPORARY' : '')." TABLE IF EXISTS cleanup_cache;
+					
+					CREATE TEMPORARY TABLE cleanup_cache (
 						status SMALLINT,
 						id INT,
 						PRIMARY KEY (status, id)
 					) ".static::sqlTableOptions(static::TABLE_OPTION_MEMORY).";
-				
-					TRUNCATE TABLE cleanup_cache;
 
 					INSERT INTO cleanup_cache
 						(SELECT

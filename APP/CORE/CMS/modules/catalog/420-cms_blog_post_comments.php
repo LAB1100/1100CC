@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -161,32 +161,32 @@ class cms_blog_post_comments extends base_module {
 			
 			$return = '<div class="blog-post-comment">
 				<div class="record"><dl>
-					<li>
+					<div>
 						<dt>'.getLabel('lbl_blog_post').'</dt>
 						<dd><strong>'.$arr_blog_post_comment['blog_post_title'].'</strong></dd>
-					</li>
-					<li>
+					</div>
+					<div>
 						<dt>'.getLabel('lbl_blog').'</dt>
 						<dd>'.$arr_blog_post_comment['blog_names'].'</dd>
-					</li>
-					<li>
+					</div>
+					<div>
 						<dt>'.getLabel('lbl_name').'</dt>
 						<dd>'.strEscapeHTML($arr_blog_post_comment['name']).'</dd>
-					</li>';
+					</div>';
 					if ($type == 'x') {
-						$return .= '<li>
+						$return .= '<div>
 							<dt>'.getLabel('lbl_source').'</dt>
 							<dd><a href="'.strEscapeHTML($arr_blog_post_comment['source']).' target="_blank"><span class="icon">'.getIcon('link').'</span></a></dd>
-						</li>';
+						</div>';
 					}
-					$return .= '<li>
+					$return .= '<div>
 						<dt>'.getLabel('lbl_date').'</dt>
 						<dd>'.date('d-m-Y h:i', strtotime($arr_blog_post_comment['added'])).'</dd>
-					</li>
-					<li>
+					</div>
+					<div>
 						<dt>'.getLabel('lbl_comment').'</dt>
 						<dd><div class="body">'.$html_comment.'</div></dd>
-					</li>
+					</div>
 				</dl></div>
 			</div>';
 			
@@ -421,7 +421,7 @@ class cms_blog_post_comments extends base_module {
 		return $arr;
 	}
 				
-	public static function getBlogPostComments($blog_post_id = 0) {
+	public static function getBlogPostComments($blog_post_id) {
 	
 		$arr = [];
 		
@@ -484,7 +484,7 @@ class cms_blog_post_comments extends base_module {
 		return $arr_row;
 	}
 	
-	public static function getBlogPostComment($blog_post_comment_id = 0) {
+	public static function getBlogPostComment($blog_post_comment_id) {
 	
 		$res = DB::query("SELECT c.*
 				FROM ".DB::getTable('TABLE_BLOG_POST_COMMENTS')." c

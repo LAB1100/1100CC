@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -25,7 +25,9 @@ class login extends base_module {
 
 	public function contents() {
 	
-		SiteStartVars::requestSecure();
+		SiteStartEnvironment::requestSecure();
+		
+		SiteEndEnvironment::setModuleVariables($this->mod_id);
 		
 		$method = $this->arr_query[0];
 		
@@ -35,12 +37,12 @@ class login extends base_module {
 			
 			$user_id = (int)$this->arr_query[1];
 			$key = $this->arr_query[2];
-			$arr_confirm = SiteStartVars::getFeedback('confirm');
+			$arr_confirm = SiteStartEnvironment::getFeedback('confirm');
 			
 			if (!$arr_confirm || $user_id != $arr_confirm['user_id'] || $key != $arr_confirm['key']) {
 
 				$arr_confirm = ['user_id' => $user_id, 'key' => $key];
-				SiteEndVars::setFeedback('confirm', $arr_confirm, true);
+				SiteEndEnvironment::setFeedback('confirm', $arr_confirm, true);
 			}
 			
 			$user_id = (int)$arr_confirm['user_id'];
@@ -59,6 +61,8 @@ class login extends base_module {
 				
 				return $return;
 			}
+			
+			SiteEndEnvironment::setModuleVariables($this->mod_id, [$method, $user_id, $key]);
 			
 			$arr_user = user_groups::getUserData($user_id, true);
 			Labels::setVariable('name', $arr_user[DB::getTableName('TABLE_USERS')]['name']);
@@ -87,12 +91,14 @@ class login extends base_module {
 			
 			$this->validate = ['password' => 'required', 'password_confirm' => ['equalTo' => '#password']];
 		} else if ($method == 'recover') {
+			
+			SiteEndEnvironment::setModuleVariables($this->mod_id, [$method]);
 		
-			Labels::setVariable('url_login', SiteStartVars::getPageURL());
+			Labels::setVariable('url_login', SiteStartEnvironment::getPageURL());
 			
 			$return .= '<h1>'.getLabel('lbl_login_recover').'</h1>
 			
-			<form id="f:login:recover-0">
+			<form id="f:login:recover-0" autocomplete="on">
 				<fieldset><ul>
 					<li><label>'.getLabel('lbl_username').'</label><input name="recover_user" type="text" /></li>
 					<li><label></label><p>'.getLabel('msg_login_recover_link_return').'</p></li>
@@ -108,25 +114,37 @@ class login extends base_module {
 				$str_message = getLabel('msg_login_welcome_confirmed');
 			} else if ($method == 'recover_confirmed') {
 				$str_message = getLabel('msg_login_recover_confirmed');
+			} else {
+				$method = false;
+			}
+			
+			if ($method) {
+				SiteEndEnvironment::setModuleVariables($this->mod_id, [$method]);
 			}
 		
 			if ($this->arr_variables) {
 				$arr_dir = directories::getDirectories($this->arr_variables);
 				$str_path = str_replace(' ', '', $arr_dir['path']).'/';
 			} else {
-				$str_path = SiteStartVars::getBasePath();
+				$str_path = SiteStartEnvironment::getBasePath();
 			}
 			
-			$arr_request_vars = SiteStartVars::getModuleVariables(0);
+			$arr_request_vars = SiteStartEnvironment::getModuleVariables(0);
 			
-			$str_input_error = ($arr_request_vars[0] == 'LOGIN_INCORRECT' ? 'input-error' : '');
-			Labels::setVariable('url_recover_password', SiteStartVars::getModuleURL($this->mod_id).'recover/');
+			$str_input_error = '';
+			if ($arr_request_vars[0] == 'LOGIN_INCORRECT') {
+				
+				$str_input_error = 'input-error';
+				SiteEndEnvironment::setModuleVariables(0, [0 => false], false);
+			}
+			
+			Labels::setVariable('url_recover_password', SiteStartEnvironment::getModuleURL($this->mod_id).'recover/');
 				
 			$return .= '<h1>'.getLabel('lbl_login').'</h1>
 			
 			'.($str_message ? '<section class="info attention">'.$str_message.'</section>' : '').'
 			
-			<form method="post" action="'.$str_path.'">
+			<form method="post" action="'.$str_path.'" autocomplete="on">
 				<fieldset><ul>		
 					<li><label>'.getLabel('lbl_username').'</label><input name="login_user" type="text" class="'.$str_input_error.'" /></li>
 					<li><label>'.getLabel('lbl_password').'</label><input name="login_ww" type="password" class="'.$str_input_error.'" /></li>
@@ -137,7 +155,7 @@ class login extends base_module {
 			
 			$this->validate = ['login_user' => 'required', 'login_ww' => 'required'];
 		}
-		
+
 		return $return;
 	}
 	
@@ -161,7 +179,7 @@ class login extends base_module {
 		
 		if ($method == "welcome" || $method == "recover_confirm") {
 			
-			$arr_confirm = SiteStartVars::getFeedback('confirm');
+			$arr_confirm = SiteStartEnvironment::getFeedback('confirm');
 			
 			if (!$arr_confirm || !$_POST['password'] || $_POST['password'] != $_POST['password_confirm']) {
 				error(getLabel('msg_missing_information'));
@@ -176,11 +194,11 @@ class login extends base_module {
 				user_management::confirmUser('recover', $user_id, $key);
 			}
 			
-			SiteStartVars::setFeedback('confirm', null, true);
+			SiteStartEnvironment::setFeedback('confirm', null, true);
 			
 			user_management::updateUser($user_id, true, false, $_POST['password']);
 						
-			$url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false);
+			$url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false);
 			$url .= ($method == 'welcome' ? 'welcome_confirmed/' : 'recover_confirmed/');
 			
 			Response::location($url);
@@ -192,14 +210,14 @@ class login extends base_module {
 				$dir = directories::getDirectories($this->arr_variables);
 				$user_group_id = $dir['user_group_id'];
 			} else {
-				$user_group_id = SiteStartVars::getDirectory('user_group_id');
+				$user_group_id = SiteStartEnvironment::getDirectory('user_group_id');
 			}
 		
 			if (!$_POST['recover_user'] || !$user_group_id) {
 				error(getLabel('msg_missing_information'));
 			}
 			
-			$url = SiteStartVars::getModuleURL($this->mod_id, false, 0, false).'recover_confirm/';
+			$url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false).'recover_confirm/';
 						
 			user_management::recoverUser($_POST['recover_user'], $user_group_id, $url);
 			

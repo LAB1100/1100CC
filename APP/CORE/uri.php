@@ -2,18 +2,27 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 // 1100CC Framework:
 
-	$arr_uri_translator = SiteStartVars::getURITranslator();
+	$arr_uri_translator = SiteStartEnvironment::getURITranslator();
 	
-	$arr_request_vars = SiteStartVars::getRequestVariables();
-	$arr_request_vars = array_slice($arr_request_vars, 1); // Remove possible leading '/'
-	$str_identifier = implode('/', $arr_request_vars);
+	$arr_request_variables = SiteStartEnvironment::getRequestVariables();
+	$arr_request_variables = array_slice($arr_request_variables, 1); // Remove possible leading '/'
+	$arr_modifier_variables = SiteStartEnvironment::getModifierVariables();
+	
+	$str_identifier = implode('/', $arr_request_variables);
+
+	if ($arr_modifier_variables) {
+		
+		$str_query = '?'.rawurldecode(http_build_query($arr_modifier_variables));
+				
+		$str_identifier .= $str_query;
+	}
 	
 	$arr_uri = uris::getURI($arr_uri_translator['id'], uris::MODE_IN, $str_identifier);
 	
@@ -60,12 +69,22 @@
 			
 			Response::location($str_url);
 		}
-			
-		$arr_path_info = [];
 		
-		if ($arr_uri['url'] != '' && $arr_uri['url'] != '/') {
-			$arr_path_info = explode('/', $arr_uri['url']);
+		$arr_parts = str2Array($arr_uri['url'], '?');
+		
+		$arr_query = [];
+		
+		if (!empty($arr_parts[1])) {
+			parse_str($arr_parts[1], $arr_query);
 		}
 		
-		SiteStartVars::setRequestVariables($arr_path_info);
+		SiteStartEnvironment::setModifierVariables($arr_query);
+		
+		$arr_path_info = [];
+		
+		if ($arr_parts[0] != '' && $arr_parts[0] != '/') {
+			$arr_path_info = explode('/', $arr_parts[0]);
+		}
+		
+		SiteStartEnvironment::setRequestVariables($arr_path_info);
 	}

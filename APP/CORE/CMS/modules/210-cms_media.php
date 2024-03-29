@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -257,26 +257,26 @@ class cms_media extends base_module {
 				$this->html .= '</div>
 				<div id="tab-media-info-prop">
 					<div class="record"><dl>
-						<li>
+						<div>
 							<dt>'.getLabel('lbl_label').'</dt>
 							<dd>'.$arr_media['label'].'</dd>
-						</li>
-						<li>
+						</div>
+						<div>
 							<dt>'.getLabel('lbl_type').'</dt>
 							<dd>'.$arr_media['type'].'</dd>
-						</li>
-						<li>
+						</div>
+						<div>
 							<dt>'.getLabel('lbl_size').'</dt>
 							<dd>'.bytes2String($arr_media['size']).'</dd>
-						</li>
-						<li>
+						</div>
+						<div>
 							<dt>'.getLabel('lbl_location').'</dt>
 							<dd>'.$media_url.'</dd>
-						</li>
-						<li>
+						</div>
+						<div>
 							<dt>'.getLabel('lbl_description').'</dt>
 							<dd>'.nl2br($arr_media['description']).'</dd>
-						</li>
+						</div>
 					</dl></div>
 				</div>
 				<div id="tab-media-info-loc">
@@ -530,7 +530,7 @@ class cms_media extends base_module {
 				
 				if ($value && $value['cache']) {
 					
-					$str_url_cache = SiteStartVars::getCacheURL('img', [200, 200], $str_url);
+					$str_url_cache = SiteStartEnvironment::getCacheURL('img', [200, 200], $str_url);
 					
 					$this->html = ['url' => $str_url, 'cache' => $str_url_cache];
 				} else {

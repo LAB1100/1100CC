@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -34,7 +34,7 @@ class intf_cms_language extends cms_language {
 				
 			</div>' : '').'<div id="tab-language-cms">
 			
-				'.self::contentTabCms().'
+				'.self::contentTabCMS().'
 				
 			</div><div id="tab-language-core">
 			
@@ -77,9 +77,13 @@ class intf_cms_language extends cms_language {
 		return $return;
 	}
 	
-	private static function contentTabCms() {
+	private static function contentTabCMS() {
 					
-		$res = DB::query("SELECT lang_code, label, is_user_selectable, is_default FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." AS language ORDER BY lang_code");
+		$res = DB::query("SELECT
+			lang_code, label, host_canonical, is_user_selectable, is_default
+				FROM ".DB::getTable('TABLE_CMS_LANGUAGE')." AS language
+			ORDER BY lang_code
+		");
 		
 		if ($res->getRowCount() == 0) {
 			$return .= '<section class="info">'.getLabel('msg_no_language').'</section>';
@@ -90,6 +94,7 @@ class intf_cms_language extends cms_language {
 					<tr>
 						<th><span>Code</span></th>
 						<th class="max"><span>Label</span></th>
+						<th><span>Hostname</span></th>
 						<th><span>User</span></th>
 						<th><span>Default</span></th>
 						<th></th>
@@ -97,13 +102,14 @@ class intf_cms_language extends cms_language {
 				</thead>
 				<tbody>';
 				
-					while ($row = $res->fetchAssoc()) {
+					while ($arr_row = $res->fetchAssoc()) {
 								
-						$return .= '<tr id="x:intf_cms_language:language_id-'.$row['lang_code'].'">
-							<td>'.$row['lang_code'].'</td>	
-							<td>'.$row['label'].'</td>	
-							<td><span class="icon" data-category="status">'.getIcon(($row['is_user_selectable'] ? 'tick' : 'min')).'</span></td>
-							<td><input type="radio" name="is_default_language" id="y:intf_cms_language:language_default-'.$row['lang_code'].'" value="'.$row['lang_code'].'"'.(($row['is_default'] == 1) ? ' checked="checked"':'').' /><label for="y:intf_cms_language:language_default-'.$row['lang_code'].'"></label></td>
+						$return .= '<tr id="x:intf_cms_language:language_id-'.$arr_row['lang_code'].'">
+							<td>'.$arr_row['lang_code'].'</td>	
+							<td>'.$arr_row['label'].'</td>
+							<td>'.($arr_row['host_canonical'] ?: '<i>'.SERVER_NAME_SITE_NAME.'</i>').'</td>
+							<td><span class="icon" data-category="status">'.getIcon(($arr_row['is_user_selectable'] ? 'tick' : 'min')).'</span></td>
+							<td><input type="radio" name="is_default_language" id="y:intf_cms_language:language_default-'.$arr_row['lang_code'].'" value="'.$arr_row['lang_code'].'"'.(($arr_row['is_default'] == 1) ? ' checked="checked"':'').' /><label for="y:intf_cms_language:language_default-'.$arr_row['lang_code'].'"></label></td>
 							<td><input type="button" class="data edit popup language_cms_edit" value="edit" /><input type="button" class="data del msg language_cms_del" value="del" /></td>
 						</tr>';
 					}
@@ -117,9 +123,10 @@ class intf_cms_language extends cms_language {
 	
 	private static function contentTabCore() {
 			
-		$res = DB::query("SELECT lang_code, label
-								FROM ".DB::getTable('TABLE_CORE_LANGUAGE')." AS language
-							ORDER BY lang_code
+		$res = DB::query("SELECT
+			lang_code, label
+				FROM ".DB::getTable('TABLE_CORE_LANGUAGE')." AS language
+			ORDER BY lang_code
 		");
 		
 		if ($res->getRowCount() == 0) {
@@ -135,11 +142,11 @@ class intf_cms_language extends cms_language {
 					</tr>
 				</thead>
 				<tbody>';
-					while($row = $res->fetchAssoc()) {	
+					while ($arr_row = $res->fetchAssoc()) {	
 							
-						$return .= '<tr id="x:intf_cms_language:language_id-'.$row['lang_code'].'">
-							<td>'.$row['lang_code'].'</td>	
-							<td>'.$row['label'].'</td>	
+						$return .= '<tr id="x:intf_cms_language:language_id-'.$arr_row['lang_code'].'">
+							<td>'.$arr_row['lang_code'].'</td>	
+							<td>'.$arr_row['label'].'</td>	
 							'.($_SESSION['CORE'] ? '<td><input type="button" class="data edit popup language_core_edit" value="edit" /><input type="button" class="data del msg language_core_del" value="del" /></td>' : '').'
 						</tr>';
 					}
@@ -179,8 +186,10 @@ class intf_cms_language extends cms_language {
 		
 		if ($method == "language_default" && $id) {
 		
-			$res = DB::query("UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = 0");
-			$res = DB::query("UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = 1 WHERE lang_code='".DBFunctions::strEscape($id)."'");
+			$res = DB::queryMulti("
+				UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = 0;
+				UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = 1 WHERE lang_code = '".DBFunctions::strEscape($id)."';
+			");
 			
 			$this->msg = true;
 		}
@@ -194,10 +203,10 @@ class intf_cms_language extends cms_language {
 				$host_name = rawurldecode($host_name);
 				
 				$res = DB::query("INSERT INTO ".DB::getTable('TABLE_CMS_LANGUAGE_HOSTS')." 
-									(host_name, lang_code)
-										VALUES
-									('".DBFunctions::strEscape($host_name)."',
-									'".DBFunctions::strEscape($value)."')
+					(host_name, lang_code)
+						VALUES
+					('".DBFunctions::strEscape($host_name)."',
+					'".DBFunctions::strEscape($value)."')
 				");
 			}
 			
@@ -209,11 +218,8 @@ class intf_cms_language extends cms_language {
 		if ($method == "language_cms_edit" || $method == "language_core_edit" || $method == "language_add") {
 		
 			if (($method == "language_cms_edit" || $method == "language_core_edit") && $id) {
-			
-				$table = ($method == 'language_cms_edit' ? 'TABLE_CMS_LANGUAGE' : 'TABLE_CORE_LANGUAGE'); 
-			
-				$res = DB::query("SELECT * FROM ".DB::getTable($table)." WHERE lang_code = '".DBFunctions::strEscape($id)."'");
-				$row = $res->fetchAssoc();
+
+				$arr_language = static::getLanguage($id, ($method == 'language_cms_edit' ? 'cms' : 'core'));
 				
 				$mode = ($method == 'language_cms_edit' ? 'language_cms_update' : 'language_core_update');
 			} else if ($method == 'language_add' && $id) {
@@ -227,7 +233,7 @@ class intf_cms_language extends cms_language {
 						
 							$this->html .= '<li>
 								<label>Copy</label>
-								<div><select name="copy">'.cms_general::createDropdown(self::getLanguage('core'), false, true, 'label', 'lang_code').'</select></div>
+								<div><select name="copy">'.cms_general::createDropdown(self::getLanguage(false, 'core'), false, true, 'label', 'lang_code').'</select></div>
 							</li>
 						</ul>
 						<hr />
@@ -235,20 +241,24 @@ class intf_cms_language extends cms_language {
 					}
 					$this->html .= '<li>
 						<label>Code</label>
-						<div><input type="text" name="lang_code" value="'.strEscapeHTML($row['lang_code']).'" /></div>
+						<div><input type="text" name="lang_code" value="'.strEscapeHTML($arr_language['lang_code']).'" /></div>
 					</li>
 					<li>
 						<label>Label</label>
-						<div><input type="text" name="label" value="'.strEscapeHTML($row['label']).'" /></div>
+						<div><input type="text" name="label" value="'.strEscapeHTML($arr_language['label']).'" /></div>
 					</li>';
 					if ($mode == 'language_cms_insert' || $mode == 'language_cms_update') {
 						
-						$this->html .= '</ul>
+						$this->html .= '<li>
+								<label>Canonical Hostname</label>
+								<div><input type="text" name="host_canonical" placeholder="'.SERVER_NAME_SITE_NAME.'" value="'.strEscapeHTML($arr_language['host_canonical']).'" /></div>
+							</li>
+						</ul>
 						<hr />
 						<ul>
 						<li>
 							<label>User Selectable</label>
-							<div><input type="checkbox" name="is_user_selectable" value="1"'.($row['is_user_selectable'] ? ' checked="checked"' : '').'" /></div>
+							<div><input type="checkbox" name="is_user_selectable" value="1"'.($arr_language['is_user_selectable'] ? ' checked="checked"' : '').'" /></div>
 						</li>';
 					}
 				$this->html .= '</ul></fieldset>
@@ -268,12 +278,12 @@ class intf_cms_language extends cms_language {
 		
 		if ($method == "language_cms_insert" || $method == "language_core_insert") {
 		
-			if ($method == "language_core_insert" && !$_SESSION['CORE']) {
-				error(getLabel("msg_not_allowed"));
+			if ($method == 'language_core_insert' && !$_SESSION['CORE']) {
+				error(getLabel('msg_not_allowed'));
 			}
 			
 			if ($method == "language_cms_insert" && $_POST['copy']) {
-				$arr_copy = self::getLanguage("core", $_POST['copy']);
+				$arr_copy = self::getLanguage($_POST['copy'], 'core');
 				$_POST = $arr_copy;
 			}
 				
@@ -281,17 +291,23 @@ class intf_cms_language extends cms_language {
 				(
 					lang_code,
 					label
-					".($method == 'language_cms_insert' ? ", is_user_selectable" : "")."
+					".($method == 'language_cms_insert' ? "
+						, host_canonical
+						, is_user_selectable
+					" : "")."
 				)
 					VALUES
 				(
 					'".DBFunctions::strEscape($_POST['lang_code'])."',
 					'".DBFunctions::strEscape($_POST['label'])."'
-					".($method == 'language_cms_insert' ? ", ".(int)$_POST['is_user_selectable'] : "")."
+					".($method == 'language_cms_insert' ? "
+						, '".DBFunctions::strEscape($_POST['host_canonical'])."'
+						, ".(int)$_POST['is_user_selectable']
+					: "")."
 				)
 			");
 			
-			$this->html = ($method == 'language_cms_insert' ? self::contentTabCms() : self::contentTabCore());
+			$this->html = ($method == 'language_cms_insert' ? self::contentTabCMS() : self::contentTabCore());
 			$this->msg = true;
 		}
 		
@@ -304,11 +320,14 @@ class intf_cms_language extends cms_language {
 			$res = DB::query("UPDATE ".DB::getTable(($method == 'language_cms_update' ? 'TABLE_CMS_LANGUAGE' : 'TABLE_CORE_LANGUAGE'))." SET
 					lang_code = '".DBFunctions::strEscape($_POST['lang_code'])."',
 					label = '".DBFunctions::strEscape($_POST['label'])."'
-					".($method == 'language_cms_update' ? ", is_user_selectable = ".(int)$_POST['is_user_selectable'] : "")."
+					".($method == 'language_cms_update' ? "
+						, host_canonical = '".DBFunctions::strEscape($_POST['host_canonical'])."'
+						, is_user_selectable = ".(int)$_POST['is_user_selectable']
+					: "")."
 				WHERE lang_code = '".DBFunctions::strEscape($id)."'
 			");
 			
-			$this->html = ($method == 'language_cms_update' ? self::contentTabCms() : self::contentTabCore());
+			$this->html = ($method == 'language_cms_update' ? self::contentTabCMS() : self::contentTabCore());
 			$this->msg = true;
 		}
 		

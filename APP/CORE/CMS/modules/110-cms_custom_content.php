@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -54,8 +54,11 @@ class cms_custom_content extends base_module {
 		
 	public static function css() {
 	
-		$return = '#frm-custom_content textarea[name=description] { width: 500px; height: 80px; }
-		#frm-custom_content li.content > label { vertical-align: middle; }';
+		$return = '
+			#frm-custom_content textarea[name=description] { width: 500px; height: 80px; }
+			#frm-custom_content input[name="style[other]"] { width: 200px; }
+			#frm-custom_content li.content > label { vertical-align: middle; }
+		';
 		
 		return $return;
 	}
@@ -66,7 +69,7 @@ class cms_custom_content extends base_module {
 			
 			var elm_editor = false;
 
-			elm_scripter.on('update change', '[name=style]', function() {
+			elm_scripter.on('update change', '[name=\"style[default]\"]', function() {
 
 				var value = $(this).val();
 				value = (value == 'default' ? 'body' : value);
@@ -77,7 +80,7 @@ class cms_custom_content extends base_module {
 			}).on('editorloaded', function(e) {
 				
 				elm_editor = e.detail.source;
-				elm_scripter.find('[name=style]:checked').trigger('update');
+				elm_scripter.find('[name=\"style[default]\"]:checked').trigger('update');
 			})
 		});";
 		
@@ -89,12 +92,16 @@ class cms_custom_content extends base_module {
 		// POPUP
 		
 		if ($method == "edit" || $method == "add") {
-		
+			
+			$arr_style = [];
+			
 			if ($id) {
 				
 				$arr_row = self::getCustomContent($id);
 				
 				$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_CUSTOM_CONTENT_TAGS'), 'custom_content_id', $id);
+				
+				$arr_style = str2Array($arr_row['style'], ' ');
 				
 				$mode = "update";
 			} else {
@@ -116,7 +123,10 @@ class cms_custom_content extends base_module {
 					</li>
 					<li>
 						<label>'.getLabel('lbl_style').'</label>
-						<div>'.cms_general::createSelectorRadio([['id' => 'none', 'name' => getLabel('lbl_none')], ['id' => 'default', 'name' => getLabel('lbl_default')]], 'style', ($arr_row['style'] ?: 'default')).'</div>
+						<div>'
+							.cms_general::createSelectorRadio([['id' => 'none', 'name' => getLabel('lbl_none')], ['id' => 'default', 'name' => getLabel('lbl_default')]], 'style[default]', ($arr_style[0] ?? 'default'))
+							.'<input type="text" name="style[other]" title="'.getLabel('inf_style_classes').'" value="'.arr2String(array_slice($arr_style, 1), ' ').'" />'
+						.'</div>
 					</li>
 					<li>
 						<label>'.getLabel('lbl_script').'</label>
@@ -197,28 +207,34 @@ class cms_custom_content extends base_module {
 		// QUERY
 	
 		if ($method == "insert") {
+			
+			$str_style = array_merge([$_POST['style']['default']], str2Array($_POST['style']['other'], ' '));
+			$str_style = arr2String(array_filter($str_style), ' ');
 						
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_CUSTOM_CONTENT')."
 				(name, body, style, script, description)
 					VALUES
-				('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['body'])."', '".DBFunctions::strEscape($_POST['style'])."', '".DBFunctions::strEscape($_POST['script'])."', '".DBFunctions::strEscape($_POST['description'])."')
+				('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['body'])."', '".DBFunctions::strEscape($str_style)."', '".DBFunctions::strEscape($_POST['script'])."', '".DBFunctions::strEscape($_POST['description'])."')
 			");
 
 			$new_id = DB::lastInsertID();
 			
-			cms_general::handleTags(DB::getTable('TABLE_CUSTOM_CONTENT_TAGS'), "custom_content_id", $new_id, $_POST['tags']);
+			cms_general::handleTags(DB::getTable('TABLE_CUSTOM_CONTENT_TAGS'), 'custom_content_id', $new_id, $_POST['tags']);
 			
 			$this->refresh_table = true;
 			$this->msg = true;
 		}
 		
 		if ($method == "update" && (int)$id) {
-						
+			
+			$str_style = array_merge([$_POST['style']['default']], str2Array($_POST['style']['other'], ' '));
+			$str_style = arr2String(array_filter($str_style), ' ');
+			
 			$res = DB::query("UPDATE ".DB::getTable('TABLE_CUSTOM_CONTENT')."
 				SET
 					name = '".DBFunctions::strEscape($_POST['name'])."',
 					body = '".DBFunctions::strEscape($_POST['body'])."',
-					style = '".DBFunctions::strEscape($_POST['style'])."',
+					style = '".DBFunctions::strEscape($str_style)."',
 					script = '".DBFunctions::strEscape($_POST['script'])."',
 					description = '".DBFunctions::strEscape($_POST['description'])."'
 				WHERE id = ".(int)$id."

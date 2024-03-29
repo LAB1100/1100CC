@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -27,7 +27,7 @@ class general extends base_module {
 			$arr_label = cms_labels::getLabel($label, 'user', $user_id);
 		} else {
 			$label = $label_default;
-			$arr_label[SiteStartVars::getContext(SiteStartVars::CONTEXT_LANGUAGE)] = $str;
+			$arr_label[SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE)] = $str;
 		}
 		
 		$return = '<div class="tabs">

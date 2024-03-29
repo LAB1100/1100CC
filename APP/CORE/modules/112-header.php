@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -29,6 +29,20 @@ class header extends base_module {
 	
 	public function contents() {
 		
+		$return .= '<a href="'.(SiteStartEnvironment::getDirectory(false, SiteStartEnvironment::DIRECTORY_LOGIN) ? SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN).'/' : '/').'" alt="'.getLabel('name', 'D').'"></a>';
+				
+		$search_box = new search_box;
+		$search_box = $search_box->contents();
+		
+		$return .= '<div class="search_box">'.$search_box.'</div>';
+		
+		$language = new language;
+		$language = $language->contents();
+		
+		if ($language) {
+			$return .= '<div class="language">'.$language.'</div>';
+		}
+
 		$navigation = new navigation;
 		
 		if ($this->arr_variables['directory_id']) {
@@ -37,15 +51,8 @@ class header extends base_module {
 		
 		$navigation = $navigation->contents();
 		
-		$search_box = new search_box;
-		$search_box = $search_box->contents();
-		
 		$logout = new logout;
 		$logout = $logout->contents();
-		
-		$return .= '<a href="'.(SiteStartVars::getDirectory(false, SiteStartVars::DIRECTORY_LOGIN) ? SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN).'/' : '/').'" alt="'.getLabel('name', 'D').'"></a>';
-		
-		$return .= '<div class="search_box">'.$search_box.'</div>';
 		
 		$return .= '<div class="navigation">'
 			.'<input id="toggle-navigation-'.$this->mod_id.'" type="checkbox" /><label for="toggle-navigation-'.$this->mod_id.'">☰</label>'

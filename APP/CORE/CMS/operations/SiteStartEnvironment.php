@@ -2,12 +2,12 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-class SiteStartVars {
+class SiteStartEnvironment {
 	
 	const REQUEST_INDEX = 1;
 	const REQUEST_COMMAND = 2;
@@ -29,8 +29,9 @@ class SiteStartVars {
 	
 	public static $arr_material = [];
 		
-	protected static $arr_request_vars = [];
+	protected static $arr_request_variables = [];
 	protected static $arr_feedback = [];
+	protected static $arr_modifier_variables = [];
 	
 	protected static $arr_cms_modules = [];
 	protected static $arr_modules = [];
@@ -56,7 +57,7 @@ class SiteStartVars {
 	public static function setPageVariables($arr_variables = false, $do_overwrite = true) {
 		
 		if ($do_overwrite) {
-			self::$arr_request_vars = [];
+			self::$arr_request_variables = [];
 		}
 		
 		if ($arr_variables) {
@@ -77,41 +78,41 @@ class SiteStartVars {
 						$cur_var_name = substr($var, 0, -2);
 					} else {
 						if ($cur_var_name) {
-							self::$arr_request_vars[$cur_mod][$cur_var_name][] = $var;
+							self::$arr_request_variables[$cur_mod][$cur_var_name][] = $var;
 						} else {
-							self::$arr_request_vars[$cur_mod][] = $var;
+							self::$arr_request_variables[$cur_mod][] = $var;
 						}
 					}
 				}
 			}
 		}
 		
-		SiteEndVars::setRequestVariables(self::$arr_request_vars);
+		SiteEndEnvironment::setRequestVariables(self::$arr_request_variables);
 	}
 	
 	public static function setRequestVariables($arr_variables = false) {
 		
 		if (IS_CMS) {
 			
-			self::$arr_request_vars = $arr_variables;
-			SiteEndVars::setRequestVariables(self::$arr_request_vars);
+			self::$arr_request_variables = $arr_variables;
+			SiteEndEnvironment::setRequestVariables(self::$arr_request_variables);
 			
 			return;
 		}
 		
 		if ($arr_variables === false) {
-			unset(self::$arr_request_vars[0]);
+			unset(self::$arr_request_variables[0]);
 		} else {
-			self::$arr_request_vars[0] = $arr_variables;
+			self::$arr_request_variables[0] = $arr_variables;
 		}
-		SiteEndVars::setRequestVariables($arr_variables, 0);
+		SiteEndEnvironment::setRequestVariables($arr_variables, 0);
 	}
 	
 	public static function getRequestVariables($num_index = false) {
 		
 		if (IS_CMS) {
 			
-			$arr = self::$arr_request_vars;
+			$arr = self::$arr_request_variables;
 		} else {
 		
 			$arr = self::getModuleVariables(0);
@@ -122,7 +123,21 @@ class SiteStartVars {
 	
 	public static function getModuleVariables($mod_id) {
 	
-		return (self::$arr_request_vars[$mod_id] ?? []);
+		return (self::$arr_request_variables[$mod_id] ?? []);
+	}
+	
+	public static function setModifierVariables($arr) {
+		
+		self::$arr_modifier_variables = $arr;
+	}
+	
+	public static function getModifierVariables($str_name = false) {
+		
+		if ($str_name) {
+			return (self::$arr_modifier_variables[$str_name] ?? null);
+		}
+		
+		return self::$arr_modifier_variables;
 	}
 	
 	public static function setModules($arr_modules, $mode_target = false) {
@@ -371,7 +386,7 @@ class SiteStartVars {
 	
 	public static function checkSession() {
 		
-		if (isset($_SESSION['session']) && $_SESSION['session'] == SiteStartVars::$session) {
+		if (isset($_SESSION['session']) && $_SESSION['session'] == SiteStartEnvironment::$session) {
 			return true;
 		}
 		
@@ -479,6 +494,71 @@ class SiteStartVars {
 		return self::$arr_material[$mode_material];
 	}
 	
+	public static function checkLanguage() {
+		
+		if (IS_CMS) {
+			
+			$arr_language_default = cms_language::getDefaultLanguage();
+			self::setContext(self::CONTEXT_LANGUAGE, $arr_language_default['lang_code']);
+			
+			return;
+		}
+		
+		$str_language_default = Settings::getShare('language_'.SERVER_NAME_SITE_NAME);
+		
+		if (!$str_language_default) {
+			
+			$arr_language_default = cms_language::getDefaultLanguage(SERVER_NAME_SITE_NAME);
+			$str_language_default = $arr_language_default['lang_code'];
+			Settings::setShare('language_'.SERVER_NAME_SITE_NAME, $str_language_default, 3600);
+		}
+		
+		if (self::getModifierVariables('language')) {
+			
+			$arr_language = cms_language::getLanguage(self::getModifierVariables('language'));
+			$str_language_pick = ($arr_language['lang_code'] ?? null);
+
+			if ($str_language_pick && $str_language_pick != $str_language_default) {
+				
+				self::setContext(self::CONTEXT_LANGUAGE, $str_language_pick);
+				SiteEndEnvironment::setModifierVariable('language', $str_language_pick);
+			}
+		}
+		
+		if (!self::getContext(self::CONTEXT_LANGUAGE)) {
+			self::setContext(self::CONTEXT_LANGUAGE, $str_language_default);
+		}
+	}
+	
+	public static function checkLanguageSession() {
+		
+		if (IS_CMS) {
+			
+			if (isset($_SESSION['LANGUAGE_SYSTEM'])) {
+				self::setContext(self::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE_SYSTEM']);
+			} else if (!empty($_SESSION['CUR_USER']['lang_code'])) {
+				self::setContext(self::CONTEXT_LANGUAGE, $_SESSION['CUR_USER']['lang_code']);
+			}
+			
+			return;
+		}
+		
+		if (SiteEndEnvironment::getModifierVariables('language')) { // Succesful override
+			
+			self::setContext(self::CONTEXT_LANGUAGE, SiteEndEnvironment::getModifierVariables('language'));
+			$_SESSION['LANGUAGE_SYSTEM'] = SiteEndEnvironment::getModifierVariables('language');
+		} else if (self::getModifierVariables('language')) { // Unsuccesful override
+			
+			unset($_SESSION['LANGUAGE_SYSTEM']);
+		} if (isset($_SESSION['LANGUAGE_SYSTEM'])) {
+			
+			self::setContext(self::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE_SYSTEM']);
+		} else if (!empty($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code'])) {
+			
+			self::setContext(self::CONTEXT_LANGUAGE, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code']);
+		}
+	}
+	
 	public static function getBasePath($num_pop_length = 0, $is_relative = true) {
 	
 		$arr_base = ($num_pop_length && count(self::getDirectoryClosure()) ? array_slice(self::getDirectoryClosure(), 0, -$num_pop_length) : self::getDirectoryClosure());
@@ -531,7 +611,7 @@ class SiteStartVars {
 
 		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') { // Ajax and ajax file uploads
 			return static::REQUEST_COMMAND;
-		} else if (SiteStartVars::getAPI()) { // API calls
+		} else if (SiteStartEnvironment::getAPI()) { // API calls
 			return static::REQUEST_API;
 		} else if (!empty($_FILES) || !empty($_POST['is_download'])) { // Plain file upload or download
 			return static::REQUEST_DOWNLOAD;

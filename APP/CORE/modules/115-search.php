@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -28,7 +28,7 @@ class search extends base_module {
 				
 				$return .= $this->doSearch($str_search);
 				
-				SiteEndVars::setModuleVariables($this->mod_id, [], true); // Clear the settings in the url
+				SiteEndEnvironment::setModuleVariables($this->mod_id, [], true); // Clear the settings in the url
 			}
 		
 		$return .= '</div>';

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,18 +13,18 @@ class HomeLogin {
 		
 		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER']);
 		
-		if (SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_KIND) == '.l' && SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME) == 'logout') {
+		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.l' && SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME) == 'logout') {
 
-			unset($_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID']);
+			unset($_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID']);
 			
-			Response::location(SiteStartVars::getBasePath(1, false));
-		} else if (!empty($_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID']) && !isset($_POST['login_user']) && !isset($_POST['login_ww'])) {
+			Response::location(SiteStartEnvironment::getBasePath(1, false));
+		} else if (!empty($_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID']) && !isset($_POST['login_user']) && !isset($_POST['login_ww'])) {
 					
 			self::updateLogin();
-		} else if (SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP) && isset($_POST['login_user']) && isset($_POST['login_ww'])) {
+		} else if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP) && isset($_POST['login_user']) && isset($_POST['login_ww'])) {
 		
 			self::checkLogin($_POST['login_user'], $_POST['login_ww']);
-		} else if (SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP) && SiteStartVars::getDirectory('require_login', SiteStartVars::DIRECTORY_LOGIN)) {
+		} else if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP) && SiteStartEnvironment::getDirectory('require_login', SiteStartEnvironment::DIRECTORY_LOGIN)) {
 			
 			self::toLogin();
 		}
@@ -42,7 +42,7 @@ class HomeLogin {
 		
 		$arr_api_client_user = apis::getClientUserByToken($token);
 				
-		if ($arr_api_client_user && $arr_api_client_user['api_id'] == SiteStartVars::getAPI('id')) {
+		if ($arr_api_client_user && $arr_api_client_user['api_id'] == SiteStartEnvironment::getAPI('id')) {
 			
 			// Regenerate token when provided unsecure
 			if (SERVER_SCHEME != URI_SCHEME_HTTPS) {
@@ -79,26 +79,26 @@ class HomeLogin {
 			
 	private static function toLogin($error = false) {
 		
-		$arr_page = pages::getPages(SiteStartVars::getDirectory('page_fallback_id', SiteStartVars::DIRECTORY_LOGIN));
+		$arr_page = pages::getPages(SiteStartEnvironment::getDirectory('page_fallback_id', SiteStartEnvironment::DIRECTORY_LOGIN));
 
-		if (SiteStartVars::getDirectory('path') != SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN) || SiteStartVars::getPage('name') != $arr_page['name']) {
+		if (SiteStartEnvironment::getDirectory('path') != SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN) || SiteStartEnvironment::getPage('name') != $arr_page['name']) {
 		
 			if (!$error) {
 				$_SESSION['RETURN_TO'] = (!empty($_SERVER['PATH_VIRTUAL']) ? $_SERVER['PATH_VIRTUAL'] : $_SERVER['PATH_INFO']);
 			}
 			
-			Response::location(URL_BASE.ltrim(SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN), '/').(SiteStartVars::getDirectory('path', SiteStartVars::DIRECTORY_LOGIN) ? '/' : '').$arr_page['name'].'.p'.($error ? '/LOGIN_INCORRECT' : ''));
+			Response::location(URL_BASE.ltrim(SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN), '/').(SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN) ? '/' : '').$arr_page['name'].'.p'.($error ? '/LOGIN_INCORRECT' : ''));
 		}
 	}
 		
 	private static function updateLogin() {
 		
-		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID'], true);
+		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'], true);
 		
 		if ($_SESSION['CUR_USER']) {
 			
-			$_SESSION['USER_ID'] = $_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID'];
-			$_SESSION['USER_GROUP'] = SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP);
+			$_SESSION['USER_ID'] = $_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'];
+			$_SESSION['USER_GROUP'] = SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP);
 			
 			if (strtotime($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['last_login']) < strtotime('-1 day')) {
 				
@@ -126,7 +126,7 @@ class HomeLogin {
 		
 	private static function checkLogin($username, $password) {
 	
-		SiteStartVars::checkCookieSupport();
+		SiteStartEnvironment::checkCookieSupport();
 		
 		$username = (is_string($username) ? $username : '');
 		$password = (is_string($password) ? $password : '');
@@ -140,7 +140,7 @@ class HomeLogin {
 		$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_USERS')."
 			WHERE enabled = TRUE
 				AND uname = '".DBFunctions::strEscape($username)."'
-				AND group_id = ".SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)."
+				AND group_id = ".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)."
 		");
 		
 		$passhash = false;
@@ -155,9 +155,9 @@ class HomeLogin {
 		if ($passhash !== false) {
 			
 			$_SESSION['CUR_USER'] = user_groups::getUserData($arr_user['id'], true);
-			$_SESSION['USER_GROUP'] = SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP);
+			$_SESSION['USER_GROUP'] = SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP);
 			$_SESSION['USER_ID'] = $arr_user['id'];
-			$_SESSION['STORE_'.SiteStartVars::getContext(SiteStartVars::CONTEXT_USER_GROUP)]['USER_ID'] = $_SESSION['USER_ID'];
+			$_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'] = $_SESSION['USER_ID'];
 			$arr_ip = Log::getIP();
 			
 			DB::setConnection(DB::CONNECT_CMS);

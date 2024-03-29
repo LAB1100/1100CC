@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -59,7 +59,7 @@ class ExitPage {
 		if ($this->str_title) {
 			$str_title = $this->str_title;
 		} else {
-			$str_title = 'OOPS - '.strtoupper($this->str_header).' - '.SiteEndVars::getTitle();
+			$str_title = 'OOPS - '.strtoupper($this->str_header).' - '.SiteEndEnvironment::getTitle();
 		}
 		
 		$str_html = '<!DOCTYPE html>
@@ -67,7 +67,7 @@ class ExitPage {
 					<head>
 					
 					<title>'.$str_title.'</title>
-					'.SiteEndVars::getIcons().'
+					'.SiteEndEnvironment::getIcons().'
 					'.$this->getHeadTags().'
 
 				</head>
@@ -127,13 +127,17 @@ class ExitPage {
 				$color = '#009cff';
 				$color_reverse = '#ffffff';
 				break;
+			case 'redirect':
+				$color = '#fff839';
+				$color_reverse = '#000000';
+				break;
 			case 'cookie':
 			case 'script':
 				$color = '#000000';
 				$color_reverse = '#ffffff';
 				break;
-			case 'redirect':
-				$color = '#fff839';
+			default:
+				$color = '#ffffff';
 				$color_reverse = '#000000';
 				break;
 		}
@@ -179,7 +183,6 @@ class ExitPage {
 		$return = '';
 	
 		foreach ($this->arr_head_tags as $tag) {
-			
 			$return .= $tag;
 		}
 		

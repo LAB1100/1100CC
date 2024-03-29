@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -31,7 +31,7 @@ class directories extends base_module {
 	
 	public static function getClosestRootedDirectory($directory_id = 0) {
 		
-		$directory_id = ($directory_id ?: SiteStartVars::getDirectory('id'));
+		$directory_id = ($directory_id ?: SiteStartEnvironment::getDirectory('id'));
 		
 		$res = DB::query("SELECT ad.ancestor_id
 				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." ad
@@ -48,7 +48,7 @@ class directories extends base_module {
 	
 	public static function getParentDirectory($directory_id = 0) {
 		
-		$directory_id = ($directory_id ?: SiteStartVars::getDirectory('id'));
+		$directory_id = ($directory_id ?: SiteStartEnvironment::getDirectory('id'));
 		
 		$res = DB::query("SELECT ad.ancestor_id
 				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." ad

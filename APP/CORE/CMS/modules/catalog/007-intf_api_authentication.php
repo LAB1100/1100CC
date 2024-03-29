@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -233,18 +233,18 @@ class intf_api_authentication extends apis {
 				<hr />
 			
 				<div class="record"><dl>
-					<li>
+					<div>
 						<dt>'.getLabel('lbl_api').'</dt>
 						<dd>'.strEscapeHTML($arr_client['api_name']).'</dd>
-					</li>
-					<li>
+					</div>
+					<div>
 						<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user').'</dt>
 						<dd>'.strEscapeHTML($arr_client['user_name']).'</dd>
-					</li>
-					<li>
+					</div>
+					<div>
 						<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_name').'</dt>
 						<dd>'.strEscapeHTML($arr_client['name']).'</dd>
-					</li>
+					</div>
 				</dl></div>
 				
 				<hr />
@@ -294,37 +294,37 @@ class intf_api_authentication extends apis {
 			}	
 			
 			$this->html = '<div class="record"><dl>
-				<li>
+				<div>
 					<dt>'.getLabel('lbl_api').'</dt>
 					<dd>'.strEscapeHTML($arr_client['api_name']).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_user').'</dt>
 					<dd>'.strEscapeHTML($arr_client['user_name']).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_name').'</dt>
 					<dd>'.strEscapeHTML($arr_client['name']).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_request_limit').'</dt>
 					<dd>'.($arr_client['request_limit_disable'] ? getLabel('lbl_no') : getLabel('lbl_yes')).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_valid_period').'</dt>
 					<dd>'.$str_time_amount.'</dd>
-				</li>
+				</div>
 			</dl>
 			<hr />
 			<dl>
-				<li>
+				<div>
 					<dt>'.getLabel('lbl_identifier').'</dt>
 					<dd><pre>'.strEscapeHTML($arr_client['id']).'</pre></dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_passkey').' (secret)</dt>
 					<dd><pre>'.strEscapeHTML($arr_client['secret']).'</pre></dd>
-				</li>
+				</div>
 			</dl></div>';
 		}
 		
@@ -335,40 +335,40 @@ class intf_api_authentication extends apis {
 			$arr_client_user = self::getClientUser($arr_id[0], $arr_id[1]);				
 			
 			$this->html = '<div class="record"><dl>
-				<li>
+				<div>
 					<dt>'.getLabel('lbl_api').'</dt>
 					<dd>'.strEscapeHTML($arr_client_user['api_name']).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_user').'</dt>
 					<dd>'.strEscapeHTML($arr_client_user['client_user_name']).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_api_client').' - '.getLabel('lbl_name').'</dt>
 					<dd>'.strEscapeHTML($arr_client_user['client_name']).'</dd>
-				</li>
+				</div>
 			</dl>
 			<hr />
 			<dl>
-				<li>
+				<div>
 					<dt>'.getLabel('lbl_user').'</dt>
 					<dd>'.strEscapeHTML($arr_client_user['user_name']).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_date_start').'</dt>
 					<dd>'.date('d-m-Y H:i:s', strtotime($arr_client_user['date'])).'</dd>
-				</li>
-				<li>
+				</div>
+				<div>
 					<dt>'.getLabel('lbl_date_end').'</dt>
 					<dd>'.($arr_client_user['date_valid'] ? date('d-m-Y H:i:s', strtotime($arr_client_user['date_valid'])) : '∞').'</dd>
-				</li>
+				</div>
 			</dl>
 			<hr />
 			<dl>
-				<li>
+				<div>
 					<dt>'.getLabel('lbl_passkey').' (token)</dt>
 					<dd><pre>'.strEscapeHTML($arr_client_user['token']).'</pre></dd>
-				</li>
+				</div>
 			</dl></div>';
 		}
 		

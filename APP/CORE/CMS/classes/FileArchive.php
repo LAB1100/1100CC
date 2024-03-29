@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -15,9 +15,11 @@ class FileArchive {
 	
 	protected $num_count_files = 0;
 	protected $num_count_memory = 0;
+	protected $arr_paths_temporary = [];
 	protected $func_update = null;
 	
-	const NUM_OPEN_FILES = 100;
+	const MEMORY_OPEN_FILES = 100;
+	const MEMORY_THRESHOLD_COPY = 100 * BYTE_MULTIPLIER * BYTE_MULTIPLIER;
 
 	public function __construct($str_path = false, $arr_contents = []) {
 		
@@ -54,53 +56,90 @@ class FileArchive {
 		
 		$this->zip->open($this->str_path, $this->mode_zip);
 		
-		foreach ($arr_contents as $filename => $content) { // Filename in zip => file/dir/memory
+		foreach ($arr_contents as $str_filename => $content) { // Filename in zip => file/dir/memory
 			
-			if ($this->num_count_files != 0 && $this->num_count_files % static::NUM_OPEN_FILES == 0) { // Prevent OS max opened file limit
+			if ($this->num_count_files != 0 && $this->num_count_files % static::MEMORY_OPEN_FILES == 0) { // Prevent OS max opened file limit
 				
 				$this->zip->close();
+				$this->closeAddResourceFiles();
+		
 				$this->zip->open($this->str_path, $this->mode_zip);
 			}
 			
-			try {
+			if (is_resource($content)) {
 				
-				$is_file = is_file($content);
-			} catch (Exception $e) { }
+				if (fstat($content)['size'] < static::MEMORY_THRESHOLD_COPY) {
+					
+					$content = read($content);
+				} else {
+				
+					$str_path = $this->getAddResourceFile($content);
+				
+					$this->zip->addFile($str_path, $str_filename); // File
+					$this->updateStatistics();
+					
+					continue;
+				}
+			}
 			
-			if ($is_file) {
+			if (is_string($content)) {
 		
-				$this->zip->addFile($content, $filename); // File
-				$this->updateStatistics();
-			} else {
-				
-				try {
-					$is_directory = is_dir($content);
-				} catch (Exception $e) { }
-				
-				if ($is_directory) {
+				if (is_file($content)) {
+					
+					$this->zip->addFile($content, $str_filename); // File
+					$this->updateStatistics();
+				} else if (is_dir($content)) {
 					
 					$str_path = realpath($content);
 					
-					$iterator_directories = new RecursiveDirectoryIterator($str_path);
+					$iterator_directories = new RecursiveDirectoryIterator($str_path, RecursiveDirectoryIterator::SKIP_DOTS);
 					$iterator_files = new RecursiveIteratorIterator($iterator_directories);
 
 					foreach ($iterator_files as $file) {
 						
-						if ($file->isFile()) {
-							
-							$this->zip->addFile($file->getPathname(), $filename.substr($file->getPathname(), strlen($str_path))); // Directory
-							$this->updateStatistics();
+						if (!$file->isFile()) {
+							continue;
 						}
+							
+						$this->zip->addFile($file->getPathname(), $str_filename.substr($file->getPathname(), strlen($str_path))); // Directory
+						$this->updateStatistics();
 					}
 				} else {
-			
-					$this->zip->addFromString($filename, $content); // Memory
+				
+					$this->zip->addFromString($str_filename, $content); // Memory
 					$this->updateStatistics(true);
 				}
 			}
 		}
-		
+
 		$this->zip->close();
+		$this->closeAddResourceFiles();
+	}
+	
+	protected function getAddResourceFile($content) {
+		
+		$str_path = getPathTemporary();
+		$this->arr_paths_temporary[] = $str_path;
+		
+		$file = fopen($str_path, 'w+');
+		stream_copy_to_stream($content, $file);
+		rewind($content);
+		fclose($file);
+		
+		return $str_path;
+	}
+	
+	protected function closeAddResourceFiles() {
+		
+		if (!$this->arr_paths_temporary) {
+			return;
+		}
+
+		foreach ($this->arr_paths_temporary as $str_path) {
+			unlink($str_path);
+		}
+		
+		$this->arr_paths_temporary = [];
 	}
 		
 	protected function updateStatistics($is_memory = false) {
@@ -131,7 +170,7 @@ class FileArchive {
 	
 	public function iterate() {
 		
-		$this->zip->open($this->str_path, $this->mode_zip);
+		$this->zip->open($this->str_path, ZipArchive::RDONLY);
 				
 		for ($i = 0; $i < $this->zip->numFiles; $i++) {
 			
@@ -152,6 +191,57 @@ class FileArchive {
 	public function getEntry($str_entry) {
 		
 		return 'zip://'.$this->str_path.'#'.$str_entry;
+	}
+	
+	public function getEntryAsArchive($str_entry) {
+
+		$this->zip->open($this->str_path, ZipArchive::RDONLY);
+		
+		$arr_add = [];
+		
+		if (strEndsWith($str_entry, '/')) {
+			
+			for ($i = 0; $i < $this->zip->numFiles; $i++) {
+			
+				$str_entry_check = $this->zip->getNameIndex($i);
+				
+				if (!strStartsWith($str_entry_check, $str_entry)) {
+					continue;
+				}
+				
+				//$file = $this->zip->getStreamName($str_entry_check);
+				$file = $this->zip->getStream($str_entry_check);
+				
+				$arr_add[basename($str_entry_check)] = $file;
+			}
+		} else {
+		
+			//$file = $this->zip->getStreamName($str_entry);
+			$file = $this->zip->getStream($str_entry);
+			
+			if ($file) {
+				$arr_add[basename($str_entry)] = $file;
+			}
+		}
+		
+		if (!$arr_add) {
+			
+			$this->zip->close();
+			
+			return false;
+		}
+		
+		$archive_temporary = new FileArchive();
+		
+		$archive_temporary->add($arr_add);
+		
+		foreach ($arr_add as $file) {
+			fclose($file);
+		}
+		
+		$this->zip->close();
+		
+		return $archive_temporary->get();
 	}
 	
 	public function get() {

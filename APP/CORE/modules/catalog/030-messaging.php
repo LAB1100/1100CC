@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -573,6 +573,6 @@ class messaging extends base_module {
 		
 	public static function findMessaging() {
 	
-		return pages::getClosestModule('messaging', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
+		return pages::getClosestModule('messaging', SiteStartEnvironment::getDirectory('id'), SiteStartEnvironment::getPage('id'));
 	}
 }

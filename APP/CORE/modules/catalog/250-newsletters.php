@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -70,7 +70,7 @@ class newsletters extends base_module {
 			$return .= '<ul>';
 			foreach ($arr_newsletters as $value) {
 				$title = Labels::parseTextVariables($value['title']);
-				$return .= '<li>'.createDate($value['date']).'<a href="'.SiteStartVars::getModuleURL($this->mod_id).$value['id'].'/'.str2URL($title).'">'.$title.'</a></li>';
+				$return .= '<li>'.createDate($value['date']).'<a href="'.SiteStartEnvironment::getModuleURL($this->mod_id).$value['id'].'/'.str2URL($title).'">'.$title.'</a></li>';
 			}
 			$return .= '</ul>';
 		}
@@ -136,6 +136,6 @@ class newsletters extends base_module {
 	
 	public static function findMainNewsletters() {
 	
-		return pages::getClosestModule('newsletters', SiteStartVars::getDirectory('id'), SiteStartVars::getPage('id'));
+		return pages::getClosestModule('newsletters', SiteStartEnvironment::getDirectory('id'), SiteStartEnvironment::getPage('id'));
 	}
 }

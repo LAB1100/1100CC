@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -44,7 +44,7 @@ class images extends base_module {
 				}
 				
 				$return .= '<td><figure>'
-					.'<img src="/'.DIR_CSS.'images/blank.png" data-original="'.SiteStartVars::getCacheURL('img', [350, 300], '/'.DIR_CMS.DIR_UPLOAD.$arr_element['directory'].$arr_element['filename']).'" />'
+					.'<img src="/'.DIR_CSS.'images/blank.png" data-original="'.SiteStartEnvironment::getCacheURL('img', [350, 300], '/'.DIR_CMS.DIR_UPLOAD.$arr_element['directory'].$arr_element['filename']).'" />'
 					.($arr_element['description'] ? '<figurecaption>'.parseBody($arr_element['description']).'</figurecaption>' : '')
 				.'</figure></td>';
 

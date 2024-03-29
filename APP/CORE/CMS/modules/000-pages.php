@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -714,11 +714,11 @@ class pages extends base_module {
 			m.id, m.page_id, p.name AS page_name, p.directory_id
 				FROM ".DB::getTable('TABLE_PAGE_MODULES')." m
 				JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)
-			WHERE m.shortcut = '".DBFunctions::strEscape(SiteStartVars::getContext(SiteStartVars::CONTEXT_PAGE_NAME))."'
-				AND (".(SiteStartVars::getDirectory('root') ?
-					"m.shortcut_root = TRUE OR p.directory_id = ".(int)SiteStartVars::getDirectory('id').""
+			WHERE m.shortcut = '".DBFunctions::strEscape(SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME))."'
+				AND (".(SiteStartEnvironment::getDirectory('root') ?
+					"m.shortcut_root = TRUE OR p.directory_id = ".(int)SiteStartEnvironment::getDirectory('id').""
 					: 
-					"m.shortcut_root = FALSE AND p.directory_id = ".(int)SiteStartVars::getDirectory('id').""
+					"m.shortcut_root = FALSE AND p.directory_id = ".(int)SiteStartEnvironment::getDirectory('id').""
 				).")
 		");
 										
@@ -737,10 +737,10 @@ class pages extends base_module {
 	
 	public static function noPage($do_show = false) {
 		
-		$num_dir_pop = (SiteStartVars::getDirectory() && SiteStartVars::getDirectory('page_index_id') && SiteStartVars::getDirectory('page_index_id') != SiteStartVars::getPage('id') ? 0 : 1);
+		$num_dir_pop = (SiteStartEnvironment::getDirectory() && SiteStartEnvironment::getDirectory('page_index_id') && SiteStartEnvironment::getDirectory('page_index_id') != SiteStartEnvironment::getPage('id') ? 0 : 1);
 	
-		if (count(SiteStartVars::getDirectoryClosure()) <= 10) { // Prevent an possible overload
-			$str_url = SiteStartVars::getBasePath($num_dir_pop);
+		if (count(SiteStartEnvironment::getDirectoryClosure()) <= 10) { // Prevent an possible overload
+			$str_url = SiteStartEnvironment::getBasePath($num_dir_pop);
 		} else {
 			$str_url = '/';
 		}
@@ -755,7 +755,7 @@ class pages extends base_module {
 				<li><label>SORRY</label><div>'.getLabel('msg_page_not_found_suggestion').'</div></li>
 			</ul>';
 					
-			header($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
+			Response::addHeaders($_SERVER['SERVER_PROTOCOL'].' 404 Not Found');
 					
 			Response::stop(function() use($str_msg) {
 				
@@ -765,6 +765,8 @@ class pages extends base_module {
 				}, (object)['msg' => $str_msg, 'msg_type' => 'alert']
 			);
 		} else {
+			
+			Response::addHeaders($_SERVER['SERVER_PROTOCOL'].' 301 Moved Permanently');
 			
 			Response::location($str_url);
 		}

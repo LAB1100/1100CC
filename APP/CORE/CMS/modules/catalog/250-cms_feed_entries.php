@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -41,7 +41,7 @@ class cms_feed_entries extends base_module {
 						<th class="max">'.getLabel('lbl_title').'</th>
 						<th>'.getLabel('lbl_url').'</th>
 						<th>'.getLabel('lbl_content').'</th>
-						<th data-sort="asc-0">'.getLabel('lbl_order').'</th>';
+						<th data-sort="desc-0">'.getLabel('lbl_date').'</th>';
 						
 						if (count($arr_feeds) > 1) {
 							
@@ -52,7 +52,10 @@ class cms_feed_entries extends base_module {
 							$num_columns += count($arr_feeds);
 						}
 						
-						$return .= '<th class="disable-sort"></th>
+						$return .= '<th class="disable-sort menu" id="x:cms_feed_entries:feed_entry_id-0" title="'.getLabel('lbl_multi_select').'">'
+							.'<input type="button" class="data del msg del_feed_entry" value="d" title="'.getLabel('lbl_delete').'" />'
+							.'<input type="checkbox" class="multi all" value="" />'
+						.'</th>
 					</tr> 
 				</thead>
 				<tbody>
@@ -97,7 +100,7 @@ class cms_feed_entries extends base_module {
 			$arr_feed_entry = [];
 		
 			if ((int)$id) {
-													
+				
 				$arr_feed_entry = self::getFeedEntries(false, $id);
 				
 				$arr_tags = cms_general::getTagsByObject(DB::getTable('TABLE_FEED_ENTRY_TAGS'), 'feed_entry_id', $arr_feed_entry['id']);
@@ -175,16 +178,10 @@ class cms_feed_entries extends base_module {
 						<label>'.getLabel('lbl_order').'</label>
 						<div>';
 						
-							$arr_order = static::getFeedEntries(false, false, 10);
+							$arr_order = static::getFeedEntries(false, false, 0, 0, false, true);
 							
 							if ($arr_feed_entry) {
-								
-								if (($arr_feed_entry['sort'] - 1) > 5) {
-									
-									$num_offset = ($arr_feed_entry['sort'] - 1 - 5);
-									$arr_order += static::getFeedEntries(false, false, 10, $num_offset);
-								}
-								
+
 								unset($arr_order[$arr_feed_entry['id']]);
 							}
 							
@@ -196,10 +193,10 @@ class cms_feed_entries extends base_module {
 							}
 							unset($value);
 							
-							$arr_order_default = ['first' => ['id' => 'first', 'title' => getLabel('lbl_first')], 'last' => ['id' => 'last', 'title' => getLabel('lbl_last')]];
+							$arr_order_default = ['date' => ['id' => 'date', 'title' => getLabel('lbl_date')], 'first' => ['id' => 'first', 'title' => getLabel('lbl_first')]];
 							$arr_order = $arr_order_default + $arr_order;
 						
-							$this->html .= '<select name="order">'.cms_general::createDropdown($arr_order, (!$id ? 'first' : false), true, 'title').'</select>
+							$this->html .= '<select name="order">'.cms_general::createDropdown($arr_order, (!$id ? 'date' : false), (!$id ? false : true), 'title').'</select>
 						</div>
 					</li>
 				</ul></fieldset>
@@ -214,9 +211,9 @@ class cms_feed_entries extends base_module {
 					
 		if ($method == "data_feed_entries") {
 			
-			$arr_sql_columns = ['title', 'url', 'body', 'sort'];
+			$arr_sql_columns = ['title', 'url', 'body', 'date'];
 			$arr_sql_columns_search = ['title', 'url', 'body', false, DBFunctions::castAs('date', DBFunctions::CAST_TYPE_STRING)];
-			$arr_sql_columns_as = ['title', 'url', 'body', 'sort', 'date', 'fe.id'];
+			$arr_sql_columns_as = ['title', 'url', 'body', 'date', 'sort', 'fe.id'];
 			
 			$arr_feeds = cms_feeds::getFeeds();
 			$arr_urls_base = [];
@@ -269,7 +266,7 @@ class cms_feed_entries extends base_module {
 				}
 				$arr_data[] = strEscapeHTML(strip_tags($str_body));
 										
-				$arr_data[] = '<small class="identifier">'.$arr_row['sort'].'</small> '.date('d-m-Y', strtotime($arr_row['date']));
+				$arr_data[] = date('d-m-Y', strtotime($arr_row['date'])).($arr_row['sort'] ? ' <small class="identifier" title="'.getLabel('lbl_order').'">'.$arr_row['sort'].'</small>' : '');
 				
 				if (count($arr_feeds) > 1) {
 					
@@ -286,9 +283,10 @@ class cms_feed_entries extends base_module {
 						}
 					}
 				}
-				
+
 				$arr_data[] = '<input type="button" class="data edit popup edit_feed_entry" value="edit" />'
-					.'<input type="button" class="data del msg del_feed_entry" value="del" />';
+					.'<input type="button" class="data del msg del_feed_entry" value="del" />'
+					.'<input class="multi" value="'.$arr_row['id'].'" type="checkbox" />';
 				
 				$arr_datatable['output']['data'][] = $arr_data;
 			}
@@ -320,10 +318,11 @@ class cms_feed_entries extends base_module {
 			$this->msg = true;
 		}
 			
-		if ($method == "del_feed_entry" && (int)$id) {
+		if ($method == "del_feed_entry" && $id) {
 		
 			static::deleteFeedEntry($id);
 			
+			$this->refresh_table = true;
 			$this->msg = true;
 		}
 	}
@@ -383,7 +382,7 @@ class cms_feed_entries extends base_module {
 			$feed_entry_id = DB::lastInsertID();
 		}
 		
-		if ($is_new || $arr_feed_entry['order']) {
+		if ($arr_feed_entry['order'] && (!$is_new || $arr_feed_entry['order'] !== 'date')) {
 		
 			static::setFeedEntryOrder($feed_entry_id, $arr_feed_entry['order']);
 		}
@@ -417,23 +416,16 @@ class cms_feed_entries extends base_module {
 	}
 	
 	public static function setFeedEntryOrder($feed_entry_id, $order_feed_entry_id = false) {
+
+		$num_sort = 0;
 		
-		$num_position = 0;
-		
-		if ($order_feed_entry_id) {
+		if ($order_feed_entry_id && $order_feed_entry_id !== 'date') {
+			
+			$num_position = 0;
 			
 			if ($order_feed_entry_id === 'first') {
 				
 				$num_position = 0;
-			} else if ($order_feed_entry_id === 'last') {
-				
-				$res = DB::query("SELECT
-					COUNT(*)
-						FROM ".DB::getTable('TABLE_FEED_ENTRIES')."
-				");
-				
-				$num_position = $res->fetchRow();
-				$num_position = (int)$num_position[0];
 			} else {
 			
 				$res = DB::query("SELECT
@@ -445,9 +437,11 @@ class cms_feed_entries extends base_module {
 				$num_position = $res->fetchRow();
 				$num_position = (int)$num_position[0];
 			}
+			
+			$num_sort = ($num_position + 1);
 		}
 		
-		$num_sort = ($num_position + 1);
+		// When the feed entry does not want to be ordered, put it in front of the ordered list, but ignore it in the final num_row result (-1)
 		
 		$res = DB::query("
 			".DBFunctions::updateWith(
@@ -456,12 +450,17 @@ class cms_feed_entries extends base_module {
 					fe.id,
 					ROW_NUMBER() OVER (ORDER BY CASE
 						WHEN fe.id = ".(int)$feed_entry_id." THEN ".$num_sort."
-						WHEN fe.sort > ".$num_position." THEN fe.sort + 2
+						WHEN fe.sort > ".($num_sort > 0 ? $num_sort-1 : 0)." THEN fe.sort + 2
 						ELSE fe.sort
 					END ASC) AS num_row
 						FROM ".DB::getTable('TABLE_FEED_ENTRIES')." AS fe
+					WHERE fe.id = ".(int)$feed_entry_id."
+						OR fe.sort > 0
 				) AS table_order ON (table_order.id = fe.id)", 'num_row'],
-				['sort' => 'num_row']
+				['sort' => ($num_sort == 0 ? 'CASE
+					WHEN fe.id = '.(int)$feed_entry_id.' THEN 0
+					ELSE num_row - 1
+				END' : 'num_row')]
 			)."
 		");
 		
@@ -470,28 +469,40 @@ class cms_feed_entries extends base_module {
 	
 	public static function deleteFeedEntry($feed_entry_id) {
 		
+		$feed_entry_id = arrParseRecursive($feed_entry_id, TYPE_INTEGER);
+		$sql_ids = (is_array($feed_entry_id) ? 'IN ('.arr2String($feed_entry_id, ',').')' : '= '.$feed_entry_id);
+		
 		$res = DB::queryMulti("
 			DELETE FROM ".DB::getTable('TABLE_FEED_ENTRY_TAGS')."
-				WHERE feed_entry_id = ".(int)$feed_entry_id."
+				WHERE feed_entry_id ".$sql_ids."
 			;
 			DELETE FROM ".DB::getTable('TABLE_FEED_ENTRY_LINK')."
-				WHERE feed_entry_id = ".(int)$feed_entry_id."
+				WHERE feed_entry_id ".$sql_ids."
 			;
 			DELETE FROM ".DB::getTable('TABLE_FEED_ENTRIES')."
-				WHERE id = ".(int)$feed_entry_id."
+				WHERE id ".$sql_ids."
 			;
 		");
 	}
 	
-	public static function getFeedEntryPosition($feed_id, $feed_entry_id) {
+	public static function getFeedEntryPosition($feed_id, $feed_entry_id, $arr_tags = false) {
+		
+		$sql_tags = false;
+		if ($arr_tags) {
+			$sql_tags = (!is_array($arr_tags) ?  "= '".DBFunctions::strEscape($arr_tags)."'" : "IN ('".arr2String(DBFunctions::arrEscape($arr_tags), "','")."')");
+		}
 	
 		$res = DB::query("SELECT
 			num_row
 				FROM (SELECT
 					fe.id,
-					ROW_NUMBER() OVER (ORDER BY fe.sort ASC) AS num_row
+					ROW_NUMBER() OVER (ORDER BY fe.sort > 0 DESC, fe.sort ASC, fe.date DESC) AS num_row
 						FROM ".DB::getTable('TABLE_FEED_ENTRIES')." fe
 						JOIN ".DB::getTable('TABLE_FEED_ENTRY_LINK')." l ON (l.feed_entry_id = fe.id)
+						".($sql_tags ? "
+							JOIN ".DB::getTable('TABLE_FEED_ENTRY_TAGS')." ftsel ON (ftsel.feed_entry_id = fe.id)
+							JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = ftsel.tag_id AND tsel.name ".$sql_tags.")"
+						: "")."
 					WHERE l.feed_id = ".(int)$feed_id."
 				) AS feo
 			WHERE feo.id = ".(int)$feed_entry_id."
@@ -517,15 +528,20 @@ class cms_feed_entries extends base_module {
 		return $arr;
 	}
 	
-	public static function getFeedEntriesCount($feed_id = 0, $str_tag = false) {
+	public static function getFeedEntriesCount($feed_id = 0, $arr_tags = false) {
+		
+		$sql_tags = false;
+		if ($arr_tags) {
+			$sql_tags = (!is_array($arr_tags) ?  "= '".DBFunctions::strEscape($arr_tags)."'" : "IN ('".arr2String(DBFunctions::arrEscape($arr_tags), "','")."')");
+		}
 		
 		$res = DB::query("SELECT
 			COUNT(fe.id)
 				FROM ".DB::getTable('TABLE_FEED_ENTRIES')." fe
 				JOIN ".DB::getTable('TABLE_FEED_ENTRY_LINK')." l ON (l.feed_entry_id = fe.id)
-				".($str_tag ? "
+				".($sql_tags ? "
 					JOIN ".DB::getTable('TABLE_FEED_ENTRY_TAGS')." ftsel ON (ftsel.feed_entry_id = fe.id)
-					JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = ftsel.tag_id AND tsel.name = '".DBFunctions::strEscape($str_tag)."')"
+					JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = ftsel.tag_id AND tsel.name ".$sql_tags.")"
 				: "")."
 			WHERE l.feed_id = ".(int)$feed_id."
 		");
@@ -535,9 +551,14 @@ class cms_feed_entries extends base_module {
 		return $arr_row[0];
 	}
 	
-	public static function getFeedEntries($feed_id = false, $feed_entry_id = false, $num_limit = 0, $num_start = 0, $str_tag = false) {
+	public static function getFeedEntries($feed_id = false, $feed_entry_id = false, $num_limit = 0, $num_start = 0, $arr_tags = false, $do_sorted_only = false) {
 	
 		$arr = [];
+		
+		$sql_tags = false;
+		if ($arr_tags) {
+			$sql_tags = (!is_array($arr_tags) ? "= '".DBFunctions::strEscape($arr_tags)."'" : "IN ('".arr2String(DBFunctions::arrEscape($arr_tags), "','")."')");
+		}
 				
 		$res = DB::query("SELECT
 			fe.*,
@@ -546,14 +567,15 @@ class cms_feed_entries extends base_module {
 				".($feed_id ? "JOIN ".DB::getTable('TABLE_FEED_ENTRY_LINK')." l ON (l.feed_entry_id = fe.id AND l.feed_id = ".(int)$feed_id.")" : "")."
 				LEFT JOIN ".DB::getTable('TABLE_FEED_ENTRY_TAGS')." ft ON (ft.feed_entry_id = fe.id)
 				LEFT JOIN ".DB::getTable('TABLE_TAGS')." t ON (t.id = ft.tag_id)
-				".($str_tag ? "
+				".($sql_tags ? "
 					JOIN ".DB::getTable('TABLE_FEED_ENTRY_TAGS')." ftsel ON (ftsel.feed_entry_id = fe.id)
-					JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = ftsel.tag_id AND tsel.name = '".DBFunctions::strEscape($str_tag)."')"
+					JOIN ".DB::getTable('TABLE_TAGS')." tsel ON (tsel.id = ftsel.tag_id AND tsel.name ".$sql_tags.")"
 				: "")."
 			WHERE TRUE
-				".($feed_entry_id ? "AND fe.id = ".(int)$feed_entry_id : "")."
+				".($feed_entry_id ? "AND fe.id = ".(int)$feed_entry_id : '')."
+				".($do_sorted_only ? "AND fe.sort > 0" : '')."
 			GROUP BY fe.id
-			ORDER BY fe.sort ASC
+			ORDER BY fe.sort > 0 DESC, fe.sort ASC, fe.date DESC
 			".($num_start || $num_limit ? "LIMIT ".(int)$num_limit." OFFSET ".(int)$num_start : "")."
 		");
 									

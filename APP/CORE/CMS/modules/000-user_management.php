@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2023 LAB1100.
+ * Copyright (C) 2024 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -103,7 +103,8 @@ class user_management extends base_module {
 		if (!$res->getRowCount()) {
 			error(getLabel('msg_missing_information'));
 		}
-		$row = $res->fetchAssoc();
+		
+		$arr_row = $res->fetchAssoc();
 		
 		$use_confirmation = ($mail_account && is_string($mail_account)); // Send a confirmation email with a specific confirmation link
 		
@@ -132,7 +133,7 @@ class user_management extends base_module {
 			
 			if ($use_confirmation) {
 				
-				if ($arr_user['email'] && $row['email'] != $arr_user['email']) {
+				if ($arr_user['email'] && $arr_row['email'] != $arr_user['email']) {
 								
 					$key = generateRandomString(20);
 					
@@ -225,8 +226,9 @@ class user_management extends base_module {
 		if (!$res->getRowCount()) {
 			error(getLabel('msg_missing_information'), TROUBLE_ERROR, LOG_BOTH, $str_uname);
 		}
-		$row = $res->fetchAssoc();
-		$user_id = $row['id'];
+		
+		$arr_row = $res->fetchAssoc();
+		$user_id = $arr_row['id'];
 	
 		$key = generateRandomString(20);
 		
@@ -260,6 +262,7 @@ class user_management extends base_module {
 		if (!$res->getRowCount()) {
 			error(getLabel('msg_missing_information'));
 		}
+		
 		$arr_row = $res->fetchAssoc();
 		
 		switch ($type) {
@@ -490,7 +493,7 @@ class user_management extends base_module {
 			if ($arr_options['exact']) {
 				$sql_value = "(u.uname = '".DBFunctions::strEscape($value)."' OR u.name = '".DBFunctions::strEscape($value)."')";
 			} else {
-				$sql_value = "(u.uname LIKE '%".DBFunctions::strEscape($value)."%' OR u.name LIKE '%".DBFunctions::strEscape($value)."%')";
+				$sql_value = "(".DBFunctions::searchMatch('u.uname', $value)." OR ".DBFunctions::searchMatch('u.name', $value).")";
 			}
 		}
 		
@@ -587,17 +590,21 @@ class user_management extends base_module {
 		Labels::setVariable('domain', $arr['domain']);
 		Labels::setVariable('user_name', $arr['uname']);
 		
-		$arr_mod = pages::getClosestModule('login', 0, 0, $arr['group_id']);
+		$str_msg = getLabel(($is_new ? 'mail_account_new' : 'mail_account_changed'));
 		
-		if ($arr['passkey']) { // Possibility to set password
-			$str_url = pages::getModuleURL($arr_mod).'welcome/'.$id.'/'.$arr['passkey'];
-		} else {
-			$str_url = pages::getPageURL($arr_mod);
+		$arr_module = pages::getClosestModule('login', 0, 0, $arr['group_id']);
+		
+		if ($arr_module) {
+				
+			if ($arr['passkey']) { // Possibility to set password
+				$str_url = pages::getModuleURL($arr_module).'welcome/'.$id.'/'.$arr['passkey'];
+			} else {
+				$str_url = pages::getPageURL($arr_module);
+			}
+			Labels::setVariable('url', $str_url);
+			
+			$str_msg .= getLabel('mail_account_login_url'.($arr['passkey'] ? '_expire' : ''));
 		}
-		
-		Labels::setVariable('url', $str_url);
-		
-		$str_msg = getLabel(($is_new ? 'mail_account_new' : 'mail_account_changed')).getLabel('mail_account_login_url'.($arr['passkey'] ? '_expire' : ''));
 		
 		$mail = new Mail($arr['email'], $str_subject, $str_msg);
 		$mail->send();
