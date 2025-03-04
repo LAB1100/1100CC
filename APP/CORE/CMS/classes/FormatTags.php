@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -132,6 +132,24 @@ class FormatTags {
 				'/\[video=([^\s"<>]+?)\]/i',
 				'<video controls="1"><source src="\1" type="video/mp4" /></video>'
 			],
+			
+			// [embed]Embedding Code[/embed]
+			'embed' => [
+				'/\[embed(?::([0-9]*))?(?::([0-9]*))?\](.+?)\[\/embed\]/si',
+				function($arr_matches) {
+					$str_attributes = '';
+					if ($arr_matches[1]) {
+						$str_attributes .= 'width:'.(int)$arr_matches[1].'px;';
+					}
+					if ($arr_matches[2]) {
+						$str_attributes .= 'height:'.(int)$arr_matches[2].'px;';
+					}
+					if ($str_attributes) {
+						$str_attributes = ' style="'.$str_attributes.'"';
+					}
+					return '<figure class="embed"'.$str_attributes.'>'.$arr_matches[3].'</figure>';
+				}
+			],
 
 			// [color=blue/#ffcc99/rgb()]Text[/color]
 			'color' => [
@@ -182,7 +200,7 @@ class FormatTags {
 					return '<acronym title="'.strEscapeHTML($arr_matches[1]).'">'.$arr_matches[2].'</acronym>';
 				}
 			],
-			
+						
 			// [spoiler]Spoiler formatted[/spoiler]
 			'spoiler' => [
 				'/\[spoiler\](.+?)\[\/spoiler\]/si',

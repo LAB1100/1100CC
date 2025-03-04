@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -244,9 +244,9 @@ class cms_blog_post_comments extends base_module {
 					
 		if ($method == "data_blog_post_comments") {
 			
-			$arr_sql_columns = [DBFunctions::sqlImplode('b.name'), 'p.title', 'c.name', 'c.body', 'c.added', 'c.pingback'];
+			$arr_sql_columns = [DBFunctions::group2String('b.name'), 'p.title', 'c.name', 'c.body', 'c.added', 'c.pingback'];
 			$arr_sql_columns_search = ['b.name', 'p.title', 'c.name', 'c.body', DBFunctions::castAs('c.added', DBFunctions::CAST_TYPE_STRING), ''];
-			$arr_sql_columns_as = [DBFunctions::sqlImplode('b.name').' AS blog_names', 'p.title', 'c.name', 'c.body', 'c.added', 'c.pingback', 'c.id'];
+			$arr_sql_columns_as = [DBFunctions::group2String('b.name').' AS blog_names', 'p.title', 'c.name', 'c.body', 'c.added', 'c.pingback', 'c.id'];
 			
 			if ($value) {
 				if ($value['post']) {
@@ -393,14 +393,14 @@ class cms_blog_post_comments extends base_module {
 		} else {
 			
 			$res = DB::query("(
-					SELECT c.id, c.blog_post_id, c.name, c.body, c.added, 0 AS pingback, '' AS source, p.title AS blog_post_title, ".DBFunctions::sqlImplode('b.name')." AS blog_names
+					SELECT c.id, c.blog_post_id, c.name, c.body, c.added, 0 AS pingback, '' AS source, p.title AS blog_post_title, ".DBFunctions::group2String('b.name')." AS blog_names
 						FROM ".DB::getTable('TABLE_BLOG_POST_COMMENTS')." c
 						LEFT JOIN ".DB::getTable('TABLE_BLOG_POSTS')." p ON (p.id = c.blog_post_id)
 						LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_LINK')." l ON (l.blog_post_id = c.blog_post_id)
 						LEFT JOIN ".DB::getTable('TABLE_BLOGS')." b ON (b.id = l.blog_id)
 					GROUP BY c.id, p.id
 				) UNION ALL (
-					SELECT x.id, x.blog_post_id, x.title AS name, x.excerpt AS body, x.added, 1 AS pingback, x.source, p.title AS blog_post_title, ".DBFunctions::sqlImplode('b.name')." AS blog_names
+					SELECT x.id, x.blog_post_id, x.title AS name, x.excerpt AS body, x.added, 1 AS pingback, x.source, p.title AS blog_post_title, ".DBFunctions::group2String('b.name')." AS blog_names
 						FROM ".DB::getTable('TABLE_BLOG_POST_XREFS')." x
 						LEFT JOIN ".DB::getTable('TABLE_BLOG_POSTS')." p ON (p.id = x.blog_post_id)
 						LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_LINK')." l ON (l.blog_post_id = x.blog_post_id)
@@ -453,7 +453,7 @@ class cms_blog_post_comments extends base_module {
 			$res = DB::query("SELECT
 				c.*,
 				p.title AS blog_post_title,
-				".DBFunctions::sqlImplode('b.name')." AS blog_names
+				".DBFunctions::group2String('b.name')." AS blog_names
 					FROM ".DB::getTable('TABLE_BLOG_POST_COMMENTS')." c
 					LEFT JOIN ".DB::getTable('TABLE_BLOG_POSTS')." p ON (p.id = c.blog_post_id)
 					LEFT JOIN ".DB::getTable('TABLE_BLOG_POST_LINK')." l ON (l.blog_post_id = p.id)
@@ -466,7 +466,7 @@ class cms_blog_post_comments extends base_module {
 			$res = DB::query("SELECT
 				x.*,
 				p.title AS blog_post_title,
-				".DBFunctions::sqlImplode('b.name')." AS blog_names,
+				".DBFunctions::group2String('b.name')." AS blog_names,
 				x.title as name,
 				x.excerpt as body,
 				x.source

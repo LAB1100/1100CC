@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -27,9 +27,8 @@ class slider extends base_module {
 		
 		$arr_slider = cms_sliders::getSliderSet($this->arr_variables);
 
-		$return = '<button type="button" class="prev"><span class="icon">'.getIcon('prev').'</span></button>
-			<div data-speed="'.$arr_slider['slider']['speed'].'" data-timeout="'.$arr_slider['slider']['timeout'].'" data-effect="'.$arr_slider['slider']['effect'].'">';
-			
+		$return = '<div class="carousel" data-speed="'.$arr_slider['slider']['speed'].'" data-timeout="'.$arr_slider['slider']['timeout'].'" data-effect="'.$arr_slider['slider']['effect'].'">';
+					
 			foreach ($arr_slider['slides'] as $arr_slide) {
 
 				if ($arr_slide['media_internal_tag_id']) {
@@ -41,14 +40,15 @@ class slider extends base_module {
 					}
 				} else {
 					
-					$html_body = parseBody($arr_slide['body']);
-					$return .= '<div class="body">'.$html_body.'</div>';
+					$str_html_body = parseBody($arr_slide['body']);
+					
+					$return .= '<div class="body">'.$str_html_body.'</div>';
 				}
 			}
 			
-			$return .= '</div>
-			<button type="button" class="next"><span class="icon">'.getIcon('next').'</span></button>
-			<nav class="pager"></nav>';
+		$return .= '</div>
+		<nav class="album-items"><button type="button" class="prev"><span class="icon">'.getIcon('prev').'</span></button><button type="button" class="next"><span class="icon">'.getIcon('next').'</span></button></nav>
+		<nav class="pager"></nav>';
 		
 		return $return;
 	}
@@ -57,38 +57,50 @@ class slider extends base_module {
 		
 		$return = '
 			.slider { overflow: hidden; }
-			.slider > div:first-of-type { position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden; }
-			.slider > div:first-of-type > div { display: none; text-align: center; width: 100%; height: 100%: }
-			.slider > div:first-of-type > div:first-child { display: block; }
-			.slider > div:first-of-type > div > img { max-width: 100%; vertical-align: middle; }
-			.slider button.prev,
-			.slider button.next,
-			.slider .pager { display: none; }
+			.slider > div { position: relative; z-index: 1; width: 100%; height: 100%; overflow: hidden; }
+			.slider > div > div { text-align: center; width: 100%; height: 100%: }
+			.slider > div > div > img { max-width: 100%; vertical-align: middle; }
 			
-			.slider > div:first-of-type[data-effect=flow] { cursor: ew-resize; }
-			.slider > div:first-of-type[data-effect=flow] > div { display: block; position: absolute; }
+			.slider > div[data-effect=flow] { cursor: ew-resize; }
+			.slider > div[data-effect=flow] > div { display: block; position: absolute; }
 			
-			.slider > div:first-of-type[data-effect=scroll] { overflow: visible; --slider-image-one: none; --slider-image-two: none; --slider-opacity: 0; }
-			.slider > div:first-of-type[data-effect=scroll] > .flip { display: block; position: -webkit-sticky; position: sticky; z-index: 0; top: 0px; width: 100%; height: 100vh; }
-			.slider > div:first-of-type[data-effect=scroll] > .flip:before,
-			.slider > div:first-of-type[data-effect=scroll] > .flip:after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; background-position: center; background-repeat: no-repeat; background-size: cover; }
-			.slider > div:first-of-type[data-effect=scroll] > .flip:before { background-image: var(--slider-image-one); }
-			.slider > div:first-of-type[data-effect=scroll] > .flip:after { background-image: var(--slider-image-two); opacity: var(--slider-opacity); transition: opacity 1s ease-in-out; }
-			.slider > div:first-of-type[data-effect=scroll] > div:not(.flip) { display: block; position: absolute; top: 0; left: 0; right: 0; height: 100vh; z-index: 1; }
-			.slider > div:first-of-type[data-effect=scroll] > div:not(.flip) > p,
-			.slider > div:first-of-type[data-effect=scroll] > div:not(.flip) > figure > figurecaption { position: absolute; bottom: 20%; left: 20%; right: 20%; margin: 0px; padding: 2em; background-color: #ffffff; }
+			.slider > div[data-effect=scroll] { overflow: visible; --slider-image-one: none; --slider-image-two: none; --slider-opacity: 0; }
+			.slider > div[data-effect=scroll] > .flip { display: block; position: -webkit-sticky; position: sticky; z-index: 0; top: 0px; width: 100%; height: 100vh; }
+			.slider > div[data-effect=scroll] > .flip:before,
+			.slider > div[data-effect=scroll] > .flip:after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; background-position: center; background-repeat: no-repeat; background-size: cover; }
+			.slider > div[data-effect=scroll] > .flip:before { background-image: var(--slider-image-one); }
+			.slider > div[data-effect=scroll] > .flip:after { background-image: var(--slider-image-two); opacity: var(--slider-opacity); transition: opacity 1s ease-in-out; }
+			.slider > div[data-effect=scroll] > div:not(.flip) { display: block; position: absolute; top: 0; left: 0; right: 0; height: 100vh; z-index: 1; }
+			.slider > div[data-effect=scroll] > div:not(.flip) > p,
+			.slider > div[data-effect=scroll] > div:not(.flip) > figure > figurecaption { position: absolute; bottom: 20%; left: 20%; right: 20%; margin: 0px; padding: 2em; background-color: #ffffff; }
 			
-			.slider button { position: absolute; width: 2rem; top: 25px; height: 2.5rem; z-index: 2; cursor: pointer; text-align: center; color: #ffffff; background-color: #000000; margin: 0px; padding: 0px; border: 0px; border-radius: 0px; }
-			.slider button > .icon svg { height: 55%; }
-			.slider button.prev { left: 0px; border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
-			.slider button.next { right: 0px; border-radius: border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
-			.slider button:hover { color: #000000; background-color: #ffffff; }
+			.slider > nav.album-items button { z-index: 2; color: #ffffff; background-color: #000000; }
+			.slider > nav.album-items button:hover { color: #000000; background-color: #ffffff; }
+						
+			.slider > nav.pager { position: absolute; z-index: 2; bottom: 20px; left: 50%; transform: translateX(-50%); line-height: 1; font-size: 0px; text-align: center; pointer-events: none; }
+			.slider > nav.pager a { display: inline-block; height: 10px; width: 10px; margin: 0px 5px; border-radius: 50%; background-color: #000000; border: 2px solid #ffffff; text-decoration: none; pointer-events: auto; }
+			
+			.slider > nav.pager a.active,
+			.slider > nav.pager a:hover { background-color: #ffffff; }
 
-			.slider .pager { position: absolute; z-index: 2; bottom: 0px; padding: 0px 2px; height: 20px; line-height: 20px; margin-left: 50%; background-color: #000000; text-align: center; border-top-left-radius: 2px; border-top-right-radius: 2px; }
-			.slider .pager a { display: inline-block; height: 10px; width: 10px; margin: 0px 1px; border-radius: 5px; background-color: #000000; border: 1px solid #ffffff; font-size: 0px; text-decoration: none; }
+			.slider > nav.album-items button.prev,
+			.slider > nav.album-items button.next,
+			.slider > nav.pager { opacity: 0; transition: opacity 0.4s; }
 			
-			.slider .pager a.active,
-			.slider .pager a:hover { background-color: #ffffff; }
+			.slider:hover > nav.album-items button.prev,
+			.slider:hover > nav.album-items button.next,
+			.slider:hover > nav.pager { opacity: 1; }
+			
+			.slider > .carousel { display: flex; flex-direction: row; align-items: normal; --slider-speed: 1000ms; --slider-index: 0; }
+			.slider > .carousel > div { position: relative; flex: 0 0 100%; overflow: hidden; }
+			.slider > .carousel > div:not(.body) { display: flex; justify-content: center; align-items: center; }
+			
+			.slider > .carousel[data-effect=vertical] { flex-direction: column; }
+			.slider > .carousel[data-effect=vertical].no-height { height: 100vh; }
+			
+			.slider > .carousel[data-effect=fade] > div { left: calc(-100% * var(--slider-index)); opacity: 0; transition: opacity var(--slider-speed) ease-in-out; }
+			.slider > .carousel[data-effect=fade] > div.active,
+			.slider > .carousel[data-effect=fade]:not(:has( > div.active)) > div:first-child { opacity: 1; }
 		';
 		
 		return $return;
@@ -125,9 +137,9 @@ class slider extends base_module {
 			const elm_show = elm.children('div');
 			const elm_pager = elm_show.siblings('.pager');
 			
-			const elms_target = elm_show.children('div');
+			const elms_slide = elm_show.children('div');
 			
-			if (!elms_target.length) {
+			if (!elms_slide.length) {
 				return;
 			}
 			
@@ -148,9 +160,9 @@ class slider extends base_module {
 					num_percentage = num_percentage_new;
 					let num_change = (num_size_difference * (num_percentage / 100));
 					
-					for (let i = 0, len = elms_target.length; i < len; i++) {
+					for (let i = 0, len = elms_slide.length; i < len; i++) {
 					
-						const elm_slide = elms_target[i];
+						const elm_slide = elms_slide[i];
 						
 						const num_speed = elm_slide.dataset.speed;
 						let num_offset = Math.round(num_change * num_speed);
@@ -170,9 +182,9 @@ class slider extends base_module {
 
 					var num_size_stage_height = 0;
 					
-					for (let i = 0, len = elms_target.length; i < len; i++) {
+					for (let i = 0, len = elms_slide.length; i < len; i++) {
 					
-						const elm_slide = elms_target[i];
+						const elm_slide = elms_slide[i];
 						const is_odd = (i % 2);
 						
 						let num_width_percentage = elm_slide.getAttribute('width');
@@ -211,9 +223,9 @@ class slider extends base_module {
 					
 					elm_show[0].style.width = num_size_stage_width+'px';
 					
-					for (let i = 0, len = elms_target.length; i < len; i++) {
+					for (let i = 0, len = elms_slide.length; i < len; i++) {
 						
-						const elm_slide = elms_target[i];
+						const elm_slide = elms_slide[i];
 						
 						let num_height = elm_slide.offsetHeight;
 						let num_top_percentage = (elm_slide.dataset.top / 100);
@@ -388,13 +400,13 @@ class slider extends base_module {
 				var func_draw = function() {
 					
 					elm[0].style.overflow = 'visible';
-					elm_show[0].style.height = (elms_target.length * 100)+'vh';
+					elm_show[0].style.height = (elms_slide.length * 100)+'vh';
 					
 					$('<div class=\"flip\"></div>').prependTo(elm_show);
 									
-					for (let i = 0, len = elms_target.length; i < len; i++) {
+					for (let i = 0, len = elms_slide.length; i < len; i++) {
 					
-						const elm_slide = elms_target[i];
+						const elm_slide = elms_slide[i];
 						
 						const elm_image = $(elm_slide).find('img').first();
 						const str_url = elm_image[0].src;
@@ -413,9 +425,9 @@ class slider extends base_module {
 					var pos_bottom = pos.top + pos.height;
 					var pos_right = pos.left + pos.width;
 					
-					for (let i = 0, len = elms_target.length; i < len; i++) {
+					for (let i = 0, len = elms_slide.length; i < len; i++) {
 						
-						const elm_slide = elms_target[i];
+						const elm_slide = elms_slide[i];
 						
 						var pos_slider = elm_slide.getBoundingClientRect();
 						var pos_slider_bottom = (pos_slider.top + (pos_slider.height * 0.6));
@@ -464,36 +476,126 @@ class slider extends base_module {
 				func_scroll_check();
 			} else {
 			
-				const elm_target = elms_target.first();
+				const elm_prev = elm.find('nav .prev');
+				const elm_next = elm.find('nav .next');
+				
+				const num_duration = parseInt(arr_options.effect != 'none' ? arr_options.speed : 0);
+				const num_timeout = (num_duration + parseInt(arr_options.timeout));
+				
+				elm_show[0].style.setProperty('--slider-speed', num_duration+'ms');
+
+				for (let i = 0, len = elms_slide.length; i < len; i++) {
+				
+					const elm_slide = elms_slide[i];
+					elm_slide.style.setProperty('--slider-index', i);
+				
+					const elm_link = $('<a href=\"#\">'+(i + 1)+'</a>');
+					elm_pager.append(elm_link);
+					
+					elm_slide.num_slide = i;
+					elm_link[0].num_slide = i;
+				}
+				
+				const elms_link = elm_pager.children();
+				let num_slide_active = 0;
+				
+				const func_slide = function(num_slide) {
+					
+					num_slide_active = num_slide;
+					
+					if (num_slide_active < 0) {
+						num_slide_active = (elms_slide.length - 1);
+					} else if (num_slide_active >= elms_slide.length) {
+						num_slide_active = 0;
+					}
+
+					for (let i = 0, len = elms_link.length; i < len; i++) {
+						
+						if (i == num_slide_active) {
+							elms_link[i].classList.add('active');
+							elms_slide[i].classList.add('active');
+						} else {
+							elms_link[i].classList.remove('active');
+							elms_slide[i].classList.remove('active');
+						}
+					}
+					
+					if (arr_options.effect == 'fade') {
+						return;
+					}
+					
+					const elm_slide = elms_slide[num_slide_active];
+					
+					moveScroll(elm_slide, {elm_container: elm_show, duration: num_duration});
+				};
+				
+				// Interaction
+				
+				elm_pager[0].addEventListener('click', function(e) {
+					
+					if (!e.target.matches('a')) {
+						return;
+					}
+					
+					e.preventDefault();
+
+					func_slide(e.target.num_slide);
+				});
+				elm_prev[0].addEventListener('click', function(e) {
+				
+					func_slide(num_slide_active-1);
+				});
+				elm_next[0].addEventListener('click', function(e) {
+				
+					func_slide(num_slide_active+1);
+				});
+				
+				// Idle
+				
+				let timer_idle = false;
+				
+				var func_hold = function() {
+				
+					if (timer_idle) {
+						clearInterval(timer_idle);
+						timer_idle = false;
+					}
+				
+					elm[0].addEventListener('mouseout', func_idle);
+					elm[0].addEventListener('touchend', func_idle);
+				};
+				var func_idle = function() {
+					
+					if (timer_idle) {
+						clearInterval(timer_idle);
+						timer_idle = false;
+					}
+					
+					timer_idle = setInterval(function() {
+						func_slide(num_slide_active+1);
+					}, num_timeout);
+					
+					elm[0].removeEventListener('mouseout', func_idle);
+					elm[0].removeEventListener('touchend', func_idle);
+				};
+				
+				elm[0].addEventListener('mouseover', func_hold);
+				elm[0].addEventListener('touchstart', func_hold);
+				
+				const elm_target = elms_slide.first();
 				
 				new ImagesLoaded(elm_target, function() {
-		
-					elm_show.cycle({
-						fx: arr_options.effect,
-						timeout: arr_options.timeout,
-						speed: arr_options.speed,
-						pager: elm_pager,
-						activePagerClass: 'active',
-						before: function(elm_cur, elm_next) {
-							const num_height = $(elm_next).height();
-							const num_height_parent = elm_show.height();
-							if (num_height && num_height > num_height_parent) {
-								elm_show.height(num_height);
-							}
+					
+					if (arr_options.effect == 'vertical') { // Vertical flow needs a height set on the parent
+						
+						if (elm_show[0].scrollHeight <= elm[0].clientHeight) {
+							elm_show[0].classList.add('no-height');
 						}
-					});
-					elm.on('mouseenter.slider', function() {
-						$(this).children('div').cycle('pause');
-						$(this).children('.next, .prev, .pager').stop(true, true).fadeIn('fast');					
-						$(this).children('.pager').css('left', '-'+($(this).children('.pager').width()/2)+'px');	
-					}).on('mouseleave.slider', function() {
-						$(this).children('div').cycle('resume');
-						$(this).children('.next, .prev, .pager').stop(true, true).fadeOut('fast');				
-					}).on('click.slider', '.prev', function() {
-						$(this).siblings('div').cycle('prev');
-					}).on('click.slider', '.next', function() {
-						$(this).siblings('div').cycle('next');
-					});
+					}
+					
+					func_slide(num_slide_active); // Reset position
+					
+					func_idle();
 				});
 			}
 		}";

@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -107,9 +107,16 @@ function Commands() {
 				
 		return setElementData(elm, 'abort', do_abort);
 	};
-	this.isAborted = function(elm) {
+	this.isAborted = function(elm, elm_command) {
 		
-		return getElementData(elm, 'abort');
+		if (getElementData(elm, 'abort')) {
+			return true;
+		}
+		if (elm_command && getElementData(elm_command, 'abort')) {
+			return true;
+		}
+		
+		return false;
 	};
 
 	this.setMessage = function(elm, label) {
@@ -134,7 +141,7 @@ function Commands() {
 		
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
 		
-		if (COMMANDS.isAborted(elm)) {
+		if (COMMANDS.isAborted(elm, cur)) {
 			return;
 		}
 
@@ -193,8 +200,7 @@ function Commands() {
 			processData: false,
 			context: cur,
 			uploadProgress: function(event, position, total, percent) {
-				
-				//elm_popup.find('progress').removeClass('hide').attr('value', percent);
+				//elm.find('progress').removeClass('hide').attr('value', percent);
 			},
 			success: function(json) {
 				
@@ -392,7 +398,7 @@ function Commands() {
 
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
 		
-		if (COMMANDS.isAborted(elm)) {
+		if (COMMANDS.isAborted(elm, cur)) {
 			return;
 		}
 
@@ -430,7 +436,7 @@ function Commands() {
 		} else {
 			var settings = $.extend(arr_options, (elm.data('options') ? elm.data('options') : {}));
 		}
-		var msg = (COMMANDS.getMessage(cur) ? COMMANDS.getMessage(cur) : 'conf_general');
+		var msg = (COMMANDS.getMessage(cur) ? COMMANDS.getMessage(cur) : 'conf_delete');
 		
 		if (!FEEDBACK.start(cur)) {
 			return;
@@ -541,7 +547,7 @@ function Commands() {
 		
 		var elm = cur.closest('[id^="x:"], [id^="y:"]');
 		
-		if (COMMANDS.isAborted(elm)) {
+		if (COMMANDS.isAborted(elm, cur)) {
 			return;
 		}
 
@@ -598,8 +604,7 @@ function Commands() {
 				call = settings;
 			},
 			uploadProgress: function(event, position, total, percent) {
-				
-				//elm_popup.find('progress').removeClass('hide').attr('value', percent);
+				//elm.find('progress').removeClass('hide').attr('value', percent);
 			},
 			success: function(json) {
 				FEEDBACK.check(cur, json, function() {
@@ -625,7 +630,7 @@ function Commands() {
 		
 		var elm = cur.closest('[id^="f:"]');
 			
-		if (COMMANDS.isAborted(elm)) {
+		if (COMMANDS.isAborted(elm, cur)) {
 			
 			if (e) {
 				e.preventDefault();
@@ -1326,19 +1331,16 @@ function Commands() {
 			
 			target.apply(elm[0]);
 		}
-		if (arr_settings.remove && target != false) {
-			
-			elm.fadeOut(function() {
-				$(this).remove();
-			});
-		}
-		if (arr_settings.hide && target != false) {
-			
-			elm.hide();
-		}
+		
 		if (json.refresh_table) {
 
-			var elms_datatable = elm_container.find('table[id^="d:"]').filter(function () {
+			let elms_datatable = elm.closest('table[id^="d:"]');
+			
+			if (!elms_datatable.length) {
+				elms_datatable = elm_container.find('table[id^="d:"]');
+			}
+			
+			elms_datatable = elms_datatable.filter(function () {
 				return !hasElement(call.context[0], this); // Do not target tables inside method's context (e.g. popup)
 			});
 			
@@ -1360,6 +1362,17 @@ function Commands() {
 			}
 
 			LOCATION.updateLocked(elm[0]);
+		}
+		
+		if (arr_settings.remove && target != false) {
+			
+			elm.fadeOut(function() {
+				$(this).remove();
+			});
+		}
+		if (arr_settings.hide && target != false) {
+			
+			elm.hide();
 		}
 		
 		if (callback) {
@@ -1785,15 +1798,15 @@ function DataTable(elm, arr_options) {
 	
 	this.getColumnsInfo = function() {
 		
-		var arr = {};
+		const arr = {};
 		
 		elms_column = elm_header.children('th');
 		
-		for (var i = 0; i < arr_settings.num_columns; i++) {
+		for (let i = 0; i < arr_settings.num_columns; i++) {
 			
-			var elm_column = elms_column[i];
+			const elm_column = elms_column[i];
 			
-			var arr_column = {disable_sort: false, text: '', title: ''};
+			const arr_column = {disable_sort: false, text: '', title: ''};
 			
 			if (elm_column.classList.contains('disable-sort')) {
 				arr_column.disable_sort = true;
@@ -1826,9 +1839,9 @@ function DataTable(elm, arr_options) {
 				str_delay = false;
 			}
 
-			var abort = (what === 'search' ? true : false);
+			const do_abort = (what === 'search' ? true : false);
 
-			if (abort) {
+			if (do_abort) {
 				FEEDBACK.stop(cur);
 			}
 			if (!FEEDBACK.start(cur)) {
@@ -1837,13 +1850,13 @@ function DataTable(elm, arr_options) {
 			
 			// Copy settings to formalise the new state when everything has gone according to plan
 			
-			var arr_settings_new = {};
+			const arr_settings_new = {};
 		
-			for (var key in arr_settings) {
+			for (const key in arr_settings) {
 				arr_settings_new[key] = arr_settings[key];
 			}
 			
-			var num_start = 0;
+			let num_start = 0;
 
 			if (what === 'next') {
 				num_start = arr_settings.num_records_start + arr_settings.num_records_length;
@@ -1871,20 +1884,20 @@ function DataTable(elm, arr_options) {
 				
 				arr_settings_new.arr_order_column = {};
 				
-				for (var i = 0; i < arr_settings.num_columns; i++) {
+				for (let i = 0; i < arr_settings.num_columns; i++) {
 					
-					var elm_column = elms_column[i];
+					const elm_column = elms_column[i];
 					
 					arr_settings_new['sort_column_'+i] = (elm_column.classList.contains('disable-sort') ? false: true);
 					arr_settings_new['search_column_'+i] = true;
 					
-					var sort = elm_column.dataset.sort_new;
+					const str_sort = elm_column.dataset.sort_new;
 					
-					if (sort) {
+					if (str_sort) {
 						
-						var arr_sort = sort.split('-');
-						var index = arr_sort[1];
-						var direction = arr_sort[0];
+						const arr_sort = str_sort.split('-');
+						const index = arr_sort[1];
+						const direction = arr_sort[0];
 						
 						if (index == 0) {
 							
@@ -1899,7 +1912,7 @@ function DataTable(elm, arr_options) {
 				}
 			}
 			
-			var arr_request = COMMANDS.prepare(cur, $.extend({mod: getModID(cur), method: arr_command.method, id: arr_command.command_id, module: arr_command.module, value: arr_command.value}, arr_settings_new));
+			const arr_request = COMMANDS.prepare(cur, $.extend({mod: getModID(cur), method: arr_command.method, id: arr_command.command_id, module: arr_command.module, value: arr_command.value}, arr_settings_new));
 			
 			FEEDBACK.request(cur, cur, {
 				type: 'POST',
@@ -1921,9 +1934,9 @@ function DataTable(elm, arr_options) {
 
 						if (do_sort) {
 							
-							for (var i = 0; i < arr_settings.num_columns; i++) {
+							for (let i = 0; i < arr_settings.num_columns; i++) {
 					
-								var elm_column = elms_column[i];
+								const elm_column = elms_column[i];
 								
 								if (elm_column.dataset.sort_new) {
 									
@@ -1938,7 +1951,7 @@ function DataTable(elm, arr_options) {
 							do_sort = false;
 						}
 						
-						var data = json.data;
+						const data = json.data;
 						
 						if (data) {
 						
@@ -1984,26 +1997,27 @@ function DataTable(elm, arr_options) {
 	
 	var func_draw = function(data) {
 		
-		var num_records = parseInt(data.total_records);
-		var num_records_filtered = parseInt(data.total_records_filtered);
+		const num_records = parseInt(data.total_records);
+		const num_records_filtered = parseInt(data.total_records_filtered);
 		
-		var num_records_end = ((arr_settings.num_records_start + arr_settings.num_records_length) > num_records_filtered || arr_settings.num_records_length == -1 ? num_records_filtered : (arr_settings.num_records_start + arr_settings.num_records_length));
+		const num_records_end = ((arr_settings.num_records_start + arr_settings.num_records_length) > num_records_filtered || arr_settings.num_records_length == -1 ? num_records_filtered : (arr_settings.num_records_start + arr_settings.num_records_length));
 		
 		arr_settings.num_records = num_records_filtered;
 		
-		var num_pages = (arr_settings.num_records_length != -1 ? Math.ceil(num_records_filtered / arr_settings.num_records_length) : 1);
-		var num_page_active = (arr_settings.num_records_start / arr_settings.num_records_length) + 1;
+		const num_pages = (arr_settings.num_records_length != -1 ? Math.ceil(num_records_filtered / arr_settings.num_records_length) : 1);
+		const num_page_active = (arr_settings.num_records_start / arr_settings.num_records_length) + 1;
 		
-		var str_thousands = ' '; // MEDIUM MATHEMATICAL SPACE
+		const str_thousands = ' '; // MEDIUM MATHEMATICAL SPACE
+		let str_count = '';
 		
 		if (!num_records_filtered) {
 			if (num_records) {
-				var str_count = '<span>No results</span><span class="count-from"> from '+formatNumber(num_records , 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '')+'</span>';
+				str_count = '<span>No results</span><span class="count-from"> from '+formatNumber(num_records , 0, str_thousands, false)+(data.total_records_info ? data.total_records_info : '')+'</span>';
 			} else {
-				var str_count = '<span>None</span>';
+				str_count = '<span>None</span>';
 			}
 		} else {
-			var str_count = formatNumber((arr_settings.num_records_start + 1), 0, str_thousands, false)+' - '+formatNumber(num_records_end , 0, str_thousands, false);
+			str_count = formatNumber((arr_settings.num_records_start + 1), 0, str_thousands, false)+' - '+formatNumber(num_records_end , 0, str_thousands, false);
 			if (num_records == num_records_filtered) {
 				str_count = '<span>'+str_count+'</span><span class="count-of"> of <strong>'+formatNumber(num_records, 0, str_thousands, false)+'</strong>'+(data.total_records_info ? data.total_records_info : '')+'</span>';
 			} else {
@@ -2020,20 +2034,21 @@ function DataTable(elm, arr_options) {
 		const num_buttons_total = arr_options.paginate;
 		const num_buttons_middle = arr_options.paginate_middle;
 		
-		var mode_buttons = (num_pages <= num_buttons_total || num_page_active <= (num_buttons_total - 2) ? 'start' : (num_page_active > num_pages - (num_buttons_total - 2) ? 'end' : 'middle'));
-		var num_buttons_max = (mode_buttons == 'middle' ? (num_buttons_middle + 2) : num_buttons_total);
-		var num_buttons = (num_pages > num_buttons_max ? num_buttons_max : num_pages);
+		const mode_buttons = (num_pages <= num_buttons_total || num_page_active <= (num_buttons_total - 2) ? 'start' : (num_page_active > num_pages - (num_buttons_total - 2) ? 'end' : 'middle'));
+		const num_buttons_max = (mode_buttons == 'middle' ? (num_buttons_middle + 2) : num_buttons_total);
+		const num_buttons = (num_pages > num_buttons_max ? num_buttons_max : num_pages);
 		
 		elm_paginate[0].appendChild(elm_paginate_previous[0]);
 					
-		for (i = 1; i <= num_buttons; i++) {
+		for (let i = 1; i <= num_buttons; i++) {
 			
 			if (i == num_buttons_max && num_pages > num_buttons_total && mode_buttons != 'end') {
-				var elm_ellipsis = $('<span></span>');
-				elm_paginate[0].appendChild(elm_ellipsis[0]);
+				
+				const elm_ellipsis = $('<span></span>')[0];
+				elm_paginate[0].appendChild(elm_ellipsis);
 			}
 			
-			var num_page = 1;
+			let num_page = 1;
 			if (i == num_buttons_max) {
 				num_page = num_pages;
 			} else if (i == 1) {
@@ -2048,29 +2063,29 @@ function DataTable(elm, arr_options) {
 				}
 			}
 				
-			var elm_button = $('<button type="button" value="'+num_page+'"'+(num_page_active == num_page ? ' class="selected"' : '')+'>'+formatNumber(num_page, 0, str_thousands, false)+'</button>');
-			elm_paginate[0].appendChild(elm_button[0]);
+			const elm_button = $('<button type="button" value="'+num_page+'"'+(num_page_active == num_page ? ' class="selected"' : '')+'>'+formatNumber(num_page, 0, str_thousands, false)+'</button>')[0];
+			elm_paginate[0].appendChild(elm_button);
 			
 			if (i == 1 && mode_buttons != 'start') {
-				var elm_ellipsis = $('<span></span>');
-				elm_paginate[0].appendChild(elm_ellipsis[0]);
+				
+				const elm_ellipsis = $('<span></span>')[0];
+				elm_paginate[0].appendChild(elm_ellipsis);
 			}
 		}
 		
 		elm_paginate[0].appendChild(elm_paginate_next[0]);
 		
-		var elm_body_new = $('<tbody></tbody>');
+		const elm_body_new = $('<tbody></tbody>');
 		
-		var arr_data = data.data;
+		const arr_data = data.data;
 		
 		if (arr_data.length) {
 									
-			for (var i = 0, len = arr_data.length; i < len; i++) {
+			for (let i = 0, len = arr_data.length; i < len; i++) {
 
-				var arr_row = arr_data[i];
+				const arr_row = arr_data[i];
 				
-				var elm_tr = $('<tr></tr>');
-				elm_tr = elm_tr[0];
+				const elm_tr = $('<tr></tr>')[0];
 				
 				if (arr_row.id) {
 					elm_tr.setAttribute('id', arr_row.id);
@@ -2080,17 +2095,16 @@ function DataTable(elm, arr_options) {
 				}
 				if (arr_row.attr) {
 					
-					var arr_row_attr = arr_row.attr;
+					const arr_row_attr = arr_row.attr;
 					
-					for (var key in arr_row_attr) {
+					for (const key in arr_row_attr) {
 						elm_tr.setAttribute(key, arr_row_attr[key]);
 					}
 				}
 				
-				for (var j = 0, len_j = arr_settings.num_columns; j < len_j; j++) {
+				for (let j = 0, len_j = arr_settings.num_columns; j < len_j; j++) {
 					
-					var elm_td = $('<td></td>');
-					elm_td = elm_td[0];
+					const elm_td = $('<td></td>')[0];
 					
 					elm_td.innerHTML = (arr_row[j] ? arr_row[j] : '');
 
@@ -2110,7 +2124,7 @@ function DataTable(elm, arr_options) {
 			}
 		} else {
 			
-			var elm_tr = $('<tr><td colspan="'+arr_settings.num_columns+'" class="empty">No results.</td></tr>');
+			const elm_tr = $('<tr><td colspan="'+arr_settings.num_columns+'" class="empty">No results.</td></tr>');
 
 			elm_body_new[0].appendChild(elm_tr[0]);
 		}
@@ -2159,28 +2173,29 @@ function DataTable(elm, arr_options) {
 
 	this.handleColumn = function(selector, content, selector_before) {
 		
-		var elm_header = cur.children('thead').children('tr');
-		var elm_target = elm_header.children(selector);
-
+		const elm_header = cur.children('thead').children('tr');
+		const elm_target = elm_header.children(selector);
+		let num_index = null;
+		
 		if (content == false) {
 			
 			if (!elm_target.length) {
 				return;
 			}
 			
-			var index = elm_target.index();
+			num_index = elm_target.index();
 			arr_settings.num_columns--;
 			
 			elm_target.remove();
 		} else {
 			
-			var elm_content = $(content);
+			const elm_content = $(content);
 			
 			ASSETS.getIcons(cur, ['updown', 'updown-up', 'updown-down'], function(data) {
 				
 				elm_content[0].innerHTML += '<span class="icon"></span>';
 				
-				var elms_icon = elm_content[0].getElementsByClassName('icon');
+				const elms_icon = elm_content[0].getElementsByClassName('icon');
 				elms_icon[elms_icon.length-1].innerHTML = data.updown+data['updown-up']+data['updown-down'];
 				
 				resizeDataTable(cur);
@@ -2195,9 +2210,9 @@ function DataTable(elm, arr_options) {
 				elm_target.replaceWith(elm_content); // Update column header
 			} else {
 				
-				var elm_before = elm_header.children(selector_before);
+				const elm_before = elm_header.children(selector_before);
 				
-				var index = elm_before.index();
+				num_index = elm_before.index();
 				arr_settings.num_columns++;
 				
 				elm_before.before(elm_content);
@@ -2208,21 +2223,20 @@ function DataTable(elm, arr_options) {
 		
 		if (content == false || !elm_target.length) {
 				
-			var elm_trs = cur.children('tbody').children('tr');
+			const elms_tr = cur.children('tbody').children('tr');
 			
-			for (var i = 0, len = elm_trs.length; i < len; i++) {
+			for (let i = 0, len = elms_tr.length; i < len; i++) {
 			
-				var elm_tr = elm_trs[i];
+				const elm_tr = elms_tr[i];
 				
 				if (content == false) {
 					
-					elm_tr.removeChild(elm_tr.childNodes[index]);
+					elm_tr.removeChild(elm_tr.childNodes[num_index]);
 				} else {
 					
-					var elm_td = $('<td></td>');
-					elm_td = elm_td[0];
-						
-					elm_tr.insertBefore(elm_td, elm_tr.childNodes[index]);
+					const elm_td = $('<td></td>')[0];
+					
+					elm_tr.insertBefore(elm_td, elm_tr.childNodes[num_index]);
 				}
 			}
 		}
@@ -2231,18 +2245,21 @@ function DataTable(elm, arr_options) {
 		
 		// Reset sorting
 		
-		var elm_columns = elm_header.children('th');
+		if (num_index != null) {
 			
-		for (var i = index; i < arr_settings.num_columns; i++) {
+			const elm_columns = elm_header.children('th');
 			
-			var elm_column = elm_columns[i];
-			
-			if (!elm_column.dataset.sort) {
-				continue;
+			for (let i = num_index; i < arr_settings.num_columns; i++) {
+				
+				const elm_column = elm_columns[i];
+				
+				if (!elm_column.dataset.sort) {
+					continue;
+				}
+				
+				arr_settings.sort = true;
+				elm_column.dataset.sort_new = elm_column.dataset.sort;
 			}
-			
-			arr_settings.sort = true;
-			elm_column.dataset.sort_new = elm_column.dataset.sort;
 		}
 	};
 	
@@ -2261,20 +2278,18 @@ function DataTable(elm, arr_options) {
 		
 		cur[0].dataset.pause = 0;
 		
-		var match = cur.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
+		const match = cur.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
 		
+		let method = match[2];
 		if (cur.data('method')) {
-			var method = cur.data('method');
-		} else {
-			var method = match[2];
+			method = cur.data('method');
 		}
+		let module = match[1];
 		if (cur.data('module')) {
-			var module = cur.data('module');
-		} else {
-			var module = match[1];
+			module = cur.data('module');
 		}
-		var command_id = match[3];
-		var value = (COMMANDS.getData(cur) ? COMMANDS.getData(cur) : '');
+		const command_id = match[3];
+		const value = (COMMANDS.getData(cur) ? COMMANDS.getData(cur) : '');
 						
 		arr_command.method = method;
 		arr_command.module = module;

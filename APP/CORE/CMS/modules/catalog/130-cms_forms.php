@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -37,12 +37,12 @@ class cms_forms extends base_module {
 					FROM ".DB::getTable('TABLE_FORM_FIELDS')." fld
 					WHERE fld.form_id = f.id
 				) AS count_fields,
-				(SELECT ".DBFunctions::sqlImplode("CONCAT(fld.label, ' (', fld.type, ')')", '<br />')."
+				(SELECT ".DBFunctions::group2String("CONCAT(fld.label, ' (', fld.type, ')')", '<br />')."
 					FROM ".DB::getTable('TABLE_FORM_FIELDS')." fld
 					WHERE fld.form_id = f.id
 				) AS fields,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-				".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+				".DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+				".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 					FROM ".DB::getTable('TABLE_FORMS')." f					
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.var != '' AND ".DBFunctions::castAs('m.var', DBFunctions::CAST_TYPE_INTEGER)." = f.id AND m.module = 'form')
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)

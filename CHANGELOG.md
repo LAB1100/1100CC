@@ -71,4 +71,13 @@ Initial release.
 * Response: Added OUTPUT_CSV to be able to apply the dynamic processing of Response to CSV output as well. Improved location and header handling wherever requested within 1100CC.
 * Various fixes, modernisation, and overall streamlining.
 
+## VERSION 10.8
+
+* Front-end: Integrated support for shadow DOM. The function ASSETS.createDocumentHost takes an element and can dynamically include relevant CSS rules from the live sheet. Essential element traversal functions (e.g. onStage, hasElement, getElementsSelector, getElementClosestSelector) have been updated to support traversing crossing shadow DOM and regular DOM.
+* Slider Module: The front-end carousel viewer has been redeveloped with a light-weight and yet more powerful implementation. The old JavaScript library has been removed.
+* Front-end: MapScroller has been extended with support for multi-layer backgrounds. Layers have controls for opacity and dynamic attribution. Additional URL template attributes have been added to support various tile services (e.g. WMS/WMTS).
+* Mediator: Added fallback procedure (attachFallback). This complements the existing listener (attach) and locking (attachLock) procedures. Even when a process is not able to recover, a fallback method with optional parameters can be called.
+* Back-end: Added the possibility to run setup or initialisation routines, that should not be Jobs, that can be called by administrators. Setup routines that can be declared/defined by any module.
+* Various fixes, modernisation, and overall streamlining.
+
 ## VERSION x.x

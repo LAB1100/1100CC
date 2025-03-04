@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -30,13 +30,13 @@ class cms_dashboards extends base_module {
 								FROM ".DB::getTable('TABLE_DASHBOARD_WIDGETS')." dw
 							WHERE dw.dashboard_id = db.id
 						) AS widget_count,
-						(SELECT ".DBFunctions::sqlImplode("CONCAT(wm.module, ' (', dw.method, ')')", '<br />')."
+						(SELECT ".DBFunctions::group2String("CONCAT(wm.module, ' (', dw.method, ')')", '<br />')."
 								FROM ".DB::getTable('TABLE_DASHBOARD_WIDGETS')." dw
 								LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." wm ON (wm.id = dw.module_id)
 							WHERE dw.dashboard_id = db.id
 						) AS widgets,
-						".DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-						".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+						".DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+						".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 					FROM ".DB::getTable('TABLE_DASHBOARDS')." db
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (".DBFunctions::castAs('m.var', DBFunctions::CAST_TYPE_INTEGER)." = db.id AND m.module = 'dashboard')
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)

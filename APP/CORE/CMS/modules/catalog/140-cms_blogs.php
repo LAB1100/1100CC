@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -29,13 +29,13 @@ class cms_blogs extends base_module {
 					WHERE bl.blog_id = b.id
 				) AS blog_post_count,
 				(SELECT
-					".DBFunctions::sqlImplode('bp.title', '<br />', 'ORDER BY bp.date DESC')."
+					".DBFunctions::group2String('bp.title', '<br />', 'ORDER BY bp.date DESC')."
 						FROM ".DB::getTable('TABLE_BLOG_POST_LINK')." bl
 						LEFT JOIN ".DB::getTable('TABLE_BLOG_POSTS')." bp ON (bp.id = bl.blog_post_id)
 					WHERE bl.blog_id = b.id
 				) AS blog_posts,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-				".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+				".DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+				".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 					FROM ".DB::getTable('TABLE_BLOGS')." b
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.var LIKE CONCAT('%\"id\":\"', b.id, '\"%') AND m.module = 'blog')
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)

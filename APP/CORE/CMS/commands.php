@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -59,9 +59,16 @@
 		}
 
 		if (!empty($arr_command['module'])) {
-
-			$class = new $arr_command['module'];
+			
+			$module = $arr_command['module'];
 			$method = $arr_command['method'];
+			$is_valid = (is_string($module) && is_string($method));
+			
+			if (!$is_valid || str2Name($module.$method, '-_') != $module.$method) {
+				error('Request targets an invalid module or method.', TROUBLE_INVALID_REQUEST, LOG_CLIENT);
+			}
+
+			$class = new $module;
 			
 			if ($method) {
 				

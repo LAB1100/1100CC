@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -74,7 +74,7 @@ class ExchangePackage {
 		
 		if ($arr['sql']) {
 			
-			$this->addSql($arr['sql']);
+			$this->addSQL($arr['sql']);
 			
 			$str_sql = implode('-', array_keys($arr['sql']['database_tables'])).'-'.(int)$arr['sql']['target_id'];
 			
@@ -98,7 +98,7 @@ class ExchangePackage {
 		}
 	}
 	
-	public function addSql($arr_sql) {
+	public function addSQL($arr_sql) {
 		
 		$arr_sql_database_tables = ($arr_sql['database_tables'] ?: []);
 		$sql_target_id = $arr_sql['target_id'];
@@ -394,7 +394,7 @@ class ExchangePackage {
 				
 				$database = $arr_entry['segments'][0];
 				
-				$this->uploadSql($str_path_zip, $database);
+				$this->uploadSQL($str_path_zip, $database);
 			} else if ($str_target == 'files') {
 				
 				$str_path_file = arr2String($arr_entry['segments'], '/');
@@ -453,7 +453,7 @@ class ExchangePackage {
 		}
 	}
 	
-	protected function uploadSql($str_resource, $database) {
+	protected function uploadSQL($str_resource, $database) {
 		
 		DB::setDatabase($database);
 		
@@ -494,7 +494,6 @@ class ExchangePackage {
 		}
 		
 		if ($sql) {
-			
 			DB::queryMulti($sql);
 		}
 		

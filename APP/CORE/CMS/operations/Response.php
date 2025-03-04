@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -139,7 +139,7 @@ class Response {
 			} else {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
-					header('Content-Type: '.(bitHasMode(self::$format, self::RENDER_LINKED_DATA) ? 'application/ld+json' : 'application/json').';charset=utf-8');
+					header('Content-Type: '.self::getFormatContentType().';charset=utf-8');
 				}
 			}
 		}
@@ -230,7 +230,7 @@ class Response {
 
 			echo $str;
 		} else {
-							
+			
 			if (is_callable($dynamic)) {
 				$dynamic = $dynamic();
 			}
@@ -278,7 +278,7 @@ class Response {
 			} else {
 				
 				if (!self::$buffer_sent && !self::$stream_sent) {
-					header('Content-Type: '.(bitHasMode(self::$format, self::RENDER_LINKED_DATA) ? 'application/ld+json' : 'application/json').';charset=utf-8');
+					header('Content-Type: '.self::getFormatContentType().';charset=utf-8');
 				}
 				
 				if (bitHasMode(self::$format, self::OUTPUT_JSONP) && !empty($_REQUEST['callback'])) {
@@ -323,7 +323,7 @@ class Response {
 				header('Content-Type: text/plain;charset=utf-8');
 			} else {
 				
-				header('Content-Type: '.(bitHasMode(self::$format, self::RENDER_LINKED_DATA) ? 'application/ld+json' : 'application/json').';charset=utf-8');
+				header('Content-Type: '.self::getFormatContentType().';charset=utf-8');
 			}
 			
 			self::$buffer_sent = true;
@@ -404,6 +404,30 @@ class Response {
 	public static function getFormatSettings() {
 		
 		return self::$format_settings;
+	}
+	public static function getFormatContentType() {
+		
+		$str_header = '';
+		
+		if (self::$format & self::OUTPUT_JSON) {
+			if (self::$format & self::RENDER_LINKED_DATA) {
+				$str_header = 'application/ld+json';
+			} else {
+				$str_header = 'application/json';
+			}
+		} else if (self::$format & self::OUTPUT_XML) {
+			if (self::$format & self::RENDER_HTML) {
+				$str_header = 'text/html';
+			} else {
+				$str_header = 'text/xml';
+			}
+		} else if (self::$format & self::OUTPUT_TEXT) {
+			$str_header = 'text/plain';
+		} else if (self::$format & self::OUTPUT_CSV) {
+			$str_header = 'text/csv';
+		}
+		
+		return $str_header;
 	}
 	
 	public static function holdFormat($do_hold = false) { // Quick store and release of format
@@ -826,6 +850,54 @@ class Response {
 		return $value;
 	}
 	
+	public static function extractParse(&$value) { // Remove Parse tags from value
+		
+		if (!is_array($value)) {
+			
+			if (!is_string($value) || !strStartsWith($value, '[PARSE')) {
+				return false;
+			}
+			
+			preg_match('/^(\[PARSE\+?\]\[\d+\])(.*)(\[-PARSE\+?\])$/', $value, $arr_match);
+			
+			$value = $arr_match[2];
+			
+			return ['open' => $arr_match[1], 'close' => $arr_match[3]];
+		}
+		
+		$arr_parse = [];
+		
+		foreach ($value as $key => &$str) {
+			
+			if (!is_string($str) || !strStartsWith($str, '[PARSE')) {
+				continue;
+			}
+			
+			preg_match('/^(\[PARSE\+?\]\[\d+\])(.*)(\[-PARSE\+?\])$/', $str, $arr_match);
+			
+			$str = $arr_match[2];
+			
+			$arr_parse[$key] = ['open' => $arr_match[1], 'close' => $arr_match[3]];
+		}
+		
+		return ($arr_parse === [] ? false : $arr_parse);
+	}
+	
+	public static function restoreParse(&$value, $arr_parse) { // Restore Parse tags to value
+		
+		if (isset($arr_parse['open'])) {
+			
+			$value = $arr_parse['open'].$value.$arr_parse['close'];
+			
+			return;
+		}
+		
+		foreach ($arr_parse as $key => $arr_parse_value) {
+			
+			$value[$key] = $arr_parse_value['open'].$value[$key].$arr_parse_value['close'];
+		}
+	}
+
 	public static function addHeaders($arr_headers) {
 		
 		if (is_array($arr_headers)) {

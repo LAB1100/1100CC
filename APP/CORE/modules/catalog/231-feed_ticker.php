@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -82,12 +82,19 @@ class feed_ticker extends base_module {
 			$str_html_entries .= feed::createFeedEntryPreview($arr_feed_entry, $arr_link, $arr_options);
 		}
 		
-		Labels::setVariable('feed_name', $str_feed_name);
-			
-		$str_html = '<h1>'.strEscapeHTML($str_feed_name).'</h1>'
+		$arr_labels = [
+			'name' => $str_feed_name,
+			'more' => getLabel('lbl_feed_more')
+		];
+		
+		Settings::get('hook_feed_labels', false, [$this->arr_mod, &$arr_labels]);
+
+		Labels::setVariable('feed_name', $arr_labels['name']);
+
+		$str_html = '<h1>'.strEscapeHTML($arr_labels['name']).'</h1>'
 		.'<div>'
 			.$str_html_entries
-			.'<a class="more" href="'.$str_url_base.'">'.getLabel('lbl_feed_more').'</a>'
+			.'<a class="more" href="'.$str_url_base.'">'.$arr_labels['more'].'</a>'
 		.'</div>';
 				
 		return $str_html;

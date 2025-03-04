@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -66,13 +66,13 @@ class directories extends base_module {
 
 		$res = DB::query("SELECT i.*,
 			MAX(a.path_length) AS path_length,
-			".DBFunctions::sqlImplode('n.name', '/', 'ORDER BY a.path_length DESC')." AS path,
-			".DBFunctions::sqlImplode(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group
+			".DBFunctions::group2String('n.name', '/', 'ORDER BY a.path_length DESC')." AS path,
+			".DBFunctions::group2String(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group
 				FROM ".DB::getTable('TABLE_DIRECTORIES')." i
 				JOIN ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." a ON (a.descendant_id = i.id)
 				JOIN ".DB::getTable('TABLE_DIRECTORIES')." n ON (n.id = a.ancestor_id)
 			GROUP BY i.id
-			HAVING ".DBFunctions::sqlImplode('n.name', '/', 'ORDER BY a.path_length DESC')." = '".DBFunctions::strEscape(implode('/', $path))."'
+			HAVING ".DBFunctions::group2String('n.name', '/', 'ORDER BY a.path_length DESC')." = '".DBFunctions::strEscape(implode('/', $path))."'
 		");
 		
 		if (!$res->getRowCount()) {
@@ -97,8 +97,8 @@ class directories extends base_module {
 			
 			$res = DB::query("SELECT i.*,
 				MAX(a.path_length) AS path_length,
-				".DBFunctions::sqlImplode('n.name', ' / ', 'ORDER BY a.path_length DESC')." AS path,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group
+				".DBFunctions::group2String('n.name', ' / ', 'ORDER BY a.path_length DESC')." AS path,
+				".DBFunctions::group2String(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group
 					FROM ".DB::getTable('TABLE_DIRECTORIES')." i
 					JOIN ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." a ON (a.descendant_id = i.id)
 					JOIN ".DB::getTable('TABLE_DIRECTORIES')." n ON (n.id = a.ancestor_id)
@@ -120,9 +120,9 @@ class directories extends base_module {
 			)");
 			
 			$res = DB::query("SELECT i.*, d.path_length,
-				".DBFunctions::sqlImplode('n.name', ' / ', 'ORDER BY a.path_length DESC')." AS path,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('s.sort', 'CHAR(3)'), ' / ', 'ORDER BY a.path_length DESC, s.sort')." AS sorted
+				".DBFunctions::group2String('n.name', ' / ', 'ORDER BY a.path_length DESC')." AS path,
+				".DBFunctions::group2String(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group,
+				".DBFunctions::group2String(DBFunctions::castAs('s.sort', 'CHAR(3)'), ' / ', 'ORDER BY a.path_length DESC, s.sort')." AS sorted
 					FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." d
 					JOIN ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." a ON (
 						a.descendant_id = d.descendant_id
@@ -156,8 +156,8 @@ class directories extends base_module {
 	public static function getDirectoriesInRange($directory_id = 0) {
 
 		$res = DB::query("SELECT i.*, d.path_length,
-			".DBFunctions::sqlImplode('n.name', ' / ', 'ORDER BY a.path_length DESC')." AS path,
-			".DBFunctions::sqlImplode(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group
+			".DBFunctions::group2String('n.name', ' / ', 'ORDER BY a.path_length DESC')." AS path,
+			".DBFunctions::group2String(DBFunctions::castAs('n.user_group_id', DBFunctions::CAST_TYPE_STRING), '/', 'ORDER BY a.path_length DESC')." AS user_group
 				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." d
 				JOIN ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." a ON (a.descendant_id = d.descendant_id)
 				JOIN ".DB::getTable('TABLE_DIRECTORIES')." i on (i.id = a.descendant_id)

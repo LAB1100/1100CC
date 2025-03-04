@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -411,7 +411,7 @@ class intf_user_management extends user_management {
 			foreach ($arr_columns as $arr_column) {
 				
 				if ($arr_column['MULTI_SOURCE']) {
-					$arr_sql_columns_as[] = DBFunctions::sqlImplode("DISTINCT ".$arr_column['TABLE_NAME'].".\"".$arr_column['COLUMN_NAME']."\"")." AS ".$arr_column['VIRTUAL_NAME'];
+					$arr_sql_columns_as[] = DBFunctions::group2String("DISTINCT ".$arr_column['TABLE_NAME'].".\"".$arr_column['COLUMN_NAME']."\"")." AS ".$arr_column['VIRTUAL_NAME'];
 				} else {
 					$arr_sql_columns_as[] = $arr_column['TABLE_NAME'].".\"".$arr_column['COLUMN_NAME']."\"";
 				}
@@ -425,17 +425,22 @@ class intf_user_management extends user_management {
 			$sql_table = DB::getTable('TABLE_USERS');
 			
 			$sql_index = $sql_table.'.id';
+			$sql_index_body = $sql_index;
 			
 			$arr_sql_columns_as[] = $sql_table.'.id';
 						
 			foreach ($arr_tables as $key => $arr_table) {
 				
 				$sql_table .= " LEFT JOIN ".$key." ON (".$key.".".$arr_table['to_column']." = ".$arr_table['from_table'].".".$arr_table['from_column'].") ";
+				
+				if (!$arr_table['multi_source']) { // Needed for grouping
+					$sql_index_body .= ', '.$key.'.'.$arr_table['to_column'];
+				}
 			}
 			
 			$sql_where = "group_id = ".(int)$id."";
 								 
-			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', '', $sql_where);
+			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', $sql_index_body, $sql_where);
 			
 			$num_columns = count($arr_sql_columns);
 			

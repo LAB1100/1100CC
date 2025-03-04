@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -166,12 +166,13 @@
 					$arr_api_client_user = HomeLogin::API($arr_method_token[1]);
 					
 					if (!$arr_api_client_user['client_request_limit_disable']) {
-				
 						Log::logRequest($str_request_identifier);
 					}
 				} else {
 					
-					error(Labels::getSystemLabel('msg_missing_information').' Invalid authentication method.', TROUBLE_INVALID_REQUEST);
+					error(Labels::getSystemLabel('msg_missing_information').' Invalid authentication method.', TROUBLE_INVALID_REQUEST,
+						(STATE == STATE_DEVELOPMENT || getLabel('show_system_errors', 'D', true) ? LOG_BOTH : LOG_CLIENT)
+					);
 				}
 			} catch (Exception $e) {
 				
@@ -314,9 +315,10 @@
 		// Page
 		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.c') {
 			
-			$arr_page_mod = explode('-', ($_POST['mod'] ?? $_POST['multi'][0]['mod'] ?? ''));
+			$arr_page_module = ($_POST['mod'] ?? $_POST['multi'][0]['mod'] ?? '');
+			$arr_page_module = (is_string($arr_page_module) ? explode('-', $arr_page_module) : []);
 			
-			$page_id = (int)$arr_page_mod[0];
+			$page_id = (int)$arr_page_module[0];
 			if ($page_id) {
 				$arr_page = pages::getPages($page_id);
 				if (SiteStartEnvironment::getDirectory('id') == $arr_page['directory_id']) {
@@ -324,9 +326,9 @@
 				}
 			}
 			
-			$arr_mod_xy = explode('_', $arr_page_mod[1]);
-			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_X, $arr_mod_xy[0]);
-			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_Y, $arr_mod_xy[1]);
+			$arr_module_xy = explode('_', ($arr_page_module[1] ?? ''));
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_X, $arr_module_xy[0]);
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_Y, $arr_module_xy[1]);
 
 			$_SERVER['PATH_VIRTUAL'] = SiteEndEnvironment::getLocation(true, SiteEndEnvironment::LOCATION_CANONICAL_NATIVE);
 		} else {
@@ -450,12 +452,12 @@
 									
 				$arr_images = [];
 
-				foreach ([64, 96, 128, 192, 256, 512] as $nr_size) {
+				foreach ([64, 96, 128, 192, 256, 512] as $num_size) {
 					
 					$arr_images[] = [
-						'src' => SiteStartEnvironment::getCacheURL('img', [$nr_size, $nr_size], $str_image),
+						'src' => SiteStartEnvironment::getCacheURL('img', [$num_size, $num_size], $str_image),
 						'type' => 'image/png',
-						'sizes' => $nr_size.'x'.$nr_size
+						'sizes' => $num_size.'x'.$num_size
 					];
 				}
 
@@ -594,7 +596,7 @@
 			}
 			
 			$html = '<!DOCTYPE html>'.EOL_1100CC
-			.'<html lang="en">'.EOL_1100CC
+			.'<html lang="'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE).'">'.EOL_1100CC
 				.'<head>'.EOL_1100CC
 					.'<title>'.$str_title.'</title>'
 					// Description
@@ -614,14 +616,14 @@
 					.'<meta property="og:image" content="'.$str_url_image.'" />'
 					// Theme
 					.'<meta name="theme-color" content="'.$arr_theme['theme_color'].'">'
-					.'<link rel="manifest" href="'.$str_url_manifest.'"'.(SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP) ? ' crossOrigin="use-credentials"' : '').' />'
-					.'<meta name="apple-mobile-web-app-capable" content="yes">'
+					.'<link rel="manifest" href="'.$str_url_manifest.'"'.(SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP) ? ' crossorigin="use-credentials"' : '').' />'
+					.'<meta name="mobile-web-app-capable" content="yes">'
 					.'<meta name="apple-mobile-web-app-status-bar-style" content="black">';
 					// CSS & JS
 					$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_CSS), SiteStartEnvironment::getModules());
-					$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" />';
+					$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" crossorigin="anonymous" />';
 					$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_JS), SiteStartEnvironment::getModules());
-					$html .= '<script type="text/javascript" src="/combine/js/'.$version.'"></script>';
+					$html .= '<script type="text/javascript" src="/combine/js/'.$version.'" crossorigin="anonymous"></script>';
 					// Other
 					$html .= SiteEndEnvironment::getHeadTags();
 					

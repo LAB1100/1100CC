@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -50,10 +50,12 @@ class blog_preview extends base_module {
 		
 			$arr_comments_link = blog_post_comments::findBlogPostComments();
 			$arr_blog_posts = cms_blog_posts::getBlogPosts($arr_blog_options['id'], false, $this->arr_variables['limit']);
-		
+			
+			$blog = new blog();
+			$blog->setMod($this->arr_mod, $this->mod_id);
+			
 			foreach ($arr_blog_posts as $arr_blog_post) {
-				
-				$return .= blog::createBlogPostPreview($arr_blog_post, $arr_link, $arr_comments_link, $arr_comments_link);
+				$return .= $blog->createBlogPostPreview($arr_blog_post, $arr_link, $arr_comments_link, $arr_comments_link);
 			}
 			
 			$total = cms_blog_posts::getBlogPostsCount($arr_blog_options['id']);

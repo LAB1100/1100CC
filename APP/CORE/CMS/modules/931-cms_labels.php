@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -345,14 +345,17 @@ class cms_labels extends base_module {
 				error(getLabel('msg_not_allowed'));
 			}
 			
-			if (!$_POST['csv']) {
+			$str_csv = trim($_POST['csv']);
+
+			if (!$str_csv) {
 				return;
 			}
 			
+			$str_csv = strParsePassthrough($str_csv);
 			$arr_language = cms_language::getLanguage(false, $id);
 						
 			$resource = getStreamMemory();
-			fwrite($resource, $_POST['csv']);
+			fwrite($resource, $str_csv);
 			rewind($resource);
 			
 			$arr_headers = fgetcsv($resource, 0, ',', '"', CSV_ESCAPE);
@@ -396,7 +399,6 @@ class cms_labels extends base_module {
 			}
 			
 			if ($_POST['truncate']) {
-
 				static::clearLabelList(($id == 'core' ? 'core' : 'cms'));
 			}
 			
@@ -439,7 +441,6 @@ class cms_labels extends base_module {
 							FROM ".DB::getTable('TABLE_CMS_LABELS')." i";
 							
 							foreach ($arr_language as $str_lang_code => $arr_language_settings) {
-								
 								$sql_table .= " LEFT JOIN ".DB::getTable('TABLE_CMS_LABELS')." ".$str_lang_code." ON (".$str_lang_code.".identifier = i.identifier AND ".$str_lang_code.".lang_code = '".$str_lang_code."')";
 							}
 							
@@ -467,17 +468,14 @@ class cms_labels extends base_module {
 				
 				$sql_index = 'i.identifier';
 				$sql_index_body = 'i.identifier';
+				
+				$sql_table = DB::getTable($id == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS')." i";
 
 				foreach ($arr_language as $str_lang_code => $arr_language_settings) {
 					
 					$arr_sql_columns[] = $str_lang_code.'.label';
 					
 					$sql_index_body .= ', '.$str_lang_code.'.identifier, '.$str_lang_code.'.lang_code';
-				}
-				
-				$sql_table = DB::getTable($id == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS')." i";
-				
-				foreach ($arr_language as $str_lang_code => $arr_language_settings) {
 					
 					$sql_table .= " LEFT JOIN ".DB::getTable($id == 'cms' ? 'TABLE_CMS_LABELS' : 'TABLE_CORE_LABELS')." ".$str_lang_code." ON (".$str_lang_code.".identifier = i.identifier AND ".$str_lang_code.".lang_code = '".$str_lang_code."')";
 				}
@@ -490,7 +488,6 @@ class cms_labels extends base_module {
 			while ($arr_row = $arr_datatable['result']->fetchRow()) {
 				
 				$arr_data = [];
-				
 				$arr_data['id'] = 'x:cms_labels:label_id-'.$arr_row[0];
 			
 				if ($id == 'select') {
@@ -500,12 +497,10 @@ class cms_labels extends base_module {
 				$arr_data[] = $arr_row[0];
 				
 				for ($i = 1; $i < $num_columns; $i++) {
-					
 					$arr_data[] = strEscapeHTML($arr_row[$i]);
 				}
 				
 				if (($id != 'select' && $id != 'core') || ($id == 'core' && $_SESSION['CORE'])) {
-					
 					$arr_data[] = '<input type="button" class="data edit popup edit_label_'.$id.'" value="edit" /><input type="button" class="data del msg del_label_'.$id.'" value="del" />';
 				}
 				

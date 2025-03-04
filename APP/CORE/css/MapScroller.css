@@ -1,28 +1,58 @@
 .mapscroller { position: relative; width: 100%; height: 100%; overflow: hidden; }
 
 .mapscroller > .draw { position: relative; width: 100%; height:100%; overflow: hidden; }
-.mapscroller > .draw > .background { position: absolute; width: 100%; height: 100%; background-color: #f8f8f9; }
+.mapscroller > .draw > .background { position: absolute; top: 0px; bottom: 0px; left: 0px; right: 0px; background-color: #f8f8f9; }
 .mapscroller > .draw > .background > img { position: absolute; width: 100%; height: 100%; }
 .mapscroller > .draw > .map { position: absolute; width: 100%; height: 100%; }
 .mapscroller > .draw > .map img { max-width: none !important; max-height: none !important; }
 .mapscroller > .draw > .map img,
+.mapscroller > .draw > .map image,
 .mapscroller > .draw > .map .img { position: absolute; }
 .mapscroller > .draw > .map .img { overflow: hidden; }
-.mapscroller > .draw > .map div:not(.img) { position: absolute; width: 100%; height: 100%; top: 0px; left: 0px; }
+.mapscroller > .draw > .map > div,
+.mapscroller > .draw > .map > div > div,
+.mapscroller > .draw > .map > div > svg { position: absolute; width: 100%; height: 100%; top: 0px; left: 0px; }
 .mapscroller > .draw > .paint { position: absolute; left: 0px; top: 0px; }
 .mapscroller > .draw > .paint > svg,
-.mapscroller > .draw > .paint > .canvas { width: 100%; height: 100%; position: absolute; }
+.mapscroller > .draw > .paint > canvas { width: 100%; height: 100%; position: absolute; }
 .mapscroller > .draw { cursor: grab; cursor: -webkit-grab; cursor: -moz-grab; }
 .mapscroller.moving > .draw { cursor: grabbing; cursor: -webkit-grabbing; cursor: -moz-grabbing; }
 
-.mapscroller > .controls {  }
+.mapscroller > .controls { }
+.mapscroller > .controls button,
+.mapscroller > .controls label { margin: 0px; padding: 0px; border: 0; border-radius: 0px; height: 2em; background-color: transparent; color: #000000; text-align: center; cursor: pointer; }
 
-.mapscroller > .controls > .attribution { position: absolute; bottom: 0px; right: 0px; padding: 5px 8px; line-height: 1; background: rgba(245, 245, 245, 0.75); color: #000000; font-size: 10px; white-space: nowrap; }
+.mapscroller > .controls > .attribution { position: absolute; bottom: 0px; right: 0px; }
+.mapscroller > .controls > .attribution > ul { display: flex; flex-flow: row; padding: 5px 8px; line-height: 1; background: rgba(245, 245, 245, 0.75); color: #000000; font-size: 1rem; white-space: nowrap; }
+.mapscroller > .controls > .attribution > ul > li:not(.hide) ~ li:not(.hide) { margin-left: 4px; }
+.mapscroller > .controls > .attribution > ul > li:not(.hide) ~ li:not(.hide)::before { content: "-"; margin-right: 4px; }
+.mapscroller > .controls > .attribution > ul > li > p { display: inline-block; margin : 0px; }
+.mapscroller > .controls > .attribution > ul:empty,
+.mapscroller > .controls > .attribution > ul:not(:has(> li:not(.hide))) { display: none; }
 
-.mapscroller > .controls .zoomer { position: absolute; top: 40px; left: 40px; padding: 6px; background: rgba(128, 128, 128, 0.35); }
-.mapscroller > .controls .zoomer span { display: block; width: 24px; height: 5px; background-color: #e7e7e7; background-repeat: no-repeat; background-position: center center; cursor: pointer; }
-.mapscroller > .controls .zoomer span + span { margin-top: 6px; }
-.mapscroller > .controls .zoomer span.plus { background-image: url(/css/images/zoom-in.png); height: 18px; }
-.mapscroller > .controls .zoomer span.min { background-image: url(/css/images/zoom-out.png); height: 18px; }
-.mapscroller > .controls .zoomer span:hover,
-.mapscroller > .controls .zoomer span.active { background-color: #ffffff; }
+.mapscroller > .controls > .main { position: absolute; top: 40px; left: 40px; pointer-events: none; }
+.mapscroller > .controls > .main > * { pointer-events: auto; }
+
+.mapscroller > .controls > .main .zoomer { width: fit-content; padding: 6px; background: rgba(128, 128, 128, 0.35); }
+.mapscroller > .controls > .main .zoomer > button { display: block; width: 24px; height: 5px; background-color: #e7e7e7; }
+.mapscroller > .controls > .main .zoomer > button + button { margin-top: 6px; }
+.mapscroller > .controls > .main .zoomer > button.plus { height: 18px; }
+.mapscroller > .controls > .main .zoomer > button.min { height: 18px; }
+.mapscroller > .controls > .main .zoomer > button .icon svg { width: 10px; }
+
+.mapscroller > .controls > .main .layers { width: fit-content; margin-top: 20px; pointer-events: none; }
+.mapscroller > .controls > .main .layers > div { padding: 6px; background: rgba(128, 128, 128, 0.35); vertical-align: top; display: inline-block; pointer-events: auto; }
+.mapscroller > .controls > .main .layers > div:first-child label { width: 24px; background-color: #e7e7e7; }
+.mapscroller > .controls > .main .layers > div:first-child:has(label input:not(:checked)) + div { display: none; }
+.mapscroller > .controls > .main .layers > div:first-child:has(label input:checked) + div { display: inline-block; }
+.mapscroller > .controls > .main .layers > div:first-child + div { margin-left: 6px; }
+.mapscroller > .controls > .main .layers ul { display: table; padding: 4px 10px; border-spacing: 0px 6px; background-color: #e7e7e7; font-size: 1.1rem; }
+.mapscroller > .controls > .main .layers ul > li { display: table-row; }
+.mapscroller > .controls > .main .layers ul > li > * { display: table-cell; }
+.mapscroller > .controls > .main .layers ul > li input[type=range] { width: 100px; }
+.mapscroller > .controls > .main .layers ul > li > div:first-child + div { padding-left: 10px; }
+.mapscroller > .controls > .main .layers ul > li > div:first-child + div > p { display: inline-block; margin : 0px; }
+
+.mapscroller > .controls > .main .zoomer > button:hover,
+.mapscroller > .controls > .main .zoomer > button.active,
+.mapscroller > .controls > .main .layers label:hover { background-color: #ffffff; }

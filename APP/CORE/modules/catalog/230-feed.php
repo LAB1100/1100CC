@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -211,7 +211,7 @@ class feed extends base_module {
 			
 			$arr_id = explode('_', $id);
 			$str_direction = $arr_id[0];
-			$num_position = ($value['position'] ?? $arr_id[1]);
+			$num_position = (int)($value['position'] ?? $arr_id[1]);
 			
 			$arr_feed_options = cms_feeds::getFeeds($this->arr_variables['id']);
 			$feed_id = $arr_feed_options['id'];

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -208,7 +208,6 @@ class cms_log extends base_module {
 			$arr_sql_columns_as = ['l.label', 'l.msg', 'l.date', 'CASE WHEN lu.user_class = 3 THEN ug.name WHEN lu.user_class = 1 OR lu.user_class = 2 THEN \'CMS\' ELSE \'\' END AS user', 'lu.ip', 'l.type', 'l.id'];
 
 			$sql_index = 'l.id';
-			$sql_index_body = 'l.id, lu.id, u.id, ug.id';
 			
 			$sql_table = DB::getTable('TABLE_LOG')." l
 				LEFT JOIN ".DB::getTable('TABLE_LOG_USERS')." lu ON (lu.id = l.log_user_id)
@@ -216,7 +215,7 @@ class cms_log extends base_module {
 				LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = u.group_id)
 			";
 			
-			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', $sql_index_body);
+			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index);
 			
 			while ($arr_row = $arr_datatable['result']->fetchAssoc())	{
 				

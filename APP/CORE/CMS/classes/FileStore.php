@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -21,6 +21,7 @@ class FileStore {
 		'image/jpeg' => 'jpg',
 		'image/png' => 'png',
 		'image/gif' => 'gif',
+		'image/webp' => 'webp',
 		'image/bmp' => 'bmp',
 		'image/x-icon' => 'icon',
 		'image/svg+xml' => 'svg',
@@ -31,7 +32,12 @@ class FileStore {
 		'application/javascript' => 'js',
 		'text/plain' => 'txt',
 		'text/css' => 'css',
-		'video/mp4' => 'mp4'
+		'audio/mpeg' => 'mp3',
+		'audio/ogg' => 'oga',
+		'audio/webm' => 'weba',
+		'video/mp4' => 'mp4',
+		'video/ogv' => 'ogv',
+		'video/webm' => 'webm'
 	];
 	protected static $arr_disallowed_extensions = ['php', 'ini', 'py', 'dll', 'exe', 'html', 'htm', 'sh'];
 	protected static $arr_img_extensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'webp'];
@@ -236,7 +242,7 @@ class FileStore {
 		
 		$file_info = new finfo(FILEINFO_MIME_TYPE);
 		$file_type = $file_info->file($file);
-				
+		
 		$str_extension = (static::$arr_mime_types[$file_type] ?? false);
 			
 		return $str_extension;

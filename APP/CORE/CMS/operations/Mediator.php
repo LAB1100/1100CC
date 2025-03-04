@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -19,10 +19,12 @@ class Mediator {
 	
 	protected static $shutdown = false;
 	protected static $in_cleanup = false;
+	protected static $memory = null;
 	
 	protected static $arr_events = [];
 	protected static $arr_processes = [];
 	protected static $arr_locks = [];
+	protected static $arr_fallbacks = [];
 	
 	protected static $run_module = false;
 	protected static $run_method = false;
@@ -31,7 +33,7 @@ class Mediator {
 	protected static $timeout_lock_sleep = 0.25; // Seconds
 	protected static $timeout_lock_notify = 60; // Seconds
 	
-	const LOCK_POOL_SEPARATOR = '::';
+	const LOCK_SEPARATOR = '::';
 	const LOCK_POOL_EMPTY = '::::';
 	const LOCK_POOL_NO_CODE = 'nocode';
 	
@@ -135,30 +137,30 @@ class Mediator {
 		}
 	}
 			
-	public static function setLock($identifier, $code) {
+	public static function attachLock($identifier, $code) {
 		
 		if (!$code) {
 			$code = static::LOCK_POOL_NO_CODE;
 		}
 				
-		$path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
-		$path_pool = $path.'_pool';
-		$time_self = (int)(microtime(true) * 1000); // Keep millisecond precision and as integer to preserve accuracy
+		$str_path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
+		$str_path_pool = $str_path.'_pool';
+		$num_time_self = (int)(microtime(true) * 1000); // Keep millisecond precision and as integer to preserve accuracy
 		
-		$file_pool = fopen($path_pool, 'c+');
+		$file_pool = fopen($str_path_pool, 'c+');
 		static::setFileLock($file_pool);
 		
-		list($code_initial, $time_initial, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
+		list($code_initial, $num_time_initial, $num_time_done) = explode(static::LOCK_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
 		
 		// Try to get the lock
 		
-		$file = fopen($path, 'c');
+		$file = fopen($str_path, 'c');
 		
 		if (static::setFileLock($file, false)) { // Got lock
 
 			fseek($file_pool, 0);
 			ftruncate($file_pool, 0);
-			fwrite($file_pool, $code.'::'.((int)(microtime(true) * 1000)).'::'.$time_initial);
+			fwrite($file_pool, $code.static::LOCK_SEPARATOR.((int)(microtime(true) * 1000)).static::LOCK_SEPARATOR.$num_time_initial);
 			fflush($file_pool);
 			
 			self::$arr_locks[$identifier] = $file;
@@ -183,12 +185,12 @@ class Mediator {
 			
 			if ($do_pool) { // Add to the pool, exit when the pool date is initiated later and has finished (time_done), or when we get lock
 				
-				$file_pool = fopen($path_pool, 'c+');
+				$file_pool = fopen($str_path_pool, 'c+');
 				static::setFileLock($file_pool);
 			
-				list($code_pool, $time_pool, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
+				list($code_pool, $num_time_pool, $num_time_done) = explode(static::LOCK_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
 				
-				if (!$code_pool || (int)$time_done >= $time_self) { // There has been a process initialised and finished after us.
+				if (!$code_pool || (int)$num_time_done >= $num_time_self) { // There has been a process initialised and finished after us.
 					
 					static::removeFileLock($file_pool);
 				
@@ -196,11 +198,11 @@ class Mediator {
 				}
 
 				// Try to get the lock
-				$file = fopen($path, 'c');
+				$file = fopen($str_path, 'c');
 				
 				if (static::setFileLock($file, false)) { // Got lock
 					
-					if ((int)$time_pool >= $time_self) { // There has been a process initialised and finished after us.
+					if ((int)$num_time_pool >= $num_time_self) { // There has been a process initialised and finished after us.
 						
 						static::removeFileLock($file);
 						static::removeFileLock($file_pool);
@@ -210,7 +212,7 @@ class Mediator {
 					
 					fseek($file_pool, 0);
 					ftruncate($file_pool, 0);
-					fwrite($file_pool, $code.'::'.((int)(microtime(true) * 1000)).'::'.$time_pool);
+					fwrite($file_pool, $code.static::LOCK_SEPARATOR.((int)(microtime(true) * 1000)).static::LOCK_SEPARATOR.$num_time_pool);
 					fflush($file_pool);
 					
 					self::$arr_locks[$identifier] = $file;
@@ -224,19 +226,19 @@ class Mediator {
 				static::removeFileLock($file_pool);
 			} else {
 				
-				$file_pool = fopen($path_pool, 'r');
+				$file_pool = fopen($str_path_pool, 'r');
 				static::setFileLock($file_pool);
 				
-				list($code_pool, $time_pool, $time_done) = explode(static::LOCK_POOL_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
+				list($code_pool, $num_time_pool, $num_time_done) = explode(static::LOCK_SEPARATOR, (fread($file_pool, 1024) ?: static::LOCK_POOL_EMPTY));
 			
-				if (!$code_pool || $code_pool != $code_initial || $time_pool != $time_initial) { // The initial lock has changed
+				if (!$code_pool || $code_pool != $code_initial || $num_time_pool != $num_time_initial) { // The initial lock has changed
 					
 					static::removeFileLock($file_pool);
 					
 					return false;
 				}
 				
-				$file = fopen($path, 'r');
+				$file = fopen($str_path, 'r');
 
 				if (static::setFileLock($file, false)) { // Got lock, initial lock is obviously gone
 
@@ -250,26 +252,26 @@ class Mediator {
 				static::removeFileLock($file_pool);
 			}
 			
-			$time_start = ($time_start ?? time());
-			$time_now = time();
-			$time_notify = ($time_notify ?? $time_now);
+			$num_time_start = ($num_time_start ?? time());
+			$num_time_now = time();
+			$num_time_notify = ($num_time_notify ?? $num_time_now);
 			
-			if (($time_now - $time_notify) > static::$timeout_lock_notify) {
+			if (($num_time_now - $num_time_notify) > static::$timeout_lock_notify) {
 				
 				msg('Lock status:'.EOL_1100CC
-					.'	'.$identifier.' = '.($time_now - $time_start).' seconds.'
-				, 'MEDIATOR', LOG_SYSTEM, 'Path lock: '.$path.EOL_1100CC.'Path pool: '.$path_pool);
+					.'	'.$identifier.' = '.($num_time_now - $num_time_start).' seconds.'
+				, 'MEDIATOR', LOG_SYSTEM, 'Path lock: '.$str_path.EOL_1100CC.'Path pool: '.$str_path_pool);
 				
-				$time_notify = ($time_now - (($time_now - $time_notify) % static::$timeout_lock_notify));
+				$num_time_notify = ($num_time_now - (($num_time_now - $num_time_notify) % static::$timeout_lock_notify));
 			}
 		}
 	}
 	
 	public static function checkLock($identifier) {
 		
-		$path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
+		$str_path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
 		
-		$file = fopen($path, 'c');
+		$file = fopen($str_path, 'c');
 		
 		if (static::setFileLock($file, false)) { // Got lock
 						
@@ -281,13 +283,13 @@ class Mediator {
 		return false;
 	}
 	
-	public static function unsetLock($identifier) {
+	public static function detachLock($identifier) {
 		
-		$path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
-		$path_pool = $path.'_pool';
+		$str_path = Settings::get('path_temporary').'lock_'.FileStore::cleanFilename($identifier);
+		$str_path_pool = $str_path.'_pool';
 		
 		// Clear pool file state
-		$file_pool = fopen($path_pool, 'c');
+		$file_pool = fopen($str_path_pool, 'c');
 		static::setFileLock($file_pool);
 		
 		ftruncate($file_pool, 0);
@@ -303,6 +305,84 @@ class Mediator {
 		
 		unset(self::$arr_locks[$identifier]);
 	}
+
+	public static function attachFallback($str_module, $str_method, $arr_options = []) {
+		
+		$str_path = getPathTemporary(false, false, Settings::get('path_temporary').'fallback/');
+		$num_time = (int)(microtime(true) * 1000); // Keep millisecond precision and as integer to preserve accuracy
+		
+		// Get the lock
+		
+		$file = fopen($str_path, 'w');
+		
+		if (!static::setFileLock($file, false)) { // Did not get lock, should not happen
+			return false;
+		}
+		
+		$str_options = value2JSON($arr_options);
+		
+		fwrite($file, $num_time.static::LOCK_SEPARATOR.$str_module.static::LOCK_SEPARATOR.$str_method.static::LOCK_SEPARATOR.$str_options);
+		fflush($file);
+		
+		self::$arr_fallbacks[$str_path] = $file;
+						
+		return $str_path;
+	}
+	
+	public static function removeFallback($str_path) {
+		
+		$file = self::$arr_fallbacks[$str_path];
+		
+		if (!$file) {
+			return false;
+		}
+		
+		static::removeFileLock($file);
+		unlink($str_path);
+		
+		unset(self::$arr_fallbacks[$str_path]);
+		
+		return true;
+	}
+	
+	public static function cleanFallbacks() {
+		
+		$str_directory = Settings::get('path_temporary').'fallback/';
+		
+		if (!isPath($str_directory)) {
+			return;
+		}
+				
+		$iterator_directory = new DirectoryIterator($str_directory);
+		
+		foreach ($iterator_directory as $file) {
+			
+			if (!$file->isFile()) {
+				continue;
+			}
+			
+			$str_path = $file->getPathname();
+			$file = fopen($str_path, 'r');
+		
+			if (!static::setFileLock($file, false)) { // Did not get lock, great
+				continue;
+			}
+			
+			list($num_time, $str_module, $str_method, $str_options) = explode(static::LOCK_SEPARATOR, fread($file, 2048));
+			
+			static::removeFileLock($file);
+			unlink($str_path);
+						
+			if (!method_exists($str_module, $str_method)) {
+				continue;
+			}
+			
+			$num_time = ($num_time / 1000);
+			$arr_options = JSON2Value($str_options);
+			
+			$str_module::$str_method($arr_options, $num_time);
+		}
+	}
 	
 	public static function setFileLock($file, $do_wait = true) {
 		
@@ -315,7 +395,7 @@ class Mediator {
 		fclose($file);
 	}
 	
-	public static function runAsync($module, $method, $arr_options = []) {
+	public static function runAsync($str_module, $str_method, $arr_options = []) {
 		
 		$arr_signature = [
 			SITE_NAME,
@@ -333,17 +413,17 @@ class Mediator {
 		
 		$str_signature = arr2String($arr_signature, ';');
 		
-		$process = new Process("php -q ".DIR_ROOT_CORE.DIR_CMS."index.php '".$str_signature."' '".$module."' '".$method."'".($arr_options ? ' '.escapeshellarg(value2JSON($arr_options)) : ''));
+		$process = new Process("php -q ".DIR_ROOT_CORE.DIR_CMS."index.php '".$str_signature."' '".$str_module."' '".$str_method."'".($arr_options ? ' '.escapeshellarg(value2JSON($arr_options)) : ''));
 		$process_id = $process->getPID();
 		
-		self::$arr_processes[$module][$method][$process_id] = $process_id;
+		self::$arr_processes[$str_module][$str_method][$process_id] = $process_id;
 		
 		return $process_id;
 	}
 	
-	public static function stopAsync($module, $method, $process_id = false) {
+	public static function stopAsync($str_module, $str_method, $process_id = false) {
 
-		$arr = ($process_id ? [$process_id] : (self::$arr_processes[$module][$method] ?? []));
+		$arr = ($process_id ? [$process_id] : (self::$arr_processes[$str_module][$str_method] ?? []));
 		$arr_stopped = [];
 		
 		foreach ($arr as $cur_process_id) {
@@ -357,15 +437,15 @@ class Mediator {
 		return ($process_id ? current($arr_stopped) : $arr_stopped);
 	}
 	
-	public static function runModuleMethod($module, $method, $arr_options = []) {
+	public static function runModuleMethod($str_module, $str_method, $arr_options = []) {
 		
-		self::$run_module = $module;
-		self::$run_method = $method;
+		self::$run_module = $str_module;
+		self::$run_method = $str_method;
 		self::$arr_run_options = $arr_options;
 		
 		timeLimit(false);
 			
-		$module::$method($arr_options);
+		$str_module::$str_method($arr_options);
 	}
 	
 	public static function checkState() {
@@ -390,7 +470,14 @@ class Mediator {
 		}
 	}
 	
+	public static function allocateShutdownMemory() {
+
+		static::$memory = str_repeat('*', 1024 * 1024); // 1MB
+	}
+	
 	public static function setShutdown($shutdown) {
+		
+		static::$memory = null; // Release shutdown/cleanup memory
 		
 		self::$shutdown = $shutdown;
 	}
@@ -399,7 +486,7 @@ class Mediator {
 		
 		return self::$shutdown;
 	}
-	
+
 	public static function setCleanup() {
 		
 		self::$in_cleanup = true;
@@ -469,6 +556,8 @@ function shutdown() {
 }
 
 register_shutdown_function('shutdown');
+
+Mediator::allocateShutdownMemory();
 
 if (function_exists('pcntl_signal')) {
 	

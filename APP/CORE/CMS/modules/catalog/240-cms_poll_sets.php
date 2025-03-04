@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -180,7 +180,7 @@ class cms_poll_sets extends base_module {
 					FROM ".DB::getTable('TABLE_POLL_SET_OPTION_VOTES')." sov
 				WHERE sov.poll_set_option_id = so.id
 			))";
-			$sql_column_options_combined = DBFunctions::sqlImplode("CONCAT(
+			$sql_column_options_combined = DBFunctions::group2String("CONCAT(
 				'<li><label>', so.label, '</label>', '<span>', (SELECT
 					COUNT(sov.poll_set_option_id)
 						FROM ".DB::getTable('TABLE_POLL_SET_OPTION_VOTES')." sov

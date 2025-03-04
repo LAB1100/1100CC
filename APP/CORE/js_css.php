@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -21,7 +21,6 @@
 		DIR_CMS.DIR_JS.'support/jquery.rangyinputs.js',
 		DIR_CMS.DIR_JS.'support/Base64.js',
 		DIR_JS.'support/jquery.gomap.custom.js',
-		DIR_JS.'support/jquery.cycle.all.js',
 		DIR_CMS.DIR_JS.'core_polyfill.js',
 		DIR_CMS.DIR_JS.'core_feedback.js',
 		DIR_CMS.DIR_JS.'core_shed.js',

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -586,13 +586,13 @@ class pages extends base_module {
 		return $module_id;
 	}
 		
-	public static function deleteNotModules($page_id, $modules) {
+	public static function deleteNotModules($page_id, $arr_modules) {
 	
-		$modules = (is_array($modules) ? $modules : [$modules]);
+		$arr_modules = (is_array($arr_modules) ? $arr_modules : [$arr_modules]);
 	
 		$res = DB::query("DELETE FROM ".DB::getTable('TABLE_PAGE_MODULES')."
 			WHERE page_id = ".(int)$page_id."
-				AND id NOT IN ('".implode("','", $modules)."')
+				AND id NOT IN ('".implode("','", $arr_modules)."')
 		");
 	}
 	
@@ -645,10 +645,9 @@ class pages extends base_module {
 			}
 			
 			return URL_BASE_HOME.ltrim(str_replace(' ', '', $arr['path']).'/', '/');
-		} else {
-			
-			return false;
 		}
+		
+		return false;
 	}
 	
 	public static function getPageURL($arr, $is_relative = false) {
@@ -662,10 +661,9 @@ class pages extends base_module {
 			}
 			
 			return (!$is_relative ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').($arr['page_name'] ?: $arr['name']).'';
-		} else {
-			
-			return false;
 		}
+		
+		return false;
 	}
 	
 	public static function getModuleURL($arr, $is_relative = false, $arr_vars_page = []) {
@@ -679,10 +677,9 @@ class pages extends base_module {
 			}
 			
 			return (!$is_relative ? URL_BASE_HOME : '/').ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['page_name'].'.p/'.($arr_vars_page ? implode('/', $arr_vars_page).'/' : '').$arr['id'].'.m/';
-		} else {
-			
-			return false;
 		}
+		
+		return false;
 	}
 	
 	public static function getShortcutURL($arr) {
@@ -698,14 +695,12 @@ class pages extends base_module {
 				}
 				
 				return URL_BASE_HOME.ltrim(str_replace(' ', '', $arr['path']).'/', '/').$arr['shortcut'].'.s/';
-			} else {
-				
-				return URL_BASE_HOME.$arr['shortcut'].'.s/';
 			}
-		} else {
-			
-			return false;
+				
+			return URL_BASE_HOME.$arr['shortcut'].'.s/';
 		}
+			
+		return false;
 	}
 		
 	public static function getShortcut() {

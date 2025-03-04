@@ -2,12 +2,14 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-abstract class DBBase {
+namespace DBBase;
+
+abstract class DB {
 	
 	const ENGINE = 1;
 	
@@ -64,7 +66,7 @@ abstract class DBBase {
 		try {
 			
 			static::newConnection();
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			
 			static::setDatabase(); // Make sure to set the database implicitly to unavailable
 			throw($e);
@@ -132,7 +134,7 @@ abstract class DBBase {
 	
 	public static function setConnectionDetails($host, $user, $password, $level = false, $database = false) {
 		
-		$password = Settings::getSafeText($password);
+		$password = \Settings::getSafeText($password);
 		
 		$level = ($level ?: static::CONNECT_HOME);
 				
@@ -217,7 +219,6 @@ abstract class DBBase {
 			foreach (static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level] as $connection_async) {
 				
 				if (static::isReady($connection_async)) {
-										
 					return $connection_async;
 				}
 			}
@@ -332,11 +333,11 @@ abstract class DBBase {
 
 	public static function error($e) {
 		
-		if (!DB::isActive()) { // Possible DB communication error
+		if (!\DB::isActive()) { // Possible DB communication error
 			
 			try {
-				DB::fixConnection();
-			} catch (Exception $ee) { }
+				\DB::fixConnection();
+			} catch (\Exception $ee) { }
 		}
 				
 		$msg = $e->getMessage();
@@ -345,7 +346,7 @@ abstract class DBBase {
 		$msg_client = static::getErrorMessage($e->getCode());
 
 		if ($msg_client) {
-			msg($msg_client, Trouble::label(TROUBLE_ERROR), LOG_CLIENT, false, Trouble::type(TROUBLE_NOTICE));
+			msg($msg_client, \Trouble::label(TROUBLE_ERROR), LOG_CLIENT, false, \Trouble::type(TROUBLE_NOTICE));
 		}
 
 		error($msg, TROUBLE_DATABASE, LOG_BOTH, $debug, $e);
@@ -357,13 +358,19 @@ abstract class DBBase {
 		
 		static::query("SET SESSION query_cache_type = 0;");
 	}
+	
+	public static function getRealNamespace() {
+		
+		$class = new \ReflectionClass('DB');
+		return $class->getNamespaceName(); // e.g. DBBase\Mysql
+	}
 }
 
-class DBTrouble extends Exception {
+abstract class DBTrouble extends \Exception {
 	
 }
 
-abstract class DBStatementBase {
+abstract class DBStatement {
 	
 	public $statement;
 	public $arr_variables;
@@ -388,16 +395,16 @@ abstract class DBStatementBase {
 
 	public static function assign($variable, $type) {
 		
-		$position = count(static::$arr_assign_variables);
+		$num_position = count(static::$arr_assign_variables);
 		
-		static::$arr_assign_variables[$variable] = [$position, $type];
+		static::$arr_assign_variables[$variable] = [$num_position, $type];
 		
 		return static::assignParameter($variable);
 	}
 	
 	public static function assignParameter($variable) {
 		
-		//$position = static::$arr_assign_variables[$variable][0];
+		//$num_position = static::$arr_assign_variables[$variable][0];
 		
 		return '?';
 	}
@@ -408,7 +415,7 @@ abstract class DBStatementBase {
 	}
 }
 
-abstract class DBResultBase {
+abstract class DBResult {
 	
 	public $result;
 	
@@ -438,7 +445,7 @@ abstract class DBResultBase {
 	abstract public function freeResult();
 }
 
-abstract class DBFunctionsBase {
+abstract class DBFunctions {
 	
 	const TABLE_OPTION_MEMORY = 1;
 	
@@ -454,17 +461,26 @@ abstract class DBFunctionsBase {
 	const CAST_TYPE_BOOLEAN = false;
 	const CAST_TYPE_BINARY = false;
 	
+	const FORMAT_STRING_HEX = 'hex';
+	const FORMAT_STRING_BASE64 = 'base64';
+	
 	const INDEX_HASH = '';
 	const INDEX_LTF = ''; // Left-to-right index (tree)
 	
+	const COLLATE_AI_CI = '';
+	const COLLATE_AS_CI = '';
+	const COLLATE_BINARY = '';
+	
 	const SQL_GROUP_SEPERATOR = '$|$'; // Use in queries
 	const SQL_VALUE_SEPERATOR = ':|:'; // Use for storage
+	const SQL_IS_LITERAL = 'LITERAL:';
+	const SQL_IS_FIELD = 'FIELD:';
 	
 	protected static $count_sql_index = 0;
 	
 	public static function specific($arr_sql, $sql_default = '') {
 		
-		$sql_select = $arr_sql[DB::ENGINE];
+		$sql_select = $arr_sql[\DB::ENGINE];
 		
 		if (!$sql_select) {
 			
@@ -496,8 +512,74 @@ abstract class DBFunctionsBase {
 	abstract public static function unescapeAs($value, $what);
 			
 	abstract public static function castAs($value, $what, $length = false);
+	
+	public static function convertTo($value, $to, $from, $format = null) {
 		
-	abstract public static function sqlImplode($expression, $separator = ', ', $clause = false);
+		switch ($to) {
+			
+			case static::TYPE_BOOLEAN:
+				$to = static::CAST_TYPE_BOOLEAN;
+				break;
+			case static::TYPE_INTEGER:
+				$to = static::CAST_TYPE_INTEGER;
+				break;
+			case static::TYPE_FLOAT:
+				$to = static::CAST_TYPE_DECIMAL;
+				break;
+			case static::TYPE_BINARY:
+				$to = static::CAST_TYPE_BINARY;
+				break;
+			default:
+				$to = static::CAST_TYPE_STRING;
+				break;
+		}
+		
+		return static::castAs($value, $to);
+	}
+		
+	public static function sqlFieldLiteral($sql, $get_type = false) {
+		
+		if (strStartsWith($sql, \DBFunctions::SQL_IS_LITERAL)) {
+			
+			$sql = substr($sql, strlen(\DBFunctions::SQL_IS_LITERAL));
+			
+			if ($get_type) {
+				return ['sql' => $sql, 'type' => \DBFunctions::SQL_IS_LITERAL];
+			}
+			
+			$sql = '\''.$sql.'\'';
+			
+			return $sql;
+		}
+		
+		if ($get_type) {
+			return ['sql' => $sql, 'type' => \DBFunctions::SQL_IS_FIELD];
+		}
+		
+		return $sql;
+	}
+	
+	public static function sqlFieldNotLiteral($sql, $get_type = false) {
+		
+		if (strStartsWith($sql, \DBFunctions::SQL_IS_FIELD)) {
+			
+			$sql = substr($sql, strlen(\DBFunctions::SQL_IS_FIELD));
+			
+			if ($get_type) {
+				return ['sql' => $sql, 'type' => \DBFunctions::SQL_IS_FIELD];
+			}
+						
+			return $sql;
+		}
+				
+		if ($get_type) {
+			return ['sql' => $sql, 'type' =>  \DBFunctions::SQL_IS_LITERAL];
+		}
+		
+		$sql = '\''.$sql.'\'';
+		
+		return $sql;
+	}
 	
 	public static function withKeys($table, $alias, $column) {
 		
@@ -591,13 +673,26 @@ abstract class DBFunctionsBase {
 	
 	abstract public static function onConflict($key, $arr_values, $sql_other = false);
 	
+	abstract public static function group2String($sql_expression, $str_separator = ', ', $sql_clause = false);
+	
+	public static function fields2String($str_separator, ...$sql_fields) {
+		
+		$str_sql_separator = ',';
+		if ($str_separator) {
+			$str_sql_separator = static::sqlFieldNotLiteral($str_separator);
+			$str_sql_separator = ','.$str_sql_separator.',';
+		}
+		
+		return 'CONCAT('.implode($str_sql_separator, $sql_fields).')';
+	}
+	
 	abstract public static function interval($amount, $unit, $field = false);
 	
 	abstract public static function timeDifference($unit, $field_start, $field_end);
 	
 	abstract public static function timeNow($do_transaction = false);
 	
-	abstract public static function regexpMatch($sql_field, $expression, $flags = false);
+	abstract public static function searchRegularExpression($sql_field, $sql_expression, $str_flags = false);
 	
 	public static function searchMatch($sql_field, $str, $do_dynamic = true, $do_array = false) {
 		
@@ -611,11 +706,11 @@ abstract class DBFunctionsBase {
 				$str = preg_replace_callback('/"((?:[^"]|"")*)"/', function($arr_match) use ($sql_field, &$arr_sql) {
 
 					$str_search = str_replace('""', '"', $arr_match[1]); // Remove escapes
-					$sql_search = ' '.static::str2Search($str_search).' ';
+					$sql_search = \DBFunctions::SQL_IS_LITERAL.' '.static::str2Search($str_search).' ';
 					
 					$sql_field_adapt = 'CONCAT(\' \', '.$sql_field.', \' \')';
 			
-					$arr_sql[$str_search] = $sql_field_adapt.' LIKE \'%'.$sql_search.'%\'';
+					$arr_sql[$str_search] = static::searchMatchSensitivity($sql_field_adapt, $sql_search);
 					
 					return '';
 				}, $str);
@@ -631,9 +726,9 @@ abstract class DBFunctionsBase {
 					continue;
 				}
 				
-				$sql_search = static::str2Search($str_search);
+				$sql_search = \DBFunctions::SQL_IS_LITERAL.static::str2Search($str_search);
 				
-				$arr_sql[$str_search] = $sql_field.' LIKE \'%'.$sql_search.'%\'';
+				$arr_sql[$str_search] = static::searchMatchSensitivity($sql_field, $sql_search);
 			}
 			
 			if ($do_array) {
@@ -645,9 +740,9 @@ abstract class DBFunctionsBase {
 			return $sql;
 		}
 		
-		$sql_search = static::str2Search($str);
+		$sql_search = \DBFunctions::SQL_IS_LITERAL.static::str2Search($str);
 		
-		$sql = $sql_field.' LIKE \'%'.$sql_search.'%\'';
+		$sql = static::searchMatchSensitivity($sql_field, $sql_search);
 		
 		if ($do_array) {
 			return [$str => $sql];
@@ -655,6 +750,8 @@ abstract class DBFunctionsBase {
 
 		return $sql;
 	}
+	
+	abstract public static function searchMatchSensitivity($sql_field, $sql_search, $mode_wildcards = MATCH_ANY, $do_case = false, $do_diacritics = false);
 	
 	public static function fieldToPosition($sql_field, $arr_values) {
 		
@@ -718,8 +815,8 @@ abstract class DBFunctionsBase {
 			
 			foreach ($arr_tables as $arr_table) {
 				
-				DB::queryMulti("
-					DROP ".(DB::ENGINE_IS_MYSQL ? 'TEMPORARY' : '')." TABLE IF EXISTS cleanup_cache;
+				\DB::queryMulti("
+					DROP ".(\DB::ENGINE_IS_MYSQL ? 'TEMPORARY' : '')." TABLE IF EXISTS cleanup_cache;
 					
 					CREATE TEMPORARY TABLE cleanup_cache (
 						status SMALLINT,
@@ -740,11 +837,11 @@ abstract class DBFunctionsBase {
 									WHERE cleanup_test.".$arr_table['test'][1]." = ".$arr_table['delete'][1]."
 								)
 						)
-						".DBFunctions::onConflict('status, id', ['status'])."
+						".\DBFunctions::onConflict('status, id', ['status'])."
 					;
 				");
 				
-				$res = DB::query("SELECT COUNT(*) FROM cleanup_cache");
+				$res = \DB::query("SELECT COUNT(*) FROM cleanup_cache");
 				$arr_row = $res->fetchRow();
 				$total = $arr_row[0];
 				
@@ -752,8 +849,8 @@ abstract class DBFunctionsBase {
 					continue;
 				}
 				
-				$stmt = DB::prepare("
-					".DBFunctions::deleteWith(
+				$stmt = \DB::prepare("
+					".\DBFunctions::deleteWith(
 						$arr_table['delete'][0], 'cleanup_delete', $arr_table['delete'][1],
 						"JOIN cleanup_cache ON (
 							cleanup_cache.id = cleanup_delete.".$arr_table['delete'][1]." 
@@ -764,11 +861,11 @@ abstract class DBFunctionsBase {
 				
 				do {
 					
-					DB::startTransaction('cleanup_tables');
+					\DB::startTransaction('cleanup_tables');
 					
 					if ($nr_limit) {
 						
-						DB::query("UPDATE cleanup_cache
+						\DB::query("UPDATE cleanup_cache
 							SET status = 1
 							WHERE status = 0
 							LIMIT ".$nr_limit
@@ -781,13 +878,13 @@ abstract class DBFunctionsBase {
 
 					if ($nr_limit) {
 						
-						DB::query("UPDATE cleanup_cache
+						\DB::query("UPDATE cleanup_cache
 							SET status = 2
 							WHERE status = 1
 						");
 					}
 					
-					DB::commitTransaction('cleanup_tables');
+					\DB::commitTransaction('cleanup_tables');
 					
 					$go = ($nr_limit && $nr_rows_affected ? true : false);
 				} while ($go);
@@ -796,7 +893,7 @@ abstract class DBFunctionsBase {
 			
 				$stmt->close();
 			}
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 				
 			$func_result();
 				
@@ -804,5 +901,13 @@ abstract class DBFunctionsBase {
 		}
 		
 		$func_result();
+	}
+}
+
+abstract class DBSetup {
+	
+	public static function init() {
+		
+		return true;
 	}
 }

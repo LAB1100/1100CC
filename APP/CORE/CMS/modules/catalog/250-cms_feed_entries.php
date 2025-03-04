@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -230,7 +230,7 @@ class cms_feed_entries extends base_module {
 			$sql_table = DB::getTable('TABLE_FEED_ENTRIES').' fe';
 
 			$sql_index = 'fe.id';
-			$sql_index_body = 'fe.id';
+			$sql_index_body = $sql_index;
 						
 			foreach ($arr_feeds as $arr_feed) {
 				
@@ -345,6 +345,7 @@ class cms_feed_entries extends base_module {
 			$str_media = arr2String(array_filter(array_unique($str_media)), DBFunctions::SQL_VALUE_SEPERATOR);
 		}
 		$str_sql_date = ($arr_feed_entry['date'] ? date('Y-m-d H:i:s', strtotime($arr_feed_entry['date'])) : false);
+		$str_body = strParsePassthrough($arr_feed_entry['body']);
 		
 		if ($feed_entry_id) {
 			
@@ -355,7 +356,7 @@ class cms_feed_entries extends base_module {
 					title = '".DBFunctions::strEscape($arr_feed_entry['title'])."',
 					url = '".DBFunctions::strEscape($str_url)."',
 					media = '".DBFunctions::strEscape($str_media)."',
-					body = '".DBFunctions::strEscape($arr_feed_entry['body'])."'
+					body = '".DBFunctions::strEscape($str_body)."'
 					".($str_sql_date ? ", date = '".$str_sql_date."'" : '')."
 						WHERE id = ".(int)$feed_entry_id.";
 			");
@@ -374,7 +375,7 @@ class cms_feed_entries extends base_module {
 					'".DBFunctions::strEscape($arr_feed_entry['title'])."',
 					'".DBFunctions::strEscape($str_url)."',
 					'".DBFunctions::strEscape($str_media)."',
-					'".DBFunctions::strEscape($arr_feed_entry['body'])."',
+					'".DBFunctions::strEscape($str_body)."',
 					".($str_sql_date ? "'".$str_sql_date."'" : 'NOW()')."
 				)
 			");
@@ -383,7 +384,6 @@ class cms_feed_entries extends base_module {
 		}
 		
 		if ($arr_feed_entry['order'] && (!$is_new || $arr_feed_entry['order'] !== 'date')) {
-		
 			static::setFeedEntryOrder($feed_entry_id, $arr_feed_entry['order']);
 		}
 		
@@ -562,7 +562,7 @@ class cms_feed_entries extends base_module {
 				
 		$res = DB::query("SELECT
 			fe.*,
-			".DBFunctions::sqlImplode('t.name', ',')." AS tags
+			".DBFunctions::group2String('t.name', ',')." AS tags
 				FROM ".DB::getTable('TABLE_FEED_ENTRIES')." fe
 				".($feed_id ? "JOIN ".DB::getTable('TABLE_FEED_ENTRY_LINK')." l ON (l.feed_entry_id = fe.id AND l.feed_id = ".(int)$feed_id.")" : "")."
 				LEFT JOIN ".DB::getTable('TABLE_FEED_ENTRY_TAGS')." ft ON (ft.feed_entry_id = fe.id)

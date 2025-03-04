@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -29,13 +29,13 @@ class cms_polls extends base_module {
 					WHERE pol.poll_id = po.id
 				) AS poll_set_count,
 				(SELECT 
-					".DBFunctions::sqlImplode('pos.label', '<br />', 'ORDER BY pos.date DESC')."
+					".DBFunctions::group2String('pos.label', '<br />', 'ORDER BY pos.date DESC')."
 						FROM ".DB::getTable('TABLE_POLL_SET_LINK')." pol
 						LEFT JOIN ".DB::getTable('TABLE_POLL_SETS')." pos ON (pos.id = pol.poll_set_id)
 					WHERE pol.poll_id = po.id
 				) AS poll_sets,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-				".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+				".DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+				".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 					FROM ".DB::getTable('TABLE_POLLS')." po
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.var != '' AND ".DBFunctions::castAs('m.var', DBFunctions::CAST_TYPE_INTEGER)." = po.id AND m.module = 'poll')
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)

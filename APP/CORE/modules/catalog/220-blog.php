@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -184,15 +184,22 @@ class blog extends base_module {
 			}
 			
 			if ($arr_posts) {
+				
+				$arr_labels = [
+					'latest' => getLabel('lbl_blog_posts_latest'),
+					'previous' => getLabel('lbl_previous'),
+					'next' => getLabel('lbl_next')
+				];
+				Settings::get('hook_blog_labels', false, [$this->arr_mod, &$arr_labels]);
 			
 				if ($blog_post_id) {
-					$str_html .= '<h1>'.getLabel('ttl_latest_blog_posts').'</h1>';
+					$str_html .= '<h1>'.$arr_labels['latest'].'</h1>';
 				}
 			
 				$arr_link = ['page_name' => SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME), 'id' => $this->mod_id];
 				
 				foreach ($arr_posts as $arr_post) {
-					$str_html .= self::createBlogPostPreview($arr_post, $arr_link, $arr_comments_link);
+					$str_html .= $this->createBlogPostPreview($arr_post, $arr_link, $arr_comments_link);
 				}
 				
 				if (!$blog_post_id) {
@@ -203,13 +210,13 @@ class blog extends base_module {
 						
 						$str_html_next_prev .= '<a class="prev" href="'.SiteStartEnvironment::getModuleURL($this->mod_id).($str_tag ? 'tag/'.strEscapeHTML($str_tag_url).'/' : '').'go/'.$num_end.'">'
 							.'<span class="icon" data-category="increase">'.getIcon('prev').getIcon('prev').'</span>'
-							.'<span>'.getLabel('lbl_previous').'</span>'
+							.'<span>'.$arr_labels['previous'].'</span>'
 						.'</a>';
 					}
 					if (($num_end - $num_limit) > 0) {
 						
 						$str_html_next_prev .= '<a class="next" href="'.SiteStartEnvironment::getModuleURL($this->mod_id).($str_tag ? 'tag/'.strEscapeHTML($str_tag_url).'/' : '').'go/'.$num_next.'">'
-							.'<span>'.getLabel('lbl_next').'</span>'
+							.'<span>'.$arr_labels['next'].'</span>'
 							.'<span class="icon" data-category="increase">'.getIcon('next').getIcon('next').'</span>'
 						.'</a>';	
 					}
@@ -292,7 +299,7 @@ class blog extends base_module {
 		return $html;
 	}
 	
-	public static function createBlogPostPreview($arr_post, $arr_link, $arr_comments_link) {
+	public function createBlogPostPreview($arr_post, $arr_link, $arr_comments_link) {
 		
 		$str_title = Labels::parseTextVariables($arr_post['title']);
 		$str_url_base = '';
@@ -304,9 +311,15 @@ class blog extends base_module {
 			$str_url_title = $str_url_base.$arr_post['id'].'/'.str2URL($str_title);
 		}
 		
+		$arr_labels = [
+			'read_more' => getLabel('lbl_read_more'),
+			'comment' => getLabel('lbl_comment')
+		];
+		Settings::get('hook_blog_post_labels', false, [$this->arr_mod, &$arr_labels]);
+		
 		$str_body = parseBody($arr_post['body'], [
 			'extract' => $arr_post['para_preview'],
-			'append' => ($arr_post['para_preview'] ? ($str_url_title ? '<a href="'.$str_url_title.'" class="more" title="'.getLabel('lbl_read_more').'">[....]</a>' : '<span class="more">[....]</span>') : '')
+			'append' => ($arr_post['para_preview'] ? ($str_url_title ? '<a href="'.$str_url_title.'" class="more" title="'.$arr_labels['read_more'].'">[....]</a>' : '<span class="more">[....]</span>') : '')
 		]);
 		
 		$arr_content_identifiers = [];
@@ -328,7 +341,7 @@ class blog extends base_module {
 		if ($arr_link) {
 			
 			$str_title = '<a href="'.$str_url_title.'">'.$str_title.'</a>';
-			$str_url_text = '<span>'.getLabel('lbl_read_more').'</span>'.($arr_comments_link ? '<span>'.getLabel('lbl_comment').'</span>' : '');
+			$str_url_text = '<span>'.$arr_labels['read_more'].'</span>'.($arr_comments_link ? '<span>'.$arr_labels['comment'].'</span>' : '');
 			$str_link = '<a class="more" href="'.$str_url_title.'">'.$str_url_text.'</a>';
 		}
 			

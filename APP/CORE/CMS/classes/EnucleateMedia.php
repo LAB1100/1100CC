@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -109,6 +109,7 @@ class EnucleateMedia {
 				case 'gif':
 				case 'webp':
 				case 'bmp':
+				case 'svg':
 				
 					if ($mode == EnucleateMedia::VIEW_TYPE) {
 						
@@ -123,26 +124,29 @@ class EnucleateMedia {
 							$str_html_class = ' class="enlarge"';
 						}
 						
-						if ($this->use_cache) {
-							
+						if ($this->use_cache && $str_extension != 'svg') {
 							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.SiteStartEnvironment::getCacheURL('img', [($this->width ?: $this->num_cache_width), ($this->height ?: false)], $this->path_enucleate.$this->path_file).'" />';
 						} else {
-							
 							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.$this->path_enucleate.$this->path_file.'" />';
 						}
 					}
 					break;
 				case 'mp3':
-				
+				case 'oga':
+				case 'weba':
+
 					if ($mode == EnucleateMedia::VIEW_TYPE) {
-						
 						$str_return = 'audio';
 					} else {
 						
-						$str_return = '<audio controls="1" height="100" width="200"><source src="'.$this->path_enucleate.$this->path_file.'" type="audio/mpeg" /></audio>';
+						$str_type = (FileStore::getExtensionMIMEType($str_extension) ?: 'audio/mpeg');
+						
+						$str_return = '<audio controls="1" height="100" width="200"><source src="'.$this->path_enucleate.$this->path_file.'" type="'.$str_type.'" /></audio>';
 					}
 					break;
 				case 'mp4':
+				case 'ogv':
+				case 'webv':
 				
 					if ($mode == EnucleateMedia::VIEW_TYPE) {
 						
@@ -161,16 +165,16 @@ class EnucleateMedia {
 						}
 						$str_html_sizing = ($this->height ? ' height="'.$this->height.'"' : '').($this->width ? ' width="'.$this->width.'"' : '');
 						
-						$str_return = '<video controls="1"'.$str_html_options.$str_html_sizing.'><source src="'.$this->path_enucleate.$this->path_file.'" type="video/mp4" /></video>';
+						$str_type = (FileStore::getExtensionMIMEType($str_extension) ?: 'video/mp4');
+						
+						$str_return = '<video controls="1"'.$str_html_options.$str_html_sizing.'><source src="'.$this->path_enucleate.$this->path_file.'" type="'.$str_type.'" /></video>';
 					}
 					break;
 				case 'pdf':
 				
 					if ($mode == EnucleateMedia::VIEW_TYPE) {
-						
 						$str_return = 'text';
 					} else {
-						
 						$str_return = '<object type="application/pdf" width="'.($this->width ?: ($this->height ? ($this->height * 0.66) : '100%')).'" height="'.($this->height ?: ($this->width ? ($this->width * 1.33) : '100%')).'" data="'.$this->path_enucleate.$this->path_file.'"></object>';
 					}
 					break;

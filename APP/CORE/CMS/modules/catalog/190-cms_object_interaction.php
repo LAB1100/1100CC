@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -50,13 +50,13 @@ class cms_object_interaction extends base_module {
 		$res = DB::query("SELECT oi_s.*,
 								sub_oi_s.count_stage_objects,
 								sub_oi_s.stage_objects,
-								".DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-								".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+								".DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+								".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 						FROM ".DB::getTable('DEF_OBJECT_INTERACTION_STAGES')." oi_s
 						LEFT JOIN (SELECT
 							oi_ol.object_interaction_stage_id,
 							COUNT(oi_o.id) AS count_stage_objects,
-							".DBFunctions::sqlImplode("oi_o.name", '<br />', "ORDER BY oi_o.name")." AS stage_objects
+							".DBFunctions::group2String("oi_o.name", '<br />', "ORDER BY oi_o.name")." AS stage_objects
 								FROM ".DB::getTable("DEF_OBJECT_INTERACTION_OBJECT_LINK")." oi_ol
 								LEFT JOIN ".DB::getTable("DEF_OBJECT_INTERACTION_OBJECTS")." oi_o ON (oi_o.id = oi_ol.object_interaction_object_id)
 							GROUP BY oi_ol.object_interaction_stage_id) sub_oi_s ON (sub_oi_s.object_interaction_stage_id = oi_s.id)
@@ -112,7 +112,7 @@ class cms_object_interaction extends base_module {
 						FROM ".DB::getTable("DEF_OBJECT_INTERACTION_OBJECTS")." oi_o
 						LEFT JOIN (SELECT
 							DISTINCT oi_ol.object_interaction_object_id,
-							".DBFunctions::sqlImplode("oi_s.name", '<br />', "ORDER BY oi_s.name")." AS stages,
+							".DBFunctions::group2String("oi_s.name", '<br />', "ORDER BY oi_s.name")." AS stages,
 							COUNT(oi_s.id) AS count_stages
 								FROM ".DB::getTable("DEF_OBJECT_INTERACTION_OBJECT_LINK")." oi_ol
 								LEFT JOIN ".DB::getTable("DEF_OBJECT_INTERACTION_STAGES")." oi_s ON (oi_s.id = oi_ol.object_interaction_stage_id)

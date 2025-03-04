@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -19,12 +19,12 @@ function MapScroller(element, options) {
 		arr_levels: [],
 		pos_view_frame: {top: 0, right: 0, bottom: 0, left: 0}, // pixels or percentage
 		show_zoom_levels: true,
-		attribution: '',
-		tile_path: '{s}.domain.tld/tile-{z}-{x}-{y}.png',
-		tile_subdomain_range: [1,2,3], // e.g. a,b,c - 1,2,3
+		attribution: '', // String or {base: '', source: ''}
+		arr_layers: false, // [{url: '{s}.domain.tld/tile-{z}-{x}-{y}.png', opacity: 1, attribution: string or {name: '', source: ''}}]
 		background_path: '',
 		background_color: false,
-		allow_sizing: false
+		allow_sizing: false,
+		svg: false
 	}, options || {});
 	
 	var cur_zoom = false,
@@ -34,7 +34,10 @@ function MapScroller(element, options) {
 	elm_paint = false,
 	elm_controls = false,
 	elm_zoomer = false,
+	elm_attribution = false,
+	elm_layers = false,
 	arr_levels = [],
+	arr_layers = [],
 	pos_elm = {width: 0, height: 0, x: 0, y: 0, frame: {width: 0, height: 0, top: 0, right: 0, bottom: 0, left: 0}},
 	pos_offset = {},
 	pos_center = {},
@@ -42,26 +45,32 @@ function MapScroller(element, options) {
 	pos_zoom = false,
 	pos_view_frame = {},
 	pos_render = {},
-	obj_elm_map_content = {},
-	obj_tiles = {},
-	interval_tiles = false,
+	arr_layer_level = false,
+	arr_layers_manager = [],
+	arr_tiles_manager = {},
+	interval_layers = false,
 	timer_tiles = false,
 	interval_tiling = false,
 	timeout_tile_animation = 100,
 	arr_move = [],
-	resize_sensor = false;
+	resize_sensor = false,
+	do_svg = false;
+	
+	const stage_ns = 'http://www.w3.org/2000/svg',
+	num_alpha_blending = 1; // Trigger overlapping alpha-blending that happens when you have polygons that share an edge
 			
 	this.init = function() {
 		
 		if (!elm.hasClass('mapscroller')) {
 			elm.addClass('mapscroller');
 		}
-
-		drawContainer();
-					
+		
+		do_svg = settings.svg;
+		
+		drawContainer();	
 		drawControls();
 					
-		for (var i = 0; i < settings.arr_levels.length; i++) {
+		for (let i = 0; i < settings.arr_levels.length; i++) {
 			
 			const arr_level = settings.arr_levels[i];
 			
@@ -72,6 +81,16 @@ function MapScroller(element, options) {
 			SELF.addZoom(arr_level);
 		}
 		
+		if (settings.arr_layers) {
+				
+			for (let i = 0; i < settings.arr_layers.length; i++) {
+				
+				const arr_layer = settings.arr_layers[i];
+				
+				SELF.addLayer(arr_layer);
+			}
+		}
+			
 		SELF.setOrigin(settings.origin);
 		SELF.setPosition(0, 0);
 		
@@ -109,17 +128,39 @@ function MapScroller(element, options) {
 	var drawControls = function() {
 		
 		elm_controls = $('<div class="controls" />').appendTo(elm);
+				
+		let str_attribution = '';
 		
 		if (settings.attribution) {
-			$('<span class="attribution body">'+settings.attribution+'</span>').appendTo(elm_controls);
+			
+			if (settings.attribution instanceof Object) {
+				str_attribution = (settings.attribution.source ? '<li class="source">'+settings.attribution.source+'</li>' : '')+(settings.attribution.base ? '<li class="base">'+settings.attribution.base+'</li>' : '');
+			} else {
+				str_attribution = '<li class="source">'+settings.attribution+'</li>';
+			}
 		}
 		
-		elm_zoomer = $('<div class="zoomer"><span class="plus"></span><span class="min"></span></div>').appendTo(elm_controls);
-		elm_zoomer.children('span:first').on('click', function() {
+		elm_attribution = $('<div class="attribution"><ul class="body">'+str_attribution+'</ul></div>').appendTo(elm_controls);
+		elm_attribution = elm_attribution.children('ul');
+		
+		const elm_controls_interact = $('<div class="main" />').appendTo(elm_controls);
+		
+		elm_zoomer = $('<div class="zoomer hide"><button type="button" class="plus"><span class="icon"></span></button><button type="button" class="min"><span class="icon"></span></button></div>').appendTo(elm_controls_interact);
+		const elm_zoomer_plus = elm_zoomer.children('button.plus');
+		elm_zoomer_plus.on('click', function() {
 			SELF.setZoom(cur_zoom+1);
 		});
-		elm_zoomer.children('span:last').on('click', function() {
+		const elm_zoomer_min = elm_zoomer.children('button.min');
+		elm_zoomer_min.on('click', function() {
 			SELF.setZoom(cur_zoom-1);
+		});
+		
+		elm_layers = $('<div class="layers hide"><div><label title="Layers"><span class="icon" data-category="full"></span><input type="checkbox" value="1" class="hide" /></label></div><div><ul></ul></div></div>').appendTo(elm_controls_interact);
+		
+		ASSETS.getIcons(elm, ['marker-map-location', 'plus', 'min'], function(data) {
+			elm_layers[0].children[0].children[0].children[0].innerHTML = data['marker-map-location'];
+			elm_zoomer_plus[0].children[0].innerHTML = data['plus'];
+			elm_zoomer_min[0].children[0].innerHTML = data['min'];
 		});
 	};
 	
@@ -271,7 +312,7 @@ function MapScroller(element, options) {
 				document.removeEventListener('mouseup', func_mouse_up, {passive: true});
 				document.removeEventListener('touchend', func_mouse_up, {passive: true});
 				
-				removeListeners = false;
+				removeListeners = null;
 			};
 		};
 		
@@ -340,7 +381,7 @@ function MapScroller(element, options) {
 		});
 	};
 	
-	var removeListeners = false;
+	var removeListeners = null;
 	
 	var setWindow = function() {
 		
@@ -395,21 +436,25 @@ function MapScroller(element, options) {
 			
 	var addZoomerLevel = function() {
 		
-		$('<span />').insertAfter(elm_zoomer.children('.plus'))
-		.on('click', function() {
-			SELF.setZoom(settings.arr_levels.length-$(this).index()+1);
-		});
+		$('<button type="button" />').insertAfter(elm_zoomer.children('.plus'))
+			.on('click', function() {
+				SELF.setZoom(settings.arr_levels.length-$(this).index()+1);
+			});
 	};
 	
 	var setZoomerLevel = function() {
 	
 		elm_zoomer.children().removeClass('active');
-		elm_zoomer.children('span:eq('+(arr_levels.length - cur_zoom+1)+')').addClass('active');
+		elm_zoomer.children('*:nth-child('+(1 + (arr_levels.length - cur_zoom) + 1)+')').addClass('active');
 	};
 					
-	this.addZoom = function(obj_level) {
+	this.addZoom = function(arr_level) {
 	
-		arr_levels.push(obj_level);
+		const num_length = arr_levels.push(arr_level);
+		
+		if (num_length == 2) {
+			elm_zoomer[0].classList.remove('hide');
+		}
 		
 		if (settings.show_zoom_levels) {
 			addZoomerLevel();
@@ -491,20 +536,18 @@ function MapScroller(element, options) {
 			pos_center.y -= (pos_elm.frame.top - pos_elm.frame.bottom)/2;
 		}
 
-		var calc_zoom = (zoom_new > cur_zoom ? '+'+(zoom_new - cur_zoom) : (zoom_new < cur_zoom ? '-'+(cur_zoom - zoom_new) : '+0'));
+		const str_calc_zoom = (zoom_new > cur_zoom ? '+'+(zoom_new - cur_zoom) : (zoom_new < cur_zoom ? '-'+(cur_zoom - zoom_new) : '+0'));
 		cur_zoom = zoom_new;
 		
 		pos_offset = {x: false, y: false, width: false, height: false, sizing: {}};
 		
 		SELF.setSize(SELF.levelVars().width, SELF.levelVars().height);
 					
-		SELF.setPosition(-pos_center.x, -pos_center.y, false, calc_zoom);
+		SELF.setPosition(-pos_center.x, -pos_center.y, false, str_calc_zoom);
 		
-		if (settings.tile_path) {	
-			renewMap();
-		}
+		renewLayers();
 		
-		SCRIPTER.triggerEvent(elm, 'zoom', [zoom_new, calc_zoom]);		
+		SCRIPTER.triggerEvent(elm, 'zoom', [zoom_new, str_calc_zoom]);		
 		setZoomerLevel();
 	};
 	
@@ -522,22 +565,20 @@ function MapScroller(element, options) {
 			var num_height = pos_offset.sizing.height;
 		}
 		
-		elm_background[0].style.width = num_width+'px';
-		elm_background[0].style.height = num_height+'px';
 		elm_map[0].style.width = num_width+'px';
 		elm_map[0].style.height = num_height+'px';
 		elm_paint[0].style.width = num_width+'px';
 		elm_paint[0].style.height = num_height+'px';
 	};
 	
-	this.setPosition = function(num_x, num_y, is_relative, calc_zoom) {
+	this.setPosition = function(num_x, num_y, is_relative, str_calc_zoom) {
 		
 		var num_x = Math.floor(num_x);
 		var num_y = Math.floor(num_y);
 		
-		var obj_level = SELF.levelVars();
-		var num_width_view = Math.ceil(pos_elm.width/2);
-		var num_height_view = Math.ceil(pos_elm.height/2);
+		const arr_level = SELF.levelVars();
+		const num_width_view = Math.ceil(pos_elm.width/2);
+		const num_height_view = Math.ceil(pos_elm.height/2);
 		
 		if (is_relative) {
 			
@@ -545,36 +586,36 @@ function MapScroller(element, options) {
 			num_y = pos_elm.y + num_y;
 		}
 		
-		if (cur_zoom && !obj_level.auto) { // Keep map in container
+		if (cur_zoom && !arr_level.auto) { // Keep map in container
 			
-			if (obj_level.width > pos_elm.width) {
+			if (arr_level.width > pos_elm.width) {
 				if (num_x > -num_width_view) {
 					num_x = -num_width_view;
 				}
-				if (num_x < -(obj_level.width - num_width_view)) {
-					num_x = -(obj_level.width - num_width_view);
+				if (num_x < -(arr_level.width - num_width_view)) {
+					num_x = -(arr_level.width - num_width_view);
 				}
 			} else {
 				if (num_x < -num_width_view) {
 					num_x = -num_width_view;
 				}
-				if (num_x > (num_width_view - obj_level.width)) {
-					num_x = (num_width_view - obj_level.width);
+				if (num_x > (num_width_view - arr_level.width)) {
+					num_x = (num_width_view - arr_level.width);
 				}
 			}
-			if (obj_level.height > pos_elm.height) {
+			if (arr_level.height > pos_elm.height) {
 				if (num_y > -num_height_view) {
 					num_y = -num_height_view;
 				}
-				if (num_y < -(obj_level.height - num_height_view)) {
-					num_y = -(obj_level.height - num_height_view);
+				if (num_y < -(arr_level.height - num_height_view)) {
+					num_y = -(arr_level.height - num_height_view);
 				}
 			} else {
 				if (num_y < -num_height_view) {
 					num_y = -num_height_view;
 				}
-				if (num_y > (num_height_view - obj_level.height)) {
-					num_y = (num_height_view - obj_level.height);
+				if (num_y > (num_height_view - arr_level.height)) {
+					num_y = (num_height_view - arr_level.height);
 				}
 			}
 		}
@@ -598,28 +639,27 @@ function MapScroller(element, options) {
 			
 			if (pos_offset.width) {
 				
-				var offset = Math.floor((obj_level.width - pos_offset.width)/2);
-				pos_offset.x = -num_x - offset;
-				num_x = -offset;
+				const num_offset = Math.floor((arr_level.width - pos_offset.width)/2);
+				pos_offset.x = -num_x - num_offset;
+				num_x = -num_offset;
 			}
 			if (pos_offset.height) {
 				
-				var offset = Math.floor((obj_level.height - pos_offset.height)/2);
-				pos_offset.y = -num_y - offset;
-				num_y = -offset;
+				const num_offset = Math.floor((arr_level.height - pos_offset.height)/2);
+				pos_offset.y = -num_y - num_offset;
+				num_y = -num_offset;
 			}
 		}
 		
-		doMove(null, calc_zoom);
+		doMove(null, str_calc_zoom);
 		
-		if (cur_zoom && !obj_level.auto) {
+		if (cur_zoom && !arr_level.auto) {
 			
 			num_x = num_x + num_width_view;
 			num_y = num_y + num_height_view;
 			
-			var str = 'translate('+num_x+'px, '+num_y+'px)';
+			const str = 'translate('+num_x+'px, '+num_y+'px)';
 			
-			elm_background[0].style.transform = elm_background[0].style.webkitTransform = str;
 			elm_map[0].style.transform = elm_map[0].style.webkitTransform = str;
 			elm_paint[0].style.transform = elm_paint[0].style.webkitTransform = str;
 		}
@@ -627,33 +667,35 @@ function MapScroller(element, options) {
 	
 	this.getPosition = function() {
 		
-		const arr_level =  SELF.levelVars();
+		const arr_level = SELF.levelVars();
 		
-		return {
+		const arr = {
 			x: pos_elm.x, y: pos_elm.y, origin: pos_origin, level: arr_level.level,
 			view: {width: pos_elm.width, height: pos_elm.height},
-			render: {width: pos_render.width, height: pos_render.height, resolution: pos_render.resolution},
 			size: {width: (pos_offset.sizing.width ? pos_offset.sizing.width : arr_level.width), height: (pos_offset.sizing.height ? pos_offset.sizing.height : arr_level.height)},
 			offset: {x: (pos_offset.x ? pos_offset.x : 0), y: (pos_offset.y ? pos_offset.y : 0)},
+			render: {width: pos_render.width, height: pos_render.height, resolution: pos_render.resolution}
 		};
+		
+		return arr;
 	};
 	
-	this.getMousePosition = function(test) {
+	this.getMousePosition = function(do_test) {
 		
-		var test = (test == undefined || test ? true : false);
+		var do_test = (do_test == undefined || do_test ? true : false);
 		
-		if (test && !POSITION.testMouseOnElement(false, elm_paint[0])) {
+		if (do_test && !POSITION.testMouseOnElement(false, elm_paint[0])) {
 			return false;
 		}
 		
-		var pos_map = POSITION.getElementToDocument(elm_map[0]);
+		const pos_map = POSITION.getElementToDocument(elm_map[0]);
 		
 		return {x: (-pos_map.x + POSITION.mouse.x + (pos_offset.x ? pos_offset.x : 0)), y: (-pos_map.y + POSITION.mouse.y + (pos_offset.y ? pos_offset.y : 0))};
 	};
 	
 	this.getMousePositionToCenter = function() {
 		
-		var pos_mouse = SELF.getMousePosition(false);
+		const pos_mouse = SELF.getMousePosition(false);
 		
 		return {x: (pos_mouse.x - ((pos_mouse.x + pos_elm.x)/2)) / SELF.levelVars().width, y: (pos_mouse.y - ((pos_mouse.y + pos_elm.y)/2)) / SELF.levelVars().height};
 	};
@@ -665,12 +707,13 @@ function MapScroller(element, options) {
 			arr_move[key] = call;
 		} else {
 			
-			for (var i = 0, len = arr_move.length; i <= len; i++) {
+			for (let i = 0, len = arr_move.length; i <= len; i++) {
 				
 				if (arr_move[i] === null || arr_move[i] === undefined) {
 					
 					var key = i;
 					arr_move[key] = call;
+					
 					break;
 				}
 			}
@@ -683,130 +726,318 @@ function MapScroller(element, options) {
 		return key;
 	};
 	
-	var doMove = function(move, calc_zoom) {
+	var doMove = function(move, str_calc_zoom) {
 				
-		var len = arr_move.length;
+		const num_length = arr_move.length;
 		
-		if (!len) {
+		if (!num_length) {
 			return;
 		}
 		
-		var obj_move = SELF.getPosition();
+		const arr_position = SELF.getPosition();
 		
-		for (var i = 0; i < len; i++) {
+		for (let i = 0; i < num_length; i++) {
 			if (arr_move[i]) {
-				arr_move[i](move, obj_move, cur_zoom, calc_zoom);
+				arr_move[i](move, arr_position, cur_zoom, str_calc_zoom);
 			}
 		}
 	};
 	
-	var renewMap = function() {
+	this.addLayer = function(arr_layer) {
 		
-		var obj_level = SELF.levelVars();
+		const num_length = arr_layers.push(arr_layer);
 		
-		// Clean all not fully loaded maps, keep loaded one, and add new
-		
-		if (obj_elm_map_content.elm) {
-							
-			var calc_ratio = (obj_level.width / SELF.levelVars(obj_elm_map_content.zoom).width);
-			var calc_left = (pos_offset.x ? ((obj_elm_map_content.pos_offset.x / SELF.levelVars(obj_elm_map_content.zoom).width) - (pos_offset.x / obj_level.width)) * obj_level.width : 0);
-			var calc_top = (pos_offset.y ? ((obj_elm_map_content.pos_offset.y / SELF.levelVars(obj_elm_map_content.zoom).height) - (pos_offset.y / obj_level.height)) * obj_level.height : 0);
-			
-			obj_elm_map_content.elm[0].style.transformOrigin = obj_elm_map_content.elm[0].style.webkitTransformOrigin = '0% 0% 0';
-			obj_elm_map_content.elm[0].style.transform = obj_elm_map_content.elm[0].style.webkitTransform = 'translate('+calc_left+'px, '+calc_top+'px) scale('+calc_ratio+')';
-		} else {
-			
-			obj_elm_map_content.elm = elm_map.children().first();
-			obj_elm_map_content.elm = (obj_elm_map_content.elm.length ? obj_elm_map_content.elm : false);
-			obj_elm_map_content.pos_offset = pos_offset;
-			obj_elm_map_content.zoom = cur_zoom;
+		if (num_length == 1) {
+			elm_layers[0].classList.remove('hide');
 		}
+
+		// Attribution
 		
-		if (obj_elm_map_content.elm) {
+		let elm_attribution_source = false;
+		let elm_attribution_name = false;
+		
+		if (arr_layer.attribution) {
 			
-			var elm_remove = obj_elm_map_content.elm.next()[0];
-			if (elm_remove) {
-				elm_map[0].removeChild(elm_remove);
+			let str_attribution_source = '';
+			let str_attribution_name = '';
+			
+			if (arr_layer.attribution instanceof Object) {
+				str_attribution_source = (arr_layer.attribution.source ? arr_layer.attribution.source : false);
+				str_attribution_name = (arr_layer.attribution.name ? arr_layer.attribution.name : false);
+			} else {
+				str_attribution_source = arr_layer.attribution;
+				str_attribution_name = arr_layer.attribution;
+			}
+			
+			if (str_attribution_source) {
+				
+				elm_attribution_source = $('<li class="layer">'+str_attribution_source+'</li>');
+				
+				const elm_source = elm_attribution.children('.source');
+				if (elm_source.length) {
+					elm_attribution_source.insertAfter(elm_source);
+				} else {
+					elm_attribution_source.prependTo(elm_attribution);
+				}
+			}
+			
+			if (str_attribution_name) {
+				elm_attribution_name = $('<div>'+str_attribution_name+'</div>')[0];
 			}
 		}
 		
-		obj_elm_map_content.elm_loading = $('<div />').appendTo(elm_map); // New map content
-					
-		obj_tiles = {};
-		obj_tiles.drawn = {};
-		obj_tiles.total = false;
-		obj_tiles.count_loading = false;
-		obj_tiles.extra = 1;
+		// Container / map
+
+		const elm_container = $('<div />')[0];
+		elm_map[0].prepend(elm_container);
+
+		arr_layers_manager[num_length-1] = {elm_container: elm_container, offset: null, zoom: null, elm: null, elm_loading: null, tiles: null};
+				
+		const func_update_visibility = function(num_opacity) {
+			
+			const do_revisit = (arr_layer.opacity == 0 && num_opacity > 0);
+			
+			arr_layer.opacity = num_opacity;
+			elm_container.style.opacity = num_opacity;
+			
+			if (do_revisit) {
+				drawTiles();
+			}
+			
+			if (elm_attribution_source) {
+				
+				if (do_revisit) {
+					elm_attribution_source[0].classList.remove('hide');
+				} else if (!num_opacity) {
+					elm_attribution_source[0].classList.add('hide');
+				}
+			}
+		};
 		
-		obj_tiles.count_width_range = Math.ceil((obj_level.width / obj_level.tile_width) / 2) * 2; // Width range (rounded)
-		var xy_origin = false;
+		if (arr_layer.opacity == null) {
+			arr_layer.opacity = 1;
+		} else if (arr_layer.opacity < 1) {
+			func_update_visibility(arr_layer.opacity);
+		}
+		
+		// Interact
+		
+		const elm_layer = $('<li><div><input type="range" min="0" max="1" step="0.01" value="'+arr_layer.opacity+'" /></div></li>').appendTo(elm_layers.find('ul'));
+		
+		if (elm_attribution_name) {
+			elm_layer[0].append(elm_attribution_name);
+		}
+		
+		const elm_layer_opacity = elm_layer.find('input[type=range]');
+		elm_layer_opacity.on('input', function() {
+			func_update_visibility(parseFloat(this.value));
+		});
+	};
+	
+	var renewLayers = function() {
+		
+		if (!arr_layers.length) {
+			return;
+		}
+		
+		const arr_position = SELF.getPosition();
+		arr_layer_level = SELF.levelVars();
+		let num_layer_resolution = 1;
+		
+		const num_find_width = (arr_layer_level.width * arr_position.render.resolution);
+		
+		if (do_svg && arr_layer_level.width != num_find_width) {
+			
+			for (let i = 0, len_i = arr_levels.length; i < len_i; i++) {
+				
+				if (arr_levels[i].width < num_find_width) {
+					continue;
+				}
+				
+				num_layer_resolution = (arr_levels[i].width / arr_layer_level.width);
+				arr_layer_level = arr_levels[i];
+				break;
+			}			
+		}
+		
+		arr_layer_level.resolution = num_layer_resolution;
+		arr_layer_level.offset = {x: (arr_position.offset.x * num_layer_resolution), y: (arr_position.offset.y * num_layer_resolution)};
+		
+		arr_tiles_manager = {};
+		arr_tiles_manager.total = false;
+		arr_tiles_manager.extra = 1;
+		
+		arr_tiles_manager.count_width_range = Math.ceil((arr_layer_level.width / arr_layer_level.tile_width) / 2) * 2; // Width range (rounded)
+		let xy_origin = false;
 		if (pos_origin.longitude != null) {
 			xy_origin = SELF.plotPoint(0, SELF.parseLongitude(pos_origin.longitude - 180, true), null, true);
 		} else if (pos_origin.x != null) {
 			xy_origin = pos_origin.origin;
 		}
 		if (xy_origin && xy_origin.x > 0) {
-			obj_tiles.count_width_range_origin = Math.floor(xy_origin.x / obj_level.tile_width);
-			obj_tiles.width_range_surplus = Math.floor(xy_origin.x % obj_level.tile_width); // Width range (leftover)
-			obj_tiles.count_width_range++; // Add extra divided tile
+			
+			arr_tiles_manager.count_width_range_origin = Math.floor((xy_origin.x * num_layer_resolution) / arr_layer_level.tile_width);
+			arr_tiles_manager.width_range_surplus = Math.floor((xy_origin.x * num_layer_resolution) % arr_layer_level.tile_width); // Width range (leftover)
+			arr_tiles_manager.count_width_range++; // Add extra divided tile
 		} else {
-			obj_tiles.count_width_range_origin = 0;
-			obj_tiles.width_range_surplus = Math.floor(obj_level.width % obj_level.tile_width); // Width range (leftover)
+			
+			arr_tiles_manager.count_width_range_origin = false;
+			arr_tiles_manager.width_range_surplus = Math.floor(arr_layer_level.width % arr_layer_level.tile_width); // Width range (leftover)
 		}
 		
-		obj_tiles.count_height_range = Math.ceil((obj_level.height / obj_level.tile_height) / 2) * 2;
-		obj_tiles.height_range_surplus = Math.floor(obj_level.height % obj_level.tile_height); // Height range (leftover)
+		arr_tiles_manager.count_height_range = Math.ceil((arr_layer_level.height / arr_layer_level.tile_height) / 2) * 2;
+		arr_tiles_manager.height_range_surplus = Math.floor(arr_layer_level.height % arr_layer_level.tile_height); // Height range (leftover)
 		
-		var count_sub_domain = 0;
-		var length_sub_domain = settings.tile_subdomain_range.length;
+		for (let num_layer = 0, num_length_layers = arr_layers.length; num_layer < num_length_layers; num_layer++) {
+			
+			const arr_layer = arr_layers[num_layer];
+			const arr_layer_manager = arr_layers_manager[num_layer];
+			
+			// Clean all not fully loaded maps, keep loaded one, and add new
 		
-		obj_tiles.getSubDomain = function(x) {
-			
-			for (var i = 2; i <= length_sub_domain; i++) { // Start with second array value, because division by one is always true
-			
-				if (x % i == 0) {
-					return i-1;
+			if (!arr_layer_manager.elm) {
+
+				arr_layer_manager.offset = arr_position.offset;
+				arr_layer_manager.zoom = cur_zoom;
+				
+				if (arr_layer_manager.elm_loading) {
+					arr_layer_manager.elm = arr_layer_manager.elm_loading;
+				}
+			} else {
+				
+				const arr_zoom_level = SELF.levelVars();		
+				const arr_zoomed_level = SELF.levelVars(arr_layer_manager.zoom);				
+				const num_calc_ratio = (arr_zoom_level.width / arr_zoomed_level.width);
+				const num_calc_left = (arr_position.offset.x ? ((arr_layer_manager.offset.x / arr_zoomed_level.width) - (arr_position.offset.x / arr_zoom_level.width)) * arr_zoom_level.width : 0);
+				const num_calc_top = (arr_position.offset.y ? ((arr_layer_manager.offset.y / arr_zoomed_level.height) - (arr_position.offset.y / arr_zoom_level.height)) * arr_zoom_level.height : 0);
+				
+				arr_layer_manager.elm.style.transformOrigin = arr_layer_manager.elm.style.webkitTransformOrigin = '0% 0% 0';
+				arr_layer_manager.elm.style.transform = arr_layer_manager.elm.style.webkitTransform = 'translate('+num_calc_left+'px, '+num_calc_top+'px) scale('+num_calc_ratio+')';
+				
+				if (arr_layer_manager.elm_loading != arr_layer_manager.elm) {
+					arr_layer_manager.elm_container.removeChild(arr_layer_manager.elm_loading);
 				}
 			}
 			
-			return 1-1;
-		};
+			if (do_svg) {
+				
+				arr_layer_manager.elm_loading = document.createElementNS(stage_ns, 'svg');
+				arr_layer_manager.elm_loading.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns', stage_ns);
+				arr_layer_manager.elm_loading.style.width = arr_position.size.width+'px';
+				arr_layer_manager.elm_loading.style.height = arr_position.size.height+'px';
+				arr_layer_manager.elm_loading.setAttribute('viewBox', '0 0 '+(arr_position.size.width * num_layer_resolution)+' '+(arr_position.size.height * num_layer_resolution));
+				
+				const node_style = document.createTextNode(`
+					svg { }
+				`);
+				const elm_style = document.createElementNS(stage_ns, 'style');
+				elm_style.appendChild(node_style);
+				
+				arr_layer_manager.elm_loading.appendChild(elm_style);
+			} else {
+			
+				arr_layer_manager.elm_loading = $('<div />')[0]; // New map content
+			}
+
+			arr_layer_manager.elm_container.appendChild(arr_layer_manager.elm_loading);
+			
+			if (!arr_layer_manager.tiles) {
+				arr_layer_manager.tiles = {timer: false, loaded: {}, count_loading: false, url: '', func_get_subdomain: false, cache: {}};
+			}
+			
+			if (arr_layer_manager.tiles.timer) {
+				clearTimeout(arr_layer_manager.tiles.timer);
+			}
+			arr_layer_manager.tiles.timer = false;
+			arr_layer_manager.tiles.loaded = {};
+			arr_layer_manager.tiles.count_loading = false;
+			arr_layer_manager.tiles.url = arr_layer.url;
+			arr_layer_manager.tiles.func_get_subdomain = false;
+			if (!arr_layer_manager.tiles.cache[arr_layer_level.level]) {
+				arr_layer_manager.tiles.cache[arr_layer_level.level] = {};
+			}
+
+			const arr_layer_subdomains = arr_layer_manager.tiles.url.match(/\{s(?:=([^\}]*))?\}/);
+			
+			if (arr_layer_subdomains) {
+				
+				let arr_subdomains = [1,2,3];
+				
+				if (arr_layer_subdomains[1]) {
+					
+					arr_subdomains = arr_layer_subdomains[1].split(',');
+					arr_layer_manager.tiles.url = arr_layer_manager.tiles.url.replace(arr_layer_subdomains[0], '{s}');
+				}
+			
+				const num_length_subdomain = arr_subdomains.length;
+				
+				arr_layer_manager.tiles.func_get_subdomain = function(num_subdomain) {
+					
+					for (let i = 2; i <= num_length_subdomain; i++) { // Start with second array value, because division by one is always true
+					
+						if (num_subdomain % i == 0) {
+							return arr_subdomains[i-1];
+						}
+					}
+					
+					return arr_subdomains[1-1];
+				};
+			}
+		}
 		
 		// Remove previous map when enough tiles are loaded
-		
-		if (timer_tiles) {
-			clearTimeout(timer_tiles);
-			timer_tiles = false;
-		}
-		if (interval_tiles) {
-			clearInterval(interval_tiles);
-			interval_tiles = false;
+
+		if (interval_layers) {
+			clearInterval(interval_layers);
+			interval_layers = false;
 		}
 		
-		interval_tiles = setInterval(function() {
+		interval_layers = setInterval(function() {
 			
-			if (obj_tiles.count_loading !== false && (obj_tiles.count_loading / obj_tiles.total) <= 0.1) {
+			let is_done = true;
+			
+			for (let num_layer = 0, num_length_layers = arr_layers.length; num_layer < num_length_layers; num_layer++) {
 				
-				timer_tiles = setTimeout(function() {
+				const arr_layer_manager = arr_layers_manager[num_layer];
+				
+				if (arr_layer_manager.tiles.timer) {
+					continue;
+				}
+				
+				if (arr_layer_manager.tiles.count_loading === false || (arr_layer_manager.tiles.count_loading / arr_tiles_manager.total) > 0.1) {
 					
-					if (obj_elm_map_content.elm) {
-						elm_map[0].removeChild(obj_elm_map_content.elm[0]);
+					is_done = false;
+					continue;
+				}
+
+				arr_layer_manager.tiles.timer = setTimeout(function() {
+					
+					if (arr_layer_manager.elm) {
+						arr_layer_manager.elm_container.removeChild(arr_layer_manager.elm);
 					}
-					obj_elm_map_content.elm = obj_elm_map_content.elm_loading;
+					arr_layer_manager.elm = arr_layer_manager.elm_loading;
 					
-					obj_elm_map_content.pos_offset = pos_offset;
-					obj_elm_map_content.zoom = cur_zoom;
+					arr_layer_manager.offset = arr_position.offset;
+					arr_layer_manager.zoom = cur_zoom;
 				}, timeout_tile_animation);
-				
-				clearInterval(interval_tiles);
-				interval_tiles = false;
 			}
+			
+			if (!is_done) {
+				return;
+			}
+			
+			clearInterval(interval_layers);
+			interval_layers = false;
 		}, 200);
 					
 		drawTiles();
 	};
 	
 	var startTiling = function() {
+		
+		if (!arr_layers.length) {
+			return;
+		}
 		
 		stopTiling();
 		
@@ -824,152 +1055,306 @@ function MapScroller(element, options) {
 			interval_tiling = false;
 		}
 	};
-	
+		
 	var drawTiles = function() {
 		
-		var obj_level = SELF.levelVars();
+		const arr_position = SELF.getPosition();
 		
-		var pos_x_elm = pos_elm.x + (pos_elm.width/2); // Correct x from center to left
-		var pos_y_elm = pos_elm.y + (pos_elm.height/2); // Correct y from center to top
+		const num_pos_x_elm = ((arr_position.x + (arr_position.view.width / 2)) * arr_layer_level.resolution); // Correct x from center to left
+		const num_pos_y_elm = ((arr_position.y + (arr_position.view.height / 2)) * arr_layer_level.resolution); // Correct y from center to top
 					
-		var y_start = Math.max(Math.floor(-pos_y_elm / obj_level.tile_height) + 1-obj_tiles.extra, 0);
-		var height_start = 0;
-		if (y_start > 0) {
-			height_start = (obj_tiles.height_range_surplus ? (obj_level.tile_height - obj_tiles.height_range_surplus) : obj_level.tile_height);
-			if (y_start > 1) {
-				height_start += ((y_start-1) * obj_level.tile_height);
+		const num_y_start = Math.max(Math.floor(-num_pos_y_elm / arr_layer_level.tile_height) + 1-arr_tiles_manager.extra, 0);
+		let num_height_start = 0;
+		if (num_y_start > 0) {
+			num_height_start = (arr_tiles_manager.height_range_surplus ? (arr_layer_level.tile_height - arr_tiles_manager.height_range_surplus) : arr_layer_level.tile_height);
+			if (num_y_start > 1) {
+				num_height_start += ((num_y_start-1) * arr_layer_level.tile_height);
 			}
 		}
-		var y_end = Math.min(Math.ceil((-pos_y_elm + pos_elm.height) / obj_level.tile_height) + 1+obj_tiles.extra, obj_tiles.count_height_range);
-		const num_y_max = (obj_tiles.count_height_range - 1);
+		const num_y_end = Math.min(Math.ceil((-num_pos_y_elm + (arr_position.view.height * arr_layer_level.resolution)) / arr_layer_level.tile_height) + 1+arr_tiles_manager.extra, arr_tiles_manager.count_height_range);
+		const num_y_max = (arr_tiles_manager.count_height_range - 1);
 		
-		var x_start = Math.max(Math.floor(-pos_x_elm / obj_level.tile_width) + 1-obj_tiles.extra, 0);
-		var width_start = 0;
-		if (x_start > 0) {
-			width_start = (obj_tiles.width_range_surplus ? (obj_level.tile_width - obj_tiles.width_range_surplus) : obj_level.tile_width);
-			if (x_start > 1) {
-				width_start += ((x_start-1) * obj_level.tile_width);
+		const num_x_start = Math.max(Math.floor(-num_pos_x_elm / arr_layer_level.tile_width) + 1-arr_tiles_manager.extra, 0);
+		let num_width_start = 0;
+		if (num_x_start > 0) {
+			num_width_start = (arr_tiles_manager.width_range_surplus ? (arr_layer_level.tile_width - arr_tiles_manager.width_range_surplus) : arr_layer_level.tile_width);
+			if (num_x_start > 1) {
+				num_width_start += ((num_x_start-1) * arr_layer_level.tile_width);
 			}
 		}
-		var x_end = Math.min(Math.ceil((-pos_x_elm + pos_elm.width) / obj_level.tile_width) + 1+obj_tiles.extra, obj_tiles.count_width_range);
+		const num_x_end = Math.min(Math.ceil((-num_pos_x_elm + (arr_position.view.width * arr_layer_level.resolution)) / arr_layer_level.tile_width) + 1+arr_tiles_manager.extra, arr_tiles_manager.count_width_range);
 
-		var offset_x = pos_offset.x;
-		var offset_y = pos_offset.y;
-		var size_width = (pos_offset.sizing.width ? pos_offset.sizing.width : obj_level.width);
-		var size_height = (pos_offset.sizing.height ? pos_offset.sizing.height : obj_level.height);
+		const num_offset_x = arr_layer_level.offset.x;
+		const num_offset_y = arr_layer_level.offset.y;
 
-		var cur_map = obj_elm_map_content.elm_loading;
-		var arr_tiles_active = {};
-		var cur_height = height_start;
-		
-		if (obj_tiles.total === false) {
-			obj_tiles.total = (x_start-x_end) * (y_start-y_end);
-			obj_tiles.count_loading = obj_tiles.total;
+		if (arr_tiles_manager.total === false) {
+			arr_tiles_manager.total = (num_x_start-num_x_end) * (num_y_start-num_y_end);
 		}
 		
-		var z_level = obj_level.level;
+		const num_level = arr_layer_level.level;
 
-		for (var y = y_start; y < y_end; y++) {
+		for (let num_layer = 0, num_length_layers = arr_layers.length; num_layer < num_length_layers; num_layer++) {
 			
-			if (obj_tiles.height_range_surplus && (y == 0 || y == num_y_max)) {
-				var height = (x == 0 ? obj_level.tile_height - obj_tiles.height_range_surplus : obj_tiles.height_range_surplus);
-			} else {
-				var height = obj_level.tile_height;
+			const arr_layer = arr_layers[num_layer];
+			
+			if (!arr_layer.opacity) {
+				continue;
 			}
 			
-			var cur_width = width_start;
+			const arr_layer_manager = arr_layers_manager[num_layer];
+			const elm_layer = arr_layer_manager.elm_loading;
+
+			if (arr_layer_manager.tiles.count_loading === false) {
+				arr_layer_manager.tiles.count_loading = arr_tiles_manager.total;
+			}
+			
+			const str_layer_url = arr_layer_manager.tiles.url
+				.replace('{width}', arr_layer_level.tile_width)
+				.replace('{height}', arr_layer_level.tile_height);
+			const has_layer_url_bbox = str_layer_url.includes('{bbox}');
+			
+			const arr_tiles_active = {};
+			const fragment = document.createDocumentFragment();
 						
-			for (var x = x_start; x < x_end; x++) {
+			let num_cur_height = num_height_start;
+
+			for (let num_y = num_y_start; num_y < num_y_end; num_y++) {
 				
-				if (obj_tiles.width_range_surplus && (x == 0 || x == obj_tiles.count_width_range-1)) {
-					var width = (x == 0 ? obj_level.tile_width - obj_tiles.width_range_surplus : obj_tiles.width_range_surplus);
-					var width_mask = obj_level.tile_width - width;
+				let num_height = null;
+				if (arr_tiles_manager.height_range_surplus && (num_y == 0 || num_y == num_y_max)) {
+					num_height = (x == 0 ? arr_layer_level.tile_height - arr_tiles_manager.height_range_surplus : arr_tiles_manager.height_range_surplus);
 				} else {
-					var width = obj_level.tile_width;
-					var width_mask = 0;
+					num_height = arr_layer_level.tile_height;
 				}
 				
-				arr_tiles_active[x+'_'+y] = true;	
-				if (!obj_tiles.drawn[x+'_'+y]) {
-
-					var x_get = x;
-					if (obj_tiles.count_width_range_origin) {
-						
-						x_get = x_get + obj_tiles.count_width_range_origin;
-						var count_width_range_real = obj_tiles.count_width_range - 1;
-						
-						if (x_get >= count_width_range_real) {
-							x_get = x_get - count_width_range_real;
-						} else if (x_get < 0) {
-							x_get = x_get + count_width_range_real;
-						}
-					}
+				let num_cur_width = num_width_start;
+							
+				for (let num_x = num_x_start; num_x < num_x_end; num_x++) {
 					
-					const tile_path = settings.tile_path
-						.replace('{z}', z_level)
-						.replace('{x}', x_get)
-						.replace('{y}', y)
-						.replace('{-y}', (num_y_max - y))
-						.replace('{s}', settings.tile_subdomain_range[obj_tiles.getSubDomain(x)]);
-					
-					if (width_mask) {
-						
-						var elm_container = document.createElement('div');
-						elm_container.classList.add('img');
-						var elm_image = document.createElement('img');
-						elm_container.appendChild(elm_image);
-						
-						elm_image.setAttribute('src', tile_path);
-						elm_image.setAttribute('style', 'opacity: 0; width:'+(width + width_mask)+'px; height:'+(height)+'px; '+(x == 0 ? 'right' : 'left')+': 0px; top: 0px;');
-						elm_container.setAttribute('style', 'width:'+(width)+'px; height:'+(height)+'px; transform: translate('+(cur_width - offset_x)+'px, '+(cur_height - offset_y)+'px);');
+					let num_width = null;
+					let num_width_mask = null;
+					let num_offset_x_extra = 0;
+					if (arr_tiles_manager.width_range_surplus && (num_x == 0 || num_x == arr_tiles_manager.count_width_range-1)) {
+						num_width = (num_x == 0 ? arr_layer_level.tile_width - arr_tiles_manager.width_range_surplus : arr_tiles_manager.width_range_surplus);
+						num_width_mask = arr_layer_level.tile_width - num_width;
 					} else {
-						
-						var elm_container = document.createElement('img');
-						elm_image = elm_container;
-						
-						elm_image.setAttribute('src', tile_path);
-						elm_image.setAttribute('style', 'opacity: 0; width:'+(width)+'px; height:'+(height)+'px; transform: translate('+(cur_width - offset_x)+'px, '+(cur_height - offset_y)+'px);');
+						num_width = arr_layer_level.tile_width;
+						num_width_mask = 0;
 					}
 					
-					obj_tiles.drawn[x+'_'+y] = elm_container;
+					if (do_svg && num_width_mask && num_x == 0) { // Add extra offset for clipped svg images
+						num_offset_x_extra = -num_width_mask;
+					}
 					
-					elm_image.addEventListener('load', function(e) {
+					const str_identifier = num_x+'_'+num_y;
+					arr_tiles_active[str_identifier] = true;
+					
+					if (!arr_layer_manager.tiles.loaded[str_identifier]) {
 						
-						if (cur_map[0] == obj_elm_map_content.elm_loading[0]) { // Check if tile is still part of the active map content
+						let elm_container_image = arr_layer_manager.tiles.cache[num_level][str_identifier];
+						
+						if (!elm_container_image) {
+
+							let num_x_get = num_x;
+							if (arr_tiles_manager.count_width_range_origin !== false) {
+								
+								num_x_get = num_x_get + arr_tiles_manager.count_width_range_origin;
+								const num_count_width_range_real = arr_tiles_manager.count_width_range - 1;
+								
+								if (num_x_get >= num_count_width_range_real) {
+									num_x_get = num_x_get - num_count_width_range_real;
+								} else if (num_x_get < 0) {
+									num_x_get = num_x_get + num_count_width_range_real;
+								}
+							}
 							
-							var elm = e.target;
+							let str_tile_url = str_layer_url
+								.replace('{z}', num_level)
+								.replace('{x}', num_x_get)
+								.replace('{y}', num_y)
+								.replace('{-y}', (num_y_max - num_y));
 							
-							new TWEEN.Tween({opacity: 0})
-								.to({opacity: 1}, timeout_tile_animation)
-								.easing(TWEEN.Easing.Cubic.Out)
-								.onUpdate(function(arr) {
-									elm.style.opacity = arr.opacity;
-								})
-							.start();
+							if (arr_layer_manager.tiles.func_get_subdomain) {
+								str_tile_url = str_tile_url.replace('{s}', arr_layer_manager.tiles.func_get_subdomain(num_x));
+							}
+							if (has_layer_url_bbox) {
+								str_tile_url = str_tile_url.replace('{bbox}', getTileBBox(num_x_get, num_y).join(','));
+							}
 							
-							ANIMATOR.trigger();
+							elm_container_image = null;
+							let elm_image = null;
 							
-							obj_tiles.count_loading--;
+							if (num_width_mask) {
+								
+								if (do_svg) {
+									
+									elm_container_image = document.createElementNS(stage_ns, 'g');
+									elm_container_image.classList.add('img');
+									elm_image = document.createElementNS(stage_ns, 'image');
+									elm_container_image.appendChild(elm_image);
+							
+									elm_image.setAttribute('width', (num_width + num_width_mask + num_alpha_blending));
+									elm_image.setAttribute('height', (num_height + num_alpha_blending));
+									
+									if (num_x == 0) {
+										elm_container_image.style['clip-path'] = 'rect(0 '+(num_width + num_width_mask + num_alpha_blending)+'px '+(num_height + num_alpha_blending)+'px '+(num_width_mask + num_alpha_blending)+'px)';
+									} else {
+										elm_container_image.style['clip-path'] = 'rect(0 '+(num_width + num_alpha_blending)+'px '+(num_height + num_alpha_blending)+'px 0)';
+									}
+								} else {
+
+									elm_container_image = document.createElement('div');
+									elm_container_image.classList.add('img');
+									elm_image = document.createElement('img');
+									elm_container_image.appendChild(elm_image);
+									
+									elm_image.style.width = (num_width + num_width_mask)+'px';
+									elm_image.style.height = num_height+'px';
+									if (num_x == 0) {
+										elm_image.style.right = '0px';
+									} else {
+										elm_image.style.left = '0px';
+									}
+									
+									elm_container_image.style.width = num_width+'px';
+									elm_container_image.style.height = num_height+'px';
+								}
+							} else {
+								
+								if (do_svg) {
+									
+									elm_container_image = document.createElementNS(stage_ns, 'image');
+									
+									elm_container_image.setAttribute('width', (num_width + num_alpha_blending));
+									elm_container_image.setAttribute('height', (num_height + num_alpha_blending));
+								} else {
+									
+									elm_container_image = document.createElement('img');
+									
+									elm_container_image.style.width = num_width+'px';
+									elm_container_image.style.height = num_height+'px';
+								}
+								
+								elm_image = elm_container_image;
+							}
+
+							elm_container_image.style.opacity = 0;
+							elm_container_image.style.transform = 'translate('+(num_cur_width - num_offset_x + num_offset_x_extra)+'px, '+(num_cur_height - num_offset_y)+'px)';
+							
+							if (do_svg) {
+								elm_image.setAttribute('href', str_tile_url);
+							} else {
+								elm_image.src = str_tile_url;
+								elm_image.referrerPolicy = 'no-referrer';
+							}
+
+							let func_ready_image = null;
+							
+							const func_load_image = function() {
+								
+								const do_continue = func_ready_image(elm_container_image);
+								
+								if (!do_continue) {
+									return;
+								}
+								
+								new TWEEN.Tween({opacity: 0})
+									.to({opacity: 1}, timeout_tile_animation)
+									.easing(TWEEN.Easing.Cubic.Out)
+									.onUpdate(function(arr) {
+										elm_container_image.style.opacity = arr.opacity;
+									})
+								.start();
+								
+								ANIMATOR.trigger();
+							};
+							const func_error_image = function() {
+								
+								const do_continue = func_ready_image(true); // No valid tile could be loaded
+								
+								if (elm_container_image.parentNode) { // Could have been removed or re-appended to a new layer
+									elm_container_image.parentNode.removeChild(elm_container_image);
+								}
+								
+								if (!do_continue) {
+									return;
+								}
+								
+								arr_layer_manager.tiles.loaded[str_identifier] = false;
+							};
+							
+							func_ready_image = function(cache) {
+								
+								elm_image.removeEventListener('load', func_load_image);
+								elm_image.removeEventListener('error', func_error_image);
+
+								arr_layer_manager.tiles.cache[num_level][str_identifier] = cache;
+								
+								if (elm_layer != arr_layer_manager.elm_loading) { // Check if tile is still part of the active map content
+									return false;
+								}
+								
+								arr_layer_manager.tiles.count_loading--;
+								
+								return true;
+							};
+							
+							elm_image.addEventListener('load', func_load_image);
+							elm_image.addEventListener('error', func_error_image);						
+							
+							fragment.appendChild(elm_container_image);
+						} else {
+							
+							if (elm_container_image !== true) {
+		
+								elm_container_image.style.opacity = 1;
+								elm_container_image.style.transform = 'translate('+(num_cur_width - num_offset_x + num_offset_x_extra)+'px, '+(num_cur_height - num_offset_y)+'px)';
+								
+								fragment.appendChild(elm_container_image);
+							}
+
+							arr_layer_manager.tiles.count_loading--;
 						}
-					});
+						
+						arr_layer_manager.tiles.loaded[str_identifier] = elm_container_image;
+					}
 					
-					cur_map[0].appendChild(elm_container);
+					num_cur_width = num_cur_width + num_width;
 				}
 				
-				cur_width = cur_width + width;
+				num_cur_height = num_cur_height + num_height;
 			}
-			cur_height = cur_height + height;
-		}
 		
-		for (var key in obj_tiles.drawn) {
-			
-			if (!arr_tiles_active[key] && obj_tiles.drawn[key]) {
+			for (const str_identifier in arr_layer_manager.tiles.loaded) {
 				
-				cur_map[0].removeChild(obj_tiles.drawn[key]);
-				obj_tiles.drawn[key] = false;
-				obj_tiles.count_loading--;
+				const elm_container_image = arr_layer_manager.tiles.loaded[str_identifier];
+				
+				if (arr_tiles_active[str_identifier] === true || elm_container_image === false) {
+					continue;
+				}
+				
+				if (elm_container_image !== true) {
+					elm_layer.removeChild(elm_container_image);
+				}
+				arr_layer_manager.tiles.loaded[str_identifier] = false;
+				arr_layer_manager.tiles.count_loading--;
 			}
+			
+			elm_layer.appendChild(fragment);
 		}
+	}
+	
+	var getTileBBox = function(x, y) {
+				
+		const pos_start = SELF.convertPointToEPSG3857(SELF.getPoint(arr_layer_level.tile_width * x, arr_layer_level.tile_height * y, arr_layer_level.level, true));
+		const pos_end = SELF.convertPointToEPSG3857(SELF.getPoint(arr_layer_level.tile_width * (x + 1), arr_layer_level.tile_height * (y + 1), arr_layer_level.level, true));
+		
+		return [
+			pos_start[0],
+			pos_end[1],
+			pos_end[0],
+			pos_start[1]
+		];
 	}
 	
 	this.plotPoint = function(latitude, longitude, zoom, has_origin) {
@@ -1008,17 +1393,25 @@ function MapScroller(element, options) {
 		return longitude;
 	};
 	
-	this.getPoint = function(x, y, zoom) {
+	this.getPoint = function(x, y, zoom, has_origin) {
 
-		var longitude = ((360*x-180*SELF.levelVars(zoom).width) / SELF.levelVars(zoom).width) + pos_origin.longitude;
+		const longitude = ((360*x-180*SELF.levelVars(zoom).width) / SELF.levelVars(zoom).width) + (!has_origin ? pos_origin.longitude : 0);
 
-		var latitude = -(2*Math.PI*y -Math.PI*SELF.levelVars(zoom).height)/SELF.levelVars(zoom).height;
-
+		let latitude = -(2*Math.PI*y -Math.PI*SELF.levelVars(zoom).height)/SELF.levelVars(zoom).height;
 		latitude = (4*Math.atan(Math.pow(Math.E,latitude))-Math.PI)/2;
-		
 		latitude = 180*latitude/Math.PI;
 
 		return {latitude: latitude, longitude: longitude};
+	};
+	
+	this.convertPointToEPSG3857 = function(pos_point) { // WGS84/EPSG:4326 GPS/pixels to meters EPSG:3857
+				
+		const x = (pos_point.longitude * 20037508.34) / 180;
+		
+		let y = Math.log(Math.tan(((90 + pos_point.latitude) * Math.PI) / 360)) / (Math.PI / 180);
+		y = (y * 20037508.34) / 180;
+		
+		return [x, y];
 	};
 	
 	this.getBoundsZoom = function(bounds) {
@@ -1051,15 +1444,15 @@ function MapScroller(element, options) {
 	this.levelVars = function(num_zoom) {
 		
 		const num_index = (num_zoom != null ? num_zoom : cur_zoom)-1;
-		const obj_level = arr_levels[num_index];
+		const arr_level = arr_levels[num_index];
 		
-		if (obj_level && obj_level.auto) {
+		if (arr_level && arr_level.auto) {
 			
-			obj_level.width = pos_elm.width;
-			obj_level.height = pos_elm.height;
+			arr_level.width = pos_elm.width;
+			arr_level.height = pos_elm.height;
 		}
 		
-		return obj_level;
+		return arr_level;
 	};
 	
 	this.getZoom = function() {

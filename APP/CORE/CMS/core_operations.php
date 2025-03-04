@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -52,6 +52,11 @@
 	const MATCH_START = 1;
 	const MATCH_END = 2;
 	const MATCH_ANY = 3;
+	
+	const REGEX_NOFLAG = '-';
+	const REGEX_CASE_INSENSITIVE = 'i';
+	const REGEX_DOT_SPECIAL = 'd';
+	const REGEX_LINE = 'l';
 	
 	const URI_SCHEME_HTTP = 'http://';
 	const URI_SCHEME_HTTPS = 'https://';
@@ -606,9 +611,19 @@
 	
 	function getPathTemporary($str_class = false, $is_directory = false, $str_path = false) {
 		
-		$str_temporary = tempnam(($str_path ?: Settings::get('path_temporary')), ($is_directory ? '_' : '').($str_class ?: '1100CC'));
+		if ($str_path) {
+			
+			if (!isPath($str_path)) {
+				mkdir($str_path, 00700, true);
+			}
+		} else {
+			
+			$str_path = Settings::get('path_temporary');
+		}
 		
-		if ($is_directory) {
+		$str_temporary = tempnam($str_path, ($is_directory ? '_' : '').($str_class ?: '1100CC'));
+		
+		if ($is_directory) { // Switch temporary file to a directory
 			
 			unlink($str_temporary);
 			mkdir($str_temporary, 00700);
@@ -839,32 +854,39 @@
 		
 		return $str;
 	}
+	
+	function str2Clean($str) {
+		
+		if ($str === null) {
+			return '';
+		}
+		
+		$str = preg_replace('/[^\PC\s]/', '', $str); // Remove non-printable characters: not, not-control characters or whitespace characters ('\PC' is inverse form of '\p{C}')
+		
+		return $str;
+	}
 
-	function str2Name($str, $str_keep = false) {
+	function str2Name($str, $str_keep = false, $str_replace = '') {
 		
 		if (!$str) {
 			return (string)$str;
 		}
 		
-		return strtolower(preg_replace('/[^a-z0-9'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', '', $str));
+		return strtolower(preg_replace('/[^a-z0-9'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', $str_replace, $str));
 	}
 	
-	function str2Label($str, $str_keep = false) {
+	function str2Label($str, $str_keep = false, $str_replace = '', $str_whitespace = '_') {
 		
 		if (!$str) {
 			return (string)$str;
 		}
 		
-		return strtolower(preg_replace('/[^a-z0-9-_'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', '', str_replace(' ', '_', $str)));
+		return strtolower(preg_replace('/[^a-z0-9-_'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', $str_replace, str_replace(' ', $str_whitespace, $str)));
 	}
 	
 	function str2URL($str, $str_keep = false) {
 		
-		if (!$str) {
-			return (string)$str;
-		}
-		
-		return strtolower(preg_replace('/[^a-z0-9-_'.($str_keep ? preg_quote($str_keep, '/') : '').']/i', '', str_replace(' ', '-', $str)));
+		return str2Label($str, $str_keep, '', '-');
 	}
 	
 	function str2Color($str, $code = 'hex') {
@@ -934,10 +956,8 @@
 	}
 		
 	function strStartsWith($str, $str_test) {
-		
-		$num_length_test = strlen($str_test);
-		
-		return (strncmp($str, $str_test, $num_length_test) === 0);
+				
+		return (strncmp($str, $str_test, strlen($str_test)) === 0);
 	}
 	
 	function strEndsWith($str, $str_test) {
@@ -970,33 +990,80 @@
 		return $str;
 	}
 	
-	function parseRegularExpression($pattern, $flags, $template) {
+	function parseRegularExpression($str_pattern, $str_flags, $str_template = null, $do_parse_self = false) {
 		
-		$pattern = trim($pattern);
-		$flags = ($flags ? preg_replace('/[^imsxADU]*/', '', $flags) : '');
-		$template = $template; // Can be empty to replace with an empty string
+		$str_pattern = trim($str_pattern);
 		
-		if (!$pattern) {
+		$str_flags_test = '';
+
+		if ($str_flags) {
+			
+			$str_flags = preg_replace('/[^'.REGEX_CASE_INSENSITIVE.REGEX_LINE.REGEX_DOT_SPECIAL.']*/', '', $str_flags);
+			$str_flags_test = parseRegularExpressionFlags($str_flags, [REGEX_CASE_INSENSITIVE => 'i', REGEX_LINE => 'm', REGEX_NOFLAG.REGEX_DOT_SPECIAL => 's']);
+		}
+		
+		$str_template = $str_template; // Can be empty to replace with an empty string
+		
+		if ($do_parse_self) { // Use for strRegularExpression
+			
+			$str_flags = $str_flags_test;
+			
+			if ($str_template !== null) {
+				$str_template = stripcslashes($str_template);
+			}
+		}
+
+		if (!$str_pattern) {
 			return false;
 		}
 		
 		// Make sure the pattern is not erroneous
 		try {
-			preg_replace('/'.$pattern.'/'.$flags, $template, 'TEST');
+			if ($str_template !== null) {
+				preg_replace('/'.$str_pattern.'/'.$str_flags_test, $str_template, 'TEST');
+			} else {
+				preg_match('/'.$str_pattern.'/'.$str_flags_test, 'TEST');
+			}
 		} catch (Exception $e) {
-			$pattern = preg_quote($pattern, '/');
+			$str_pattern = preg_quote($str_pattern, '/');
 		}
 		
-		return ['pattern' => $pattern, 'flags' => $flags, 'template' => $template];
+		return ['pattern' => $str_pattern, 'flags' => $str_flags, 'template' => $str_template];
 	}
 	
-	function strRegularExpression($str, $pattern, $flags, $template, $do_process_template = true) {
+	function parseRegularExpressionFlags($str_flags, $arr_translate) {
 		
-		if ($do_process_template) {
-			$template = stripcslashes($template);
+		$str_flags_translate = '';
+		$func_get_translate = fn($mode) => ($arr_translate[$mode] ?? '');
+		
+		if ($str_flags) {
+			
+			if (strpos($str_flags, REGEX_DOT_SPECIAL) !== false) { // Dot does not match newlines
+				$str_flags_translate .= $func_get_translate(REGEX_DOT_SPECIAL);
+			} else {
+				$str_flags_translate .= $func_get_translate(REGEX_NOFLAG.REGEX_DOT_SPECIAL);
+			}
+			if (strpos($str_flags, REGEX_LINE) !== false) { // Start and end of line ($^) matches newlines
+				$str_flags_translate .= $func_get_translate(REGEX_LINE);
+			} else {
+				$str_flags_translate .= $func_get_translate(REGEX_NOFLAG.REGEX_LINE);
+			}
+			if (strpos($str_flags, REGEX_CASE_INSENSITIVE) !== false) { // Case-insensitive
+				$str_flags_translate .= $func_get_translate(REGEX_CASE_INSENSITIVE);
+			} else { // Case-sensitive
+				$str_flags_translate .= $func_get_translate(REGEX_NOFLAG.REGEX_CASE_INSENSITIVE);
+			}
+		} else {
+			
+			$str_flags_translate = $func_get_translate(REGEX_NOFLAG.REGEX_CASE_INSENSITIVE).$func_get_translate(REGEX_NOFLAG.REGEX_LINE).$func_get_translate(REGEX_NOFLAG.REGEX_DOT_SPECIAL);
 		}
 		
-		return preg_replace('/'.$pattern.'/'.$flags, $template, $str);		
+		return $str_flags_translate;
+	}
+	
+	function strRegularExpression($str, $str_pattern, $str_flags, $str_template) {
+		
+		return preg_replace('/'.$str_pattern.'/'.$str_flags, $str_template, $str);		
 	}
 	
 	function parseValue($value, $what, $keep_null = false) {
@@ -1049,16 +1116,15 @@
 		foreach ($arr as $key => &$value) {
 			
 			if ($arr_keys !== null) {
+				
 				if ($keys_include == true && empty($arr_keys[$key]) || $keys_include == false && !empty($arr_keys[$key])) {
 					continue;
 				}
 			}
 			
 			if (is_array($value)) { // Recursive
-
 				$value = arrParseRecursive($value, $what, $arr_keys, $keys_include);
 			} else {
-				
 				$value = parseValue($value, $what);
 			}
 		}
@@ -1081,38 +1147,72 @@
 			return array_filter($arr);
 		}
 	}
-	
-	function arrUniqueValuesRecursive($arr_keys, $arr, &$arr_flat = []) {
 		
-		return arrValuesRecursive($arr_keys, $arr, $arr_flat, true);
-	}
-	
-	function arrValuesRecursive($arr_keys, $arr, &$arr_flat = [], $do_unique = false) {
+	function arrValuesRecursive($arr_keys, $arr, $do_positive = true, &$arr_flat = [], $do_unique = false, $parse_what = null) {
 		
-		if ($arr_keys !== false && !is_array($arr_keys)) {
+		if ($arr_keys !== null && !is_array($arr_keys)) {
 			$arr_keys = [$arr_keys => true];
 		}
 	
 		foreach ($arr as $k => $v) {
 		
-			if (!$v) {
+			if ($v === null || ($do_positive && !$v)) {
 				continue;
 			}
 			
-			if ($arr_keys === false || isset($arr_keys[$k])) {
+			if (isset($arr_keys[$k])) {
+				
+				$v_use = ($parse_what !== null ? parseValue($v, $parse_what) : $v);
+				
 				if ($do_unique) {
-					$arr_flat[$v] = $v;
+					$arr_flat[$v_use] = $v_use;
 				} else {
-					$arr_flat[] = $v;
+					$arr_flat[] = $v_use;
 				}
 			}
 			
 			if (is_array($v)) { // Recursive
-				arrValuesRecursive($arr_keys, $v, $arr_flat, $do_unique);
+				
+				arrValuesRecursive($arr_keys, $v, $do_positive, $arr_flat, $do_unique);
+				continue;
+			}
+			
+			if ($arr_keys === null) {
+				
+				$v_use = ($parse_what !== null ? parseValue($v, $parse_what) : $v);
+				
+				if ($do_unique) {
+					$arr_flat[$v_use] = $v_use;
+				} else {
+					$arr_flat[] = $v_use;
+				}
 			}
 		}
 		
 		return $arr_flat;
+	}
+	
+	function arrValuesRecursiveParse($arr_keys, $arr, $parse_what, $do_positive = true, &$arr_flat = []) {
+		
+		if (!is_array($arr)) {
+			return parseValue($arr, $parse_what);
+		}
+		
+		return arrValuesRecursive($arr_keys, $arr, $do_positive, $arr_flat, false, $parse_what);
+	}
+	
+	function arrValuesRecursiveUniqueParse($arr_keys, $arr, $parse_what, $do_positive = true, &$arr_flat = []) {
+		
+		if (!is_array($arr)) {
+			return parseValue($arr, $parse_what);
+		}
+		
+		return arrValuesRecursive($arr_keys, $arr, $do_positive, $arr_flat, true, $parse_what);
+	}
+	
+	function arrValuesRecursiveUnique($arr_keys, $arr, $do_positive = true, &$arr_flat = []) {
+		
+		return arrValuesRecursive($arr_keys, $arr, $do_positive, $arr_flat, true);
 	}
 	
 	function arrHasValuesRecursive($key, $arr_values, $arr) {
@@ -1125,7 +1225,7 @@
 			
 			$is_array_v = is_array($v);
 			
-			if (($k === $key || $key === false) && !$is_array_v && isset($arr_values[$v])) {
+			if (($k === $key || $key === null) && !$is_array_v && isset($arr_values[$v])) {
 				return $v;
 			}
 			
@@ -1142,7 +1242,7 @@
 		return null;
 	}
 	
-	function arrHasKeysRecursive($arr_keys, $arr, $only_positive = false) {
+	function arrHasKeysRecursive($arr_keys, $arr, $do_positive = false) {
 		
 		if (!is_array($arr_keys)) {
 			$arr_keys = [$arr_keys => true];
@@ -1150,8 +1250,13 @@
 	
 		foreach ($arr as $k => $v) {
 			
+			if ($v === null) {
+				continue;
+			}
+			
 			if (!empty($arr_keys[$k])) {
-				if (!$only_positive) { // Any key (with or without value)
+				
+				if (!$do_positive) { // Any key (with or without value)
 					return $k;
 				} else if ($v) { // Only keys with a positive value
 					return $k;
@@ -1160,7 +1265,7 @@
 			
 			if ($v && is_array($v)) { // Recursive
 				
-				$key_found = arrHasKeysRecursive($arr_keys, $v, $only_positive);
+				$key_found = arrHasKeysRecursive($arr_keys, $v, $do_positive);
 				
 				if ($key_found !== null) {
 					return $key_found;
@@ -1181,7 +1286,7 @@
 				
 				$arr_result = arrFlattenKeysRecursive($value);
 				
-				if ($key == '0') {
+				if ($key === 0) {
 					
 					foreach ($arr_result as $k => $v) {
 						$arr_collect[] = ['[]' => $v];
@@ -1193,7 +1298,7 @@
 				}
 			} else {
 				
-				if ($key == '0') {
+				if ($key === 0) {
 					$arr_collect[] = ['[]' => ''];
 				}
 				
@@ -1204,17 +1309,18 @@
 		return $arr_collect;
 	}
 	
-	function arrKsortRecursive($arr, $flag_sort = SORT_STRING) {
+	function arrSortKeysRecursive($arr, $flag_sort = SORT_STRING) {
 		
 		 // $flag_sort = SORT_STRING, compare as strings by default, because array keys could be of mixed types
 
-		if (is_array($arr)) {
+		if (!is_array($arr)) {
+			return $arr;
+		}
 			
-			ksort($arr, $flag_sort);
+		ksort($arr, $flag_sort);
 			
-			foreach ($arr as &$v) {
-				$v = arrKsortRecursive($v, $flag_sort); // Recursive
-			}
+		foreach ($arr as &$v) {
+			$v = arrSortKeysRecursive($v, $flag_sort); // Recursive
 		}
 		
 		return $arr;
@@ -1285,7 +1391,7 @@
 		return $arr_collect;
 	}
 	
-	function arrMergeValues(...$arrs) {  // Merge arrays: values will be overwitten
+	function arrMergeValues(...$arrs) { // Merge arrays: values will be overwitten
 		
 		if (!isset($arrs[1])) {
 			$arrs = current($arrs);
@@ -1305,6 +1411,51 @@
 	function arrIsAssociative($arr) {
 		
 		return (bool)count(array_filter(array_keys($arr), 'is_string'));
+	}
+	
+	function arrIsEqual(...$arrs) { // Check if transported arrays (i.e. former JSON object) are equal to active ones
+
+		static $func_parse = null;
+		
+		if ($func_parse === null) {
+			
+			$func_parse = function($value) use (&$func_parse) {
+					
+				if (!is_array($value)) {
+					
+					if (is_numeric($value)) { // Account for difference between a floaty '1' and an integer '1'
+						$value = (string)$value;
+					}
+					
+					return $value;
+				}
+					
+				ksort($value, SORT_STRING);
+					
+				foreach ($value as &$v) {
+					$v = $func_parse($v);
+				}
+				
+				return $value;
+			};
+		}
+		
+		$arr_first = null;
+		
+		foreach ($arrs as $arr) {
+			
+			if ($arr_first === null) {
+				
+				$arr_first = $func_parse($arr);
+				continue;
+			}
+			
+			if ($arr_first !== $func_parse($arr)) {
+				return false;
+			}
+		}
+		
+		return true;
 	}
 	
 	function arrRearrangeParams($arr) { // $arr[param][0] => $arr[0][param]
@@ -1388,6 +1539,21 @@
 		
 		return htmlspecialchars_decode($str_html);
 	}
+	
+	function strParsePassthrough($str) {
+		
+		if (Settings::get('input_passthrough') !== false || !$str) {
+			return $str;
+		}
+		
+		$str_base = trim($str);
+		
+		if (!preg_match('/^[A-Za-z0-9+\/]+=*$/', $str_base)) {
+			return $str;
+		}
+		
+		return base64_decode($str_base);
+	}
 		
 	function createContentIdentifier($arr) {
 		
@@ -1432,7 +1598,7 @@
 		
 			$body = FormatTags::parse($body);
 			
-			$format = new FormatHTML($body);
+			$format = new FormatHTML($body, ($arr_options['newlines'] ?? true));
 			
 			if ($arr_options['sanitise']) {
 				if (is_array($arr_options['sanitise'])) {

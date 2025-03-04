@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -262,14 +262,14 @@ class messaging extends base_module {
 			$sql_participant_summary = "(SELECT 
 				CASE
 					WHEN COUNT(cp.user_id) > 5 THEN COUNT(cp.user_id)
-					ELSE ".DBFunctions::sqlImplode('u.name', ', ', "ORDER BY cp.is_owner DESC")."
+					ELSE ".DBFunctions::group2String('u.name', ', ', "ORDER BY cp.is_owner DESC")."
 				END
 					FROM ".DB::getTable('MESSAGING_CONVERSATION_PARTICIPANTS')." cp
 					LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = cp.user_id)
 				WHERE cp.conversation_id = c.id
 			)";
 			$sql_participant_user_groups = "(SELECT
-				".DBFunctions::sqlImplode('ug.name', ', ')."
+				".DBFunctions::group2String('ug.name', ', ')."
 					FROM ".DB::getTable('MESSAGING_CONVERSATION_PARTICIPANTS')." cp
 					LEFT JOIN ".DB::getTable('TABLE_USERS')." u ON (u.id = cp.user_id)
 					LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." ug ON (ug.id = cp.user_group_id)

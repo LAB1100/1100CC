@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -153,7 +153,7 @@ class cms_custom_content extends base_module {
 		if ($method == "data") {
 			
 			$sql_column_tags = "(SELECT
-				".DBFunctions::sqlImplode('DISTINCT t.name')."
+				".DBFunctions::group2String('DISTINCT t.name')."
 					FROM ".DB::getTable('TABLE_PAGE_MODULES')." m
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_INTERNAL_TAGS')." ot ON (ot.page_id = p.id)
@@ -163,11 +163,12 @@ class cms_custom_content extends base_module {
 			
 			$arr_sql_columns = ['cc.name', 'COUNT(d.id)', $sql_column_tags];
 			$arr_sql_columns_search = ['cc.name', '', $sql_column_tags];
-			$arr_sql_columns_as = ['cc.name', '', $sql_column_tags.' AS tags', 'cc.id', DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id').' AS directories', DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id').' AS pages'];
-
-			$sql_table = DB::getTable('TABLE_CUSTOM_CONTENT').' cc';
+			$arr_sql_columns_as = ['cc.name', '', $sql_column_tags.' AS tags', 'cc.id', DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id').' AS directories', DBFunctions::group2String('p.name', ',', 'ORDER BY p.id').' AS pages'];
 
 			$sql_index = 'cc.id';
+			$sql_index_body = 'cc.id';
+			
+			$sql_table = DB::getTable('TABLE_CUSTOM_CONTENT').' cc';
 			
 			$sql_body = $sql_table."
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.var != '' AND ".DBFunctions::castAs('m.var', DBFunctions::CAST_TYPE_INTEGER)." = cc.id AND m.module = 'custom_content')
@@ -175,7 +176,7 @@ class cms_custom_content extends base_module {
 					LEFT JOIN ".DB::getTable('TABLE_DIRECTORIES')." d ON (d.id = p.directory_id)
 			";
 			
-			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, $sql_body);
+			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, $sql_body, $sql_index_body);
 			
 			while ($arr_row = $arr_datatable['result']->fetchAssoc())	{
 
@@ -210,11 +211,14 @@ class cms_custom_content extends base_module {
 			
 			$str_style = array_merge([$_POST['style']['default']], str2Array($_POST['style']['other'], ' '));
 			$str_style = arr2String(array_filter($str_style), ' ');
-						
+			$str_body = strParsePassthrough($_POST['body']);
+			$str_script = strParsePassthrough($_POST['script']);
+			$str_description = strParsePassthrough($_POST['description']);
+			
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_CUSTOM_CONTENT')."
 				(name, body, style, script, description)
 					VALUES
-				('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['body'])."', '".DBFunctions::strEscape($str_style)."', '".DBFunctions::strEscape($_POST['script'])."', '".DBFunctions::strEscape($_POST['description'])."')
+				('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($str_body)."', '".DBFunctions::strEscape($str_style)."', '".DBFunctions::strEscape($str_script)."', '".DBFunctions::strEscape($str_description)."')
 			");
 
 			$new_id = DB::lastInsertID();
@@ -229,14 +233,17 @@ class cms_custom_content extends base_module {
 			
 			$str_style = array_merge([$_POST['style']['default']], str2Array($_POST['style']['other'], ' '));
 			$str_style = arr2String(array_filter($str_style), ' ');
+			$str_body = strParsePassthrough($_POST['body']);
+			$str_script = strParsePassthrough($_POST['script']);
+			$str_description = strParsePassthrough($_POST['description']);
 			
 			$res = DB::query("UPDATE ".DB::getTable('TABLE_CUSTOM_CONTENT')."
 				SET
 					name = '".DBFunctions::strEscape($_POST['name'])."',
-					body = '".DBFunctions::strEscape($_POST['body'])."',
+					body = '".DBFunctions::strEscape($str_body)."',
 					style = '".DBFunctions::strEscape($str_style)."',
-					script = '".DBFunctions::strEscape($_POST['script'])."',
-					description = '".DBFunctions::strEscape($_POST['description'])."'
+					script = '".DBFunctions::strEscape($str_script)."',
+					description = '".DBFunctions::strEscape($str_description)."'
 				WHERE id = ".(int)$id."
 			");
 			
@@ -260,7 +267,7 @@ class cms_custom_content extends base_module {
 
 		$res = DB::query("SELECT
 			cc.*,
-			".DBFunctions::sqlImplode('t.name')." AS tags
+			".DBFunctions::group2String('t.name')." AS tags
 				FROM ".DB::getTable('TABLE_CUSTOM_CONTENT')." cc
 				LEFT JOIN ".DB::getTable('TABLE_CUSTOM_CONTENT_TAGS')." ot ON (ot.custom_content_id = cc.id)
 				LEFT JOIN ".DB::getTable('TABLE_TAGS')." t ON (t.id = ot.tag_id)

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -29,13 +29,13 @@ class cms_feeds extends base_module {
 					WHERE fl.feed_id = f.id
 				) AS feed_entry_count,
 				(SELECT
-					".DBFunctions::sqlImplode('fe.title', '<br />', 'ORDER BY fe.date DESC')."
+					".DBFunctions::group2String('fe.title', '<br />', 'ORDER BY fe.date DESC')."
 						FROM ".DB::getTable('TABLE_FEED_ENTRY_LINK')." fl
 						LEFT JOIN ".DB::getTable('TABLE_FEED_ENTRIES')." fe ON (fe.id = fl.feed_entry_id)
 					WHERE fl.feed_id = f.id
 				) AS feed_entries,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-				".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+				".DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+				".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 					FROM ".DB::getTable('TABLE_FEEDS')." f
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.var LIKE CONCAT('%\"id\":\"', f.id, '\"%') AND m.module = 'feed')
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)

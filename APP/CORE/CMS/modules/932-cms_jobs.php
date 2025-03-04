@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -570,7 +570,7 @@ class cms_jobs extends base_module {
 					
 						if ($is_service) {
 							
-							$do = Mediator::setLock($module.$method, 'job');
+							$do = Mediator::attachLock($module.$method, 'job');
 		
 							if ($do) {
 
@@ -652,7 +652,7 @@ class cms_jobs extends base_module {
 		$module = $arr_module_method['module'];
 		$method = $arr_module_method['method'];
 		
-		$do = Mediator::setLock($module.$method, false);
+		$do = Mediator::attachLock($module.$method, false);
 		
 		if (!$do) {
 			return;
@@ -695,7 +695,7 @@ class cms_jobs extends base_module {
 
 		SiteStartEnvironment::stopSession();
 
-		$do = Mediator::setLock($module.$method, $key);
+		$do = Mediator::attachLock($module.$method, $key);
 		
 		if (!$do) {
 			
@@ -813,7 +813,9 @@ class cms_jobs extends base_module {
 			
 			$module::$method($arr_job);
 		} catch (Exception $e) {
-		
+			
+			DB::rollbackTransaction(false);
+			
 			$func_update();
 			throw($e);
 		}

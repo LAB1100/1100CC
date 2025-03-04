@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -54,7 +54,7 @@ class Labels {
 	
 	public static function doPrintLabels($str_text, $encode = false) {
 
-		if (self::$arr_labels || self::$arr_identifiers) {
+		if (self::$arr_identifiers) {
 			
 			$arr_to_lookup = [];
 			
@@ -102,6 +102,9 @@ class Labels {
 					self::$arr_labels[$code] = str_replace($code_print, self::$arr_labels[$code_print], self::$arr_labels[$code]);
 				}
 			}
+		}
+			
+		if (self::$arr_labels) {
 			
 			// Print
 			

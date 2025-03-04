@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -23,7 +23,7 @@ class intf_user_groups extends user_groups {
 				g.*,
 				pg.name AS parent_name,
 				COUNT(DISTINCT u.id) AS user_count,
-				".DBFunctions::sqlImplode('DISTINCT '.DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',')." AS directories 
+				".DBFunctions::group2String('DISTINCT '.DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',')." AS directories 
 					FROM ".DB::getTable('TABLE_USER_GROUPS')." g
 					LEFT JOIN ".DB::getTable('TABLE_USER_GROUPS')." pg ON (pg.id = g.parent_id)
 					LEFT JOIN ".DB::getTable('TABLE_DIRECTORIES')." d ON (d.user_group_id = g.id)
@@ -395,7 +395,7 @@ class intf_user_groups extends user_groups {
 					(DB::ENGINE_IS_POSTGRESQL ? "SELECT
 						TRUE AS is_primary,
 						(SELECT
-							".DBFunctions::sqlImplode('kcu2.COLUMN_NAME', ',')."
+							".DBFunctions::group2String('kcu2.COLUMN_NAME', ',')."
 								FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu2
 							WHERE kcu2.TABLE_CATALOG = kcu.TABLE_CATALOG
 								AND kcu2.TABLE_SCHEMA = kcu.TABLE_SCHEMA
@@ -438,7 +438,7 @@ class intf_user_groups extends user_groups {
 					.(DB::ENGINE_IS_MYSQL ? "SELECT
 						TRUE AS is_primary,
 						(SELECT
-							".DBFunctions::sqlImplode('c2.COLUMN_NAME', ',')."
+							".DBFunctions::group2String('c2.COLUMN_NAME', ',')."
 								FROM INFORMATION_SCHEMA.COLUMNS c2
 							WHERE c2.TABLE_SCHEMA = c.TABLE_SCHEMA
 							AND c2.TABLE_NAME = c.TABLE_NAME

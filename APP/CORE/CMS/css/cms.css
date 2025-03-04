@@ -13,6 +13,10 @@ Closed related: #ffdcdc border: #f6bcbc
 
 */
 
+:root {
+	--button: #009cff; --button-border: #009cff; --button-hover: #009cff; --button-focus: #009cff;
+}
+
 /* GENERAL */
 
 html {
@@ -158,8 +162,6 @@ body > .overlay { min-width: 1000px; }
 .section > h2 + div > *:last-child > *:last-child { margin-bottom: 0px; }
 
 /* INTERFACE */
-
-*[type=button], *[type=submit] { background-color: #009cff; border: 1px solid #009cff; }
 
 menu { text-align: center; }
 

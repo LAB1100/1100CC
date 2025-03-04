@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -27,6 +27,19 @@ class cms_admin extends base_module {
 				'database' => DB::$database_cms,
 				'tables' => [],
 				'download' => false
+			]
+		];
+	}
+	
+	public static function setupProperties() {
+		
+		return [
+			'database_initialise' => [
+				'label' => 'Initialise 1100CC database settings.',
+				'run' => function() {
+
+					(DB::getRealNamespace().'\DBSetup')::init();
+				}
 			]
 		];
 	}
@@ -56,6 +69,7 @@ class cms_admin extends base_module {
 					<li><a href="#">'.getLabel('lbl_backup').'</a></li>
 					<li><a href="#">'.getLabel('lbl_restore').'</a></li>
 					'.($_SESSION['CORE'] ? '<li><a href="#">'.getLabel('lbl_update').' 1100CC</a></li>' : '').'
+					'.($_SESSION['CORE'] ? '<li><a href="#">'.getLabel('lbl_setup').' 1100CC</a></li>' : '').'
 				</ul>
 				
 				<div class="backup">
@@ -66,7 +80,7 @@ class cms_admin extends base_module {
 							.'<select name="backup[]" multiple="multiple"'.($arr_backup_selector ? ' size="'.count($arr_backup_selector).'"' : '').'>'.cms_general::createDropdown($arr_backup_selector).'</select>'
 						.'</div>
 						
-						<menu><input title="'.getLabel('inf_backup_download').'" name="download" type="submit" value="'.getLabel('lbl_download').'" /><input type="submit" value="'.getLabel('lbl_save').'" /></menu>
+						<menu><input title="'.getLabel('inf_backup_1100cc_download').'" name="download" type="submit" value="'.getLabel('lbl_download').'" /><input type="submit" value="'.getLabel('lbl_save').'" /></menu>
 					</form>
 					
 				</div>
@@ -112,6 +126,10 @@ class cms_admin extends base_module {
 						
 						'.$this->contentTabUpdate().'
 						
+					</div><div class="setup">
+						
+						'.$this->contentTabSetup().'
+						
 					</div>';
 				}			
 					
@@ -134,6 +152,30 @@ class cms_admin extends base_module {
 			</dl></div>
 			
 			<menu><input type="submit" value="'.getLabel('lbl_update').'" /></menu>
+			
+		</form>';
+		
+		return $return;
+	}
+	
+	private function contentTabSetup() {
+				
+		$return = '<form id="f:cms_admin:setup-0">
+
+			<div class="record options"><ul>';
+				
+				$arr_modules = getModuleConfiguration('setupProperties');
+						
+				foreach ($arr_modules as $module => $arr_settings) {
+					foreach ($arr_settings as $str_name => $arr_setup) {
+						
+						$return .= '<li>'.$arr_setup['label'].'</li>';
+					}
+				}
+				
+			$return .= '</ul></div>
+			
+			<menu><input type="submit" value="'.getLabel('lbl_setup').'" /></menu>
 			
 		</form>';
 		
@@ -173,6 +215,7 @@ class cms_admin extends base_module {
 			.cms_admin form { text-align: center; }
 			.cms_admin .tabs > .backup select { display: block; margin: 0px auto 8px auto; }
 			.cms_admin .tabs > .update dl { display: inline-table; margin-left: auto; margin-right: auto; }
+			.cms_admin .tabs > .setup ul { list-style-type: disc; list-style-position: inside; }
 		';
 		
 		return $return;
@@ -328,7 +371,7 @@ class cms_admin extends base_module {
 				Labels::setVariable('name', $arr_backup_details[$arr_file['name']]['label']);
 				Labels::setVariable('date',  $arr_file['date']);
 							
-				$this->html = getLabel('conf_backup_restore');
+				$this->html = getLabel('conf_backup_1100cc_restore');
 				$this->do_confirm = true;
 			} else {
 								
@@ -353,6 +396,26 @@ class cms_admin extends base_module {
 			
 			$this->msg = true;
 			$this->html = $this->contentTabUpdate();
+		}
+		
+		if ($method == "setup" && $_SESSION['CORE']) {
+			
+			if ($this->is_confirm === null) {
+				
+				//Labels::setVariable('what', $str_what);
+				$this->html = getLabel('conf_setup_1100cc');
+				$this->do_confirm = true;
+				return;
+			} else if ($this->is_confirm) {
+			
+				timeLimit(false);
+				
+				self::runSetup();
+				
+				msg('1100CC has successfully been setup.');
+				
+				$this->msg = true;
+			}
 		}
 	}
 				
@@ -412,7 +475,7 @@ class cms_admin extends base_module {
 			}
 		}
 		
-		self::$arr_backup_files = arrKsortRecursive(self::$arr_backup_files);
+		self::$arr_backup_files = arrSortKeysRecursive(self::$arr_backup_files);
 		
 		return self::$arr_backup_files;
 	}
@@ -477,7 +540,6 @@ class cms_admin extends base_module {
 		$str_path_update = Settings::getUpdatePath();
 		
 		if (!isPath($str_path_update)) {
-				
 			error(getLabel('msg_not_available'));
 		}
 				
@@ -492,5 +554,28 @@ class cms_admin extends base_module {
 		$str_directory_update = rtrim(Settings::getUpdatePath(false), '/');
 		
 		FileStore::deleteDirectoryTree($str_directory_update);
+	}
+	
+	private static function runSetup() {
+		
+		$arr_modules = getModuleConfiguration('setupProperties');
+				
+		foreach ($arr_modules as $module => $arr_settings) {
+			foreach ($arr_settings as $str_name => $arr_setup) {
+			
+				if (!$arr_setup['run']) {
+					continue;
+				}
+				
+				try {
+				
+					$func_run = $arr_setup['run'];
+					$func_run();
+				} catch (Exception $e) {
+					
+					error('1100CC Setup Failed.', 0, LOG_BOTH, false, $e);
+				}
+			}
+		}
 	}
 }

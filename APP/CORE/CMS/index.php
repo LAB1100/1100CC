@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -172,7 +172,11 @@
 	
 	// Virtual path
 	if ($str_path_start == 'commands') {
-		$_SERVER['PATH_VIRTUAL'] = '/'.($_POST['module'] ?? $_POST['multi'][0]['module'] ?? '').'/';
+		
+		$str_module = ($_POST['module'] ?? $_POST['multi'][0]['module'] ?? '');
+		$str_module = (is_string($str_module) ? $str_module : 'INVALID');
+		
+		$_SERVER['PATH_VIRTUAL'] = '/'.$str_module.'/';
 	}
 	
 	// Login
@@ -189,8 +193,6 @@
 	$str_path_last = ($arr_path_info[count($arr_path_info)-1] ?? '');
 	
 	if ($str_path_start == 'commands') {
-	
-		$_SERVER['REQUEST_COMMANDS'] = true;
 		
 		// Feedback
 		if ($_POST['feedback']) {
@@ -340,7 +342,7 @@
 		$html_icons = SiteEndEnvironment::getIcons();
 
 		$html = '<!DOCTYPE html>'.EOL_1100CC
-		.'<html lang="en">'.EOL_1100CC
+		.'<html lang="'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE).'">'.EOL_1100CC
 			.'<head>'.EOL_1100CC
 				.'<title>'.getLabel('title', 'D').' | 1100CC</title>'
 				.$html_icons

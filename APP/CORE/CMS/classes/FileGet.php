@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -388,15 +388,14 @@ class FileGet {
 
 	public static function getProtocolExternal($str_url) {
 		
-		$arr_protocol_url = explode('://', $str_url);
-		
-		if (empty($arr_protocol_url[1])) {
+		if (strpos($str_url, '://') === false) {
 			return false;
 		}
 		
+		$arr_protocol_url = explode('://', $str_url);
 		$str_protocol = $arr_protocol_url[0];
 		
-		if (!in_array($str_protocol, static::$arr_external_protocols)) {
+		if (!in_array($str_protocol, static::$arr_external_protocols) || empty($arr_protocol_url[1])) {
 			return false;
 		}
 		

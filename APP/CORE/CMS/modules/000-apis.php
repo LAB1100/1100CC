@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -49,7 +49,7 @@ class apis extends base_module {
 								ah.host_name = '".DBFunctions::strEscape($host_name)."'
 							) OR (
 								ah.host_name LIKE ':%'
-								AND ".DBFunctions::regexpMatch("'".DBFunctions::strEscape($host_name)."'", "SUBSTRING(ah.host_name FROM 2)")."
+								AND ".DBFunctions::searchRegularExpression(DBFunctions::SQL_IS_LITERAL.DBFunctions::strEscape($host_name), "SUBSTRING(ah.host_name FROM 2)")."
 							)
 						" : "")."
 		");

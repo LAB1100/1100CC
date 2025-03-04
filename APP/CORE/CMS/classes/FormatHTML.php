@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -15,16 +15,26 @@ class FormatHTML {
 	
 	public $count_paragraphs = 0;
 	public $count_elements_removed = 0;
+	
+	const NEWLINES_SIMPLE = 1;
+	const NEWLINES_FULL = 2;
 
-	public function __construct($html) {
+	public function __construct($html, $mode_newlines = self::NEWLINES_FULL) {
 	
 		$this->html = $html;
-		$this->html = str_replace(["\r\n", "\r"], "\n", $this->html); // Standardize newline characters to "\n"
-	
-		if ($this->hasUntaggedContent()) {
-			$this->html = self::autoP($this->html);
-		} else {
-			$this->handleNewlines();
+		
+		if ($mode_newlines == static::NEWLINES_FULL) {
+			
+			$this->html = str_replace(["\r\n", "\r"], "\n", $this->html); // Standardize newline characters to "\n"
+			
+			if ($this->hasUntaggedContent()) {
+				$this->html = self::autoP($this->html);
+			} else {
+				$this->handleNewlines();
+			}
+		} else if ($mode_newlines == static::NEWLINES_SIMPLE) {
+			
+			$this->html = nl2br($this->html);
 		}
 		
 		$this->doc = new HTMLDocument($this->html);
@@ -283,7 +293,7 @@ class FormatHTML {
 		}
 		// Change multiple <br>s into two line breaks, which will turn into paragraphs.
 		$pee = preg_replace('|<br\s*/?>\s*<br\s*/?>|', "\n\n", $pee);
-		$allblocks = '(?:table|thead|tfoot|caption|col|colgroup|tbody|tr|td|th|div|dl|dd|dt|ul|ol|li|pre|select|option|form|map|area|blockquote|address|math|style|input|p|h[1-6]|hr|fieldset|legend|section|article|aside|hgroup|header|footer|nav|figure|figcaption|details|menu|summary)';
+		$allblocks = '(?:table|thead|tfoot|caption|col|colgroup|tbody|tr|td|th|div|dl|dd|dt|ul|ol|li|pre|select|option|form|map|area|blockquote|address|math|script|style|input|p|h[1-6]|hr|fieldset|legend|section|article|aside|hgroup|header|footer|nav|figure|figcaption|details|menu|summary)';
 		// Add a double line break above block-level opening tags.
 		$pee = preg_replace('!(<' . $allblocks . '[\s/>])!', "\n\n$1", $pee);
 		// Add a double line break below block-level closing tags.

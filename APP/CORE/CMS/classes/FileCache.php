@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -149,7 +149,7 @@ class FileCache {
 		if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX) {
 			pages::noPage();
 		} else {
-			error(getLabel('msg_not_found'));
+			error(getLabel('msg_not_found'), TROUBLE_ERROR, LOG_CLIENT);
 		}
 	}
 	

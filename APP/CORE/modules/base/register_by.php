@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,8 +13,8 @@ abstract class register_by extends base_module {
 		static::$parent_label = getLabel('lbl_users');
 	}
 	
-	protected $main_table = ''; // User details table
-	protected $columns = []; // name => array("table" => name, "column" => name/array(name, name))
+	protected $sql_main_table = false; // User details table
+	protected $arr_columns = []; // name => array("table" => name, "column" => name/array(name, name))
 	protected $arr_user = [];
 	abstract protected function contentsForm();
 	abstract protected function processForm();
@@ -40,15 +40,15 @@ abstract class register_by extends base_module {
 						<th><span title="'.getLabel('lbl_enabled').'">E</span></th>
 						<th class="max limit" data-sort="asc-0">'.getLabel('lbl_name_display').'</th>
 						<th class="max limit">'.getLabel('lbl_username').'</th>';
-						foreach ($this->columns as $key => $value) {
-							$return .= '<th>'.$key.'</th>';
+						foreach ($this->arr_columns as $arr_column) {
+							$return .= '<th>'.$arr_column['label'].'</th>';
 						}
 						$return .= '<th class="disable-sort"></th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr>
-						<td colspan="'.(count($this->columns)+3).'" class="empty">'.getLabel('msg_loading_server_data').'</td>
+						<td colspan="'.(count($this->arr_columns)+3).'" class="empty">'.getLabel('msg_loading_server_data').'</td>
 					</tr>
 				</tbody>
 			</table>';
@@ -286,32 +286,48 @@ abstract class register_by extends base_module {
 		if ($method == "data") {
 			
 			$arr_sql_columns = ['u.enabled', 'u.name', 'u.uname'];
+			$arr_sql_columns_as = $arr_sql_columns;
+			$arr_sql_columns_as[] = 'u.id';
 
-			if ($this->main_table) {
+			if ($this->sql_main_table) {
 				
-				foreach ($this->columns as $key => $arr) {
+				foreach ($this->arr_columns as $key => $arr) {
 					
 					if (is_array($arr['column'])) {
 						
 						foreach ($arr['column'] as $column) {
 							
-							$arr_sql_columns[] = $arr['table'].'.'.$column;
+							$sql_column = $arr['table'].'.'.$column;
+						
+							$arr_sql_columns[] = $sql_column;
+							$arr_sql_columns_as[] = $sql_column;
 						}
 					} else {
 						
-						$arr_sql_columns[] = $arr['table'].'.'.$arr['column'];
+						$sql_column = $arr['table'].'.'.$arr['column'];
+						
+						$arr_sql_columns[] = $sql_column;
+						
+						if ($arr['column_as']) {
+							$arr_sql_columns_as[] = $arr['column_as'].' AS '.$arr['column'];
+						} else {
+							$arr_sql_columns_as[] = $sql_column;
+						}
 					}
 				}
 			}
-			
-			$arr_sql_columns_as = $arr_sql_columns;
-			$arr_sql_columns_as[] = 'u.id';
-			
+
 			$sql_index = 'u.id';
+			$sql_index_body = $sql_index;
+			$sql_table = DB::getTable('TABLE_USERS').' u';
 			
-			$sql_table = DB::getTable('TABLE_USERS')." u
-				".($this->main_table ? "LEFT JOIN ".$this->main_table." ON (".$this->main_table.".user_id = ".$sql_index.")" : "")."
-			";
+			if ($this->sql_main_table) {
+				
+				$sql_index_body .= ', '.$this->sql_main_table.'.user_id';
+				$sql_table .= "
+					LEFT JOIN ".$this->sql_main_table." ON (".$this->sql_main_table.".user_id = ".$sql_index.")
+				";
+			}
 
 			if ($this->arr_variables['user_group_id'] && $this->arr_variables['user_group_id'] != $_SESSION['USER_GROUP']) {
 				$sql_where = "u.parent_id = ".$_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'];
@@ -321,7 +337,7 @@ abstract class register_by extends base_module {
 				$sql_where = "u.group_id = ".$_SESSION['USER_GROUP'];
 			}
 			
-			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, false, $arr_sql_columns_as, $sql_table, $sql_index, '', '', $sql_where);
+			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, false, $arr_sql_columns_as, $sql_table, $sql_index, '', $sql_index_body, $sql_where);
 			
 			$class = static::class;
 			
@@ -333,17 +349,24 @@ abstract class register_by extends base_module {
 				$arr_data[] = '<span class="icon" data-category="status">'.getIcon(($arr_row['enabled'] ? 'tick' : 'min')).'</span>';
 				$arr_data[] = $arr_row['name'];
 				$arr_data[] = $arr_row['uname'];
-				foreach ($this->columns as $key => $arr) {
+				
+				foreach ($this->arr_columns as $key => $arr) {
+					
 					if (is_array($arr['column'])) {
+						
 						$arr_combine = [];
+						
 						foreach ($arr['column'] as $column) {
 							$arr_combine[] = $arr_row[$column];
 						}
+						
 						$arr_data[] = implode(' ', $arr_combine);
 					} else {
+						
 						$arr_data[] = $arr_row[$arr['column']];
 					}
 				}
+				
 				$arr_data[] = '<input type="button" class="data edit" value="edit" /><input type="button" class="data msg del" value="del" />';
 				
 				$arr_datatable['output']['data'][] = $arr_data;

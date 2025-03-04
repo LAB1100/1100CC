@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -350,7 +350,7 @@ class search extends base_module {
 		// Replace specific entities with plain spaces
 		$str = str_replace(['.', ',', '_'], ' ', $str);
 		
-		// Remove non wordlike characters
+		// Remove non word-like characters
 		$str = preg_replace('/[^a-z0-9\s]/i', '', $str);
 		
 		// Remove small words of 2 chars

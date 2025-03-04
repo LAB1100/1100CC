@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -503,9 +503,9 @@ class cms_form_submissions extends base_module {
 					$sql_value = "field_input_".$field_id.".value";
 				}
 				
-				$arr_sql_columns[] = DBFunctions::sqlImplode('DISTINCT '.$sql_value);
+				$arr_sql_columns[] = DBFunctions::group2String('DISTINCT '.$sql_value);
 				$arr_sql_columns_search[] = $sql_value;
-				$arr_sql_columns_as['field_'.$field_id] = DBFunctions::sqlImplode('DISTINCT '.$sql_value)." AS field_".$field_id;
+				$arr_sql_columns_as['field_'.$field_id] = DBFunctions::group2String('DISTINCT '.$sql_value)." AS field_".$field_id;
 			}
 			
 			$arr_sql_columns[] = 'fs.date';
@@ -513,7 +513,7 @@ class cms_form_submissions extends base_module {
 			$arr_sql_columns_as[] = 'fs.date';
 					
 			$sql_column_tags = "(SELECT
-				".DBFunctions::sqlImplode('DISTINCT t.name')."
+				".DBFunctions::group2String('DISTINCT t.name')."
 					FROM ".DB::getTable('TABLE_FORM_SUBMISSION_INTERNAL_TAGS')." ot
 					LEFT JOIN ".DB::getTable('TABLE_INTERNAL_TAGS')." t ON (t.id = ot.tag_id)
 				WHERE ot.form_submission_id = fs.id
@@ -526,6 +526,7 @@ class cms_form_submissions extends base_module {
 			$sql_table = DB::getTable('TABLE_FORM_SUBMISSIONS').' fs';
 
 			$sql_index = 'fs.id';
+			$sql_index_body = $sql_index;
 			
 			$sql_where = 'fs.form_id = '.(int)$id;
 			
@@ -546,7 +547,7 @@ class cms_form_submissions extends base_module {
 				}
 			}
 			
-			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', '', $sql_where);
+			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, $arr_sql_columns_search, $arr_sql_columns_as, $sql_table, $sql_index, '', $sql_index_body, $sql_where);
 			
 			while ($arr_row = $arr_datatable['result']->fetchAssoc())	{
 
@@ -663,7 +664,7 @@ class cms_form_submissions extends base_module {
 				$sql_value = "field_input_".$field_id.".value";
 			}
 			
-			$arr_sql_columns['field_'.$field_id] = DBFunctions::sqlImplode('DISTINCT '.$sql_value)." AS field_".$field_id;
+			$arr_sql_columns['field_'.$field_id] = DBFunctions::group2String('DISTINCT '.$sql_value)." AS field_".$field_id;
 			
 			if ($arr_field['field_details']['type'] == 'choice' || $arr_field['field_details']['type'] == 'check' || $arr_field['field_details']['type'] == 'choice_dropdown') {
 				

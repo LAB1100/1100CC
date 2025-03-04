@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -477,18 +477,13 @@ class intf_templates extends templates {
 						
 						$html_css .= 'width: calc('.(($width / $parent_width) * 100).'% - '.$cur_m.'px); ';
 					}
-					
-					$mt = ($box->getAttribute('mt') ? $cur_margin : 0);
-					$mte = ($box->getAttribute('mte') ? (int)$box->getAttribute('mte') : 0);
-					$html_css .= ($mt && !$mte ? '' : ' margin-top: '.($mt+$mte).'px;');
-					
+										
 					$html_css .= ' margin-left: '.($l_margin ?: 0).'px;';
 					$html_css .= ' margin-right: '.($r_closing ?: 0).'px;';
 					$html_css .= ' margin-top: '.($t_margin ?: 0).'px;';
 					$html_css .= ' margin-bottom: '.($b_closing ?: 0).'px;';
 					
 					if ($box->getAttribute('aright')) { // Align right?
-					
 						$html_css .= ' float: right;';
 					}
 					

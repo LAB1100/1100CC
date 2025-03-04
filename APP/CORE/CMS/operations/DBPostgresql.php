@@ -2,12 +2,14 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
-class DB extends DBBase {
+namespace DBBase\Postgresql;
+
+class DB extends \DBBase\DB {
 	
 	const ENGINE = parent::ENGINE_POSTGRESQL;
 	
@@ -52,10 +54,10 @@ class DB extends DBBase {
 				case 1040:
 				case 1203:
 				case 2002:
-					if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX) {
-						error('Too many users. Please press the refresh button in your browser to retry.');
+					if (\SiteStartEnvironment::getRequestState() == \SiteStartEnvironment::REQUEST_INDEX) {
+						error('Server connection problem. Please refresh page to retry.');
 					} else {
-						error('The server load is very high at the moment.');
+						error('Server connection problem.');
 					}
 				default:
 					error('Database trouble.');
@@ -72,9 +74,9 @@ class DB extends DBBase {
 		try {
 
 			pg_query($connection, $q);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 
-			static::error(new DBTrouble(pg_last_error($connection)));
+			static::error(new \DBTrouble(pg_last_error($connection)));
 		}
 						
 		return $connection;
@@ -92,10 +94,10 @@ class DB extends DBBase {
 			try {
 
 				$res = pg_query(static::$connection_active, $q);
-			} catch (Exception $e) {
+			} catch (\Exception $e) {
 
 				static::$last_query = $q;
-				static::error(new DBTrouble(pg_last_error(static::$connection_active)));
+				static::error(new \DBTrouble(pg_last_error(static::$connection_active)));
 			}
 		} else {
 			
@@ -104,14 +106,14 @@ class DB extends DBBase {
 			try {
 				
 				$res = pg_query($connection_async, $q);
-			} catch (Exception $e) {
+			} catch (\Exception $e) {
 
 				static::$last_query = $q;
-				static::error(new DBTrouble(pg_last_error($connection_async)));
+				static::error(new \DBTrouble(pg_last_error($connection_async)));
 			}
 		}
 		
-		return new DBResult($res);
+		return new \DBResult($res);
 	}
 
 	public static function queryAsync($q) {
@@ -140,10 +142,10 @@ class DB extends DBBase {
 		if (pg_result_status($res) == PGSQL_FATAL_ERROR) { // Something went wrong, but could not be caught since it happened asynchronously
 
 			static::$last_query = $q;
-			static::error(new DBTrouble(pg_result_error($res)));
+			static::error(new \DBTrouble(pg_result_error($res)));
 		}
 					
-		return new DBResult($res);
+		return new \DBResult($res);
 	}
 	
 	public static function queryMulti($q) {
@@ -157,10 +159,10 @@ class DB extends DBBase {
 			if (pg_result_status($res) == PGSQL_FATAL_ERROR) {
 				
 				static::$last_query = $q;
-				static::error(new DBTrouble(pg_result_error($res)));
+				static::error(new \DBTrouble(pg_result_error($res)));
 			}
 								
-			$arr_res[] = new DBResult($res);
+			$arr_res[] = new \DBResult($res);
 		}
 		
 		return $arr_res;
@@ -170,17 +172,17 @@ class DB extends DBBase {
 		
 		try {
 			
-			$statement = new DBStatement(false);
+			$statement = new \DBStatement(false);
 			
 			$identifier = $statement->getIdentifier();
 			
 			$res = pg_prepare(static::$connection_active, $identifier, $q);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 				
-			DBStatement::reset();
+			\DBStatement::reset();
 			
 			static::$last_query = $q;
-			static::error(new DBTrouble(pg_last_error(static::$connection_active)));
+			static::error(new \DBTrouble(pg_last_error(static::$connection_active)));
 		}
 		
 		return $statement;
@@ -199,14 +201,21 @@ class DB extends DBBase {
 	
 	public static function isActive($connection = false) {
 		
-		$connection = ($connection !== false ? $connection : static::$connection_active);
+		if ($connection === false) {
+			
+			if (static::$connection_active_is_async) {
+				$connection = static::newConnectionAsync();
+			} else {
+				$connection = static::$connection_active;
+			}
+		}
 		
 		try {
 						
 			if (!$connection || pg_transaction_status($connection) === PGSQL_TRANSACTION_UNKNOWN) {
 				return false;
 			}
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			
 			return false;
 		}
@@ -221,7 +230,7 @@ class DB extends DBBase {
 		try {
 			
 			pg_close($connection);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			
 		}
 	}
@@ -249,46 +258,54 @@ class DB extends DBBase {
 	}
 }
 
-class DBStatement extends DBStatementBase {
+class DBStatement extends \DBBase\DBStatement {
 	
 	protected static $count_statement = 0;
 	
 	private $arr_parameters = [];
-	private $identifier = '';
+	private $arr_parameters_template = [];
+	private $str_identifier = '';
+	
+	public function __construct($statement) {
+		
+		parent::__construct($statement);
+		
+		$this->arr_parameters_template = array_fill(0, count($this->arr_variables), null); // Use template to make sure the keys remain in original position/sequence
+	}
 	
 	public function getIdentifier() {
 		
 		static::$count_statement++;
 		
-		$this->identifier = '1100CC_'.static::$count_statement;
+		$this->str_identifier = '1100CC_'.static::$count_statement;
 		
-		return $this->identifier;
+		return $this->str_identifier;
 	}
 
 	public function bindParameters($arr) {
 
-		$this->arr_parameters = [];
+		$this->arr_parameters = $this->arr_parameters_template;
 		
 		foreach ($arr as $variable => $value) {
 			
-			$position = $this->arr_variables[$variable][0];
+			$num_position = $this->arr_variables[$variable][0];
 			
-			$this->arr_parameters[$position] = $value;
+			$this->arr_parameters[$num_position] = $value;
 		}
 	}
 	
 	public static function assignParameter($variable) {
 		
-		$position = static::$arr_assign_variables[$variable][0];
+		$num_position = static::$arr_assign_variables[$variable][0];
 	
-		return '$'.($position+1);
+		return '$'.($num_position+1);
 	}
 	
 	public function execute() {
 		
-		$this->statement = pg_execute(DB::$connection_active, $this->identifier, $this->arr_parameters);
+		$this->statement = pg_execute(\DB::$connection_active, $this->str_identifier, $this->arr_parameters);
 		
-		return new DBResult($this->statement);
+		return new \DBResult($this->statement);
 	}
 	
 	public function getAffectedRowCount() {
@@ -298,11 +315,11 @@ class DBStatement extends DBStatementBase {
 	
 	public function close() {
 		
-		DB::query('DEALLOCATE "'.$this->identifier.'"');
+		\DB::query('DEALLOCATE "'.$this->str_identifier.'"');
 	}
 }
 
-class DBResult extends DBResultBase {
+class DBResult extends \DBBase\DBResult {
 	
 	public function fetchArray() {
 		
@@ -348,7 +365,7 @@ class DBResult extends DBResultBase {
 		
 		switch ($type) {
 			case 'bool':
-				$int = DBFunctions::TYPE_BOOLEAN;
+				$int = \DBFunctions::TYPE_BOOLEAN;
 				break;
 			default:
 				$int = 0;
@@ -368,7 +385,7 @@ class DBResult extends DBResultBase {
 	}
 }
 
-class DBFunctions extends DBFunctionsBase {
+class DBFunctions extends \DBBase\DBFunctions {
 	
 	const CAST_TYPE_INTEGER = 'INTEGER';
 	const CAST_TYPE_DECIMAL = 'DECIMAL';
@@ -382,7 +399,7 @@ class DBFunctions extends DBFunctionsBase {
 			return (string)$str;
 		}
 		
-		return pg_escape_string(DB::$connection_active, $str);
+		return pg_escape_string(\DB::$connection_active, $str);
 	}
 	
 	public static function escapeAs($value, $what) {
@@ -429,14 +446,26 @@ class DBFunctions extends DBFunctionsBase {
 		
 		return 'CAST('.$value.' AS '.$what.')';
 	}
-						
-	public static function sqlImplode($expression, $separator = ', ', $clause = false) {
-		
-		$sql = 'string_agg('.$expression.', \''.$separator.'\' '.$clause.')';
-		
-		return $sql;
-	}
 	
+	public static function convertTo($value, $to, $from, $format = null) {
+		
+		if ($from === static::TYPE_BINARY && $to === static::TYPE_STRING) {
+			if ($format === static::FORMAT_STRING_BASE64) {
+				return 'ENCODE('.$value.', \'base64\')';
+			} else {
+				return 'ENCODE('.$value.', \'hex\')';
+			}
+		} else if ($from === static::TYPE_STRING && $to === static::TYPE_BINARY) {
+			if ($format === static::FORMAT_STRING_BASE64) {
+				return 'DECODE('.$value.', \'base64\')';
+			} else {
+				return 'DECODE('.$value.', \'hex\')';
+			}
+		}
+		
+		return parent::convertTo($value, $to, $from, $format);
+	}
+		
 	public static function onConflict($key, $arr_values, $sql_other = false) {
 		
 		if (!$arr_values && !$sql_other) {
@@ -466,6 +495,37 @@ class DBFunctions extends DBFunctionsBase {
 		}		
 		
 		return $sql.$sql_affix;
+	}
+	
+	public static function group2String($sql_expression, $str_separator = ', ', $sql_clause = false) {
+		
+		if ($sql_clause && strStartsWith($sql_expression, 'DISTINCT')) {
+			
+			/* It's not valid to, per engine: first GROUP/DISTINCT the values and subsequently order the result on another value. We would end up with a possible irregular ordering.
+			 * We have to let the engine do the ordering first (keep clause) and manually do the deduplication (function)
+			 * Functions are in DBSetup, more here: https://stackoverflow.com/a/25192555
+			 */
+		
+			$sql_expression = substr($sql_expression, 8); // Remove DISTINCT
+			$sql = 'array_to_string(array_agg_uniq('.$sql_expression.' '.$sql_clause.'), \''.$str_separator.'\')';
+			
+			return $sql;
+		}
+		
+		$sql = 'string_agg('.$sql_expression.', \''.$str_separator.'\' '.$sql_clause.')';
+
+		return $sql;
+	}
+	
+	public static function fields2String($str_separator, ...$sql_fields) {
+		
+		$str_sql_separator = ' || ';
+		if ($str_separator) {
+			$str_sql_separator = static::sqlFieldNotLiteral($str_separator);
+			$str_sql_separator = ' || '.$str_sql_separator.' || ';
+		}
+		
+		return implode($str_sql_separator, $sql_fields);
 	}
 	
 	public static function interval($amount, $unit, $field = false) {
@@ -513,9 +573,40 @@ class DBFunctions extends DBFunctionsBase {
 		return 'STATEMENT_TIMESTAMP()'; // Statement time
 	}
 	
-	public static function regexpMatch($sql_field, $expression, $flags = false) {
+	public static function searchRegularExpression($sql_field, $sql_expression, $str_flags = false) {
 		
-		return $sql_field.' ~ \''.$expression.'\'';
+		$sql_field = static::sqlFieldLiteral($sql_field);
+		$sql_expression = static::sqlFieldLiteral($sql_expression);
+		
+		$str_flags = parseRegularExpressionFlags($str_flags, [REGEX_NOFLAG.REGEX_CASE_INSENSITIVE => 'c', REGEX_CASE_INSENSITIVE => 'i', REGEX_LINE => 'w', REGEX_DOT_SPECIAL => 'p']);
+		
+		return 'REGEXP_LIKE('.$sql_field.', '.$sql_expression.', \''.$str_flags.'\')';
+	}
+	
+	public static function searchMatchSensitivity($sql_field, $sql_search, $mode_wildcards = MATCH_ANY, $do_case = false, $do_diacritics = false) {
+		
+		$sql_field = static::sqlFieldLiteral($sql_field);
+		$sql_search = static::sqlFieldLiteral($sql_search, true);
+		$is_literal_search = ($sql_search['type'] === static::SQL_IS_LITERAL);
+		$sql_search = $sql_search['sql'];
+		
+		if (!$do_case) {
+			$sql_field = 'LOWER('.$sql_field.')';
+			$sql_search = ($is_literal_search ? strtolower($sql_search) : 'LOWER('.$sql_search.')');
+		}
+		if (!$do_diacritics) {
+			$sql_field = 'UNACCENT('.$sql_field.')';
+		}
+		
+		$sql = '';
+		
+		if ($is_literal_search) {
+			$sql = $sql_field.' LIKE \''.($mode_wildcards === MATCH_END || $mode_wildcards === MATCH_ANY ? '%' : '').$sql_search.($mode_wildcards === MATCH_START || $mode_wildcards === MATCH_ANY ? '%' : '').'\'';
+		} else {
+			$sql = $sql_field.' LIKE CONCAT(\''.($mode_wildcards === MATCH_END || $mode_wildcards === MATCH_ANY ? '%' : '').'\', '.$sql_search.', \''.($mode_wildcards === MATCH_START || $mode_wildcards === MATCH_ANY ? '%' : '').'\')';
+		}
+			
+		return $sql;
 	}
 	
 	public static function sqlTableOptions($engine) {
@@ -527,26 +618,26 @@ class DBFunctions extends DBFunctionsBase {
 	
 	public static function bulkSelect($q) {
 		
-		$statement = new DBStatement(false);
+		$statement = new \DBStatement(false);
 		
 		$identifier = $statement->getIdentifier();
 		
-		DB::startTransaction('bulk_select');
+		\DB::startTransaction('bulk_select');
 
-		DB::query('DECLARE "'.$identifier.'_cursor" NO SCROLL CURSOR FOR ('.$q.')');
+		\DB::query('DECLARE "'.$identifier.'_cursor" NO SCROLL CURSOR FOR ('.$q.')');
 		
-		/*$res = pg_prepare(DB::$connection_active, $identifier, 'FETCH NEXT FROM "'.$identifier.'_cursor"');
+		/*$res = pg_prepare(\DB::$connection_active, $identifier, 'FETCH NEXT FROM "'.$identifier.'_cursor"');
 		$arr_parameters = [];
 
-		while ($arr_row = pg_fetch_row(pg_execute(DB::$connection_active, $identifier, $arr_parameters))) {
+		while ($arr_row = pg_fetch_row(pg_execute(\DB::$connection_active, $identifier, $arr_parameters))) {
 				
 			yield $arr_row;
 		}*/
 		
-		$res = pg_prepare(DB::$connection_active, $identifier, 'FETCH FORWARD 1000 FROM "'.$identifier.'_cursor"');
+		$res = pg_prepare(\DB::$connection_active, $identifier, 'FETCH FORWARD 1000 FROM "'.$identifier.'_cursor"');
 		$arr_parameters = [];
 		
-		while ($res = pg_execute(DB::$connection_active, $identifier, $arr_parameters)) {
+		while ($res = pg_execute(\DB::$connection_active, $identifier, $arr_parameters)) {
 			
 			while ($arr_row = pg_fetch_row($res)) {
 				
@@ -554,8 +645,31 @@ class DBFunctions extends DBFunctionsBase {
 			}
 		}
 		
-		DB::query('DEALLOCATE "'.$identifier.'"');
+		\DB::query('DEALLOCATE "'.$identifier.'"');
 		
-		DB::commitTransaction('bulk_select');
+		\DB::commitTransaction('bulk_select');
+	}
+}
+
+class DBTrouble extends \DBBase\DBTrouble {}
+
+class DBSetup extends \DBBase\DBSetup {
+	
+	public static function init() {
+		
+		\DB::queryMulti("
+			CREATE OR REPLACE FUNCTION f_array_append_uniq (anyarray, anyelement)
+				RETURNS anyarray
+				LANGUAGE sql STRICT IMMUTABLE AS
+			'SELECT CASE WHEN $1[array_upper($1, 1)] = $2 THEN $1 ELSE $1 || $2 END'; -- Only add next element to array if it is different from the previous value (discard adjacent duplicates)
+			
+			CREATE OR REPLACE AGGREGATE array_agg_uniq (anyelement) (
+				SFUNC = f_array_append_uniq
+				, STYPE = anyarray
+				, INITCOND = '{}'
+			);
+		");
+		
+		return true;
 	}
 }

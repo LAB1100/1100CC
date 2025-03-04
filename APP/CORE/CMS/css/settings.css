@@ -31,6 +31,19 @@
 	
 	--input-element-height: 2.2em;
 	--input-element-padding: 0.4em;
+	
+	--button: #000000;
+	--button-text: #ffffff;
+	--button-border: #000000;
+	--button-hover: var(--button);
+	--button-hover-border: #2e2e2e;
+	--button-focus: var(--button);
+	--button-focus-border: #0096ff;
+	--button-disabled: #a4a4a4;
+	--button-disabled-border: #a4a4a4;
+	--button-selected: #ffffff;
+	--button-selected-border: var(--back-detail);
+	--button-selected-text: #000000;
 }
 
 body { --view-height: 100vh; }

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -42,7 +42,7 @@ class intf_pages extends pages {
 				p.*,
 				t.preview,
 				COUNT(m.page_id) AS module_count,
-				".DBFunctions::sqlImplode("CASE
+				".DBFunctions::group2String("CASE
 					WHEN m.shortcut != '' THEN CONCAT(
 						m.module, ' (shortcut: ', m.shortcut, ', root: ', CASE
 							WHEN m.shortcut_root IS TRUE THEN 'yes'
@@ -408,7 +408,7 @@ class intf_pages extends pages {
 
 						if (!str_module) {
 							
-							elm_module_active.attr({'mod': '', 'var': '', 'shortcut': '', 'shortcut_root': ''}).removeClass('set');
+							elm_module_active.attr({mod: '', var: '', shortcut: '', shortcut_root: ''}).removeClass('set');
 						} else {
 						
 							const elm_options_active = elm_options.children(':not(.hide)');
@@ -811,7 +811,6 @@ class intf_pages extends pages {
 			$is_shortcut_root = (bool)$td->getAttribute('shortcut_root');
 			
 			if (static::checkModuleShortcut($directory_id, $page_id, $str_shortcut_name, $is_shortcut_root)) {
-					
 				error('Shortcut already exists');
 			}
 			

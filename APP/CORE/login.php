@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -95,12 +95,21 @@ class HomeLogin {
 		
 		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'], true);
 		
-		if ($_SESSION['CUR_USER']) {
+		if (!$_SESSION['CUR_USER']) {
+			
+			self::toLogin();
+			
+			return;
+		}
+		
+		$arr_user = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')];
+		
+		if ($arr_user['enabled']) {
 			
 			$_SESSION['USER_ID'] = $_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'];
 			$_SESSION['USER_GROUP'] = SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP);
 			
-			if (strtotime($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['last_login']) < strtotime('-1 day')) {
+			if (strtotime($arr_user['last_login']) < strtotime('-1 day')) {
 				
 				$arr_ip = Log::getIP();
 				
@@ -118,10 +127,11 @@ class HomeLogin {
 				
 				msg(user_management::getUserTag($_SESSION['USER_ID']), 'LOGIN+', LOG_SYSTEM);
 			}
-		} else {
 			
-			self::toLogin();
+			return;
 		}
+			
+		self::toLogin();
 	}
 		
 	private static function checkLogin($username, $password) {
@@ -182,12 +192,13 @@ class HomeLogin {
 				
 				Response::location($url);
 			}
-		} else {
 			
-			Log::logRequest('login_home', $username);
-			
-			self::toLogin(true);	
+			return;
 		}
+		
+		Log::logRequest('login_home', $username);
+			
+		self::toLogin(true);
 	}
 	
 	private static function checkUser($user_id) {
@@ -206,9 +217,8 @@ class HomeLogin {
 			$_SESSION['USER_ID'] = $arr_user['id'];
 			
 			return true;
-		} else {
-			
-			return false;
 		}
+			
+		return false;
 	}
 }

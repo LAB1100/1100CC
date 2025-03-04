@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -25,7 +25,7 @@ class cms_general extends base_module {
 	
 	const OPTION_GROUP_SEPARATOR = ' ||| ';
 	const NAME_GROUP_ITERATOR = 'iterate_';
-		
+			
 	public static function css() {
 	
 		$return = 'img.select { max-width: 200px; max-height: 200px; cursor: pointer; border: 1px dashed #bdbdbd; vertical-align: middle; }
@@ -280,10 +280,11 @@ class cms_general extends base_module {
 		
 			$arr = [];
 
-			$res = DB::query("SELECT id, name
-								FROM ".DB::getTable(($method == 'lookup_internal_tag' ? 'TABLE_INTERNAL_TAGS' :'TABLE_TAGS'))."
-								WHERE name LIKE '%".DBFunctions::strEscape($value)."%'
-								LIMIT 20
+			$res = DB::query("SELECT
+				id, name
+					FROM ".DB::getTable(($method == 'lookup_internal_tag' ? 'TABLE_INTERNAL_TAGS' :'TABLE_TAGS'))."
+				WHERE name LIKE '%".DBFunctions::strEscape($value)."%'
+				LIMIT 20
 			");
 		
 			while ($row = $res->fetchAssoc()) {
@@ -324,33 +325,33 @@ class cms_general extends base_module {
 			
 			$arr_column_order = [];
 			
-			foreach ($arr_order_column as $nr_order => list($nr_column, $str_direction)) {
-				$arr_column_order[$nr_column] = [$str_direction, $nr_order];
+			foreach ($arr_order_column as $num_order => list($num_column, $str_direction)) {
+				$arr_column_order[$num_column] = [$str_direction, $num_order];
 			}
 			
 			$arr_sort_options = [['id' => 'asc', 'name' => getLabel('lbl_ascending')], ['id' => 'desc', 'name' => getLabel('lbl_descending')]];
 			
 			$arr_sorter = [];
 			
-			foreach ($arr_columns as $nr_column => $arr_column_info) {
+			foreach ($arr_columns as $num_column => $arr_column_info) {
 				
 				if ($arr_column_info['disable_sort']) {
 					continue;
 				}
 
-				$nr_order = 'b'.$nr_column;
+				$num_order = 'b'.$num_column;
 				$str_direction = '';
 				
-				$arr_column = $arr_column_order[$nr_column];
+				$arr_column = $arr_column_order[$num_column];
 				
 				if ($arr_column) {
 					$str_direction = $arr_column[0];
-					$nr_order = 'a'.$arr_column[1];
+					$num_order = 'a'.$arr_column[1];
 				}
 				
 				$str_name = ($arr_column_info['title'] ?: $arr_column_info['text']);
 
-				$arr_sorter[$nr_order] = ['value' => '<label>'.$str_name.'</label><select name="order['.$nr_column.']">'.cms_general::createDropdown($arr_sort_options, $str_direction, true).'</select>'];
+				$arr_sorter[$num_order] = ['value' => '<label>'.$str_name.'</label><select name="order['.$num_column.']">'.cms_general::createDropdown($arr_sort_options, $str_direction, true).'</select>'];
 			}
 			
 			ksort($arr_sorter);
@@ -367,16 +368,16 @@ class cms_general extends base_module {
 		if ($method == "return_datatable_order") {
 			
 			$arr_order = [];
-			$nr_order = 0;
+			$num_order = 0;
 			
-			foreach ($_POST['order'] as $nr_column => $str_direction) {
+			foreach ($_POST['order'] as $num_column => $str_direction) {
 				
 				if (!$str_direction) {
 					continue;
 				}
 				
-				$arr_order[$nr_column] = [$str_direction, $nr_order];
-				$nr_order++;
+				$arr_order[$num_column] = [$str_direction, $num_order];
+				$num_order++;
 			}
 			
 			$this->html = $arr_order;
@@ -510,15 +511,15 @@ class cms_general extends base_module {
 				$arr_group[$str_label[0]][] = $arr_option;
 			} else {
 				
-				$arr_attr = [];
+				$arr_attributes = [];
 				
 				if (isset($arr_option['attr'])) {
 					foreach ($arr_option['attr'] as $key => $value) {
-						$arr_attr[] = $key.'="'.$value.'"';
+						$arr_attributes[] = $key.'="'.$value.'"';
 					}
 				}
 				
-				$return .= '<option value="'.strEscapeHTML($arr_option[$id_column]).'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').(in_array($arr_option[$id_column], $selected, $is_strict) ? ' selected="selected"' : '').'>'.Labels::addContainer(strEscapeHTML($str_label)).'</option>';
+				$return .= '<option value="'.strEscapeHTML($arr_option[$id_column]).'"'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').(in_array($arr_option[$id_column], $selected, $is_strict) ? ' selected="selected"' : '').'>'.Labels::addContainer(strEscapeHTML($str_label)).'</option>';
 			}
 		}
 		
@@ -538,15 +539,15 @@ class cms_general extends base_module {
 		
 		foreach ($arr as $arr_option) {
 			
-			$arr_attr = [];
+			$arr_attributes = [];
 			
 			if (isset($arr_option['attr'])) {
 				foreach ($arr_option['attr'] as $key => $value) {
-					$arr_attr[] = $key.'="'.$value.'"';
+					$arr_attributes[] = $key.'="'.$value.'"';
 				}
 			}
 			
-			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
+			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
 		}
 		
 		return $return;
@@ -558,15 +559,15 @@ class cms_general extends base_module {
 		
 		foreach ($arr as $arr_option) {
 			
-			$arr_attr = [];
+			$arr_attributes = [];
 				
 			if (isset($arr_option['attr'])) {
 				foreach ($arr_option['attr'] as $key => $value) {
-					$arr_attr[] = $key.'="'.$value.'"';
+					$arr_attributes[] = $key.'="'.$value.'"';
 				}
 			}
 				
-			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
+			$return .= '<label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><span>'.Labels::addContainer($arr_option[$label_column]).'</span></label>';
 		}
 		
 		return $return;
@@ -582,15 +583,15 @@ class cms_general extends base_module {
 		foreach ($arr as $arr_option) {
 			
 			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
-			$arr_attr = [];
+			$arr_attributes = [];
 			
 			if (isset($arr_option['attr'])) {
 				foreach ($arr_option['attr'] as $key => $value) {
-					$arr_attr[] = $key.'="'.$value.'"';
+					$arr_attributes[] = $key.'="'.$value.'"';
 				}
 			}
 			
-			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="checkbox" name="'.($name ? $name.'['.$arr_option[$id_column].']' : $arr_option[$id_column]).'" value="'.$arr_option[$id_column].'"'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').($selected == 'all' || in_array($arr_option[$id_column], $selected) ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
 		}
 		
 		$return .= '</ul>';
@@ -608,15 +609,15 @@ class cms_general extends base_module {
 		foreach ($arr as $arr_option) {
 			
 			$str_class = (is_array($arr_option['class']) ? implode(' ', $arr_option['class']) : $arr_option['class']);
-			$arr_attr = [];
+			$arr_attributes = [];
 			
 			if (isset($arr_option['attr'])) {
 				foreach ($arr_option['attr'] as $key => $value) {
-					$arr_attr[] = $key.'="'.$value.'"';
+					$arr_attributes[] = $key.'="'.$value.'"';
 				}
 			}
 			
-			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_attr ? ' '.implode(' ', $arr_attr) : '').($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
+			$return .= '<li'.($str_class ? ' class="'.$str_class.'"' : '').'><label'.(!empty($arr_option['title']) ? ' title="'.Labels::addContainer(strEscapeHTML($arr_option['title'])).'"' : '').'><input type="radio" name="'.$name.'" value="'.$arr_option[$id_column].'"'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').($arr_option[$id_column] == $selected ? ' checked="checked"' : '').' /><div>'.Labels::addContainer($arr_option[$label_column]).'</div></label></li>';
 		}
 		
 		$return .= '</ul>';
@@ -652,11 +653,32 @@ class cms_general extends base_module {
 		foreach ($arr_tags as $key => $value) {
 			$str_tags .= '<li><span><input type="hidden" name="'.$name.'['.$key.']" value="'.$key.'"/>'.Labels::addContainer($value).'</span><span class="handler"></span></li>';
 		}
+
+		if ($arr_options['delay']) {
+			$arr_options['attr']['data-delay'] = $arr_options['delay'];
+		}
 		
-		return '<input type="hidden" name="'.$name.'" value=""'.($id_value ? ' id="'.$id_value.'"' : '').' /><div class="autocomplete tags'.($arr_options['list'] ? ' list' : '').'"><input type="hidden" name="'.$name.'" value="" /><ul>'.$str_tags.'</ul></div><input type="search" class="autocomplete multi" id="'.$id.'" value=""'.($arr_options['delay'] ? ' data-delay="'.$arr_options['delay'].'"' : '').($arr_options['order'] ? ' data-order="1"' : '').' />';
+		$arr_attributes = [];
+			
+		if (isset($arr_options['attr'])) {
+			foreach ($arr_options['attr'] as $key => $value) {
+				$arr_attributes[] = $key.'="'.$value.'"';
+			}
+		}
+				
+		return '<input type="hidden" name="'.$name.'" value=""'.($id_value ? ' id="'.$id_value.'"' : '').' /><div class="autocomplete tags'.($arr_options['list'] ? ' list' : '').'"><input type="hidden" name="'.$name.'" value="" /><ul>'.$str_tags.'</ul></div><input type="search" class="autocomplete multi" id="'.$id.'" value=""'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').($arr_options['order'] ? ' data-order="1"' : '').' />';
 	}
 	
-	public static function createRegularExpressionEditor($arr_regex, $name = '', $do_switch = false, $arr_options = []) {
+	public static function createRegularExpressionEditor($arr_regex, $name = '', $arr_options = []) {
+		
+		$name = ($name ?: 'regex');
+		
+		$str_info = ($arr_options['info'] ?: getLabel('inf_regular_expression_match'));
+
+		return '<div class="input regex'.($arr_options['class'] ? ' '.$arr_options['class'] : '').'" title="'.strEscapeHTML($str_info).'"><span></span><input type="text" name="'.$name.'[pattern]" placeholder="'.getLabel('lbl_match').'" value="'.strEscapeHTML($arr_regex['pattern']).'" /><span></span><input type="text" name="'.$name.'[flags]" value="'.strEscapeHTML($arr_regex['flags']).'" /></div>';
+	}
+	
+	public static function createRegularExpressionReplaceEditor($arr_regex, $name = '', $do_switch = false, $arr_options = []) {
 		
 		$name = ($name ?: 'regex');
 		
@@ -664,7 +686,7 @@ class cms_general extends base_module {
 		$html_enable = '';
 		
 		if ($do_switch) {
-			$html_enable = '<label title="'.strEscapeHTML($str_info).'"><input type="checkbox" name="'.$name.'[enable]" value="1"'.($arr_regex['enable'] ? ' checked="checked"' : '').' /><span>(.*)</span></label>';
+			$html_enable = '<label title="'.strEscapeHTML($str_info).'"><input type="checkbox" name="'.$name.'[enable]" value="1"'.($arr_regex['enable'] ? ' checked="checked"' : '').' /><span>'.getLabel('lbl_regular_expression_abbr').'</span></label>';
 		}
 		
 		return '<div class="input regex"'.(!$do_switch ? ' title="'.strEscapeHTML($str_info).'"' : '').'><span></span><input type="text" name="'.$name.'[pattern]" placeholder="'.getLabel('lbl_match').'" value="'.strEscapeHTML($arr_regex['pattern']).'" /><span></span><input type="text" name="'.$name.'[flags]" value="'.strEscapeHTML($arr_regex['flags']).'" /><span></span><input type="text" name="'.$name.'[template]" placeholder="'.getLabel('lbl_replace').'" value="'.strEscapeHTML($arr_regex['template']).'" />'.$html_enable.'</div>';
@@ -677,25 +699,45 @@ class cms_general extends base_module {
 	
 	public static function createSorter($arr_rows, $handle = false, $reverse = false, $arr_options = []) {
 		
-		$return = '<ul class="sorter'.($reverse ? ' reverse' : '').($arr_options['full'] ? ' full' : '').($arr_options['diverse'] ? ' diverse' : '').'"'
-			.($arr_options['auto_add'] ? ' data-auto_add="1"' : '')
-			.($arr_options['auto_clean'] ? ' data-auto_clean="1"' : '')
-			.($arr_options['limit'] ? ' data-limit="'.(int)$arr_options['limit'].'"' : '')
-		.'>';
+		$arr_attributes = [];
+		
+		if ($arr_options['auto_add']) {
+			$arr_attributes[] = 'data-auto_add="1"';
+		}
+		if ($arr_options['auto_clean']) {
+			$arr_attributes[] = 'data-auto_clean="1"';
+		}
+		if ($arr_options['limit']) {
+			$arr_attributes[] = 'data-limit="'.(int)$arr_options['limit'].'"';
+		}
+		if (isset($arr_options['attr'])) {
+			foreach ($arr_options['attr'] as $key => $value) {
+				$arr_attributes[] = $key.'="'.$value.'"';
+			}
+		}
+		
+		$return = '<ul class="sorter'.($reverse ? ' reverse' : '').($arr_options['full'] ? ' full' : '').($arr_options['diverse'] ? ' diverse' : '').'"'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').'>';
 		
 		$html_handle = '<span class="icon">'.getIcon('updown').'</span>';
 		
 		foreach ($arr_rows as $arr_row) {
 			
 			$str_class = (is_array($arr_row['class']) ? implode(' ', $arr_row['class']) : $arr_row['class']);
+			$arr_attributes = [];
+			
+			if (isset($arr_row['attr'])) {
+				foreach ($arr_row['attr'] as $key => $value) {
+					$arr_attributes[] = $key.'="'.$value.'"';
+				}
+			}
 			
 			if (is_array($arr_row['value'])) {
 				$html = '<ul'.($str_class ? ' class="'.$str_class.'"' : '').'><li>'.implode('</li><li>', $arr_row['value']).'</li></ul>';
 			} else {
 				$html = '<div'.($str_class ? ' class="'.$str_class.'"' : '').'>'.$arr_row['value'].'</div>';
 			}
-			
-			$return .= '<li'.($arr_row['source'] ? ' class="source"' : '').'>'.((int)$handle ? '<span>'.$html_handle.'</span>' : '').$html.((string)$handle == 'append' ? '<span>'.$html_handle.'</span>' : '').'</li>';
+
+			$return .= '<li'.($arr_row['source'] ? ' class="source"' : '').($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').'>'.((int)$handle ? '<span>'.$html_handle.'</span>' : '').$html.((string)$handle == 'append' ? '<span>'.$html_handle.'</span>' : '').'</li>';
 		}
 		$return .= '</ul>';
 		
@@ -704,31 +746,31 @@ class cms_general extends base_module {
 	
 	public static function createDataTableHeading($id, $arr_options = ['search' => true]) {
 		
-		$arr_options_data = [];
+		$arr_attributes = [];
 		
 		if (!keyIsUncontested('search', $arr_options)) {
-			$arr_options_data[] = 'data-search="0"';
+			$arr_attributes[] = 'data-search="0"';
 		}
 		if ($arr_options['filter']) {
-			$arr_options_data[] = 'data-filter="'.$arr_options['filter'].'"';
+			$arr_attributes[] = 'data-filter="'.$arr_options['filter'].'"';
 		}
 		if ($arr_options['filter_settings']) {
-			$arr_options_data[] = 'data-filter_settings="'.strEscapeHTML($arr_options['filter_settings']).'"';
+			$arr_attributes[] = 'data-filter_settings="'.strEscapeHTML($arr_options['filter_settings']).'"';
 		}
 		if ($arr_options['search_settings']) {
-			$arr_options_data[] = 'data-search_settings="'.strEscapeHTML($arr_options['search_settings']).'"';
+			$arr_attributes[] = 'data-search_settings="'.strEscapeHTML($arr_options['search_settings']).'"';
 		}
 		if ($arr_options['order']) {
-			$arr_options_data[] = 'data-order="'.($arr_options['order'] == true ? 'y:cms_general:order_datatable-0' : $arr_options['order']).'"';
+			$arr_attributes[] = 'data-order="'.($arr_options['order'] == true ? 'y:cms_general:order_datatable-0' : $arr_options['order']).'"';
 		}
 		if ($arr_options['delay']) {
-			$arr_options_data[] = 'data-delay="'.$arr_options['delay'].'"';
+			$arr_attributes[] = 'data-delay="'.$arr_options['delay'].'"';
 		}
 		if ($arr_options['pause']) {
-			$arr_options_data[] = 'data-pause="1"';
+			$arr_attributes[] = 'data-pause="1"';
 		}
 	
-		$html = '<table class="display'.($arr_options['class'] ? ' '.$arr_options['class'] : '').'" id="'.$id.'"'.($arr_options_data ? ' '.implode(' ', $arr_options_data) : '').'>';
+		$html = '<table class="display'.($arr_options['class'] ? ' '.$arr_options['class'] : '').'" id="'.$id.'"'.($arr_attributes ? ' '.implode(' ', $arr_attributes) : '').'>';
 		
 		return $html;
 	}
@@ -744,7 +786,6 @@ class cms_general extends base_module {
 		$sql_limit = '';
 		
 		if (isset($arr_interact['num_records_start']) && $arr_interact['num_records_length'] != '-1') {
-			
 			$sql_limit = "LIMIT ".(int)$arr_interact['num_records_length']." OFFSET ".(int)$arr_interact['num_records_start'];
 		}
 		
@@ -752,16 +793,12 @@ class cms_general extends base_module {
 		
 		if ($arr_interact['arr_order_column']) {
 				
-			foreach ($arr_interact['arr_order_column'] as $nr_order => list($nr_column, $str_direction)) {
-				
-				$sql_order .= $arr_sql_columns[$nr_column]." ".DBFunctions::strEscape($str_direction) .", ";
-			}
-			
-			if ($sql_order) {
-				
-				$sql_order = "ORDER BY ".substr_replace($sql_order, '', -2);
+			foreach ($arr_interact['arr_order_column'] as $num_order => list($num_column, $str_direction)) {
+				$sql_order .= ($sql_order !== '' ? ', ' : '').$arr_sql_columns[$num_column]." ".DBFunctions::strEscape($str_direction);
 			}
 		}
+		
+		$sql_order = "ORDER BY ".($sql_order ?: $sql_index);
 		
 		$sql_where_default = ($sql_where_default ? "WHERE ".$sql_where_default : "");
 		$sql_where = $sql_where_default;
@@ -793,6 +830,10 @@ class cms_general extends base_module {
 					if ($arr_column['json']) {
 						$str_search_use = substr(value2JSON($str_search_use), 1, -1);
 					}
+				}
+				
+				if (DB::ENGINE_IS_POSTGRESQL) {
+					$sql_column = DBFunctions::castAs($sql_column, DBFunctions::CAST_TYPE_STRING);
 				}
 				
 				$sql_where .= DBFunctions::searchMatch($sql_column, $str_search_use)." OR ";
@@ -828,49 +869,76 @@ class cms_general extends base_module {
 					}
 				}
 				
+				if (DB::ENGINE_IS_POSTGRESQL) {
+					$sql_column = DBFunctions::castAs($sql_column, DBFunctions::CAST_TYPE_STRING);
+				}
+				
 				$sql_where .= DBFunctions::searchMatch($sql_column, $str_search_use);
 			}
 		}
 		
 		$sql_body = ($sql_body ?: $sql_table);
-		$sql_index_body = ($sql_index_body ?: $sql_index);
 		
 		$result = DB::query("SELECT
 			".implode(", ", array_filter($arr_sql_columns_as))."
 				FROM ".$sql_body."
 				".$sql_where." 
-			GROUP BY ".$sql_index_body."
+			".($sql_index_body ? "GROUP BY ".$sql_index_body : "")."
 			".$sql_order."
 			".$sql_limit."
 		");
 		
-		$result_total_filtered = DB::query("SELECT
-			COUNT(DISTINCT ".$sql_index.")
-				FROM ".$sql_table."
-				".$sql_where."
-		");
+		if (DB::ENGINE_IS_POSTGRESQL) {
+			
+			$result_total_filtered = DB::query("SELECT
+				COUNT(*) FROM (
+					SELECT DISTINCT ".$sql_index."
+						FROM ".$sql_table."
+						".$sql_where."
+					) AS foo
+			");
+		} else {
+			
+			$result_total_filtered = DB::query("SELECT
+				COUNT(DISTINCT ".$sql_index.")
+					FROM ".$sql_table."
+					".$sql_where."
+			");
+		}
 		
 		$arr_total_filtered = $result_total_filtered->fetchRow();
-		$nr_total_filtered = $arr_total_filtered[0];
+		$num_total_filtered = $arr_total_filtered[0];
 
 		if ($sql_where_default != $sql_where) {
 			
-			$result_total = DB::query("SELECT
-				COUNT(DISTINCT ".$sql_index.")
-					FROM ".$sql_table."
-					".$sql_where_default."
-			");
+			if (DB::ENGINE_IS_POSTGRESQL) {
+				
+				$result_total = DB::query("SELECT
+					COUNT(*) FROM (
+						SELECT DISTINCT ".$sql_index."
+							FROM ".$sql_table."
+							".$sql_where_default."
+						) AS foo
+				");
+			} else {
+				
+				$result_total = DB::query("SELECT
+					COUNT(DISTINCT ".$sql_index.")
+						FROM ".$sql_table."
+						".$sql_where_default."
+				");
+			}
 			
 			$arr_total = $result_total->fetchRow();
-			$nr_total = $arr_total[0];
+			$num_total = $arr_total[0];
 		} else {
 			
-			$nr_total = $nr_total_filtered;
+			$num_total = $num_total_filtered;
 		}
 		
 		$arr_output = [
-			'total_records' => $nr_total,
-			'total_records_filtered' => $nr_total_filtered,
+			'total_records' => $num_total,
+			'total_records_filtered' => $num_total_filtered,
 			'data' => []
 		];
 		

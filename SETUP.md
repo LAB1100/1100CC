@@ -151,7 +151,7 @@ Import the following SQL to their respective databases:
 
 #### PostgreSQL
 
-Currently MySQL works as a master for development, you can use [PGLoader](https://pgloader.io/) to transfer the MySQL structure to PostgreSQL and work from there, e.g. use a PGLoader script with:
+Currently MySQL/MariaDB works as a master for development, you can use [PGLoader](https://pgloader.io/) to transfer the MySQL structure to PostgreSQL and work from there, e.g. use a PGLoader script with:
 
 ```sql
 LOAD DATABASE

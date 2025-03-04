@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -71,13 +71,19 @@
 			
 			$module = $arr_command['module'];
 			$method = $arr_command['method'];
+			$page_module = $arr_command['mod'];
+			$is_valid = (is_string($module) && is_string($method) && is_string($page_module));
+			
+			if (!$is_valid || str2Name($module.$method, '-_') != $module.$method) {
+				error('Request targets an invalid module or method.', TROUBLE_INVALID_REQUEST, LOG_CLIENT);
+			}
 			
 			if ($is_multi) {
 				
-				$arr_page_mod = explode('-', $arr_command['mod']);
-				$arr_mod_xy = explode('_', $arr_page_mod[1]);
-				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_X, $arr_mod_xy[0]);
-				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_Y, $arr_mod_xy[1]);
+				$arr_page_module = explode('-', $page_module);
+				$arr_module_xy = explode('_', ($arr_page_module[1] ?? ''));
+				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_X, $arr_module_xy[0]);
+				SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_MODULE_Y, $arr_module_xy[1]);
 			}
 
 			// Check if module command really originates from valid source directory and page
@@ -105,7 +111,10 @@
 				
 				$arr_page_directory = directories::getDirectories(SiteStartEnvironment::getPage('directory_id'));
 				
-				error('Request originates from invalid path: '.SiteStartEnvironment::getDirectory('path').' => '.strEscapeHTML($module).':'.strEscapeHTML($method).' (using: '.str_replace(' ', '', $arr_page_directory['path']).' '.strEscapeHTML($arr_command['mod']).')');
+				error('Request originates from invalid path.', TROUBLE_INVALID_REQUEST,
+					(STATE == STATE_DEVELOPMENT || getLabel('show_system_errors', 'D', true) ? LOG_BOTH : LOG_CLIENT),
+					'Path '.SiteStartEnvironment::getDirectory('path').' targets '.strEscapeHTML($module).':'.strEscapeHTML($method).'. Using: '.str_replace(' ', '', $arr_page_directory['path']).' '.strEscapeHTML($page_module)
+				);
 			}
 
 			$arr = $res->fetchAssoc();
@@ -162,7 +171,10 @@
 				
 				if ($module == false) {
 					
-					error('Module '.$arr['module'].' does not allow relaying '.strEscapeHTML($module_target));
+					error('Module does not allow the requested relay.', TROUBLE_INVALID_REQUEST,
+						(STATE == STATE_DEVELOPMENT || getLabel('show_system_errors', 'D', true) ? LOG_BOTH : LOG_CLIENT),
+						'Module '.$arr['module'].' does not allow relaying '.strEscapeHTML($module_target)
+					);
 				} else if ($module != 'this' && $module != $arr['module']) {
 					
 					$mod_target = new $module;
@@ -204,6 +216,7 @@
 			$JSON_command->reset_form = $mod->reset_form;
 			
 			if ($mod->msg) {
+				
 				if ($mod->msg !== true) {
 					Log::setMsg($mod->msg);
 				} else {

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -161,19 +161,21 @@ class general extends base_module {
 			$sql_table = DB::getTable('TABLE_SITE_USER_LABELS')." i";
 			
 			$sql_index = 'i.identifier';
+			$sql_index_body = 'i.identifier';
 			
 			$arr_language = cms_language::getLanguage();
 			
-			foreach ($arr_language as $lang_code => $arr_row) {
+			foreach ($arr_language as $str_lang_code => $arr_row) {
 				
-				$arr_sql_columns[] = $lang_code.'.label';
+				$arr_sql_columns[] = $str_lang_code.'.label';
+				$sql_index_body .= ', '.$str_lang_code.'.identifier, '.$str_lang_code.'.lang_code';
 				
-				$sql_table .= " LEFT JOIN ".DB::getTable('TABLE_SITE_USER_LABELS')." ".$lang_code." ON (".$lang_code.".identifier = i.identifier AND ".$lang_code.".lang_code = '".$lang_code."' AND ".$lang_code.".user_id = ".(int)$user_id.")";
+				$sql_table .= " LEFT JOIN ".DB::getTable('TABLE_SITE_USER_LABELS')." ".$str_lang_code." ON (".$str_lang_code.".identifier = i.identifier AND ".$str_lang_code.".lang_code = '".$str_lang_code."' AND ".$str_lang_code.".user_id = ".(int)$user_id.")";
 			}
 
 			$sql_where = "i.user_id = ".(int)$user_id;
 								 
-			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, false, false, $sql_table, $sql_index, '', '', $sql_where);
+			$arr_datatable = cms_general::prepareDataTable($arr_sql_columns, false, false, $sql_table, $sql_index, '', $sql_index_body, $sql_where);
 
 			while ($arr_row = $arr_datatable['result']->fetchRow())	{
 							

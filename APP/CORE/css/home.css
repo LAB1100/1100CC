@@ -1,3 +1,7 @@
+:root {
+	
+}
+
 /* GERERAL */
 
 html {
@@ -131,6 +135,7 @@ fieldset > ul > li > label + *[type=button],
 fieldset > ul > li > label + div > input.invalid + *[type=submit],
 fieldset > ul > li > label + div > input.invalid + *[type=button] { margin: 0px; width: 100%; }
 fieldset > ul > li > label:first-child + * input[type=text],
+fieldset > ul > li > label:first-child + * input[type=search],
 fieldset > ul > li > label:first-child + * input[type=password],
 fieldset > ul > li > label:first-child + * textarea { width: 100%; }
 fieldset > ul > li > label:first-child + * > input[type],
@@ -140,8 +145,10 @@ fieldset > ul > li > label:first-child + * > select,
 fieldset > ul > li > label:first-child + * > .input { display: inline-block; margin-top: 0px; margin-bottom: 0px; }
 fieldset > ul > li > label:first-child + * > .options { margin: 0px; }
 .options fieldset > ul > li > label:first-child + input[type=text],
+.options fieldset > ul > li > label:first-child + input[type=search],
 .options fieldset > ul > li > label:first-child + input[type=password],
 .options fieldset > ul > li > label:first-child + * input[type=text],
+.options fieldset > ul > li > label:first-child + * input[type=search],
 .options fieldset > ul > li > label:first-child + * input[type=password] { width: 250px; }
 .options fieldset > ul > li > label:first-child + input.date,
 .options fieldset > ul > li > label:first-child + input.datepicker,

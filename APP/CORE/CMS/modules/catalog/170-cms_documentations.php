@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -29,12 +29,12 @@ class cms_documentations extends base_module {
 					WHERE ds.documentation_id = d.id 
 				) AS documentation_section_count,
 				(SELECT
-					".DBFunctions::sqlImplode('ds.title', '<br />', 'ORDER BY ds.date_updated DESC')."
+					".DBFunctions::group2String('ds.title', '<br />', 'ORDER BY ds.date_updated DESC')."
 						FROM ".DB::getTable('TABLE_DOCUMENTATION_SECTIONS')." ds
 					WHERE ds.documentation_id = d.id
 				) AS documentation_sections,
-				".DBFunctions::sqlImplode(DBFunctions::castAs('dir.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-				".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+				".DBFunctions::group2String(DBFunctions::castAs('dir.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+				".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 					FROM ".DB::getTable('TABLE_DOCUMENTATIONS')." d
 					LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.var LIKE CONCAT('%\"id\":\"', d.id, '\"%') AND m.module = 'documentation')
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)

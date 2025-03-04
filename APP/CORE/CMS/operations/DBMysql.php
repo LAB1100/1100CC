@@ -2,14 +2,16 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
+namespace DBBase\Mysql;
+
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT); // Throw all MySQL errors
 		
-class DB extends DBBase {
+class DB extends \DBBase\DB {
 	
 	const ENGINE = parent::ENGINE_MYSQL;
 	
@@ -26,17 +28,17 @@ class DB extends DBBase {
 		
 		try {
 			
-			$connection = new mysqli($host, $arr_connection_details['user'], $arr_connection_details['password'], $database, $port);
-		} catch (Exception $e) {
+			$connection = new \mysqli($host, $arr_connection_details['user'], $arr_connection_details['password'], $database, $port);
+		} catch (\Exception $e) {
 
 			switch ($e->getCode()) {
 				case 1040:
 				case 1203:
 				case 2002:
-					if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX) {
-						error('Too many users. Please press the refresh button in your browser to retry.');
+					if (\SiteStartEnvironment::getRequestState() == \SiteStartEnvironment::REQUEST_INDEX) {
+						error('Server connection problem. Please refresh page to retry.');
 					} else {
-						error('The server load is very high at the moment.');
+						error('Server connection problem.');
 					}
 				default:
 					error('Database trouble.');
@@ -44,7 +46,7 @@ class DB extends DBBase {
 		}
 		
 		$connection->multi_query("
-			SET NAMES utf8mb4;
+			SET NAMES utf8mb4 COLLATE ".\DBFunctions::COLLATE_AI_CI.";
 			
 			SET SESSION
 				time_zone = '+00:00',
@@ -76,7 +78,7 @@ class DB extends DBBase {
 			}
 			
 			static::query('SELECT TRUE');
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 
 			return false;
 		}
@@ -93,10 +95,10 @@ class DB extends DBBase {
 			try {
 
 				$res = static::$connection_active->query($q, $modifier);
-			} catch (Exception $e) {
+			} catch (\Exception $e) {
 
 				static::$last_query = $q;
-				static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
+				static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
 			}
 		} else {
 			
@@ -105,14 +107,14 @@ class DB extends DBBase {
 			try {
 				
 				$res = $connection_async->query($q, $modifier);
-			} catch (Exception $e) {
+			} catch (\Exception $e) {
 
 				static::$last_query = $q;
-				static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
+				static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
 			}
 		}
 		
-		return new DBResult($res);
+		return new \DBResult($res);
 	}
 
 	public static function queryAsync($q) {
@@ -120,10 +122,10 @@ class DB extends DBBase {
 		try {
 			
 			static::$connection_active->query($q, MYSQLI_ASYNC);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 
 			static::$last_query = $q;
-			static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
+			static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 		
 		static::$connection_active_is_async = true;
@@ -148,6 +150,7 @@ class DB extends DBBase {
 			foreach (static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level] as $key => $cur_connection_async) {
 				
 				if ($cur_connection_async === $connection_async) {
+					
 					unset(static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level][$key]);
 					break;
 				}					
@@ -160,13 +163,13 @@ class DB extends DBBase {
 		
 		if (!$res) { // Something went wrong, but could not be caught since it happened asynchronously
 
-			$e = new DBTrouble(static::$connection_active->error, static::$connection_active->errno);
+			$e = new \DBTrouble(static::$connection_active->error, static::$connection_active->errno);
 			
 			static::$last_query = $q;
 			static::error($e);
 		}
 		
-		return new DBResult($res);
+		return new \DBResult($res);
 	}
 	
 	public static function queryMulti($q) {
@@ -178,19 +181,19 @@ class DB extends DBBase {
 			if (static::$connection_active->multi_query($q)) {
 				
 				do {
-					$arr_res[] = new DBResult(static::$connection_active->store_result());
+					$arr_res[] = new \DBResult(static::$connection_active->store_result());
 				}
 				while (static::$connection_active->more_results() && static::$connection_active->next_result());
 			}
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 
 			static::$last_query = $q;
-			static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
+			static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 
 		if (static::$connection_active->errno) { // Something went wrong, but could not be caught because only the first query can be caught
 			
-			$e = new DBTrouble(static::$connection_active->error, static::$connection_active->errno);
+			$e = new \DBTrouble(static::$connection_active->error, static::$connection_active->errno);
 			
 			static::$last_query = $q;
 			static::error($e);
@@ -204,15 +207,15 @@ class DB extends DBBase {
 		try {
 			
 			$statement = static::$connection_active->prepare($q);
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			
-			DBStatement::reset();
+			\DBStatement::reset();
 
 			static::$last_query = $q;
-			static::error(new DBTrouble($e->getMessage(), $e->getCode(), $e));
+			static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 		
-		return new DBStatement($statement);
+		return new \DBStatement($statement);
 	}
 	
 	public static function isReady($connection = false) {
@@ -230,14 +233,21 @@ class DB extends DBBase {
 	
 	public static function isActive($connection = false) {
 		
-		$connection = ($connection !== false ? $connection : static::$connection_active);
+		if ($connection === false) {
+			
+			if (static::$connection_active_is_async) {
+				$connection = static::newConnectionAsync();
+			} else {
+				$connection = static::$connection_active;
+			}
+		}
 		
 		try {
 			
 			if (!$connection || $connection->errno == 2006 || $connection->errno == 2013 || $connection->errno == 2014 || !$connection->stat()) { // 2006: Server has gone away. 2013: Lost connection during query. 2014: Command out of sync. No stat: Server does not respond at all
 				return false;
 			}
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			
 			return false;
 		}
@@ -252,7 +262,7 @@ class DB extends DBBase {
 		try {
 			
 			$connection->close();
-		} catch (Exception $e) {
+		} catch (\Exception $e) {
 			
 		}
 	}
@@ -283,7 +293,7 @@ class DB extends DBBase {
 	}
 }
 
-class DBStatement extends DBStatementBase {
+class DBStatement extends \DBBase\DBStatement {
 	
 	public function bindParameters($arr) {
 
@@ -295,9 +305,9 @@ class DBStatement extends DBStatementBase {
 		
 		foreach ($arr as $variable => $value) {
 			
-			$position = $this->arr_variables[$variable][0]+1;
+			$num_position = $this->arr_variables[$variable][0]+1;
 			
-			$arr_collect[$position] = $value;
+			$arr_collect[$num_position] = $value;
 			
 			$format .= $this->arr_variables[$variable][1];
 		}
@@ -311,7 +321,7 @@ class DBStatement extends DBStatementBase {
 		
 		$this->statement->execute();
 		
-		return new DBResult($this->statement->get_result());
+		return new \DBResult($this->statement->get_result());
 	}
 	
 	public function getAffectedRowCount() {
@@ -325,7 +335,7 @@ class DBStatement extends DBStatementBase {
 	}
 }
 
-class DBResult extends DBResultBase {
+class DBResult extends \DBBase\DBResult {
 	
 	public function fetchArray() {
 		
@@ -374,17 +384,17 @@ class DBResult extends DBResultBase {
 		switch ($arr_field->type) {
 			case MYSQLI_TYPE_TINY:
 				if ($arr_field->length == 1) {
-					$int = DBFunctions::TYPE_BOOLEAN;
+					$int = \DBFunctions::TYPE_BOOLEAN;
 				} else {
-					$int = DBFunctions::TYPE_INTEGER;
+					$int = \DBFunctions::TYPE_INTEGER;
 				}
 				break;
 			case MYSQLI_TYPE_SHORT:
 			case MYSQLI_TYPE_LONG:
-				$int = DBFunctions::TYPE_INTEGER;
+				$int = \DBFunctions::TYPE_INTEGER;
 				break;
 			case MYSQLI_TYPE_FLOAT:
-				$int = DBFunctions::TYPE_FLOAT;
+				$int = \DBFunctions::TYPE_FLOAT;
 				break;
 			default:
 				$int = 0;
@@ -395,7 +405,7 @@ class DBResult extends DBResultBase {
 	
 	public function getAffectedRowCount() {
 		
-		return DB::$connection_active->affected_rows;
+		return \DB::$connection_active->affected_rows;
 	}
 	
 	public function freeResult() {
@@ -404,7 +414,7 @@ class DBResult extends DBResultBase {
 	}
 }
 
-class DBFunctions extends DBFunctionsBase {
+class DBFunctions extends \DBBase\DBFunctions {
 	
 	const CAST_TYPE_INTEGER = 'SIGNED';
 	const CAST_TYPE_DECIMAL = 'DECIMAL';
@@ -414,6 +424,10 @@ class DBFunctions extends DBFunctionsBase {
 	
 	const INDEX_HASH = 'HASH';
 	const INDEX_LTF = 'BTREE';
+	
+	const COLLATE_AI_CI = 'utf8mb4_unicode_ci'; // utf8mb4_0900_ci
+	const COLLATE_AS_CI = 'utf8mb4_unicode_as_ci'; // utf8mb4_0900_as_ci
+	const COLLATE_BINARY = 'utf8mb4_bin'; // utf8mb4_0900_bin
 			
 	public static function strEscape($str) {
 		
@@ -421,7 +435,7 @@ class DBFunctions extends DBFunctionsBase {
 			return (string)$str;
 		}
 		
-		return DB::$connection_active->real_escape_string($str);
+		return \DB::$connection_active->real_escape_string($str);
 	}
 	
 	public static function escapeAs($value, $what) {
@@ -432,7 +446,7 @@ class DBFunctions extends DBFunctionsBase {
 				$value = ($value ? 'TRUE' : 'FALSE');
 				break;
 			case static::TYPE_BINARY:
-				$value = '\''.DB::$connection_active->real_escape_string($value).'\'';
+				$value = '\''.\DB::$connection_active->real_escape_string($value).'\'';
 				break;
 		}
 		
@@ -469,9 +483,28 @@ class DBFunctions extends DBFunctionsBase {
 		return 'CAST('.$value.' AS '.$what.($length ? '('.$length.')' : '').')';
 	}
 	
-	public static function sqlImplode($expression, $separator = ', ', $clause = false) {
+	public static function convertTo($value, $to, $from, $format = null) {
 		
-		$sql = 'GROUP_CONCAT('.$expression.' '.$clause.' SEPARATOR \''.$separator.'\')';
+		if ($from === static::TYPE_BINARY && $to === static::TYPE_STRING) {
+			if ($format === static::FORMAT_STRING_BASE64) {
+				return 'TO_BASE64('.$value.')';
+			} else {
+				return 'HEX('.$value.')';
+			}
+		} else if ($from === static::TYPE_STRING && $to === static::TYPE_BINARY) {
+			if ($format === static::FORMAT_STRING_BASE64) {
+				return 'FROM_BASE64('.$value.')';
+			} else {
+				return 'UNHEX('.$value.')';
+			}
+		}
+		
+		return parent::convertTo($value, $to, $from, $format);
+	}
+	
+	public static function group2String($sql_expression, $str_separator = ', ', $sql_clause = false) {
+		
+		$sql = 'GROUP_CONCAT('.$sql_expression.' '.$sql_clause.' SEPARATOR \''.$str_separator.'\')';
 		
 		return $sql;
 	}
@@ -565,9 +598,47 @@ class DBFunctions extends DBFunctionsBase {
 		return 'NOW()'; // Statement time
 	}
 	
-	public static function regexpMatch($sql_field, $expression, $flags = false) {
+	public static function searchRegularExpression($sql_field, $sql_expression, $str_flags = false) {
 		
-		return $sql_field.' REGEXP '.$expression;
+		$sql_field = static::sqlFieldLiteral($sql_field);
+		$sql_expression = static::sqlFieldLiteral($sql_expression);
+		
+		$str_flags = parseRegularExpressionFlags($str_flags, [REGEX_NOFLAG.REGEX_CASE_INSENSITIVE => 'c', REGEX_CASE_INSENSITIVE => 'i', REGEX_LINE => 'm', REGEX_NOFLAG.REGEX_DOT_SPECIAL => 'n']);
+		
+		return 'REGEXP_LIKE('.$sql_field.', '.$sql_expression.', \''.$str_flags.'\')';
+	}
+	
+	public static function searchMatchSensitivity($sql_field, $sql_search, $mode_wildcards = MATCH_ANY, $do_case = false, $do_diacritics = false) {
+		
+		$sql_field = static::sqlFieldLiteral($sql_field);
+		$sql_collate = ' COLLATE '.static::COLLATE_AI_CI;
+		
+		if ($do_case) { // Also implies accent
+			$sql_collate = ' COLLATE '.static::COLLATE_BINARY;
+		} else if ($do_diacritics) {
+			$sql_collate = ' COLLATE '.static::COLLATE_AS_CI;
+		}
+		
+		$sql = '';
+		
+		if ($mode_wildcards === false) {
+			
+			$sql_search = static::sqlFieldLiteral($sql_search);
+			$sql = $sql_field.' = '.$sql_search.$sql_collate;
+		} else {
+			
+			$sql_search = static::sqlFieldLiteral($sql_search, true);
+			$is_literal_search = ($sql_search['type'] === static::SQL_IS_LITERAL);
+			$sql_search = $sql_search['sql'];
+
+			if ($is_literal_search) {
+				$sql = $sql_field.' LIKE \''.($mode_wildcards === MATCH_END || $mode_wildcards === MATCH_ANY ? '%' : '').$sql_search.($mode_wildcards === MATCH_START || $mode_wildcards === MATCH_ANY ? '%' : '').'\''.$sql_collate;
+			} else {
+				$sql = $sql_field.' LIKE CONCAT(\''.($mode_wildcards === MATCH_END || $mode_wildcards === MATCH_ANY ? '%' : '').'\', '.$sql_search.', \''.($mode_wildcards === MATCH_START || $mode_wildcards === MATCH_ANY ? '%' : '').'\')'.$sql_collate;
+			}
+		}
+		
+		return $sql;
 	}
 	
 	public static function sqlTableOptions($engine) {
@@ -584,7 +655,7 @@ class DBFunctions extends DBFunctionsBase {
 	
 	public static function bulkSelect($q) {
 			
-		$res = DB::query($q, MYSQLI_USE_RESULT);
+		$res = \DB::query($q, MYSQLI_USE_RESULT);
 		$res = $res->result; // Get native
 		
 		while ($arr_row = $res->fetch_row()) {
@@ -593,3 +664,7 @@ class DBFunctions extends DBFunctionsBase {
 		}
 	}
 }
+
+class DBTrouble extends \DBBase\DBTrouble {}
+
+class DBSetup extends \DBBase\DBSetup {}

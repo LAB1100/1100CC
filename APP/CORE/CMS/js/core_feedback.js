@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -455,18 +455,28 @@ function Feedback() {
 					return;
 				}
 				
-				if (num_errors == 1) {	
-					var str_msg = 'The form you would like to submit contains an invalid or missing value.';
-				} else {
-					var str_msg = 'The form you would like to submit contains '+num_errors+' invalid or missing values.';
+				const elm_error = validator.errorList[0].element;
+				
+				let str_msg = 'conf_form_missing_value';
+				
+				if (num_errors > 1) {
+					str_msg = 'conf_form_missing_values';
 				}
 				
-				MESSAGEBOX.add({msg: '<ul><li><label></label><div>'+str_msg+'</div></li></ul>', type: 'attention', method: 'append', duration: 5000});
+				ASSETS.getLabels(elm_error, [str_msg], function(data) {
+					
+					str_msg = data[str_msg];
+					str_msg = str_msg.replace('[V]{errors}', num_errors);
+					
+					if (elm_box) {
+						elm_box.find('div').html(str_msg);
+					}
+				});
+				
+				var elm_box = MESSAGEBOX.add({msg: '<ul><li><label></label><div>'+str_msg+'</div></li></ul>', type: 'attention', method: 'append', duration: 5000});
 
 				validator.defaultShowErrors();
-				
-				var elm_error = validator.errorList[0].element;
-				
+								
 				if (elm_error && elm_error.closest('.tabs')) {
 					
 					var elms_focus = $(elm_error).parents('.tabs > div');
@@ -508,8 +518,7 @@ function Loader() {
 	this.start = function(elm) {
 		
 		var elm = getElement(elm);
-		
-		var obj_loader = elm.loader;
+		let obj_loader = elm.loader;
 		
 		if (!obj_loader) {
 		
@@ -561,8 +570,7 @@ function Loader() {
 	this.show = function(elm) {
 		
 		var elm = getElement(elm);
-		
-		var obj_loader = elm.loader;
+		const obj_loader = elm.loader;
 		
 		if (obj_loader.elm) {
 			return;
@@ -578,8 +586,7 @@ function Loader() {
 	this.stop = function(elm) {
 		
 		var elm = getElement(elm);
-		
-		var obj_loader = elm.loader;
+		const obj_loader = elm.loader;
 		
 		if (!obj_loader || !obj_loader.loading) {
 			return;
@@ -609,13 +616,12 @@ function Loader() {
 	this.reset = function(elm) {
 		
 		var elm = getElement(elm);
-		
-		var obj_loader = elm.loader;
+		const obj_loader = elm.loader;
 		
 		if (!obj_loader) {
 			return;
 		}
-			
+		
 		obj_loader.updated = 0;
 	};
 }
@@ -628,11 +634,11 @@ function WebService(host, port) {
 	this.host = host;
 	this.port = port;
 
-	var active = false;
-	var socket = false;
-	var keep_connection = false;
-	var timeout_keep_connection = false;
-	var func_keep_connection = function(state) {
+	let is_active = false;
+	let socket = false;
+	let keep_connection = false;
+	let timeout_keep_connection = false;
+	let func_keep_connection = function(state) {
 		
 		if (state === true || state === false) {
 			
@@ -652,8 +658,8 @@ function WebService(host, port) {
 			timeout_keep_connection = false;
 		}, 2000);
 	};
-	var interval_keep_alive = false;
-	var func_keep_alive = function(state) {
+	let interval_keep_alive = false;
+	let func_keep_alive = function(state) {
 		
 		if (state === false) {
 			
@@ -676,11 +682,11 @@ function WebService(host, port) {
 			return;
 		}
 						
-		var host = (window.location.protocol == 'https:' ? 'wss:' : 'ws:')+'//'+SELF.host+(SELF.port ? ':'+SELF.port : '')+'/';
+		const str_host = (window.location.protocol == 'https:' ? 'wss:' : 'ws:')+'//'+SELF.host+(SELF.port ? ':'+SELF.port : '')+'/';
 
-		socket = new WebSocket(host);
+		socket = new WebSocket(str_host);
 		
-		active = false;
+		is_active = false;
 		func_keep_connection(true);
 		
 		SELF.opening();
@@ -689,7 +695,7 @@ function WebService(host, port) {
 		
 			SELF.log('Connected.');
 			
-			active = true;
+			is_active = true;
 			SELF.opened();
 			
 			func_keep_alive(true);
@@ -697,7 +703,7 @@ function WebService(host, port) {
 		
 		socket.onmessage = function(e) {
 								
-			var data = JSON.parse(e.data);
+			const data = JSON.parse(e.data);
 			
 			SELF.receive(data);
 		};
@@ -750,7 +756,7 @@ function WebService(host, port) {
 	
 	this.send = function(data) {
 		
-		if (!socket || !active) {
+		if (!socket || !is_active) {
 			return false;
 		}
 		
@@ -914,23 +920,25 @@ var WEBSERVICES = new WebServices();
 			return;
 		}
 		
-		var elm = settings.context;
+		const elm = settings.context;
 		
 		if (xhr.responseText) {
 			
+			let json = null;
+			
 			try {
-				var json = JSON.parse(xhr.responseText);
+				json = JSON.parse(xhr.responseText);
 			} catch(e) { }
+			
 			if (json) {
 				FEEDBACK.check(elm, json);
 				return;
 			}
 		}
 		
+		let msg = '<ul><li><label></label><div>Connection lost.</div></li></ul>';
 		if (exception) {
-			var msg = '<ul><li><label></label><div>Connection error: '+exception+'.</div></li></ul>';
-		} else {
-			var msg = '<ul><li><label></label><div>Connection lost.</div></li></ul>';
+			msg = '<ul><li><label></label><div>Connection error: '+exception+'.</div></li></ul>';
 		}
 		
 		FEEDBACK.check(elm, {msg_type: 'alert', msg: msg});
@@ -939,14 +947,14 @@ var WEBSERVICES = new WebServices();
 		xhr.setRequestHeader('1100CC-Status', '1');
 	});
 	    
-    var orgXHR = $.ajaxSettings.xhr;
+    const orgXHR = $.ajaxSettings.xhr;
     
     $.ajaxSetup({
 		xhr: function() {
 			
 			// Patch ajax settings to call a progress callback
 			
-			var xhr = orgXHR();
+			const xhr = orgXHR();
 			
 			if (xhr instanceof window.XMLHttpRequest) {
 				xhr.addEventListener('progress', this.progress, false);
@@ -962,21 +970,21 @@ var WEBSERVICES = new WebServices();
 
 	$.ajaxPrefilter(function(options, options_original, jqXHR) {
 		
-		var is_buffering = true;
-		var arr_response = false;
-		var str_response = '';
-		var pos_processed = 0;
-		var str_processed = '';
+		let is_buffering = true;
+		let arr_response = false;
+		let str_response = '';
+		let pos_processed = 0;
+		let str_processed = '';
 		
-		var str2Bytes = function(str) {
+		const str2Bytes = function(str) {
 
-			var bytes = 0;
+			let num_bytes = 0;
 			
-			for (var i = 0, len = str.length; i < len; i++) {
+			for (let i = 0, len = str.length; i < len; i++) {
 				
-				var c = str.charCodeAt(i);
+				const c = str.charCodeAt(i);
 				
-				bytes += c < (1 <<  7) ? 1 :
+				num_bytes += c < (1 <<  7) ? 1 :
 						   c < (1 << 11) ? 2 :
 						   c < (1 << 16) ? 3 :
 						   c < (1 << 21) ? 4 :
@@ -984,7 +992,7 @@ var WEBSERVICES = new WebServices();
 						   c < (1 << 31) ? 6 : Number.NaN;
 			}
 			
-			return bytes;
+			return num_bytes;
 		};
 		
 		options.uploadProgress = function(e) {
@@ -993,9 +1001,11 @@ var WEBSERVICES = new WebServices();
 				return;
 			}
 			
-			var position = e.loaded;
-			var total = e.total;
-			var percent = (position / total) * 100;
+			const position = e.loaded;
+			const total = e.total;
+			const percent = (position / total) * 100;
+			
+			LOADER.reset(options.context);
 			
 			options_original.uploadProgress(e, position, total, percent);
 		};
@@ -1016,7 +1026,7 @@ var WEBSERVICES = new WebServices();
 			
 			if (is_buffering) { // Make sure we have an fully processed first response and no buffer issues (IE)
 
-				var str_check = arr_response.responseText;
+				const str_check = arr_response.responseText;
 				
 				if (str_check.indexOf('[-PROCESS]') !== -1) {
 					
@@ -1043,9 +1053,7 @@ var WEBSERVICES = new WebServices();
 		
 		var update = function() {
 			
-			var elm = options.context;
-			
-			LOADER.reset(elm);
+			LOADER.reset(options.context);
 
 			if (arr_response.responseText && (arr_response.responseText.length > str_response.length)) {
 				
@@ -1057,14 +1065,14 @@ var WEBSERVICES = new WebServices();
 		
 		var parse = function() {
 			
-			var arr_pos_delimiters = [];
+			const arr_pos_delimiters = [];
 			
-			var pos_search = pos_processed;
-			var pos_delimiter_found = str_response.indexOf('[-PROCESS]', pos_search);
+			let pos_search = pos_processed;
+			let pos_delimiter_found = str_response.indexOf('[-PROCESS]', pos_search);
 			
 			while (pos_delimiter_found !== -1) {
 				
-				var pos_delimiter_open = str_response.indexOf('[PROCESS]', pos_search);
+				const pos_delimiter_open = str_response.indexOf('[PROCESS]', pos_search);
 				
 				arr_pos_delimiters.push([pos_delimiter_open, pos_delimiter_found + 10]);
 				
@@ -1072,32 +1080,29 @@ var WEBSERVICES = new WebServices();
 				pos_delimiter_found = str_response.indexOf('[-PROCESS]', pos_search);
 			}
 			
-			for (var i = 0, len = arr_pos_delimiters.length; i < len; i++) {
+			for (let i = 0, len = arr_pos_delimiters.length; i < len; i++) {
 				
-				var arr_pos_delimiter = arr_pos_delimiters[i];
+				const arr_pos_delimiter = arr_pos_delimiters[i];
 				
-				var pos_start = arr_pos_delimiter[0];
-				var pos_stop = arr_pos_delimiter[1];
+				const pos_start = arr_pos_delimiter[0];
+				const pos_stop = arr_pos_delimiter[1];
 				
 				if (pos_start > pos_processed) {
-					
 					str_processed += str_response.substring(pos_processed, pos_start);
 				}
 				
-				var str = str_response.substring(pos_start + 9, pos_stop - 10);
+				const str = str_response.substring(pos_start + 9, pos_stop - 10);
 				
 				pos_processed = pos_stop;
 				
+				let json = null;
+				
 				try {
-					
-					var json = JSON.parse(str);
+					json = JSON.parse(str);
 				} catch(e) { }
 				
-				if (json) {
-					
-					var elm = options.context;
-					
-					FEEDBACK.check(elm, json);
+				if (json) {				
+					FEEDBACK.check(options.context, json);
 				}
 			}
 		}

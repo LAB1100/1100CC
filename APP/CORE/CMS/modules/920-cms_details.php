@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -33,6 +33,9 @@ class cms_details extends base_module {
 				'options' => function($arr_options) {
 					return '<label>'.getLabel('lbl_age').'</label><input type="text" name="options[age_amount]" value="'.$arr_options['age_amount'].'" /><select name="options[age_unit]">'.cms_general::createDropdown(cms_general::getTimeUnits(), $arr_options['age_unit']).'</select>';
 				},
+			],
+			'cleanFallbacks' => [
+				'label' => getLabel('lbl_cleanup_fallbacks')
 			],
 			'clearStaticServerFiles' => [
 				'label' => getLabel('lbl_static_server_file_clear')
@@ -983,6 +986,11 @@ class cms_details extends base_module {
 		}
 		
 		$res = DB::query('DELETE FROM '.DB::getTable('SITE_CACHE_FILES').'');
+	}
+	
+	public static function cleanFallbacks($arr_options) {
+		
+		Mediator::cleanFallbacks();
 	}
 	
 	public static function runWebService($arr_options) {

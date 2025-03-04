@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -45,6 +45,8 @@ class SiteStartEnvironment {
 	protected static $num_page_module_x = false;
 	protected static $num_page_module_y = false;
 	protected static $str_language = false;
+	
+	protected static $str_language_default = false;
 	
 	protected static $uri_translator = false;
 	protected static $api = false;
@@ -347,14 +349,16 @@ class SiteStartEnvironment {
 		} else {
 			
 			$is_secure = (SERVER_SCHEME == URI_SCHEME_HTTPS ? true : false);
+			
+			// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie for info on '__Host-' prefix and 'Partitioned'
 
 			$arr_session_options = [];
-			$arr_cookie_options = ['lifetime' => 0, 'path' => (IS_CMS ? ini_get('session.cookie_path') : '/'), 'domain' => ini_get('session.cookie_domain'), 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None' : null)];
+			$arr_cookie_options = ['lifetime' => 0, 'path' => '/', 'domain' => null, 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None; Partitioned' : null)];
 			
 			session_set_cookie_params($arr_cookie_options);	
 			
 			self::$session = uniqid('', true); // As unique as possible over multiple/parallel threads
-			session_name('1100CC_'.($is_secure ? 'secure' : 'open'));
+			session_name(($is_secure ? '__Host-' : '').'1100CC');
 		}
 		
 		try {
@@ -410,7 +414,7 @@ class SiteStartEnvironment {
 		
 		$is_secure = (SERVER_SCHEME == URI_SCHEME_HTTPS ? true : false);
 		
-		$arr_cookie_options = ['expires' => 0, 'path' => (IS_CMS ? ini_get('session.cookie_path') : '/'), 'domain' => ($include_sub_domains ? SERVER_NAME : ini_get('session.cookie_domain')), 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None' : null)];
+		$arr_cookie_options = ['expires' => 0, 'path' => '/', 'domain' => ($include_sub_domains ? SERVER_NAME : null), 'httponly' => true, 'secure' => $is_secure, 'samesite' => ($is_secure ? 'None; Partitioned' : null)];
 		
 		setcookie($name, $value, $arr_cookie_options);
 	}
@@ -513,12 +517,14 @@ class SiteStartEnvironment {
 			Settings::setShare('language_'.SERVER_NAME_SITE_NAME, $str_language_default, 3600);
 		}
 		
+		self::$str_language_default = $str_language_default;
+		
 		if (self::getModifierVariables('language')) {
 			
 			$arr_language = cms_language::getLanguage(self::getModifierVariables('language'));
 			$str_language_pick = ($arr_language['lang_code'] ?? null);
 
-			if ($str_language_pick && $str_language_pick != $str_language_default) {
+			if ($str_language_pick) {
 				
 				self::setContext(self::CONTEXT_LANGUAGE, $str_language_pick);
 				SiteEndEnvironment::setModifierVariable('language', $str_language_pick);
@@ -543,20 +549,46 @@ class SiteStartEnvironment {
 			return;
 		}
 		
-		if (SiteEndEnvironment::getModifierVariables('language')) { // Succesful override
+		if (SiteEndEnvironment::getModifierVariables('language')) { // Successful override
 			
-			self::setContext(self::CONTEXT_LANGUAGE, SiteEndEnvironment::getModifierVariables('language'));
-			$_SESSION['LANGUAGE_SYSTEM'] = SiteEndEnvironment::getModifierVariables('language');
-		} else if (self::getModifierVariables('language')) { // Unsuccesful override
+			$str_language = SiteEndEnvironment::getModifierVariables('language');
+			self::setLanguageSession($str_language);
 			
-			unset($_SESSION['LANGUAGE_SYSTEM']);
-		} if (isset($_SESSION['LANGUAGE_SYSTEM'])) {
+			if ($str_language == self::$str_language_default) {
+				SiteEndEnvironment::setModifierVariable('language', null);
+			}
+		} else if (self::getModifierVariables('language')) { // Unsuccessful override
 			
-			self::setContext(self::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE_SYSTEM']);
+			self::setLanguageSession(false);
+		}
+		
+		if (isset($_SESSION['LANGUAGE'.($_SESSION['USER_ID'] ? '_USER' : '_SYSTEM')])) {
+			self::setContext(self::CONTEXT_LANGUAGE, $_SESSION['LANGUAGE'.($_SESSION['USER_ID'] ? '_USER' : '_SYSTEM')]);
 		} else if (!empty($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code'])) {
-			
 			self::setContext(self::CONTEXT_LANGUAGE, $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code']);
 		}
+	}
+	
+	public static function setLanguageSession($str_language = false) {
+		
+		if (!$str_language) {
+			
+			unset($_SESSION['LANGUAGE'.($_SESSION['USER_ID'] ? '_USER' : '_SYSTEM')]);
+			return;
+		}
+		
+		$_SESSION['LANGUAGE'.($_SESSION['USER_ID'] ? '_USER' : '_SYSTEM')] = $str_language;
+	}
+	
+	public static function setLanguagePreference($str_language) {
+		
+		// Indicate a preferred langauge, if not overidden by session
+		
+		if (isset($_SESSION['LANGUAGE'.($_SESSION['USER_ID'] ? '_USER' : '_SYSTEM')]) || !empty($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['lang_code'])) {
+			return;
+		}
+		
+		self::setContext(self::CONTEXT_LANGUAGE, $str_language);
 	}
 	
 	public static function getBasePath($num_pop_length = 0, $is_relative = true) {
@@ -609,15 +641,15 @@ class SiteStartEnvironment {
 	
 	public static function getRequestState() {
 
-		if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') { // Ajax and ajax file uploads
-			return static::REQUEST_COMMAND;
-		} else if (SiteStartEnvironment::getAPI()) { // API calls
+		if (SiteStartEnvironment::getAPI()) { // API calls
 			return static::REQUEST_API;
+		} else if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') { // Ajax and ajax file uploads
+			return static::REQUEST_COMMAND;
 		} else if (!empty($_FILES) || !empty($_POST['is_download'])) { // Plain file upload or download
 			return static::REQUEST_DOWNLOAD;
-		} else { // Direct page request
-			return static::REQUEST_INDEX;
 		}
+		
+		return static::REQUEST_INDEX; // Direct page request
 	}
 	
 	public static function checkRequestOptions() {

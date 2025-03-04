@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -377,109 +377,126 @@ class cms_blog_posts extends base_module {
 	
 		if ($method == "insert_blog_post") {
 		
-			$body = $_POST['body'];
+			$arr_blog_post = $_POST;
+			$arr_blog_post['date'] = $_POST['date'].' '.$_POST['date_t'];
 			
-			$num_para = ((int)$_POST['para_preview'] ?: '0');
-				
-			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POSTS')."
-				(title, body, abstract, cms_user_id, date, para_preview, draft)
-					VALUES
-				(
-					'".DBFunctions::strEscape($_POST['title'])."',
-					'".DBFunctions::strEscape($body)."',
-					'".DBFunctions::strEscape($_POST['abstract'])."',
-					".$_SESSION['USER_ID'].",
-					'".date('Y-m-d H:i:s', strtotime($_POST['date'].' '.$_POST['date_t']))."',
-					".$num_para.",
-					".DBFunctions::escapeAs($_POST['draft'], DBFunctions::TYPE_BOOLEAN)."
-				)
-			");
-						
-			$new_id = DB::lastInsertID();
-			
-			if ($_POST['blog']) {
-				
-				foreach ($_POST['blog'] as $blog_id => $value) {
-					
-					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_LINK')."
-						(blog_id, blog_post_id)
-							VALUES
-						(".(int)$blog_id.", ".$new_id.")
-					");
-				
-					if ($_POST['pingback-url']) {
-						self::doPings($_POST['pingback-url'], $blog_id, $new_id, $_POST['title']);
-					}
-				}
-			}
-			
-			cms_general::handleTags(DB::getTable('TABLE_BLOG_POST_TAGS'), 'blog_post_id', $new_id, $_POST['tags']);
+			$id = static::handleBlogPost(false, $arr_blog_post, $_POST['blog'], $_POST['tags']);
 						
 			$this->refresh_table = true;
 			$this->msg = true;
 		}
 		
 		if ($method == "update_blog_post" && (int)$id) {
+			
+			$arr_blog_post = $_POST;
+			$arr_blog_post['date'] = $_POST['date'].' '.$_POST['date_t'];
+			
+			static::handleBlogPost($id, $arr_blog_post, $_POST['blog'], $_POST['tags']);
 		
-			$body = $_POST['body'];
-			
-			$num_para = ((int)$_POST['para_preview'] ?: '0');
-					
-			$res = DB::query("UPDATE ".DB::getTable('TABLE_BLOG_POSTS')." SET
-				title = '".DBFunctions::strEscape($_POST['title'])."',
-				body = '".DBFunctions::strEscape($body)."',
-				abstract = '".DBFunctions::strEscape($_POST['abstract'])."',
-				date = '".date('Y-m-d H:i:s', strtotime($_POST['date'].' '.$_POST['date_t']))."',
-				para_preview = ".$num_para.",
-				draft = ".DBFunctions::escapeAs($_POST['draft'], DBFunctions::TYPE_BOOLEAN)."
-					WHERE id = ".(int)$id."
-			");
-						
-			$res = DB::query("DELETE FROM ".DB::getTable('TABLE_BLOG_POST_LINK')."
-				WHERE blog_post_id = ".(int)$id."
-			");
-			
-			if ($_POST['blog']) {
-				
-				foreach ($_POST['blog'] as $blog_id => $value) {
-					
-					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_LINK')."
-						(blog_id, blog_post_id)
-							VALUES
-						(".(int)$blog_id.", ".(int)$id.")
-					");
-					
-					if ($_POST['pingback-url']) {
-						self::doPings($_POST['pingback-url'], $blog_id, $id, $_POST['title']);
-					}
-				}
-			}
-						
-			cms_general::handleTags(DB::getTable('TABLE_BLOG_POST_TAGS'), 'blog_post_id', $id, $_POST['tags']);
-									
 			$this->refresh_table = true;
 			$this->msg = true;
 		}
 			
 		if ($method == "del_blog_post" && (int)$id) {
-		
-			$res = DB::queryMulti("
-				DELETE FROM ".DB::getTable('TABLE_BLOG_POST_TAGS')."
-					WHERE blog_post_id = ".(int)$id."
-				;
-				DELETE FROM ".DB::getTable('TABLE_BLOG_POST_LINK')."
-					WHERE blog_post_id = ".(int)$id."
-				;
-				DELETE FROM ".DB::getTable('TABLE_BLOG_POST_XREFS')."
-					WHERE blog_post_id = ".(int)$id."
-				;	
-				DELETE FROM ".DB::getTable('TABLE_BLOG_POSTS')."
-					WHERE id = ".(int)$id."
-				;
-			");
 			
+			static::deleteBlogPost($id);
+			
+			$this->refresh_table = true;
 			$this->msg = true;
 		}
+	}
+	
+	public static function handleBlogPost($blog_post_id = false, $arr_blog_post = [], $arr_blogs = [], $arr_tags = []) {
+		
+		$is_new = true;
+		$str_body = strParsePassthrough($arr_blog_post['body']);
+		$num_para = ((int)$arr_blog_post['para_preview'] ?: '0');
+		$str_sql_date = date('Y-m-d H:i:s', strtotime($arr_blog_post['date']));
+		
+		if ($blog_post_id) {
+			
+			$res = DB::queryMulti("
+				SELECT TRUE FROM ".DB::getTable('TABLE_BLOG_POSTS')." WHERE id = ".(int)$blog_post_id.";
+			
+				UPDATE ".DB::getTable('TABLE_BLOG_POSTS')." SET
+					title = '".DBFunctions::strEscape($arr_blog_post['title'])."',
+					body = '".DBFunctions::strEscape($str_body)."',
+					abstract = '".DBFunctions::strEscape($arr_blog_post['abstract'])."',
+					date = '".$str_sql_date."',
+					para_preview = ".$num_para.",
+					draft = ".DBFunctions::escapeAs($arr_blog_post['draft'], DBFunctions::TYPE_BOOLEAN)."
+						WHERE id = ".(int)$blog_post_id.";
+			");
+			
+			if (!$res[0]->getRowCount()) {
+				error(getLabel('msg_error_database_missing_record'));
+			}
+			
+			$is_new = false;
+		} else {
+		
+			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POSTS')."
+				(title, body, abstract, cms_user_id, date, para_preview, draft)
+					VALUES
+				(
+					'".DBFunctions::strEscape($arr_blog_post['title'])."',
+					'".DBFunctions::strEscape($str_body)."',
+					'".DBFunctions::strEscape($arr_blog_post['abstract'])."',
+					".$_SESSION['USER_ID'].",
+					'".$str_sql_date."',
+					".$num_para.",
+					".DBFunctions::escapeAs($arr_blog_post['draft'], DBFunctions::TYPE_BOOLEAN)."
+				)
+			");
+					
+			$blog_post_id = DB::lastInsertID();
+		}
+		
+		if (!$is_new) {
+			
+			$res = DB::query("DELETE FROM ".DB::getTable('TABLE_BLOG_POST_LINK')."
+				WHERE blog_post_id = ".(int)$blog_post_id."
+			");
+		}
+		
+		if ($arr_blogs) {
+			
+			foreach ($arr_blogs as $blog_id => $value) {
+				
+				$res = DB::query("INSERT INTO ".DB::getTable('TABLE_BLOG_POST_LINK')."
+					(blog_id, blog_post_id)
+						VALUES
+					(".(int)$blog_id.", ".$blog_post_id.")
+				");
+			
+				if ($arr_blog_post['pingback-url']) {
+					self::doPings($arr_blog_post['pingback-url'], $blog_id, $blog_post_id, $arr_blog_post['title']);
+				}
+			}
+		}
+		
+		cms_general::handleTags(DB::getTable('TABLE_BLOG_POST_TAGS'), 'blog_post_id', $blog_post_id, $arr_tags);
+	}
+	
+	public static function deleteBlogPost($blog_post_id) {
+		
+		$blog_post_id = arrParseRecursive($blog_post_id, TYPE_INTEGER);
+		$sql_ids = (is_array($blog_post_id) ? 'IN ('.arr2String($blog_post_id, ',').')' : '= '.$blog_post_id);
+		
+		$res = DB::queryMulti("
+			DELETE FROM ".DB::getTable('TABLE_BLOG_POST_TAGS')."
+				WHERE blog_post_id ".$sql_ids."
+			;
+			DELETE FROM ".DB::getTable('TABLE_BLOG_POST_LINK')."
+				WHERE blog_post_id ".$sql_ids."
+			;
+			DELETE FROM ".DB::getTable('TABLE_BLOG_POST_XREFS')."
+				WHERE blog_post_id ".$sql_ids."
+			;	
+			DELETE FROM ".DB::getTable('TABLE_BLOG_POSTS')."
+				WHERE id ".$sql_ids."
+			;
+		");
 	}
 		
 	private static function doPings($arr_pings, $blog_id, $blog_post_id, $str_title) {
@@ -547,7 +564,7 @@ class cms_blog_posts extends base_module {
 		$res = DB::query("SELECT
 			bp.*,
 			cu.name AS cms_user_name,
-			".DBFunctions::sqlImplode('t.name', ',')." AS tags
+			".DBFunctions::group2String('t.name', ',')." AS tags
 				FROM ".DB::getTable('TABLE_BLOG_POSTS')." bp
 				LEFT JOIN ".DB::getTable('TABLE_CMS_USERS')." cu ON (cu.id = bp.cms_user_id)
 				".($blog_id ? "JOIN ".DB::getTable('TABLE_BLOG_POST_LINK')." l ON (l.blog_post_id = bp.id AND l.blog_id = ".(int)$blog_id.")" : "")."

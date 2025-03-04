@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -81,7 +81,7 @@
 	$path_database = DIR_ROOT_SETTINGS.DIR_HOME.'database';
 	$path_settings = DIR_ROOT_SETTINGS.DIR_HOME.'settings.php';
 
-	$str_database = 'mysql';
+	$str_database = '';
 	
 	if (isPath($path_database)) {
 		$str_database = readText($path_database);
@@ -89,9 +89,18 @@
 	
 	if ($str_database == 'postgresql') {
 		require('operations/DBPostgresql.php');
-	} else {
+	} else if ($str_database == 'mysql') {
 		require('operations/DBMysql.php');
+	} else {
+		$str_database = 'mariadb';
+		require('operations/DBMariadb.php');
 	}
+	
+	class_alias('DBBase\\'.$str_database.'\DB', 'DB');
+	class_alias('DBBase\\'.$str_database.'\DBStatement', 'DBStatement');
+	class_alias('DBBase\\'.$str_database.'\DBResult', 'DBResult');
+	class_alias('DBBase\\'.$str_database.'\DBFunctions', 'DBFunctions');
+	class_alias('DBBase\\'.$str_database.'\DBTrouble', 'DBTrouble');
 
 	// CORE settings
 	

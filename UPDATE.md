@@ -224,3 +224,9 @@ Run SQL queries in database ?SITE?_cms:
 ```sql
 ALTER TABLE `cms_language` ADD `host_canonical` VARCHAR(100) NOT NULL AFTER `label`;
 ```
+
+## VERSION 10.8
+
+The default database has been changed from MySQL to MariaDB. If the current installation is not using MariaDB, make sure to set the contents of file `./APP/SETTINGS/?SITE?/database` to 'mysql'.
+
+Update 1100CC [1100CC.core_labels.en.sql](/setup/1100CC.core_labels.en.sql).

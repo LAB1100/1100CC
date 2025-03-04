@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2024 LAB1100.
+ * Copyright (C) 2025 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -55,7 +55,7 @@ class cms_sliders extends base_module {
 				WHERE sldl.slider_id = sldr.id
 			) AS count_slider_slides,
 			(SELECT 
-				".DBFunctions::sqlImplode("CASE
+				".DBFunctions::group2String("CASE
 					WHEN sldl.media_internal_tag_id > 0 THEN CONCAT(t.name, ' (".getLabel('lbl_media').")')
 					ELSE CONCAT(slds.name, ' (".getLabel('lbl_slide').")')
 				END", '<br />', 'ORDER BY sldl.sort')."
@@ -64,8 +64,8 @@ class cms_sliders extends base_module {
 					LEFT JOIN ".DB::getTable('TABLE_INTERNAL_TAGS')." t ON (t.id = sldl.media_internal_tag_id)
 				WHERE sldl.slider_id = sldr.id
 			) AS slider_slides,
-			".DBFunctions::sqlImplode(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
-			".DBFunctions::sqlImplode('p.name', ',', 'ORDER BY p.id')." AS pages
+			".DBFunctions::group2String(DBFunctions::castAs('d.id', DBFunctions::CAST_TYPE_STRING), ',', 'ORDER BY p.id')." AS directories,
+			".DBFunctions::group2String('p.name', ',', 'ORDER BY p.id')." AS pages
 				FROM ".DB::getTable('TABLE_SLIDERS')." sldr
 				LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.var != '' AND ".DBFunctions::castAs('m.var', DBFunctions::CAST_TYPE_INTEGER)." = sldr.id AND m.module = 'slider')
 				LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.id = m.page_id)
@@ -277,7 +277,7 @@ class cms_sliders extends base_module {
 			
 			$arr_sql_columns = ['slds.name', 'COUNT(sldr.id)'];
 			$arr_sql_columns_search = ['slds.name', 'sldr.name'];
-			$arr_sql_columns_as = ['slds.name', DBFunctions::sqlImplode('sldr.name', '<br />', 'ORDER BY sldr.id DESC').' AS sliders', 'COUNT(sldr.id) AS count_sliders', 'slds.id'];
+			$arr_sql_columns_as = ['slds.name', DBFunctions::group2String('sldr.name', '<br />', 'ORDER BY sldr.id DESC').' AS sliders', 'COUNT(sldr.id) AS count_sliders', 'slds.id'];
 			
 			$sql_table = DB::getTable('TABLE_SLIDER_SLIDES')." slds
 				LEFT JOIN ".DB::getTable('TABLE_SLIDER_SLIDE_LINK')." sldl ON (sldl.slider_slide_id = slds.id)
@@ -419,11 +419,12 @@ class cms_sliders extends base_module {
 	
 	private static function getSliderEffects($effect = false) {
 		
-		$arr = [];
-		$arr['scrollHorz'] = ['name' => getLabel('lbl_scroll_horizontal'), 'id' => 'scrollHorz'];
-		$arr['scrollVert'] = ['name' => getLabel('lbl_scroll_vertical'), 'id' => 'scrollVert'];
-		$arr['fade'] = ['name' => getLabel('lbl_fade'), 'id' => 'fade'];
-		$arr['none'] = ['name' => getLabel('lbl_none'), 'id' => 'none'];
+		$arr = [
+			'horizontal' => ['name' => getLabel('lbl_scroll_horizontal'), 'id' => 'horizontal'],
+			'vertical' => ['name' => getLabel('lbl_scroll_vertical'), 'id' => 'vertical'],
+			'fade' => ['name' => getLabel('lbl_fade'), 'id' => 'fade'],
+			'none' => ['name' => getLabel('lbl_none'), 'id' => 'none']
+		];
 		
 		return ($effect ? $arr[$effect]['name'] : $arr);
 	}
