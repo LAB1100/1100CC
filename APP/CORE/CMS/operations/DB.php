@@ -260,12 +260,12 @@ abstract class DB {
 			
 	abstract public static function prepare($q);
 	
-	public static function startTransaction($identifier = 'default', $force = false) {
+	public static function startTransaction($identifier = 'default', $do_force = false) {
 		
 		$arr_connection_status =& static::$arr_connection_status[static::$connection_database];
 		
 		// When requested, force close any existing transaction
-		if ($force) {
+		if ($do_force) {
 			static::commitTransaction($arr_connection_status['transaction']);
 		}
 		
@@ -307,11 +307,11 @@ abstract class DB {
 		
 		if (!$identifier) {
 			
-			if (!isset(static::$arr_connection_status[static::$connection_database])) {
+			$arr_connection_status = (static::$arr_connection_status[static::$connection_database] ?? null);
+			
+			if (!$arr_connection_status) {
 				return false;
 			}
-			
-			$arr_connection_status = static::$arr_connection_status[static::$connection_database];
 			
 			$identifier = $arr_connection_status['transaction'];
 			
@@ -321,6 +321,17 @@ abstract class DB {
 		}
 		
 		return static::commitTransaction($identifier, false);
+	}
+	
+	public static function getTransaction() {
+		
+		$arr_connection_status = (static::$arr_connection_status[static::$connection_database] ?? null);
+		
+		if (!$arr_connection_status || !$arr_connection_status['transaction']) {
+			return false;
+		}
+		
+		return $arr_connection_status['transaction'];
 	}
 
 	abstract public static function lastInsertID();

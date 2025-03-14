@@ -412,6 +412,8 @@ class FormatHTML {
 			'figure' => true,
 			'figurecaption' => true,
 			'blockquote' => true,
+			'details' => true,
+			'summary' => true,
 			'q' => true,
 			'ul' => true,
 			'ol' => true,
