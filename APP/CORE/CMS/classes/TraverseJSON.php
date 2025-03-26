@@ -27,6 +27,7 @@ class TraverseJSON {
 	protected $arr_key_unique = [];
 	protected $arr_key_unique_parsed = [];
 	protected $do_grouping = true;
+	protected $in_grouping_check = false;
 	
 	protected $arr_return = [];
 	protected $num_groups = 0;
@@ -48,8 +49,15 @@ class TraverseJSON {
     public function __construct($arr_path, $do_grouping = true) {
 		
 		$this->arr_path = $this->preparePath($arr_path);
-
-		$this->do_grouping = $do_grouping;
+		
+		if ($do_grouping === null) { // Assume grouping, but we're not sure
+			
+			$this->do_grouping = true;
+			$this->in_grouping_check = true;
+		} else {
+		
+			$this->do_grouping = $do_grouping;
+		}		
     }
     
     public function set($arr) {
@@ -262,7 +270,7 @@ class TraverseJSON {
 					}
 				} else {
 					
-					if ($num_group === false) { // Incorrect
+					if ($num_group === false && !$this->in_grouping_check) { // Incorrect
 						continue;
 					}
 						

@@ -30,14 +30,23 @@ class cms_language extends base_module {
 			
 			$res = DB::query("SELECT * FROM ".DB::getTable($str_table)." AS language WHERE lang_code = '".DBFunctions::strEscape($str_lang_code)."'");			
 			
-			$arr = ($res->fetchAssoc() ?: []);			
+			$arr = ($res->fetchAssoc() ?: []);
+			
+			if ($arr) {
+				
+				$arr['is_user_selectable'] = DBFunctions::unescapeAs($arr['is_user_selectable'], DBFunctions::TYPE_BOOLEAN);
+				$arr['is_default'] = DBFunctions::unescapeAs($arr['is_default'], DBFunctions::TYPE_BOOLEAN);
+			}
 		} else {
 			
 			$res = DB::query("SELECT * FROM ".DB::getTable($str_table)." AS language ORDER BY".($str_table == 'TABLE_CMS_LANGUAGE' ? " is_default DESC," : "")." lang_code");
 			
-			while ($row = $res->fetchAssoc()) {
+			while ($arr_row = $res->fetchAssoc()) {
 				
-				$arr[$row['lang_code']] = $row;
+				$arr_row['is_user_selectable'] = DBFunctions::unescapeAs($arr_row['is_user_selectable'], DBFunctions::TYPE_BOOLEAN);
+				$arr_row['is_default'] = DBFunctions::unescapeAs($arr_row['is_default'], DBFunctions::TYPE_BOOLEAN);
+				
+				$arr[$arr_row['lang_code']] = $arr_row;
 			}
 		}		
 		

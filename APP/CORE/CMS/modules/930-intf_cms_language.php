@@ -103,13 +103,16 @@ class intf_cms_language extends cms_language {
 				<tbody>';
 				
 					while ($arr_row = $res->fetchAssoc()) {
+						
+						$arr_row['is_user_selectable'] = DBFunctions::unescapeAs($arr_row['is_user_selectable'], DBFunctions::TYPE_BOOLEAN);
+						$arr_row['is_default'] = DBFunctions::unescapeAs($arr_row['is_default'], DBFunctions::TYPE_BOOLEAN);
 								
 						$return .= '<tr id="x:intf_cms_language:language_id-'.$arr_row['lang_code'].'">
 							<td>'.$arr_row['lang_code'].'</td>	
 							<td>'.$arr_row['label'].'</td>
 							<td>'.($arr_row['host_canonical'] ?: '<i>'.SERVER_NAME_SITE_NAME.'</i>').'</td>
 							<td><span class="icon" data-category="status">'.getIcon(($arr_row['is_user_selectable'] ? 'tick' : 'min')).'</span></td>
-							<td><input type="radio" name="is_default_language" id="y:intf_cms_language:language_default-'.$arr_row['lang_code'].'" value="'.$arr_row['lang_code'].'"'.(($arr_row['is_default'] == 1) ? ' checked="checked"':'').' /><label for="y:intf_cms_language:language_default-'.$arr_row['lang_code'].'"></label></td>
+							<td><input type="radio" name="is_default_language" id="y:intf_cms_language:language_default-'.$arr_row['lang_code'].'" value="'.$arr_row['lang_code'].'"'.($arr_row['is_default'] ? ' checked="checked"':'').' /><label for="y:intf_cms_language:language_default-'.$arr_row['lang_code'].'"></label></td>
 							<td><input type="button" class="data edit popup language_cms_edit" value="edit" /><input type="button" class="data del msg language_cms_del" value="del" /></td>
 						</tr>';
 					}
@@ -187,8 +190,8 @@ class intf_cms_language extends cms_language {
 		if ($method == "language_default" && $id) {
 		
 			$res = DB::queryMulti("
-				UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = 0;
-				UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = 1 WHERE lang_code = '".DBFunctions::strEscape($id)."';
+				UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = FALSE;
+				UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = TRUE WHERE lang_code = '".DBFunctions::strEscape($id)."';
 			");
 			
 			$this->msg = true;
@@ -302,7 +305,7 @@ class intf_cms_language extends cms_language {
 					'".DBFunctions::strEscape($_POST['label'])."'
 					".($method == 'language_cms_insert' ? "
 						, '".DBFunctions::strEscape($_POST['host_canonical'])."'
-						, ".(int)$_POST['is_user_selectable']
+						, ".DBFunctions::escapeAs($_POST['is_user_selectable'], DBFunctions::TYPE_BOOLEAN)
 					: "")."
 				)
 			");
@@ -322,7 +325,7 @@ class intf_cms_language extends cms_language {
 					label = '".DBFunctions::strEscape($_POST['label'])."'
 					".($method == 'language_cms_update' ? "
 						, host_canonical = '".DBFunctions::strEscape($_POST['host_canonical'])."'
-						, is_user_selectable = ".(int)$_POST['is_user_selectable']
+						, is_user_selectable = ".DBFunctions::escapeAs($_POST['is_user_selectable'], DBFunctions::TYPE_BOOLEAN)
 					: "")."
 				WHERE lang_code = '".DBFunctions::strEscape($id)."'
 			");

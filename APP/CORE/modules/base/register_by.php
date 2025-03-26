@@ -341,7 +341,9 @@ abstract class register_by extends base_module {
 			
 			$class = static::class;
 			
-			while ($arr_row = $arr_datatable['result']->fetchAssoc())	{
+			while ($arr_row = $arr_datatable['result']->fetchAssoc()) {
+				
+				$arr_row['enabled'] = DBFunctions::unescapeAs($arr_row['enabled'], DBFunctions::TYPE_BOOLEAN);
 
 				$arr_data = [];
 				
