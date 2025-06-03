@@ -193,6 +193,13 @@ LOAD DATABASE
 
 Add a file called 'database' with the contents 'postgresql' in the SITE's `./APP/SETTINGS/?SITE?` directory.
 
+### Error & Debug
+
+Whenever the most basic part of the setup works, where `./APP/CORE/index.php` or `./APP/CORE/CMS/index.php` can be reached and processed by Apache, errors are captured and can be found in the following places:
+* Database YES: `//cms.yourhost.com/cms_log/` or database table `"?SITE?_cms".site_log`.
+* Database NO, filesystem YES: `./APP/STORAGE/?SITE?/CMS/PRIVATE/log`.
+* Display YES: Edit `./APP/.htaccess` and uncomment `#SetEnv STATE development` to display the error message whenever an error is reported.
+
 ## Programs
 
 The `./PROGRAMS` directory provides an environment to create and build services using C++. The `creation_station.sh` script found in `./PROGRAMS/LIBRARIES` helps you to build and link programs to `./PROGRAMS/RUN`.
