@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -627,7 +627,7 @@ abstract class api extends base_module {
 			if ($str_html_form) {
 				$this->html = $str_html_form;
 			}
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if (($method == "insert_client" || $method == "update_client") && $this->is_discard) {
@@ -667,7 +667,7 @@ abstract class api extends base_module {
 			
 			$this->reset_form = true;
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_client" && $id) {
@@ -699,7 +699,7 @@ abstract class api extends base_module {
 
 			$this->html = $this->createAddClient();
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_client" && $id) {
@@ -710,7 +710,7 @@ abstract class api extends base_module {
 			
 			apis::delClients($id);
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if (($method == "insert_client_user" || $method == "update_client_user") && $this->is_discard) {
@@ -744,7 +744,7 @@ abstract class api extends base_module {
 			
 			$this->reset_form = true;
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_client_user" && $id) {
@@ -775,7 +775,7 @@ abstract class api extends base_module {
 			
 			$this->html = '';
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_client_user" && $id) {
@@ -804,7 +804,7 @@ abstract class api extends base_module {
 			
 			apis::delClientUsers($arr_ids);
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

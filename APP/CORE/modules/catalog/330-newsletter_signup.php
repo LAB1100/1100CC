@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -57,7 +57,7 @@ class newsletter_signup extends base_module {
 			
 			cms_newsletters::addEmailAddress($_POST['email'], $_POST['name']);
 			
-			$this->msg = true;
+			$this->message = true;
 			$this->reset_form = true;
 		}
 	}

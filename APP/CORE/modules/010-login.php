@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,11 +16,11 @@ class login extends base_module {
 		
 	public static function moduleVariables() {
 		
-		$return = '<select>';
-		$return .= directories::createDirectoriesDropdown(directories::getDirectories(), false, true);
-		$return .= '</select>';
+		$str_html = '<select>'
+			.directories::createDirectoriesDropdown(directories::getDirectories(), false, true)
+		.'</select>';
 		
-		return $return;
+		return $str_html;
 	}
 
 	public function contents() {
@@ -31,7 +31,7 @@ class login extends base_module {
 		
 		$method = $this->arr_query[0];
 		
-		$return = '';
+		$str_html = '';
 				
 		if ($method == 'welcome' || $method == 'recover_confirm') {
 			
@@ -55,11 +55,11 @@ class login extends base_module {
 				
 				$str_message = getLabel('msg_login_confirm_incorrect');
 				
-				$return = '<h1>'.getLabel('lbl_login').'</h1>
+				$str_html = '<h1>'.getLabel('lbl_login').'</h1>
 				
 				<section class="info alert">'.$str_message.'</section>';
 				
-				return $return;
+				return $str_html;
 			}
 			
 			SiteEndEnvironment::setModuleVariables($this->mod_id, [$method, $user_id, $key]);
@@ -77,7 +77,7 @@ class login extends base_module {
 				$str_message = getLabel('msg_login_recover_confirm');
 			}
 				
-			$return .= '<h1>'.getLabel('lbl_login_welcome').'</h1>
+			$str_html .= '<h1>'.getLabel('lbl_login_welcome').'</h1>
 			
 			<section class="info attention">'.$str_message.'</section>
 			
@@ -96,7 +96,7 @@ class login extends base_module {
 		
 			Labels::setVariable('url_login', SiteStartEnvironment::getPageURL());
 			
-			$return .= '<h1>'.getLabel('lbl_login_recover').'</h1>
+			$str_html .= '<h1>'.getLabel('lbl_login_recover').'</h1>
 			
 			<form id="f:login:recover-0" autocomplete="on">
 				<fieldset><ul>
@@ -121,14 +121,7 @@ class login extends base_module {
 			if ($method) {
 				SiteEndEnvironment::setModuleVariables($this->mod_id, [$method]);
 			}
-		
-			if ($this->arr_variables) {
-				$arr_dir = directories::getDirectories($this->arr_variables);
-				$str_path = str_replace(' ', '', $arr_dir['path']).'/';
-			} else {
-				$str_path = SiteStartEnvironment::getBasePath();
-			}
-			
+
 			$arr_request_vars = SiteStartEnvironment::getModuleVariables(0);
 			
 			$str_input_error = '';
@@ -138,52 +131,75 @@ class login extends base_module {
 				SiteEndEnvironment::setModuleVariables(0, [0 => false], false);
 			}
 			
-			Labels::setVariable('url_recover_password', SiteStartEnvironment::getModuleURL($this->mod_id).'recover/');
+			Labels::setVariable('url_recover_password', SiteStartEnvironment::getModuleURL($this->mod_id).'recover');
 				
-			$return .= '<h1>'.getLabel('lbl_login').'</h1>
+			$str_html .= '<h1>'.getLabel('lbl_login').'</h1>
 			
 			'.($str_message ? '<section class="info attention">'.$str_message.'</section>' : '').'
 			
-			<form method="post" action="'.$str_path.'" autocomplete="on">
+			<form id="f:login:login-0" autocomplete="on">
 				<fieldset><ul>		
 					<li><label>'.getLabel('lbl_username').'</label><input name="login_user" type="text" class="'.$str_input_error.'" /></li>
-					<li><label>'.getLabel('lbl_password').'</label><input name="login_ww" type="password" class="'.$str_input_error.'" /></li>
+					<li><label>'.getLabel('lbl_password').'</label><input name="login_password" type="password" class="'.$str_input_error.'" /></li>
 					<li><label></label><p>'.getLabel('msg_login_recover_link').'</p></li>
 					<li><label></label><input type="submit" value="'.getLabel('lbl_login').'" /></li>
 				</ul></fieldset>
 			</form>';
 			
-			$this->validate = ['login_user' => 'required', 'login_ww' => 'required'];
+			$this->validate = ['login_user' => 'required', 'login_password' => 'required'];
 		}
 
-		return $return;
+		return $str_html;
 	}
 	
 	public static function css() {
 	
-		$return = '';
+		$str_html = '';
 		
-		return $return;
+		return $str_html;
 	}
 	
 	public static function js() {
 	
-		$return = "";
+		$str_html = "";
 		
-		return $return;
+		return $str_html;
 	}
 
 	public function commands($method, $id, $value = "") {
 		
 		// INTERACT
 		
-		if ($method == "welcome" || $method == "recover_confirm") {
+		if ($method == 'login') {
+			
+			if (empty($_POST['login_user']) || empty($_POST['login_password']) || !is_string($_POST['login_user']) || !is_string($_POST['login_password'])) {
+				error(getLabel('msg_missing_information'), TROUBLE_ERROR, LOG_CLIENT);
+			}
+			
+			if ($this->arr_variables) {
+				
+				$arr_directory = directories::getDirectories($this->arr_variables);
+				$str_url = str_replace(' ', '', $arr_directory['path']).'/';
+			} else {
+				
+				$arr_directory = null;
+				$str_url = SiteStartEnvironment::getBasePath();
+			}
+			
+			HomeLogin::indexProposeUser($_POST['login_user'], $_POST['login_password'], $arr_directory);
+			
+			Response::location($str_url);
+		}
+		
+		if ($method == 'welcome' || $method == 'recover_confirm') {
 			
 			$arr_confirm = SiteStartEnvironment::getFeedback('confirm');
 			
-			if (!$arr_confirm || !$_POST['password'] || $_POST['password'] != $_POST['password_confirm']) {
-				error(getLabel('msg_missing_information'));
+			if (!$arr_confirm || !$_POST['password'] || $_POST['password'] != $_POST['password_confirm'] || !is_string($_POST['password'])) {
+				error(getLabel('msg_missing_information'), TROUBLE_ERROR, LOG_CLIENT);
 			}
+			
+			account::checkPasswordStrength($_POST['password']);
 			
 			$user_id = (int)$arr_confirm['user_id'];
 			$key = $arr_confirm['key'];
@@ -198,31 +214,45 @@ class login extends base_module {
 			
 			user_management::updateUser($user_id, true, false, $_POST['password']);
 						
-			$url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false);
-			$url .= ($method == 'welcome' ? 'welcome_confirmed/' : 'recover_confirmed/');
+			$str_url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false);
+			$str_url .= ($method == 'welcome' ? 'welcome_confirmed' : 'recover_confirmed');
 			
-			Response::location($url);
+			Response::location($str_url);
 		}
 		
-		if ($method == "recover") {
+		if ($method == 'recover') {
 
+			if (empty($_POST['recover_user']) || !is_string($_POST['recover_user'])) {
+				error(getLabel('msg_missing_information'), TROUBLE_ERROR, LOG_CLIENT);
+			}
+			
 			if ($this->arr_variables) {
-				$dir = directories::getDirectories($this->arr_variables);
-				$user_group_id = $dir['user_group_id'];
+				
+				$arr_directory = directories::getDirectories($this->arr_variables);
+				$user_group_id = $arr_directory['user_group_id'];
 			} else {
+				
 				$user_group_id = SiteStartEnvironment::getDirectory('user_group_id');
 			}
-		
-			if (!$_POST['recover_user'] || !$user_group_id) {
+			
+			if (!$user_group_id) {
 				error(getLabel('msg_missing_information'));
 			}
 			
-			$url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false).'recover_confirm/';
+			$check = Log::checkRequest('login_recover_home', null, 10, ['ip' => 5, 'ip_block' => 10, 'global' => 100]);
+		
+			if ($check !== true) {
+				error(getLabel('msg_access_limit'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
+			}
+			
+			Log::logRequest('login_recover_home');
+
+			$str_url = SiteStartEnvironment::getModuleURL($this->mod_id, false, 0, false).'recover_confirm/';
 						
-			user_management::recoverUser($_POST['recover_user'], $user_group_id, $url);
+			user_management::recoverUser($_POST['recover_user'], $user_group_id, $str_url);
 			
 			$this->reset_form = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

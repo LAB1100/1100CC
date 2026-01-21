@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -39,7 +39,8 @@ class cms_admin extends base_module {
 				'run' => function() {
 
 					(DB::getRealNamespace().'\DBSetup')::init();
-				}
+				},
+				'transform' => false
 			]
 		];
 	}
@@ -144,7 +145,7 @@ class cms_admin extends base_module {
 				
 		$return = '<form id="f:cms_admin:update-0">
 
-			<div class="record options"><dl>
+			<div class="options"><dl>
 				<div>
 					<dt>'.getLabel('lbl_available').'</dt>
 					<dd><span class="icon">'.getIcon((isPath(Settings::getUpdatePath()) ? 'tick' : 'min')).'</span></dd>
@@ -162,18 +163,21 @@ class cms_admin extends base_module {
 				
 		$return = '<form id="f:cms_admin:setup-0">
 
-			<div class="record options"><ul>';
+			<div class="options">
+				<ul>';
 				
 				$arr_modules = getModuleConfiguration('setupProperties');
 						
 				foreach ($arr_modules as $module => $arr_settings) {
 					foreach ($arr_settings as $str_name => $arr_setup) {
 						
-						$return .= '<li>'.$arr_setup['label'].'</li>';
+						$return .= '<li><span>'.$arr_setup['label'].'</span>'.($arr_setup['transform'] ? '<span>'.getLabel('lbl_transform').'</span>' : '').'</li>';
 					}
 				}
 				
-			$return .= '</ul></div>
+				$return .= '</ul>
+				<p><label><input type="checkbox" name="transform" value="1" /><span>'.getLabel('lbl_transform').'</span></label></p>
+			</div>
 			
 			<menu><input type="submit" value="'.getLabel('lbl_setup').'" /></menu>
 			
@@ -215,7 +219,11 @@ class cms_admin extends base_module {
 			.cms_admin form { text-align: center; }
 			.cms_admin .tabs > .backup select { display: block; margin: 0px auto 8px auto; }
 			.cms_admin .tabs > .update dl { display: inline-table; margin-left: auto; margin-right: auto; }
+			.cms_admin .tabs > .setup form > div { text-align: left; }
 			.cms_admin .tabs > .setup ul { list-style-type: disc; list-style-position: inside; }
+			.cms_admin .tabs > .setup ul > li > span + span::before { content: \'[\'; }
+			.cms_admin .tabs > .setup ul > li > span + span::after { content: \']\'; }
+			.cms_admin .tabs > .setup ul > li > span + span { font-size: 0.85em; font-weight: bold; margin-left: 0.1em; text-transform: lowercase; }
 		';
 		
 		return $return;
@@ -287,7 +295,7 @@ class cms_admin extends base_module {
 				
 				msg('1100CC data package (upload) has successfully been processed.');
 				
-				$this->msg = true;
+				$this->message = true;
 			} else if ($this->is_confirm === false) {
 				
 				if (isPath($str_path)) {
@@ -336,7 +344,7 @@ class cms_admin extends base_module {
 					exit;
 				}
 				
-				$this->msg = true;			
+				$this->message = true;			
 			} else if ($do_download) {
 				
 				$this->do_download = true;
@@ -382,7 +390,7 @@ class cms_admin extends base_module {
 				
 				msg('1100CC data package (restore) has successfully been processed.');
 				
-				$this->msg = true;
+				$this->message = true;
 			}
 		}
 						
@@ -394,7 +402,7 @@ class cms_admin extends base_module {
 			
 			msg('1100CC has successfully been updated.');
 			
-			$this->msg = true;
+			$this->message = true;
 			$this->html = $this->contentTabUpdate();
 		}
 		
@@ -410,11 +418,11 @@ class cms_admin extends base_module {
 			
 				timeLimit(false);
 				
-				self::runSetup();
+				self::runSetup((bool)$_POST['transform']);
 				
 				msg('1100CC has successfully been setup.');
 				
-				$this->msg = true;
+				$this->message = true;
 			}
 		}
 	}
@@ -548,7 +556,7 @@ class cms_admin extends base_module {
 			require($str_path_update);		
 		} catch (Exception $e) {
 			
-			error('1100CC Update Failed.', 0, LOG_BOTH, false, $e);
+			error('1100CC Update Failed.', TROUBLE_ERROR, LOG_BOTH, null, $e);
 		}
 		
 		$str_directory_update = rtrim(Settings::getUpdatePath(false), '/');
@@ -556,14 +564,15 @@ class cms_admin extends base_module {
 		FileStore::deleteDirectoryTree($str_directory_update);
 	}
 	
-	private static function runSetup() {
+	private static function runSetup($do_transform = false) {
 		
 		$arr_modules = getModuleConfiguration('setupProperties');
+		$has_error = false;
 				
 		foreach ($arr_modules as $module => $arr_settings) {
 			foreach ($arr_settings as $str_name => $arr_setup) {
 			
-				if (!$arr_setup['run']) {
+				if (!$arr_setup['run'] || ($arr_setup['transform'] && !$do_transform)) {
 					continue;
 				}
 				
@@ -573,9 +582,14 @@ class cms_admin extends base_module {
 					$func_run();
 				} catch (Exception $e) {
 					
-					error('1100CC Setup Failed.', 0, LOG_BOTH, false, $e);
+					error('1100CC Setup ERROR: '.$str_name, TROUBLE_NOTICE, LOG_SYSTEM, null, $e);
+					$has_error = true;
 				}
 			}
+		}
+		
+		if ($has_error) {
+			error('1100CC Setup Failed.', TROUBLE_ERROR, LOG_BOTH);
 		}
 	}
 }

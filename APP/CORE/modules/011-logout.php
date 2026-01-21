@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -14,47 +14,70 @@ class logout extends base_module {
 		static::$parent_label = getLabel('lbl_users');
 	}
 
-	private static $arr_elements_extra = [];
+	protected static $arr_elements_extra = [];
+	protected static $str_url_logout = null;
 	
 	public static function addElement($class, $html) {
 		
-		self::$arr_elements_extra[$class] = $html;
+		static::$arr_elements_extra[$class] = $html;
 	}
-
-	public function contents() {
-		
-		$return = '';
 	
-		if ($_SESSION['USER_ID']) {
+	public static function setLogoutURL($str_url) {
 		
-			$arr_account_link = account::findAccount();
-			
-			if (class_exists('messaging')) {
-				$arr_messaging_link = messaging::findMessaging();
-				$unread_count = messaging::getUnreadMessages();
-			}
-			
-			$domain = strEscapeHTML(($_SESSION['CUR_USER'][DB::getTableName('VIEW_USER_PARENT')]['parent_name'] ?: $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_GROUPS')]['name']));
-			$name = strEscapeHTML($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name']);
+		static::$str_url_logout = $str_url;
+	}
+	
+	public function contents() {
 
-			$return .= '<ul>';
-			$return .= '<li class="info"><div><span title="'.$domain.'">'.$domain.'</span><span title="'.$name.'">'.$name.'</span></div></li>';
-			foreach (self::$arr_elements_extra as $class => $html) {
-				$return .= '<li class="'.$class.'">'.$html.'</li>';
-			}
-			$return .= ($arr_messaging_link && pages::filterClearance([$arr_messaging_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]) ? '<li class="messaging"><a title="'.getLabel('lbl_messaging').'" href="'.SiteStartEnvironment::getPageURL($arr_messaging_link['page_name'], $arr_messaging_link['sub_dir']).'"><span class="icon">'.getIcon('message').'</span>'.($unread_count ? '<sup>'.$unread_count.'</sup>' : '').'</a></li>' : '');
-			$return .= ($arr_account_link && pages::filterClearance([$arr_account_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')]) ? '<li class="account"><a title="'.getLabel('lbl_account').'" href="'.SiteStartEnvironment::getPageURL($arr_account_link['page_name'], $arr_account_link['sub_dir']).'"><span class="icon">'.getIcon('settings').'</span></a></li>' : '');
-			$return .= '<li class="logout-button"><span title="'.getLabel('lbl_logout').'" class="a"><span class="icon">'.getIcon('logout').'</span></span></li><li class="logout-options"><span>'.getLabel('lbl_logout').'?</span><span><a href="'.SiteStartEnvironment::getBasePath().'logout.l">'.getLabel('lbl_yes').'</a></span><span>|</span><span class="no a">'.getLabel('lbl_no').'</span></li>';
-			$return .= '</ul>';
+		if (empty($_SESSION['USER_ID'])) {
+			return '';
 		}
 		
-		return $return;
+		$str_html = '';
+		
+		$arr_account_link = account::findAccount();
+		
+		if (class_exists('messaging')) {
+			$arr_messaging_link = messaging::findMessaging();
+			$num_unread_count = messaging::getUnreadMessages();
+		}
+		
+		$domain = strEscapeHTML(($_SESSION['CUR_USER'][DB::getTableName('VIEW_USER_PARENT')]['parent_name'] ?: $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_GROUPS')]['name']));
+		$name = strEscapeHTML($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['name']);
+
+		$str_html .= '<ul>'
+			.'<li class="info"><div><span title="'.$domain.'">'.$domain.'</span><span title="'.$name.'">'.$name.'</span></div></li>';
+			
+			foreach (static::$arr_elements_extra as $class => $html) {
+				$str_html .= '<li class="'.$class.'">'.$html.'</li>';
+			}
+			
+			if ($arr_messaging_link && pages::filterClearance([$arr_messaging_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')])) {
+				$str_html .= '<li class="messaging"><a title="'.getLabel('lbl_messaging').'" href="'.SiteStartEnvironment::getPageURL($arr_messaging_link['page_name'], $arr_messaging_link['sub_dir']).'"><span class="icon">'.getIcon('message').'</span>'.($num_unread_count ? '<sup>'.$num_unread_count.'</sup>' : '').'</a></li>';
+			}
+			if ($arr_account_link && pages::filterClearance([$arr_account_link], $_SESSION['USER_GROUP'], $_SESSION['CUR_USER'][DB::getTableName('TABLE_USER_PAGE_CLEARANCE')])) {
+				$str_html .= '<li class="account"><a title="'.getLabel('lbl_account').'" href="'.SiteStartEnvironment::getPageURL($arr_account_link['page_name'], $arr_account_link['sub_dir']).'"><span class="icon">'.getIcon('settings').'</span></a></li>';
+			}
+			
+			$str_url_logout = static::$str_url_logout;
+			
+			if (is_callable($str_url_logout)) {
+				$str_url_logout = $str_url_logout();
+			}
+			
+			if (!$str_url_logout) {
+				$str_url_logout = SiteStartEnvironment::getBasePath().'logout.l';
+			}
+			
+			$str_html .= '<li class="logout-button"><span title="'.getLabel('lbl_logout').'" class="a"><span class="icon">'.getIcon('logout').'</span></span></li><li class="logout-options hide"><span>'.getLabel('lbl_logout').'?</span><span><a href="'.$str_url_logout.'">'.getLabel('lbl_yes').'</a></span><span>|</span><span class="no a">'.getLabel('lbl_no').'</span></li>'
+		.'</ul>';
+		
+		return $str_html;
 	}
 	
 	public static function css() {
 	
 		$return = '.logout { height: 30px; line-height: 30px; padding: 0px 15px; text-align:center; font-weight:bold; color: #ffffff; background-color: #000000; float: right;}
-				.logout:hover { background-color: #ffffff; }
 				.logout li { display: inline-block; margin-left: 12px; }
 				.logout li > a,
 				.logout li > .a,
@@ -68,7 +91,6 @@ class logout extends base_module {
 				.logout li.logout-options { margin-left: 0px; }
 				.logout li.logout-options > span { margin-left: 5px; vertical-align: middle; }
 				.logout li.logout-options > span:first-child { margin-left: 0px; }
-				.logout li.logout-options { display: none; }
 				.logout li.info { text-align: left; }
 				.logout li.info > div > span { display: block; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 				.logout li.info > div > span:first-child { font-size: 10px; }
@@ -81,14 +103,17 @@ class logout extends base_module {
 	
 		$return = "SCRIPTER.static('.logout', function(elm_scripter) {
 		
+			const elm_logout_options = elm_scripter.find('ul > li.logout-options');
+			const elms_options = elm_scripter.find('ul > li:not(.logout-options)');
+		
 			elm_scripter.find('.logout-button').on('click', function() {
-				elm_scripter.find('ul > li.logout-options').show();
-				elm_scripter.find('ul > li:not(.logout-options)').hide();
+				elm_logout_options.removeClass('hide');
+				elms_options.addClass('hide');
 			});
 			
 			elm_scripter.on('click', '.logout-options .no', function() {
-				elm_scripter.find('ul > li.logout-options').hide();
-				elm_scripter.find('ul > li:not(.logout-options)').show();
+				elm_logout_options.addClass('hide');
+				elms_options.removeClass('hide');
 			});
 		});";
 		

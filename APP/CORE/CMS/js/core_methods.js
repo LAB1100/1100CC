@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -19,14 +19,13 @@ function Commands() {
 		
 		var elm = $(elm);
 		
-		var elm_context = elm.closest('[id^="x:"], [id^="y:"], [id^="f:"], [id^="d:"]');
+		let elm_context = elm.closest('[id^="x:"], [id^="y:"], [id^="f:"], [id^="d:"]');
 		
 		if (elm_context.length) {
-			
 			return elm_context[0];
 		}
 		
-		var elm_overlay = elm.closest('.overlay');
+		const elm_overlay = elm.closest('.overlay');
 		
 		if (elm_overlay.length) {
 			
@@ -72,10 +71,11 @@ function Commands() {
 		
 		var elm = getElement(elm);
 		
-		var module = getElementData(elm, 'module');
+		let module = getElementData(elm, 'module');
 		
 		if (!module) {
-			var arr_match = elm.getAttribute('id').match(/([dfxy]):([^:]*):([^-]*)-(.*)/);
+			
+			const arr_match = elm.getAttribute('id').match(/([dfxy]):([^:]*):([^-]*)-(.*)/);
 			module = arr_match[2];
 		}
 		
@@ -90,13 +90,15 @@ function Commands() {
 		
 		var elm = getElement(elm);
 		
-		var command_id = getElementData(elm, 'command_id');
+		let command_id = getElementData(elm, 'command_id');
+		
 		if (command_id === undefined || command_id === ''|| command_id === null) {
 			command_id = false;
 		}
 		
 		if (command_id === false && do_parse) {
-			var arr_match = elm.getAttribute('id').match(/([dfxy]):([^:]*):([^-]*)-(.*)/);
+			
+			const arr_match = elm.getAttribute('id').match(/([dfxy]):([^:]*):([^-]*)-(.*)/);
 			command_id = arr_match[4];
 		}
 		
@@ -135,105 +137,119 @@ function Commands() {
 		var arr_options = $.extend({
 		}, arr_options || {});
 
-		var cur = $(elm);
+		const elm_action = $(elm);
 		
-		SCRIPTER.triggerEvent(cur, 'command');
+		SCRIPTER.triggerEvent(elm_action, 'command');
 		
-		var elm = cur.closest('[id^="x:"], [id^="y:"]');
+		const elm_context = elm_action.closest('[id^="x:"], [id^="y:"]');
 		
-		if (COMMANDS.isAborted(elm, cur)) {
+		if (COMMANDS.isAborted(elm_context, elm_action)) {
 			return;
 		}
 
-		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
+		var match = elm_context.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
-		if (cur.data('method')) {
-			var method = cur.data('method');
+		if (elm_action.data('method')) {
+			var method = elm_action.data('method');
 		} else if (match[1] == 'y') {
 			var method = match[3];
 		} else if (match[1] == 'x') {
-			var method = cur.attr('class').split(' ').slice(-1)[0]; // Last class name
+			var method = elm_action.attr('class').split(' ').slice(-1)[0]; // Last class name
 		}
-		if (cur.data('module')) {
-			var module = cur.data('module');
+		if (elm_action.data('module')) {
+			var module = elm_action.data('module');
 		} else {
 			var module = match[2];
 		}
-		var command_id = (COMMANDS.getID(elm) !== false ? COMMANDS.getID(elm) : match[4]);
-		var mod_id = getModID(elm);
+		var command_id = (COMMANDS.getID(elm_context) !== false ? COMMANDS.getID(elm_context) : match[4]);
+		var mod_id = getModID(elm_context);
 		
-		if (cur.is('input:not([type=submit], [type=button]), select, textarea')) {
-			var value = (cur.is('input[type=checkbox], input[type=radio]') ? cur.filter(':checked').val() : cur.val());
-			if (elm.data('value')) {
-				value = $.extend({'value_element': value}, (typeof elm.data('value') === 'object' ? elm.data('value') : [elm.data('value')]));
+		if (elm_action.is('input:not([type=submit], [type=button]), select, textarea')) {
+			var value = (elm_action.is('input[type=checkbox], input[type=radio]') ? elm_action.filter(':checked').val() : elm_action.val());
+			if (elm_context.data('value')) {
+				value = $.extend({'value_element': value}, (typeof elm_context.data('value') === 'object' ? elm_context.data('value') : [elm_context.data('value')]));
 			}
 		} else {
-			var value = elm.data('value');
+			var value = elm_context.data('value');
 		}
 		if (!value) { // Allow for object manupulation further down the road
 			value = {};
-			elm.data('value', value);
+			elm_context.data('value', value);
 		}
 		
-		var target = (elm.data('target') ? elm.data('target') : (elm.data('target') !== false ? 'module' : false));
+		var target = (elm_context.data('target') ? elm_context.data('target') : (elm_context.data('target') !== false ? 'module' : false));
 		if (target instanceof Array) {
 			var settings = [];
 			for (var i in target) {
 				settings[i] = $.extend({}, arr_options, (target[i].data('options') ? target[i].data('options') : {}));
 			}
 		} else {
-			var settings = $.extend(arr_options, (elm.data('options') ? elm.data('options') : {}));
+			var settings = $.extend(arr_options, (elm_context.data('options') ? elm_context.data('options') : {}));
 		}
 						
-		if (!FEEDBACK.start(cur)) {
+		if (!FEEDBACK.start(elm_action)) {
 			return;
 		}
 		
-		var arr_request = SELF.prepare(cur, {mod: mod_id, method: method, id: command_id, module: module, value: value});
+		var arr_request = SELF.prepare(elm_action, {mod: mod_id, method: method, id: command_id, module: module, value: value});
+		let call = null;
 		
-		FEEDBACK.request(cur, elm, {
+		FEEDBACK.request(elm_action, elm_context, {
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
 			url: LOCATION.getURL('command'),
 			data: arr_request.data,
 			processData: false,
-			context: cur,
+			context: elm_action,
+			beforeSend: function(xhr, settings) {
+				call = settings;
+			},
 			uploadProgress: function(event, position, total, percent) {
-				//elm.find('progress').removeClass('hide').attr('value', percent);
+				//elm_context.find('progress').removeClass('hide').attr('value', percent);
 			},
 			success: function(json) {
 				
-				FEEDBACK.check(cur, json, function() {
-				
-					var elm_popup = $('<div class="popup"></div>');
+				FEEDBACK.check(elm_action, json, function() {
 					
-					if (!elm.closest('.mod').length) {
+					if (json.do_download) {
+						
+						SELF.parse(json, target, elm_context, settings, call, function() {
+
+							SCRIPTER.triggerEvent(elm_action, 'commandfinished');
+						});
+						
+						return;
+					}
+				
+					const elm_popup = $('<div class="popup"></div>');
+					
+					if (!elm_context.closest('.mod').length) {
 						settings.overlay = 'document';
 					}
 					if (settings.overlay == 'document') {
 						var elm_overlay_target = document.body;
 					} else {
-						var elm_overlay_target = (settings.overlay ? settings.overlay : elm.closest('.mod'));
+						var elm_overlay_target = (settings.overlay ? settings.overlay : elm_context.closest('.mod'));
 					}
 					var obj_overlay = new Overlay(elm_overlay_target, elm_popup, {
 						call_close: function() {
 							FEEDBACK.stopContext(elm_popup);
 						},
-						elm_prevnext: (cur.attr('data-method') ? cur : {}),
+						elm_prevnext: (elm_action.attr('data-method') ? elm_action : {}),
 						sizing: (settings.overlay_settings ? settings.overlay_settings.sizing : undefined)
 					});
 					
 					var elm_overlay = obj_overlay.getOverlay();
 					
-					elm_overlay.context = elm;
+					elm_overlay.context = elm_context;
 					if (settings.overlay == 'document') {
 						setElementData(elm_overlay, 'mod', mod_id);
 					}
 				
 					var call_popup = function(json) {
 						
-						var elm_html = $(json.html);
+						const elm_html = $(json.html);
 						let arr_rules = (json.validate ? json.validate : {});
 						var name_submit = false;
 						
@@ -290,7 +306,7 @@ function Commands() {
 							});
 						}
 						
-						var elm_location = elm_popup.children('[data-location]').first();
+						const elm_location = elm_popup.children('[data-location]').first();
 						
 						if (elm_location.length) {
 							obj_overlay.location(elm_location[0].dataset.location);
@@ -298,11 +314,11 @@ function Commands() {
 						}
 						
 						SCRIPTER.runDynamic(elm_html);
-						SCRIPTER.triggerEvent(elm, 'ajaxloaded', {elm: elm_html});
+						SCRIPTER.triggerEvent(elm_context, 'ajaxloaded', {elm: elm_html});
 						
 						if (elm_form.length) {
 							
-							SCRIPTER.triggerEvent(cur, 'commandintermediate', {elm: elm_popup});
+							SCRIPTER.triggerEvent(elm_action, 'commandintermediate', {elm: elm_popup});
 							
 							var call_submit = function() {
 								
@@ -328,7 +344,7 @@ function Commands() {
 								}
 								
 								arr_request = SELF.prepare(elm_form, arr_request);
-								var call = false;
+								let call = null;
 								
 								FEEDBACK.request(elm_popup, elm_popup, {
 									type: 'POST',
@@ -353,21 +369,21 @@ function Commands() {
 										
 										FEEDBACK.check(elm_popup, json, function() {
 											
-											var elm_html = false;
+											let elm_html_form = null;
 											try {
-												elm_html = $(json.html);
+												elm_html_form = $(json.html);
 											} catch(e) { }
 											
-											if (elm_html && elm_html.is('form:not([id^=f\\\:])')) {
+											if (elm_html_form && elm_html_form.is('form:not([id^=f\\\:])')) {
 												
 												call_popup(json);
 											} else {
 												
-												SELF.parse(json, target, elm, settings, call, function() {
+												SELF.parse(json, target, elm_context, settings, call, function() {
 													
 													LOCATION.unlock(elm_popup[0]);
 													obj_overlay.close();
-													SCRIPTER.triggerEvent(cur, 'commandfinished');
+													SCRIPTER.triggerEvent(elm_action, 'commandfinished');
 												});
 											}
 										});
@@ -376,7 +392,7 @@ function Commands() {
 							}
 						} else {
 							
-							SCRIPTER.triggerEvent(cur, 'commandfinished');
+							SCRIPTER.triggerEvent(elm_action, 'commandfinished');
 						}
 					};
 					
@@ -392,87 +408,87 @@ function Commands() {
 			remove: false
 		}, arr_options || {});
 		
-		var cur = $(elm);
+		const elm_action = $(elm);
 
-		SCRIPTER.triggerEvent(cur, 'command');
+		SCRIPTER.triggerEvent(elm_action, 'command');
 
-		var elm = cur.closest('[id^="x:"], [id^="y:"]');
+		const elm_context = elm_action.closest('[id^="x:"], [id^="y:"]');
 		
-		if (COMMANDS.isAborted(elm, cur)) {
+		if (COMMANDS.isAborted(elm_context, elm_action)) {
 			return;
 		}
 
-		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
+		var match = elm_context.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
-		if (cur.data('method')) {
-			var method = cur.data('method');
+		if (elm_action.data('method')) {
+			var method = elm_action.data('method');
 		} else if (match[1] == 'y') {
 			var method = match[3];
 		} else if (match[1] == 'x') {
-			var method = cur.attr('class').split(' ').slice(-1)[0]; // Last class name
+			var method = elm_action.attr('class').split(' ').slice(-1)[0]; // Last class name
 		}
-		if (cur.data('module')) {
-			var module = cur.data('module');
+		if (elm_action.data('module')) {
+			var module = elm_action.data('module');
 		} else {
 			var module = match[2];
 		}
-		var command_id = (COMMANDS.getID(elm) !== false ? COMMANDS.getID(elm) : match[4]);
-		var mod_id = getModID(elm);
+		var command_id = (COMMANDS.getID(elm_context) !== false ? COMMANDS.getID(elm_context) : match[4]);
+		var mod_id = getModID(elm_context);
 		
-		if (cur.is('input:not([type=submit], [type=button]), select, textarea')) {
-			var value = (cur.is('input[type=checkbox], input[type=radio]') ? cur.filter(':checked').val() : cur.val());
-			if (elm.data('value')) {
-				value = $.extend({'value_element': value}, (typeof elm.data('value') === 'object' ? elm.data('value') : [elm.data('value')]));
+		if (elm_action.is('input:not([type=submit], [type=button]), select, textarea')) {
+			var value = (elm_action.is('input[type=checkbox], input[type=radio]') ? elm_action.filter(':checked').val() : elm_action.val());
+			if (elm_context.data('value')) {
+				value = $.extend({'value_element': value}, (typeof elm_context.data('value') === 'object' ? elm_context.data('value') : [elm_context.data('value')]));
 			}
 		} else {
-			var value = elm.data('value');
+			var value = elm_context.data('value');
 		}
-		var target = (elm.data('target') ? elm.data('target') : (elm.data('target') !== false ? 'module' : false));
+		var target = (elm_context.data('target') ? elm_context.data('target') : (elm_context.data('target') !== false ? 'module' : false));
 		if (target instanceof Array) {
 			var settings = [];
 			for (var i in target) {
 				settings[i] = $.extend({}, arr_options, (target[i].data('options') ? target[i].data('options') : {}));
 			}
 		} else {
-			var settings = $.extend(arr_options, (elm.data('options') ? elm.data('options') : {}));
+			var settings = $.extend(arr_options, (elm_context.data('options') ? elm_context.data('options') : {}));
 		}
-		var msg = (COMMANDS.getMessage(cur) ? COMMANDS.getMessage(cur) : 'conf_delete');
+		var msg = (COMMANDS.getMessage(elm_action) ? COMMANDS.getMessage(elm_action) : 'conf_delete');
 		
-		if (!FEEDBACK.start(cur)) {
+		if (!FEEDBACK.start(elm_action)) {
 			return;
 		}
 		
-		var arr_request = SELF.prepare(cur, {mod: mod_id, module: 'cms_general', method: 'get_label', id: msg});
+		var arr_request = SELF.prepare(elm_action, {mod: mod_id, module: 'cms_general', method: 'get_label', id: msg});
 
-		FEEDBACK.request(cur, elm, {
+		FEEDBACK.request(elm_action, elm_context, {
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
 			url: LOCATION.getURL('command'),
 			data: arr_request.data,
 			processData: false,
-			context: cur,
+			context: elm_action,
 			success: function(json) {
 				
-				FEEDBACK.check(cur, json, function() {
+				FEEDBACK.check(elm_action, json, function() {
 					
-					var elm_html = false;
+					let elm_html = null;
 					try {
 						elm_html = $(json.html);
 					} catch (e) {};
 					
-					if (!elm.closest('.mod').length) {
+					if (!elm_context.closest('.mod').length) {
 						settings.overlay = 'document';
 					}
 					if (settings.overlay == 'document') {
 						var elm_overlay_target = document.body;
 					} else {
-						var elm_overlay_target = (settings.overlay ? settings.overlay : elm.closest('.mod'));
+						var elm_overlay_target = (settings.overlay ? settings.overlay : elm_context.closest('.mod'));
 					}
 					
 					var elm_popup = $('<div class="popup message"><span class="icon"></span><div>'+(elm_html ? elm_html : json.html)+'</div></div>');
 					
-					ASSETS.getIcons(cur, ['attention'], function(data) {
+					ASSETS.getIcons(elm_action, ['attention'], function(data) {
 						elm_popup[0].children[0].innerHTML = data.attention;
 					});
 
@@ -501,10 +517,10 @@ function Commands() {
 							success: function(json) {
 								FEEDBACK.check(elm_popup, json, function() {
 									
-									SELF.parse(json, target, elm, settings, call, function() {
+									SELF.parse(json, target, elm_context, settings, call, function() {
 										
 										obj_overlay.close();
-										SCRIPTER.triggerEvent(cur, 'commandfinished');
+										SCRIPTER.triggerEvent(elm_action, 'commandfinished');
 									});
 								});
 							}
@@ -524,13 +540,13 @@ function Commands() {
 					});
 					
 					var elm_overlay = obj_overlay.getOverlay();
-					elm_overlay.context = elm;
+					elm_overlay.context = elm_context;
 					
 					if (elm_html) {
 						SCRIPTER.runDynamic(elm_html);
 					}
-					SCRIPTER.triggerEvent(elm, 'ajaxloaded', {elm: elm_html});
-					SCRIPTER.triggerEvent(cur, 'commandintermediate', {elm: elm_popup});
+					SCRIPTER.triggerEvent(elm_context, 'ajaxloaded', {elm: elm_html});
+					SCRIPTER.triggerEvent(elm_action, 'commandintermediate', {elm: elm_popup});
 				});
 			}
 		});
@@ -541,77 +557,77 @@ function Commands() {
 		var arr_options = $.extend({
 		}, arr_options || {});
 		
-		var cur = $(elm);
+		const elm_action = $(elm);
 
-		SCRIPTER.triggerEvent(cur, 'command');
+		SCRIPTER.triggerEvent(elm_action, 'command');
 		
-		var elm = cur.closest('[id^="x:"], [id^="y:"]');
+		const elm_context = elm_action.closest('[id^="x:"], [id^="y:"]');
 		
-		if (COMMANDS.isAborted(elm, cur)) {
+		if (COMMANDS.isAborted(elm_context, elm_action)) {
 			return;
 		}
 
-		var match = elm.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
+		var match = elm_context.attr('id').match(/([xy]):([^:]*):([^-]*)-(.*)/);
 
-		if (cur.data('method')) {
-			var method = cur.data('method');
+		if (elm_action.data('method')) {
+			var method = elm_action.data('method');
 		} else if (match[1] == 'y') {
 			var method = match[3];
 		} else if (match[1] == 'x') {
-			var method = cur.attr('class').split(' ').slice(-1)[0]; // Last class name
+			var method = elm_action.attr('class').split(' ').slice(-1)[0]; // Last class name
 		}
-		if (cur.data('module')) {
-			var module = cur.data('module');
+		if (elm_action.data('module')) {
+			var module = elm_action.data('module');
 		} else {
 			var module = match[2];
 		}
-		var command_id = (COMMANDS.getID(elm) !== false ? COMMANDS.getID(elm) : match[4]);
+		var command_id = (COMMANDS.getID(elm_context) !== false ? COMMANDS.getID(elm_context) : match[4]);
 		
-		if (cur.is('input:not([type=submit], [type=button]), select, textarea')) {
-			var value = (cur.is('input[type=checkbox], input[type=radio]') ? cur.filter(':checked').val() : cur.val());
-			if (elm.data('value')) {
-				value = $.extend({'value_element': value}, (typeof elm.data('value') === 'object' ? elm.data('value') : [elm.data('value')]));
+		if (elm_action.is('input:not([type=submit], [type=button]), select, textarea')) {
+			var value = (elm_action.is('input[type=checkbox], input[type=radio]') ? elm_action.filter(':checked').val() : elm_action.val());
+			if (elm_context.data('value')) {
+				value = $.extend({'value_element': value}, (typeof elm_context.data('value') === 'object' ? elm_context.data('value') : [elm_context.data('value')]));
 			}
 		} else {
-			var value = elm.data('value');
+			var value = elm_context.data('value');
 		}
-		var target = (target ? target : (target !== false ? (elm.data('target') ? elm.data('target') : (elm.data('target') !== false ? 'module' : false)) : false));
+		var target = (target ? target : (target !== false ? (elm_context.data('target') ? elm_context.data('target') : (elm_context.data('target') !== false ? 'module' : false)) : false));
 		if (target instanceof Array) {
 			var settings = [];
 			for (var i in target) {
 				settings[i] = $.extend({}, arr_options, (target[i].data('options') ? target[i].data('options') : {}));
 			}
 		} else {
-			var settings = $.extend(arr_options, (elm.data('options') ? elm.data('options') : {}));
+			var settings = $.extend(arr_options, (elm_context.data('options') ? elm_context.data('options') : {}));
 		}
 
-		if (!FEEDBACK.start(cur)) {
+		if (!FEEDBACK.start(elm_action)) {
 			return;
 		}
 
-		var arr_request = SELF.prepare(cur, {mod: getModID(elm), method: method, id: command_id, module: module, value: value});
+		var arr_request = SELF.prepare(elm_action, {mod: getModID(elm_context), method: method, id: command_id, module: module, value: value});
 		var call = false;
 		
-		FEEDBACK.request(cur, elm, {
+		FEEDBACK.request(elm_action, elm_context, {
 			type: 'POST',
 			contentType: arr_request.contentType,
 			dataType: 'json',
 			url: LOCATION.getURL('command'),
 			data: arr_request.data,
 			processData: false,
-			context: cur,
+			context: elm_action,
 			beforeSend: function(xhr, settings) {
 				call = settings;
 			},
 			uploadProgress: function(event, position, total, percent) {
-				//elm.find('progress').removeClass('hide').attr('value', percent);
+				//elm_context.find('progress').removeClass('hide').attr('value', percent);
 			},
 			success: function(json) {
-				FEEDBACK.check(cur, json, function() {
+				FEEDBACK.check(elm_action, json, function() {
 					
-					SELF.parse(json, target, elm, settings, call, function() {
+					SELF.parse(json, target, elm_context, settings, call, function() {
 						
-						SCRIPTER.triggerEvent(cur, 'commandfinished');
+						SCRIPTER.triggerEvent(elm_action, 'commandfinished');
 					});
 				});
 			}
@@ -624,13 +640,13 @@ function Commands() {
 			html: 'replace'
 		}, arr_options || {});
 		
-		var cur = $(elm);
+		const elm_action = $(elm);
 		
-		SCRIPTER.triggerEvent(cur, 'command');
+		SCRIPTER.triggerEvent(elm_action, 'command');
 		
-		var elm = cur.closest('[id^="f:"]');
+		const elm_context = elm_action.closest('[id^="f:"]');
 			
-		if (COMMANDS.isAborted(elm, cur)) {
+		if (COMMANDS.isAborted(elm_context, elm_action)) {
 			
 			if (e) {
 				e.preventDefault();
@@ -639,48 +655,48 @@ function Commands() {
 			return;
 		}
 		
-		var match = elm.attr('id').match(/f:([^:]*):([^-]*)-(.*)/);
+		var match = elm_context.attr('id').match(/f:([^:]*):([^-]*)-(.*)/);
 		
-		if (cur.data('method')) {
-			var method = cur.data('method');
+		if (elm_action.data('method')) {
+			var method = elm_action.data('method');
 		} else {
 			var method = match[2];
 		}
-		if (cur.data('module')) {
-			var module = cur.data('module');
+		if (elm_action.data('module')) {
+			var module = elm_action.data('module');
 		} else {
 			var module = match[1];
 		}
 		var command_id = match[3];
 		
-		var target = (elm.data('target') ? elm.data('target') : (elm.data('target') !== false ? elm : false));
+		var target = (elm_context.data('target') ? elm_context.data('target') : (elm_context.data('target') !== false ? elm_context : false));
 		if (target instanceof Array) {
 			var settings = [];
 			for (var i in target) {
 				settings[i] = $.extend({}, arr_options, (target[i].data('options') ? target[i].data('options') : {}));
 			}
 		} else {
-			var settings = $.extend(arr_options, (elm.data('options') ? elm.data('options') : {}));
+			var settings = $.extend(arr_options, (elm_context.data('options') ? elm_context.data('options') : {}));
 		}
-		var value = elm.data('value');
+		var value = elm_context.data('value');
 		
 		var name_submit = (e && $(e.target).is(':submit') && e.target.getAttribute('name') ? e.target.getAttribute('name') : false);
 
 		var call_submit = function() {
 
-			SCRIPTER.triggerEvent(elm, 'ajaxsubmithandler');
+			SCRIPTER.triggerEvent(elm_context, 'ajaxsubmithandler');
 			
-			if (!FEEDBACK.start(cur)) {
+			if (!FEEDBACK.start(elm_action)) {
 				return;
 			}
 
-			SCRIPTER.triggerEvent(elm, 'ajaxsubmit');
+			SCRIPTER.triggerEvent(elm_context, 'ajaxsubmit');
 			
 			if (name_submit == 'do_discard') {
-				elm.find('input, select, textarea').prop('disabled', true);
+				elm_context.find('input, select, textarea').prop('disabled', true);
 			}
 			
-			var arr_request = {mod: getModID(elm), method: method, id: command_id, module: module, value: value};
+			var arr_request = {mod: getModID(elm_context), method: method, id: command_id, module: module, value: value};
 			
 			if (name_submit) {
 				
@@ -691,49 +707,49 @@ function Commands() {
 				}
 			}
 			
-			arr_request = SELF.prepare(elm, arr_request);
+			arr_request = SELF.prepare(elm_context, arr_request);
 			var call = false;
 			
-			FEEDBACK.request(cur, elm, {
+			FEEDBACK.request(elm_action, elm_context, {
 				type: 'POST',
 				contentType: arr_request.contentType,
 				dataType: 'json',
 				url: LOCATION.getURL('command'),
 				data: arr_request.data,
 				processData: false,
-				context: cur,
+				context: elm_action,
 				beforeSend: function(xhr, settings) {
 					call = settings;
 				},
 				uploadProgress: function(event, position, total, percent) {
-					elm.find('progress').removeClass('hide').attr('value', percent);
+					elm_context.find('progress').removeClass('hide').attr('value', percent);
 				},
 				error: function() {
-					SCRIPTER.triggerEvent(elm, 'ajaxsubmitted');
+					SCRIPTER.triggerEvent(elm_context, 'ajaxsubmitted');
 				},
 				success: function(json) {
 					
-					SCRIPTER.triggerEvent(elm, 'ajaxsubmitted');
+					SCRIPTER.triggerEvent(elm_context, 'ajaxsubmitted');
 					
-					FEEDBACK.check(cur, json, function() {
+					FEEDBACK.check(elm_action, json, function() {
 						
-						var elm_parent = elm.parent();
+						var elm_parent = elm_context.parent();
 						
-						SELF.parse(json, target, elm, settings, call, function() {
+						SELF.parse(json, target, elm_context, settings, call, function() {
 						
-							if (!onStage(cur[0])) {
+							if (!onStage(elm_action[0])) {
 	
-								if (cur[0] != elm[0] && onStage(elm[0])) {
-									var elm_trigger = elm;
+								if (elm_action[0] != elm_context[0] && onStage(elm_context[0])) {
+									var elm_trigger = elm_context;
 								} else if (onStage(elm_parent[0])) {
 									var elm_trigger = elm_parent;
 								} else {
 									var elm_trigger = document;
 								}
-								SCRIPTER.triggerEvent(elm_trigger, 'closed', {elm: elm});
+								SCRIPTER.triggerEvent(elm_trigger, 'closed', {elm: elm_context});
 							}
 							
-							SCRIPTER.triggerEvent(cur, 'commandfinished');
+							SCRIPTER.triggerEvent(elm_action, 'commandfinished');
 						});
 					});
 				}
@@ -742,12 +758,12 @@ function Commands() {
 
 		if (name_submit != 'do_discard') {
 			
-			let arr_rules = getElementData(elm, 'rules'); // Always check, the form's rules could have been updated
+			let arr_rules = getElementData(elm_context, 'rules'); // Always check, the form's rules could have been updated
 			arr_rules = (arr_rules ? arr_rules : {});
 			
-			if (!elm.data('validator')) {
+			if (!elm_context.data('validator')) {
 					
-				elm.validate({
+				elm_context.validate({
 					rules: arr_rules,
 					submitHandler: function(elm) {
 						
@@ -757,11 +773,11 @@ function Commands() {
 				});
 			} else {
 			
-				$.extend(elm.validate().settings, {rules: arr_rules});
+				$.extend(elm_context.validate().settings, {rules: arr_rules});
 			}
 			
 			if (!e) {
-				SCRIPTER.triggerEvent(elm, 'submit');
+				SCRIPTER.triggerEvent(elm_context, 'submit');
 			}
 		} else {
 			
@@ -769,8 +785,8 @@ function Commands() {
 				e.preventDefault();
 			}
 			
-			FEEDBACK.stopContext(elm);
-									
+			FEEDBACK.stopContext(elm_context);
+			
 			call_submit();
 		}
 	};
@@ -810,11 +826,11 @@ function Commands() {
 	
 	// HELPERS
 	
-	this.prepare = function(elm, arr_request) {
+	this.prepare = function(elm_data, arr_request) {
 		
-		var elm = $(elm);
+		var elm_data = $(elm_data);
 		
-		const is_form = (elm && elm.is('form') ? true : false);
+		const is_form = (elm_data && elm_data.is('form') ? true : false);
 		const has_object = (typeof arr_request.value === 'object' && arr_request.value !== null);
 		const has_form = (has_object && arr_request.value.forms);
 		
@@ -829,10 +845,10 @@ function Commands() {
 				
 				const elms_ignore = [];
 				
-				runElementSelectorFunction(elm[0], '[type=submit][name]:enabled', function(elm_found) { // Make sure FormData procedures really disregard buttons (i.e. polyfill FormData issue)
+				runElementSelectorFunction(elm_data[0], '[type=submit][name]:enabled', function(elm_found) { // Make sure FormData procedures really disregard buttons (i.e. polyfill FormData issue)
 					elms_ignore.push(elm_found);
 				});
-				runElementSelectorFunction(elm[0], 'input[type=file]:not([disabled])', function(elm_found) { // A Safari 11.1/webkit bug on empty file inputs
+				runElementSelectorFunction(elm_data[0], 'input[type=file]:not([disabled])', function(elm_found) { // A Safari 11.1/webkit bug on empty file inputs
 					if (elm_found.files.length > 0) {
 						return;
 					}
@@ -843,7 +859,7 @@ function Commands() {
 					elms_ignore[i].setAttribute('disabled', '');
 				}
 					
-				form_collect = new FormData(elm[0]);
+				form_collect = new FormData(elm_data[0]);
 				
 				for (let i = 0, len = elms_ignore.length; i < len; i++) {
 					elms_ignore[i].removeAttribute('disabled');
@@ -956,12 +972,13 @@ function Commands() {
 		return {contentType: contentType, data: data};
 	};
 	
-	this.parse = function(json, target, elm, arr_settings, call, callback) {
+	this.parse = function(json, target, elm_context, arr_settings, call, callback) {
 		
+		let elm_container = null;
 		if (arr_settings.elm_container) {
-			var elm_container = arr_settings.elm_container;
+			elm_container = arr_settings.elm_container;
 		} else {
-			var elm_container = getContainer(elm); // Originating element container
+			elm_container = getContainer(elm_context); // Originating element container
 		}
 		
 		if (call.is_discard) { // Cancel call to new parse from old parse
@@ -970,28 +987,32 @@ function Commands() {
 			return false;
 		}
 		
+		const elm_action = call.context;
+		
 		if (json.do_confirm) {
 			
-			if (!elm.closest('.mod').length) {
+			if (!elm_context.closest('.mod').length) {
 				arr_settings.overlay = 'document';
 			}
+			
+			let elm_overlay_target = null;
 			if (arr_settings.overlay == 'document') {
-				var elm_overlay_target = document.body;
+				elm_overlay_target = document.body;
 			} else {
-				var elm_overlay_target = (arr_settings.overlay ? arr_settings.overlay : elm.closest('.mod'));
+				elm_overlay_target = (arr_settings.overlay ? arr_settings.overlay : elm_context.closest('.mod'));
 			}
 
-			var elm_popup = $('<div class="popup confirm"><span class="icon"></span><div>'+json.html+'</div></div>');
+			const elm_popup = $('<div class="popup confirm"><span class="icon"></span><div>'+json.html+'</div></div>');
 			
-			ASSETS.getIcons(elm, ['attention'], function(data) {
+			ASSETS.getIcons(elm_context, ['attention'], function(data) {
 				elm_popup[0].children[0].innerHTML = data.attention;
 			});
 
-			var elm_menu = $('<menu></menu>').appendTo(elm_popup);
+			const elm_menu = $('<menu></menu>').appendTo(elm_popup);
 			
 			const func_confirm = function(is_confirm) {
-				
-				if (!FEEDBACK.start(call.context)) {
+
+				if (!FEEDBACK.start(elm_action)) {
 					return;
 				}
 				
@@ -1037,6 +1058,8 @@ function Commands() {
 				$.ajax(call);
 			};
 			
+			let obj_overlay = null;
+			
 			$('<input type="button" value="Ok" />').appendTo(elm_menu).on('click', function() {
 				
 				func_confirm(true);
@@ -1045,55 +1068,45 @@ function Commands() {
 			});
 			$('<input type="button" value="Cancel" />').appendTo(elm_menu).on('click', function() {
 				
-				FEEDBACK.stopContext(call.context);
+				FEEDBACK.stopContext(elm_context);
 				
 				func_confirm(false);
 				
 				obj_overlay.close();
 			});
 			
-			var obj_overlay = new Overlay(elm_overlay_target, elm_popup, {
+			obj_overlay = new Overlay(elm_overlay_target, elm_popup, {
 				position: 'middle',
 				button_close: false,
 				sizing: (arr_settings.overlay_settings ? arr_settings.overlay_settings.sizing : undefined)
 			});
 			
-			var elm_overlay = obj_overlay.getOverlay();
+			const elm_overlay = obj_overlay.getOverlay();
 			
 			if (arr_settings.overlay == 'document') {
-				setElementData(elm_overlay, 'mod', getModID(elm));
+				setElementData(elm_overlay, 'mod', getModID(elm_context));
 			}
 				
 			return false;
 		} else if (json.do_download) {
-			
-			const elm_form = $('<form action="'+call.url+'" method="post"></form>');
-			
-			const elm_download = $('<input type="hidden" name="is_download" value="1" />');			
-			
-			elm_form.append(elm_download);
+
+			let arr_data = null;
 			
 			try {
-				var arr_data = JSON.parse(call.data);
+				arr_data = JSON.parse(call.data);
 			} catch (e) {};
 			
 			if (arr_data) { // JSON
 				
 				if (typeof json.do_download === 'object') {
-						
 					$.extend(arr_data, json.do_download);
-					
-					call.data = JSON.stringify(arr_data);
 				}
 				
-				const elm_new = $('<input type="hidden" name="json" value="" />');
-				elm_new.val(call.data);
+				arr_data.is_download = true;
 				
-				elm_form.append(elm_new);
+				call.data = JSON.stringify(arr_data);
 			} else { // FormData
 				
-				const form_collect = new FormData(elm_form[0]);
-
 				if (typeof json.do_download === 'object') {
 					
 					for (const key in json.do_download) {
@@ -1114,72 +1127,90 @@ function Commands() {
 							
 							call.data.append('json', JSON.stringify(arr_json));
 						} else {
+							
 							call.data.append(key, value);
 						}
 					}
 				}
-
-				for (const arr_entry of call.data.entries()) {
-
-					let elm_new = null;
-					
-					if (arr_entry[2]) { // File
-						
-						elm_new = $('<input type="file" name="'+arr_entry[0]+'" value="" />');
-						elm_new[0].files(arr_entry[1]);
-						elm_new.val(arr_entry[2]);
-					} else {
-						
-						elm_new = $('<input type="hidden" name="'+arr_entry[0]+'" value="" />');
-						elm_new.val(arr_entry[1]);
-					}
-					
-					elm_form.append(elm_new);
-				}
+				
+				call.data.append('is_download', 1);
 			}
-					
-			var elm_iframe = $('<iframe src="about:blank"></iframe>')
-				.hide()
-				.appendTo('body');
+			
+			if (!FEEDBACK.start(elm_action)) {
+				return;
+			}
+			
+			LOADER.progress(elm_action, 0);
+
+			const xhr = new XMLHttpRequest();
+			xhr.responseType = 'blob';
+			xhr.onprogress = function(e) {
 				
-			var interval = setInterval(function() {
-				
-				if (elm_iframe.contents()[0].readyState != 'complete') {
+				if (!e.lengthComputable) {
 					return;
 				}
-				clearInterval(interval);
 				
-				SCRIPTER.triggerEvent(elm_form.appendTo(elm_iframe.contents().find('body')), 'submit', false, {do_native: true});
+				LOADER.progress(elm_action, parseInt((e.loaded / e.total) * 100));
+			};
+			xhr.onload = async function(e) {
 				
-				elm_iframe.on('load', function() { // Only tiggers when regular content is returned (i.e. not when a file download is presented)
+				const blob = xhr.response;
+				
+				if (blob.type == 'text/plain') {
+					
+					let json = null;
 					
 					try {
-						var json = JSON.parse(elm_iframe.contents().find('textarea').val());
+						
+						const str_text = await blob.text();
+						json = JSON.parse(str_text);
 					} catch(e) {}
-					
-					elm_iframe.remove();
 					
 					if (json) {
 						
-						FEEDBACK.check(call.context, json, function() {
+						FEEDBACK.check(elm_action, json, function() {
 							
 							if (callback) {
 								callback();
 							}
 						});
+						
+						return;
 					}
-				});
-			}, 20);
+				}
+
+				let str_filename = xhr.getResponseHeader('Content-Disposition');
+				
+				if (!str_filename) {
+					return;
+				}
+				
+				str_filename = str_filename.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)[1]; // https://stackoverflow.com/a/23054920/
+
+				const elm_a = document.createElement('a');
+				elm_a.href = window.URL.createObjectURL(blob);
+				elm_a.download = str_filename;
+				
+				SCRIPTER.triggerEvent(elm_a, 'click', false, {do_native: true});
+				
+				FEEDBACK.stop(elm_action);
+			};
+
+			FEEDBACK.request(elm_action, elm_context, {
+				xhr: xhr,
+				url: call.url,
+				data: call.data
+			});
 			
 			return false;
 		} else if ((json.html || json.html === "") && target) {
 			
-			var elm_result = false;
+			let elm_result = false;
 			
 			if (typeof target === 'function') {
 				
-				var html = json.html;
-				var elm_html = false;
+				const html = json.html;
+				let elm_html = null;
 				
 				if (html && typeof html === 'string' && html.indexOf('<') >= 0 && html.indexOf('>') >= 1) {
 					
@@ -1196,7 +1227,7 @@ function Commands() {
 					setElementData(elm_html, 'rules', json.validate, true);
 				}
 				
-				elm_result = target.apply(elm[0], [(elm_html ? elm_html : html)]);
+				elm_result = target.apply(elm_context[0], [(elm_html ? elm_html : html)]);
 				if (!elm_result) {
 					elm_result = elm_html;
 				}
@@ -1247,7 +1278,7 @@ function Commands() {
 							if (IS_CMS) {
 								$(($('[id^=mod-] .tabs > div:visible').length ? '[id^=mod-] .tabs > div:visible' : '[id^=mod-]')).html(elm_html);
 							} else {
-								elm.closest('.mod').html(elm_html);
+								elm_context.closest('.mod').html(elm_html);
 							}
 						} else {
 							if (arr_settings_use.style == 'fade') {
@@ -1315,10 +1346,10 @@ function Commands() {
 				elm_result = $();
 			}
 			
-			if (onStage(elm[0])) {
+			if (onStage(elm_context[0])) {
 				
 				SCRIPTER.runDynamic(elm_result); // Applied to first element
-				SCRIPTER.triggerEvent(elm, 'ajaxloaded', {elm: elm_result});
+				SCRIPTER.triggerEvent(elm_context, 'ajaxloaded', {elm: elm_result});
 			} else if (elm_container[0] && onStage(elm_container[0])) {
 				
 				SCRIPTER.runDynamic(elm_result); // Applied to first element
@@ -1329,19 +1360,19 @@ function Commands() {
 			}
 		} else if (typeof target === "function") {
 			
-			target.apply(elm[0]);
+			target.apply(elm_context[0]);
 		}
 		
 		if (json.refresh_table) {
 
-			let elms_datatable = elm.closest('table[id^="d:"]');
+			let elms_datatable = elm_context.closest('table[id^="d:"]');
 			
 			if (!elms_datatable.length) {
 				elms_datatable = elm_container.find('table[id^="d:"]');
 			}
 			
 			elms_datatable = elms_datatable.filter(function () {
-				return !hasElement(call.context[0], this); // Do not target tables inside method's context (e.g. popup)
+				return !hasElement(elm_action[0], this); // Do not target tables inside method's context (e.g. popup)
 			});
 			
 			elms_datatable.each(function() {
@@ -1355,24 +1386,24 @@ function Commands() {
 		}
 		if (json.reset_form) {
 			
-			if (elm.is('form')) {
-				SCRIPTER.triggerEvent(elm, 'reset', false, {do_native: true});
+			if (elm_context.is('form')) {
+				SCRIPTER.triggerEvent(elm_context, 'reset', false, {do_native: true});
 			} else {
-				elm.val('');
+				elm_context.val('');
 			}
 
-			LOCATION.updateLocked(elm[0]);
+			LOCATION.updateLocked(elm_context[0]);
 		}
 		
 		if (arr_settings.remove && target != false) {
 			
-			elm.fadeOut(function() {
+			elm_context.fadeOut(function() {
 				$(this).remove();
 			});
 		}
 		if (arr_settings.hide && target != false) {
 			
-			elm.hide();
+			elm_context.hide();
 		}
 		
 		if (callback) {
@@ -1523,53 +1554,53 @@ function DataTable(elm, arr_options) {
 		paginate_middle: 3
 	}, arr_options);
 							
-	var cur = $(elm);
+	const elm_action = $(elm);
 	
-	if (cur[0].datatable) {
+	if (elm_action[0].datatable) {
 		return;
 	}
-	cur[0].datatable = this;
+	elm_action[0].datatable = this;
 
-	SCRIPTER.triggerEvent(cur, 'command');
+	SCRIPTER.triggerEvent(elm_action, 'command');
 	
-	if (COMMANDS.isAborted(cur)) {
+	if (COMMANDS.isAborted(elm_action)) {
 		return;
 	}
 	
-	var match = cur.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
+	var match = elm_action.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
 	
-	if (cur.data('method')) {
-		var method = cur.data('method');
+	if (elm_action.data('method')) {
+		var method = elm_action.data('method');
 	} else {
 		var method = match[2];
 	}
-	if (cur.data('module')) {
-		var module = cur.data('module');
+	if (elm_action.data('module')) {
+		var module = elm_action.data('module');
 	} else {
 		var module = match[1];
 	}
 	var command_id = match[3];
 	
-	var has_search = (cur.data('search') != undefined ? cur.data('search') : true);
-	var value_search = (cur.data('search_settings') ? cur.data('search_settings') : '');
-	var command_filter = cur.data('filter');
-	var settings_filter = cur.data('filter_settings');
-	var command_order = cur.data('order');
+	var has_search = (elm_action.data('search') != undefined ? elm_action.data('search') : true);
+	var value_search = (elm_action.data('search_settings') ? elm_action.data('search_settings') : '');
+	var command_filter = elm_action.data('filter');
+	var settings_filter = elm_action.data('filter_settings');
+	var command_order = elm_action.data('order');
 	
-	var value_filter = COMMANDS.getData(cur);
+	var value_filter = COMMANDS.getData(elm_action);
 	if (!value_filter) {
 		value_filter = {};
-		COMMANDS.setData(cur, value_filter);
+		COMMANDS.setData(elm_action, value_filter);
 	}
 	if (settings_filter && typeof value_filter === 'object') {
 		$.extend(value_filter, settings_filter);
 	}
 	
-	var delay = (cur.data('delay') ? cur.data('delay') : false);
+	var delay = (elm_action.data('delay') ? elm_action.data('delay') : false);
 	
 	// Build
 					
-	var elm_container = $('<div class="datatable"></div>').insertBefore(cur);
+	var elm_container = $('<div class="datatable"></div>').insertBefore(elm_action);
 	
 	var elm_options = $('<div class="options"></div>').appendTo(elm_container);
 	var elm_options_left = $('<div></div>').appendTo(elm_options);
@@ -1587,7 +1618,7 @@ function DataTable(elm, arr_options) {
 
 	var func_column_icons = false;
 	
-	ASSETS.getIcons(cur, ['prev', 'next', 'updown', 'updown-up', 'updown-down'], function(data) {
+	ASSETS.getIcons(elm_action, ['prev', 'next', 'updown', 'updown-up', 'updown-down'], function(data) {
 		
 		elm_paginate_previous[0].getElementsByClassName('icon')[0].innerHTML = data.prev;
 		elm_paginate_next[0].getElementsByClassName('icon')[0].innerHTML = data.next;
@@ -1606,7 +1637,7 @@ function DataTable(elm, arr_options) {
 				elms_icon[elms_icon.length-1].innerHTML = data.updown+data['updown-up']+data['updown-down'];							
 			}
 			
-			resizeDataTable(cur);
+			resizeDataTable(elm_action);
 			
 			func_column_icons = false;
 		};
@@ -1614,7 +1645,7 @@ function DataTable(elm, arr_options) {
 		func_column_icons();
 	});
 	
-	cur.appendTo(elm_container);
+	elm_action.appendTo(elm_container);
 	
 	var elm_filter = null;
 	
@@ -1631,7 +1662,7 @@ function DataTable(elm, arr_options) {
 				}				
 			}
 		});
-		ASSETS.getIcons(cur, ['filter'], function(data) {
+		ASSETS.getIcons(elm_action, ['filter'], function(data) {
 			elm_filter[0].children[0].innerHTML = data.filter;
 		});
 		if (settings_filter) {
@@ -1642,18 +1673,18 @@ function DataTable(elm, arr_options) {
 		
 		elm_filter.on('command', function() {
 			
-			COMMANDS.setData(elm_filter, COMMANDS.getData(cur), true);
+			COMMANDS.setData(elm_filter, COMMANDS.getData(elm_action), true);
 		});
 		COMMANDS.setTarget(elm_filter, function(data) {
 			
-			COMMANDS.setData(cur, (data.filter ? data.filter : {}), false);
+			COMMANDS.setData(elm_action, (data.filter ? data.filter : {}), false);
 			
 			SELF.refresh();
 			
 			elm_filter.toggleClass('active', (data.active ? true : false));
 			SCRIPTER.triggerEvent(elm_filter, 'filteranimate');
 			
-			//moveScroll(cur, {if_visible: true});
+			//moveScroll(elm_action, {if_visible: true});
 		});
 	}
 	
@@ -1663,7 +1694,7 @@ function DataTable(elm, arr_options) {
 		
 		elm_order = $('<button type="button" title="Set Ordering" id="'+command_order+'" class="popup" value=""><span class="icon"></span></button>');
 		
-		ASSETS.getIcons(cur, ['updown'], function(data) {
+		ASSETS.getIcons(elm_action, ['updown'], function(data) {
 			elm_order[0].children[0].innerHTML = data.updown;
 		});
 
@@ -1680,11 +1711,11 @@ function DataTable(elm, arr_options) {
 		});
 	}
 	
-	var elm_header = cur.children('thead').children('tr');
+	var elm_header = elm_action.children('thead').children('tr');
 	var elms_column = elm_header.children('th');
-	var elm_body = cur.children('tbody');
+	var elm_body = elm_action.children('tbody');
 	
-	tweakDataTable(cur);
+	tweakDataTable(elm_action);
 	
 	// State
 	
@@ -1732,7 +1763,7 @@ function DataTable(elm, arr_options) {
 	});
 	if (has_search) {
 		
-		elm_search.on('change keyup', function() {
+		elm_search.on('input', function() {
 			
 			if (this.value == arr_settings.search) {
 				return;
@@ -1754,7 +1785,7 @@ function DataTable(elm, arr_options) {
 	});
 	elm_header.on('click', 'th', function() {
 		
-		if (this.classList.contains('disable-sort') || cur[0].loading) {
+		if (this.classList.contains('disable-sort') || elm_action[0].loading) {
 			return;
 		}
 		
@@ -1826,7 +1857,7 @@ function DataTable(elm, arr_options) {
 	
 	var func_load = function(what) {
 			
-		if (cur[0].dataset.pause == 1) {
+		if (elm_action[0].dataset.pause == 1) {
 			return;
 		}
 	
@@ -1842,9 +1873,9 @@ function DataTable(elm, arr_options) {
 			const do_abort = (what === 'search' ? true : false);
 
 			if (do_abort) {
-				FEEDBACK.stop(cur);
+				FEEDBACK.stop(elm_action);
 			}
-			if (!FEEDBACK.start(cur)) {
+			if (!FEEDBACK.start(elm_action)) {
 				return;
 			}
 			
@@ -1912,23 +1943,23 @@ function DataTable(elm, arr_options) {
 				}
 			}
 			
-			const arr_request = COMMANDS.prepare(cur, $.extend({mod: getModID(cur), method: arr_command.method, id: arr_command.command_id, module: arr_command.module, value: arr_command.value}, arr_settings_new));
+			const arr_request = COMMANDS.prepare(elm_action, $.extend({mod: getModID(elm_action), method: arr_command.method, id: arr_command.command_id, module: arr_command.module, value: arr_command.value}, arr_settings_new));
 			
-			FEEDBACK.request(cur, cur, {
+			FEEDBACK.request(elm_action, elm_action, {
 				type: 'POST',
 				contentType: arr_request.contentType,
 				dataType: 'json',
 				url: LOCATION.getURL('command'),
 				data: arr_request.data,
 				processData: false,
-				context: cur,
+				context: elm_action,
 				error: function() {
 					
 					do_sort = false;							
 				},
 				success: function(json) {
 
-					FEEDBACK.check(cur, json, function() {
+					FEEDBACK.check(elm_action, json, function() {
 						
 						arr_settings = arr_settings_new;
 
@@ -1957,9 +1988,9 @@ function DataTable(elm, arr_options) {
 						
 							func_draw(data);
 							
-							SCRIPTER.runDynamic(cur);
-							SCRIPTER.triggerEvent(cur, 'ajaxloaded', {elm: cur});
-							SCRIPTER.triggerEvent(cur, 'commandfinished');
+							SCRIPTER.runDynamic(elm_action);
+							SCRIPTER.triggerEvent(elm_action, 'ajaxloaded', {elm: elm_action});
+							SCRIPTER.triggerEvent(elm_action, 'commandfinished');
 						}
 					});
 				}
@@ -2129,23 +2160,23 @@ function DataTable(elm, arr_options) {
 			elm_body_new[0].appendChild(elm_tr[0]);
 		}
 		
-		cur[0].removeChild(elm_body[0]);
+		elm_action[0].removeChild(elm_body[0]);
 		elm_body = elm_body_new;
 		
-		cur[0].appendChild(elm_body[0]);
+		elm_action[0].appendChild(elm_body[0]);
 		
-		tweakDataTable(cur);
-		SCRIPTER.triggerEvent(cur, 'newpage');
+		tweakDataTable(elm_action);
+		SCRIPTER.triggerEvent(elm_action, 'newpage');
 	};
 
 	func_load();
 	
-	cur.on('next', function() {
+	elm_action.on('next', function() {
 		func_load('next');
 	}).on('prev', function() {
 		func_load('previous');
 	}).on('pause', function() {
-		cur[0].dataset.pause = 1;
+		elm_action[0].dataset.pause = 1;
 	}).on('continue', function() {
 		SELF.continue();
 	}).on('reload', function() {
@@ -2173,7 +2204,7 @@ function DataTable(elm, arr_options) {
 
 	this.handleColumn = function(selector, content, selector_before) {
 		
-		const elm_header = cur.children('thead').children('tr');
+		const elm_header = elm_action.children('thead').children('tr');
 		const elm_target = elm_header.children(selector);
 		let num_index = null;
 		
@@ -2191,14 +2222,14 @@ function DataTable(elm, arr_options) {
 			
 			const elm_content = $(content);
 			
-			ASSETS.getIcons(cur, ['updown', 'updown-up', 'updown-down'], function(data) {
+			ASSETS.getIcons(elm_action, ['updown', 'updown-up', 'updown-down'], function(data) {
 				
 				elm_content[0].innerHTML += '<span class="icon"></span>';
 				
 				const elms_icon = elm_content[0].getElementsByClassName('icon');
 				elms_icon[elms_icon.length-1].innerHTML = data.updown+data['updown-up']+data['updown-down'];
 				
-				resizeDataTable(cur);
+				resizeDataTable(elm_action);
 			});
 			
 			if (elm_target.length) {
@@ -2223,7 +2254,7 @@ function DataTable(elm, arr_options) {
 		
 		if (content == false || !elm_target.length) {
 				
-			const elms_tr = cur.children('tbody').children('tr');
+			const elms_tr = elm_action.children('tbody').children('tr');
 			
 			for (let i = 0, len = elms_tr.length; i < len; i++) {
 			
@@ -2241,7 +2272,7 @@ function DataTable(elm, arr_options) {
 			}
 		}
 		
-		resizeDataTable(cur);
+		resizeDataTable(elm_action);
 		
 		// Reset sorting
 		
@@ -2270,26 +2301,26 @@ function DataTable(elm, arr_options) {
 	
 	this.refresh = function() {
 									
-		SCRIPTER.triggerEvent(cur, 'command');
+		SCRIPTER.triggerEvent(elm_action, 'command');
 		
-		if (COMMANDS.isAborted(cur)) {
+		if (COMMANDS.isAborted(elm_action)) {
 			return;
 		}
 		
-		cur[0].dataset.pause = 0;
+		elm_action[0].dataset.pause = 0;
 		
-		const match = cur.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
+		const match = elm_action.attr('id').match(/d:([^:]*):([^-]*)-(.*)/);
 		
 		let method = match[2];
-		if (cur.data('method')) {
-			method = cur.data('method');
+		if (elm_action.data('method')) {
+			method = elm_action.data('method');
 		}
 		let module = match[1];
-		if (cur.data('module')) {
-			module = cur.data('module');
+		if (elm_action.data('module')) {
+			module = elm_action.data('module');
 		}
 		const command_id = match[3];
-		const value = (COMMANDS.getData(cur) ? COMMANDS.getData(cur) : '');
+		const value = (COMMANDS.getData(elm_action) ? COMMANDS.getData(elm_action) : '');
 						
 		arr_command.method = method;
 		arr_command.module = module;
@@ -2307,7 +2338,7 @@ function DataTable(elm, arr_options) {
 
 $(document).on('click', '*[type=button].popup, .a.popup, tr.popup', function(e) {
 	
-	var elm_target = $(e.target);
+	const elm_target = $(e.target);
 	
 	if (this.nodeName == 'TR' && (elm_target.is('input, button, a, .a, img.enlarge') || elm_target.closest('input, button, a, .a, img.enlarge').length)) {
 		return;
@@ -2328,11 +2359,10 @@ $.fn.popupCommand = function(arr_options) {
 
 $(document).on('click', '*[type=button].msg', function(e) {
 	
-	var cur = $(this);
+	const elm = $(this);
+	const arr_options = {};
 	
-	var arr_options = {};
-	
-	if (cur.hasClass('del')) {
+	if (elm.hasClass('del')) {
 		arr_options.remove = true;
 	}
 	

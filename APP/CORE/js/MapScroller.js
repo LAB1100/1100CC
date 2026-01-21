@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -164,9 +164,9 @@ function MapScroller(element, options) {
 		});
 	};
 	
-	this.onInteractDown = false;
-	this.onInteractMove = false;
-	this.onInteractUp = false;
+	this.onInteractDown = null;
+	this.onInteractMove = null;
+	this.onInteractUp = null;
 	
 	var addListeners = function() {
 		
@@ -390,11 +390,12 @@ function MapScroller(element, options) {
 		
 		pos_render.width = pos_elm.width;
 		pos_render.height = pos_elm.height;
+		pos_render.resolution = (window.devicePixelRatio || 1);
 		if (elm[0].dataset.resolution) {
-			pos_render.width = Math.ceil(elm[0].dataset.width * (elm[0].dataset.resolution / 2.54));
+			pos_render.width = Math.ceil(elm[0].dataset.width * (elm[0].dataset.resolution / 2.54)); // Convert resolution's 1 inch to 2.54 centimeter
 			pos_render.height = Math.ceil(elm[0].dataset.height * (elm[0].dataset.resolution / 2.54));
+			pos_render.resolution = (pos_render.width / pos_elm.width);
 		}
-		pos_render.resolution = (pos_render.width / pos_elm.width);
 		
 		pos_elm.frame.width = pos_elm.width;
 		pos_elm.frame.height = pos_elm.height;
@@ -628,11 +629,9 @@ function MapScroller(element, options) {
 			pos_zoom = false;
 			
 			if (pos_offset.x) {
-				
 				num_x = num_x + pos_offset.x;
 			}
 			if (pos_offset.y) {
-				
 				num_y = num_y + pos_offset.y;
 			}
 		} else {
@@ -737,9 +736,12 @@ function MapScroller(element, options) {
 		const arr_position = SELF.getPosition();
 		
 		for (let i = 0; i < num_length; i++) {
-			if (arr_move[i]) {
-				arr_move[i](move, arr_position, cur_zoom, str_calc_zoom);
+			
+			if (!arr_move[i]) {
+				continue;
 			}
+			
+			arr_move[i](move, arr_position, cur_zoom, str_calc_zoom);
 		}
 	};
 	
@@ -1440,7 +1442,7 @@ function MapScroller(element, options) {
 
 		return zoom;
 	};
-							
+	
 	this.levelVars = function(num_zoom) {
 		
 		const num_index = (num_zoom != null ? num_zoom : cur_zoom)-1;

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -15,8 +15,8 @@
 		SELECT {object}_{data_type}_{action} AND array[{object}_{data_type}_{action}] => SELECT object date FOR start
 		{do}{object}{data_type}{action}() AND $method = {do}_{object}_{data_type}_{action} => getObjectDateStart()
 	*/
-
-	mb_internal_encoding('UTF-8');
+	
+	ini_set('default_charset', 'UTF-8');
 	date_default_timezone_set('UTC');
 	
 	const TROUBLE_ERROR = 0;
@@ -42,7 +42,7 @@
 	const SYMBOL_SPACE_TEXT = ' '; // U+2002 - EN SPACE
 	const SYMBOL_SPACE_MATHEMATICAL = ' '; // U+205F - MEDIUM MATHEMATICAL SPACE
 	
-	const TYPE_INTEGER = 'int';
+	const TYPE_INTEGER = 'integer';
 	const TYPE_FLOAT = 'float';
 	const TYPE_BOOLEAN = 'boolean';
 	const TYPE_STRING = 'string';
@@ -71,46 +71,46 @@
 	require('operations/SiteStartEnvironment.php');
 	require('operations/SiteEndEnvironment.php');
 	
-	function error($msg = '', $code = TROUBLE_ERROR, $suppress = LOG_BOTH, $debug = false, $exception = null) {
+	function error($message = '', $mode_code = TROUBLE_ERROR, $mode_suppress = LOG_BOTH, $debug = null, $exception = null) {
 		
-		if (is_array($msg)) {
-			$msg = print_r($msg, true);
+		if (is_array($message)) {
+			$message = print_r($message, true);
 		}
 		if (is_array($debug)) {
 			$debug = print_r($debug, true);
 		}
 		
-		Trouble::fling($msg, $code, $suppress, $debug, $exception);
+		Trouble::fling($message, $mode_code, $mode_suppress, $debug, $exception);
 	}
 	
-	function msg($msg = '', $label = false, $suppress = LOG_BOTH, $debug = false, $type = false, $arr_options = null) {
+	function message($message = '', $str_label = null, $mode_suppress = LOG_BOTH, $debug = null, $str_type = null, $arr_options = null, $identifier = null) {
 		
-		if (is_array($msg)) {
-			$msg = print_r($msg, true);
+		if (is_array($message)) {
+			$message = print_r($message, true);
 		}
 		if (is_array($debug)) {
 			$debug = print_r($debug, true);
 		}
-		$label = ($label ?: 'LOG');
-		$type = ($type ?: 'attention');
+		$str_label = ($str_label ?: 'LOG');
+		$str_type = ($str_type ?: Trouble::type(TROUBLE_NOTICE));
 		
-		Log::addMsg($msg, $label, $suppress, $debug, $type, $arr_options);
+		Log::addMessage($message, $str_label, $mode_suppress, $debug, $str_type, $arr_options, $identifier);
 	}
 	
-	function status($msg = '', $label = false, $header = false, $arr_options = null) {
+	function status($message = '', $str_label = null, $str_header = null, $arr_options = null) {
 		
-		if ($msg === false) {
+		if ($message === false) {
 			
 			$str = false;
 		} else {
 			
-			if (is_array($msg)) {
-				$msg = print_r($msg, true);
+			if (is_array($message)) {
+				$message = print_r($message, true);
 			}
-			$label = ($label ?: 'UPDATE');
-			$header = ($header ?: getLabel('lbl_status'));
+			$str_label = ($str_label ?: 'UPDATE');
+			$str_header = ($str_header ?: getLabel('lbl_status'));
 						
-			$str = '<ul><li><label></label><div>'.$header.'</div></li><li><label>'.$label.'</label><div>'.$msg.'</div></li></ul>';
+			$str = '<ul><li><label></label><div>'.$str_header.'</div></li><li><label>'.$str_label.'</label><div>'.$message.'</div></li></ul>';
 		}
 		
 		if ($arr_options !== null && !is_array($arr_options)) {
@@ -120,22 +120,26 @@
 		}
 		
 		if (!isset($arr_options['identifier'])) {
-			$arr_options['identifier'] = SiteStartEnvironment::getSessionId(true);
+			$arr_options['identifier'] = SiteStartEnvironment::getSessionID(true);
 		}
 		
-		$arr_status = ['msg' => $str, 'msg_type' => 'status', 'msg_options' => $arr_options];
+		$arr_status = ['message' => $str, 'message_type' => 'status', 'message_options' => $arr_options];
 			
 		Response::update($arr_status);
 	}
+	
+	function err(...$args) { error(...$args); }
+	function msg(...$args) { message(...$args); }
+	function sts(...$args) { status(...$args); }
 	
 	function clearStatus($identifier, $timeout = null) {
 		
 		status(false, false, false, ['clear' => ['identifier' => $identifier, 'timeout' => $timeout]]);
 	}
 	
-	function getLabel($identifier, $type = 'L', $go_now = false) {
+	function getLabel($str_identifier, $str_type = null, $go_now = false) {
 		
-		return Labels::getLabel($identifier, $type, $go_now);
+		return Labels::getLabel($str_identifier, $str_type, $go_now);
 	}
 	
 	function getModules($level = false) {
@@ -279,38 +283,86 @@
 		return $arr;
 	}
 	
-	function findFilePath($filename, $path = '') {
+	function findFilePath($str_filename, $str_path_file, $str_path_check) {
 		
 		static $arr_path_files = [];
 		
-		if (!isPath($path)) {
+		if (!isPath($str_path_check)) {
 			return false;
 		}
 
-		if (isset($arr_path_files[$path])) {
+		if (!isset($arr_path_files[$str_path_check])) {
 			
-			return ($arr_path_files[$path][$filename] ?? false);
-		} else {
-			
-			$it_directory = new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS);
+			$it_directory = new RecursiveDirectoryIterator($str_path_check, RecursiveDirectoryIterator::SKIP_DOTS);
 			$it_files = new RecursiveIteratorIterator($it_directory, RecursiveIteratorIterator::LEAVES_ONLY); // LEAVES_ONLY, only files
 
 			foreach ($it_files as $file) {
 				
-				$cur_path = $file->getPath();
-				$cur_filename = $file->getFilename();
+				$str_path_found = $file->getPath();
+				$str_filename_found = $file->getFilename();
 				
-				$arr_path_files[$path][$cur_filename] = $cur_path;
+				$arr_path_file =& $arr_path_files[$str_path_check][$str_filename_found];
+				
+				if (isset($arr_path_file)) {
+					
+					if (!is_array($arr_path_file)) {
+						$arr_path_file = [$arr_path_file];
+					}
+					
+					$arr_path_file[] = $str_path_found;
+				} else {
+					
+					$arr_path_file = $str_path_found;
+				}
 			}
 			
-			return ($arr_path_files[$path][$filename] ?? false);
+			unset($arr_path_file);
 		}
+		
+		$arr_path_file = ($arr_path_files[$str_path_check][$str_filename] ?? null);
+				
+		if (!$arr_path_file) {
+			return false;
+		}
+
+		if (is_array($arr_path_file)) {
+			
+			$str_path = false;
+			
+			foreach ($arr_path_file as $str_path_found) {
+				
+				if (!strEndsWith($str_path_found, $str_path_file)) {
+					continue;
+				}
+				
+				$str_path_match = $str_path_found.'/'.$str_filename;
+				
+				if (!$str_path || strlen($str_path_match) < strlen($str_path)) { // Use the best match
+					$str_path = $str_path_match;
+				}
+			}
+			
+			return $str_path;
+		}
+		
+		$str_path = $arr_path_file;
+			
+		return $str_path.'/'.$str_filename;
 	}
 	
 	function autoLoadClass($class) {
 		
-		$filename = $class.'.php';
+		$str_filename = $class.'.php';
+		$str_path_file = '';
 		
+		if (strpos($str_filename, '\\') !== false) {
+			
+			$arr_path = explode('\\', $str_filename);
+			
+			$str_filename = array_pop($arr_path);
+			$str_path_file = implode('\\', $arr_path);
+		}
+
 		$arr_paths = [
 			DIR_SITE.DIR_CLASSES,
 			DIR_SITE.DIR_CMS.DIR_CLASSES,
@@ -318,15 +370,15 @@
 			DIR_CORE.DIR_CMS.DIR_CLASSES
 		];
 		
-		foreach ($arr_paths as $cur_path) {
+		foreach ($arr_paths as $str_path_check) {
 			
-			$path = findFilePath($filename, $cur_path);
+			$str_path = findFilePath($str_filename, $str_path_file, $str_path_check);
 			
-			if (!$path) {
+			if (!$str_path) {
 				continue;
 			}
 			
-			require($path.'/'.$filename);
+			require($str_path);
 			
 			return true;
 		}
@@ -367,7 +419,6 @@
 		if ($do_add) {
 			
 			$num_add = str2Bytes(ini_get('memory_limit'));
-						
 			$num_mb += ($num_add / BYTE_MULTIPLIER / BYTE_MULTIPLIER); // To MegaBytes
 		}
 		
@@ -422,13 +473,13 @@
 						
 		SiteStartEnvironment::stopSession();
 		
-		$count = 0;
+		$num_count = 0;
 		
 		while (true) {
 			
-			$alive = Mediator::checkState(); // Check connection
+			$is_alive = Mediator::checkState(); // Check connection
 			
-			if (!$alive) {
+			if (!$is_alive) {
 				
 				$func_abort();
 				exit;
@@ -450,8 +501,8 @@
 				break;
 			}
 			
-			usleep(($count < 10 ? 20000 : 100000)); // 100ms, first 10 loops 20ms
-			$count++;
+			usleep(($num_count < 10 ? 20000 : 100000)); // 100ms, first 10 loops 20ms
+			$num_count++;
 		}
 				
 		// Not aborted, continue
@@ -464,18 +515,18 @@
 
 		SiteStartEnvironment::stopSession();
 		
-		$time = microtime(true);
-		$count = 0;
+		$num_time = microtime(true);
+		$num_count = 0;
 		
 		while (true) {
 			
-			$cur_time = microtime(true);
+			$num_cur_time = microtime(true);
 			
-			if (($cur_time - $time) > ($count < 10 ? 0.2 : 0.1)) { // 100ms, first 10 loops 20ms
+			if (($num_cur_time - $num_time) > ($num_count < 10 ? 0.2 : 0.1)) { // 100ms, first 10 loops 20ms
 			
-				$alive = Mediator::checkState(); // Check connection
+				$is_alive = Mediator::checkState(); // Check connection
 			
-				if (!$alive) {
+				if (!$is_alive) {
 					
 					$func_abort();
 					exit;
@@ -492,8 +543,8 @@
 					}
 				}
 				
-				$time = $cur_time;
-				$count++;
+				$num_time = $num_cur_time;
+				$num_count++;
 			}
 			
 			// If polling function finishes, continue
@@ -652,7 +703,6 @@
 			$arr_hash = explode('---', $hash);
 			
 			if ($arr_hash[1] !== sha1($password.$arr_hash[2].$arr_hash[3])) {
-
 				return false;
 			}
 			
@@ -660,7 +710,6 @@
 		} else {
 					
 			if (!password_verify($password, $hash)) {
-				
 				return false;
 			}
 			
@@ -668,47 +717,80 @@
 		}
 
 		if ($do_rehash) {
-			
 			$hash = password_hash($password, PASSWORD_DEFAULT);
 		}
 
 		return $hash;
 	}
 	
-	function generateSecret($length = 20, $char = 'unicode') {
+	function generateRandomString($num_length, $str_characters = null) {
 		
-		$ret = '';
+		$str_secret = '';
+		$str_characters = ($str_characters ? $str_characters : 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ023456789');
 		
-		for ($i = 0; $i < $length; $i++) {
-			if ($char == 'ascii') {
-				$ret .= chr(mt_rand(33, 255)); // ASCII
+		for ($i = 0; $i < $num_length; $i++) {
+			
+			$num_generate = rand(0, strlen($str_characters));
+			$str_append = substr($str_characters, $num_generate, 1);
+			$str_secret .= $str_append;
+		}
+		
+		return $str_secret;
+	}
+	
+	function generateSecret($num_length, $str_charset = 'unicode') {
+		
+		$str_secret = '';
+		
+		for ($i = 0; $i < $num_length; $i++) {
+			
+			if ($str_charset == 'ascii') {
+				$str_secret .= chr(mt_rand(33, 255)); // ASCII
 			} else {
-				$ret .= unichr(mt_rand(33, 1000)); // Unicode
+				$str_secret .= mb_convert_encoding('&#'.mt_rand(33, 1000).';', 'UTF-8', 'HTML-ENTITIES'); // Unicode
 			}
 		}
 		
-		return $ret;
+		return $str_secret;
 	}
 	
-	function unichr($u) {
+	function checkPasswordStrength($str_password) {
 		
-		return mb_convert_encoding('&#'.intval($u).';', 'UTF-8', 'HTML-ENTITIES');
-	}
-	
-	function generateRandomString($length, $char = false) {
-		
-		$pass = '';
-		$char = ($char ? $char : "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ023456789");
-		
-		for ($i=0; $i <= $length; $i++) {
-			
-			$gen = rand(0, strlen($char));
-			$single = substr($char, $gen, 1);
-			$pass .= $single;
+		// Accounts for multi-script/unicode, https://www.php.net/manual/en/regexp.reference.unicode.php
+
+		if (mb_strlen($str_password) < 8) {
+			return 0;
 		}
-		return $pass;
+		
+		$num_strength = 0;
+		
+		if (preg_match('/\p{Latin}/u', $str_password)) { // Alphabetic latin
+			$num_strength += 1;
+		}
+		
+		if (preg_match('/(?=\p{L})(?!\p{Latin})/u', $str_password)) { // Alphabetic non-latin
+			$num_strength += 1;
+		}
+		
+		/*if (preg_match('/(?:\p{Ll}.*\p{Lu}|(?:.\p{Lu}.*\p{Ll})|\p{Lt}|\p{Lm})/u', $str_password)) { // Mixed cases, title case ('ǲ' vs 'ǳ|Ǳ'), or modifier
+			$num_strength += 1;
+		}*/
+		
+		if (preg_match('/[\p{Nl}\p{No}]/u', $str_password)) { // Number-letter or other (e.g. roman numerals)
+			$num_strength += 1;
+		}
+		
+		if (preg_match('/\p{Nd}/u', $str_password)) { // Number-digit (any script)
+			$num_strength += 1;
+		}
+			
+		if (preg_match('/[\p{P}\p{S}]/u', $str_password)) { // Punctuation or symbol characters
+			$num_strength += 1;
+		}
+
+		return ($num_strength >= 3);
 	}
-	
+
 	function value2HashExchange($value) { // Calculable/exchangeable externally (e.g. database, ProcessProgram)
 		
 		$value = (is_array($value) || is_object($value) ? json_encode($value) : $value);
@@ -745,6 +827,53 @@
 	function YAML2Value($yaml, $arr_callbacks = []) {
 				
 		return yaml_parse($yaml, 0, $num_docs, $arr_callbacks);
+	}
+	
+	function strSerial2Value($str, &$str_leftover = null, $func_callback = null) {
+		
+		if (!$str) {
+			return null;
+		}
+		
+		$str_serial = null;
+		$func_parse = null;
+		
+		static $arr_serials = [['YAML2Value', '---', '...', false], ['JSON2Value', '{', '}', true], ['JSON2Value', '[', ']', true]];
+		
+		foreach ($arr_serials as $arr_serial) {
+			
+			$num_pos_start = strpos($str, $arr_serial[1]);
+			
+			if ($num_pos_start === false) {
+				continue;
+			}
+			
+			$num_pos_end = strpos($str, $arr_serial[2], $num_pos_start);
+		
+			if ($num_pos_end === false && $arr_serials[4] === true) { // [4] = end is required
+				continue;
+			}
+			
+			$num_length = ($num_pos_end === false ? null : ($num_pos_end + strlen($arr_serial[2])) - $num_pos_start);
+			$str_serial = substr($str, $num_pos_start, $num_length);
+			$func_parse = $arr_serial[0];
+			
+			break;
+		}
+				
+		if ($str_serial === null) {
+			return null;
+		}
+		
+		if (isset($func_callback)) {
+			$value = $func_callback($func_parse, $str_serial);
+		} else {
+			$value = $func_parse($str_serial);
+		}
+		
+		$str_leftover = trim(str_replace($str_serial, '', $str));
+		
+		return $value;
 	}
 
 	function str2Array($str, $separator = '_') {
@@ -896,7 +1025,7 @@
 		}
 		
 		if ($code == 'hex') {
-			return '#'.strtolower(substr(preg_replace('/[^a-f0-9]/i', '', $str), 0, 6));
+			return '#'.strtolower(substr(preg_replace('/[^a-f0-9]/i', '', $str), 0, 8));
 		}
 	}
 	
@@ -1063,7 +1192,7 @@
 	
 	function strRegularExpression($str, $str_pattern, $str_flags, $str_template) {
 		
-		return preg_replace('/'.$str_pattern.'/'.$str_flags, $str_template, $str);		
+		return preg_replace('/'.$str_pattern.'/u'.$str_flags, $str_template, $str); // Enable unicode support 'u'
 	}
 	
 	function parseValue($value, $what, $keep_null = false) {
@@ -1366,7 +1495,7 @@
 		}
 	}
 	
-	function arrMerge(...$arrs) { // String keys will be overwitten
+	function arrMerge(...$arrs) { // Merge arrays: string keys will be overwitten
 		
 		if (!isset($arrs[1])) {
 			$arrs = current($arrs);
@@ -1375,7 +1504,7 @@
 		return array_merge(...$arrs);
 	}
 	
-	function arrMergeKeys(...$arrs) { // All keys will be overwitten
+	function arrMergeKeys(...$arrs) { // Merge arrays: all keys will be overwitten
 		
 		if (!isset($arrs[1])) {
 			$arrs = current($arrs);
@@ -1384,7 +1513,6 @@
 		$arr_collect = [];
 		
 		foreach ($arrs as $arr) {
-			
 			$arr_collect += $arr;
 		}
 		
@@ -1458,13 +1586,13 @@
 		return true;
 	}
 	
-	function arrRearrangeParams($arr) { // $arr[param][0] => $arr[0][param]
+	function arrRearrangeKeysValues($arr) { // $arr[key][0] => $arr[0][key]
 		
 		$arr_new = [];
 		
-		foreach($arr as $key => $all){
-			foreach($all as $i => $val) {
-				$arr_new[$i][$key] = $val;   
+		foreach ($arr as $key => $arr_all){
+			foreach ($arr_all as $i => $value) {
+				$arr_new[$i][$key] = $value;   
 			}   
 		}
 		
@@ -1486,6 +1614,24 @@
 		return $arr_partition;
 	}
 	
+	function &arrByPath(&$arr, $str_path, $str_delimiter = '/') {
+	
+		$arr_walk = explode($str_delimiter, trim($str_path));
+		
+		$arr_current =& $arr;
+	
+		foreach ($arr_walk as $key) {
+	
+			if (!is_array($arr_current) || !array_key_exists($key, $arr_current)) {
+				error();
+			}
+			
+			$arr_current =& $arr_current[$key];
+		}
+	
+		return $arr_current;
+	}
+	
 	function keyIsUncontested($key, $arr) {
 		
 		return (!array_key_exists($key, $arr) || $arr[$key]);
@@ -1493,15 +1639,39 @@
 	
 	function doNotXMLParse($s) {
 		
-		if (!$_SERVER['PATH_VIRTUAL']) {
+		if (SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX) {
 		
 			$s = str_replace('<![CDATA[', '', $s); // Remove existing CDATA tags
 			$s = str_replace(']]>', '', $s);
 			
 			return '<![CDATA['.$s.']]>';
 		} else {
+			
 			return $s;
 		}
+	}
+	
+	function strIsValidEncoding($str) {
+		
+		if (!$str) {
+			return true;
+		}
+		
+		return mb_check_encoding($str); // Also does arrays
+	}
+	
+	function arrHasValidStringEncoding($arr) {
+		
+		return strIsValidEncoding($arr);
+	}
+	
+	function strFixEncoding($str) {
+		
+		if (!$str) {
+			return $str;
+		}
+		
+		return mb_convert_encoding($str, 'UTF-8'); // Also does arrays
 	}
 	
 	function strEscapeXML($str_xml) {
@@ -1649,7 +1819,7 @@
 		public $refresh_table = false;
 		public $reset_form = false;	
 		public $style = false;
-		public $msg = false;
+		public $message = false;
 		
 		public $is_confirm = null;
 		public $is_download = null;
@@ -1720,4 +1890,47 @@
 		//public function contents() {}
 		//public function js() {}
 		//public function css() {}
+	}
+	
+	trait ClassAnalyse {
+		
+		public $byte_block;
+		
+		public function initialiseMemoryBlock() {
+			
+			$this->byte_block = str_repeat('*', 1024 * 1024 * 5);
+		}
+		
+		public function getMemoryUsage($do_static = true) {
+			
+			$num_bytes = strlen(print_r((array)$this, true));
+			
+			if ($do_static) {
+				$num_bytes += static::getMemoryUsageStatic();
+			}
+			
+			return $num_bytes;
+		}
+		
+		static public function getMemoryUsageStatic() {
+			
+			$class = get_called_class();
+			$arr = [];
+			
+			$arr_variables = get_class_vars($class);
+			$num_size = 0;
+			
+			foreach ($arr_variables as $name => $default) {
+				
+				if (!isset($class::$$name)) {
+					continue;
+				}
+					
+				$arr[$name] = $class::$$name;
+			}
+			
+			$num_bytes = strlen(print_r($arr, true));
+			
+			return $num_bytes;
+		}
 	}

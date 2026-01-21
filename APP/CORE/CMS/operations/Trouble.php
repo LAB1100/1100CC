@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -12,6 +12,46 @@ class RealTrouble extends Exception {
 	public function setMessage($str) {
 		
 		$this->message = $str;
+	}
+	
+	public function setCode($num) {
+		
+		$this->code = $num;
+	}
+	
+	public function getTroubleMessage() {
+		
+		$arr_message = Trouble::parseMessage($this);
+		
+		return $arr_message['message'];
+	}
+	
+	public function getTroubleDebug() {
+		
+		$arr_message = Trouble::parseMessage($this);
+		
+		return $arr_message['debug'];
+	}
+	
+	public function getTroubleCode() {
+		
+		$arr_code = Trouble::parseCode($this);
+		
+		return $arr_code['code'];
+	}
+	
+	public function getTroubleSuppress() {
+		
+		$arr_code = Trouble::parseCode($this);
+		
+		return $arr_code['suppress'];
+	}
+	
+	public function getTroubleTraceDebug() {
+		
+		$str_trace_debug = Trouble::strTraceDebug($this);
+		
+		return $str_trace_debug;
 	}
 }
 class RealTroubleThrown extends RealTrouble {
@@ -38,67 +78,67 @@ class Trouble {
 		TROUBLE_UNAUTHORIZED_CLIENT => [['REQUEST', 'unauthorized_client'], 'alert', 'RealTroubleThrown']
 	];
 		
-	public static function fling($msg = '', $code = TROUBLE_ERROR, $suppress = LOG_BOTH, $debug = false, $exception = null) {
+	public static function fling($str_message = '', $mode_code = TROUBLE_ERROR, $mode_suppress = LOG_BOTH, $str_debug = null, $exception = null) {
 
-		switch ($code) {
+		switch ($mode_code) {
 			case TROUBLE_NOTICE:
 			case TROUBLE_UNKNOWN:
 				
 				// Create notice/message
 				
-				$e = self::create($msg, $code, $suppress, $debug, $exception);
+				$e = self::create($str_message, $mode_code, $mode_suppress, $str_debug, $exception);
 				
-				$suppress = ($suppress ?: (STATE == STATE_PRODUCTION && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH));
-				$msg = self::strMsg($e);
-				$debug = self::strDebug($e);
+				$mode_suppress = ($mode_suppress ?: (STATE == STATE_PRODUCTION && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH));
+				$arr_message = self::parseMessage($e);
+				$str_trace_debug = self::strTraceDebug($e);
 				
-				msg($msg, self::label($code), $suppress, $debug, self::type($code));
+				message($arr_message['message'], self::label($mode_code), $mode_suppress, $str_trace_debug, self::type($mode_code), null, $e);
 				break;
 			default:
 			
 				// Create exception
 			
-				throw self::create($msg, $code, $suppress, $debug, $exception);
+				throw self::create($str_message, $mode_code, $mode_suppress, $str_debug, $exception);
 				break;
 		}
 	}
 	
-	public static function create($msg = '', $code = TROUBLE_ERROR, $suppress = LOG_BOTH, $debug = false, $exception = null) {
+	public static function create($str_message = '', $mode_code = TROUBLE_ERROR, $mode_suppress = LOG_BOTH, $str_debug = null, $exception = null) {
 		
-		$msg = ($msg ?? '');
-		$code = ($suppress ? $code + ($suppress * 1000) : $code); // Combine suppression parameter with error code
+		$str_message = ($str_message ?? '');
+		$mode_code = ($mode_suppress ? $mode_code + ($mode_suppress * 1000) : $mode_code); // Combine suppression parameter with error code
 
-		if ($debug) {
-			$msg = $msg.PHP_EOL.self::strMsgSeparator().PHP_EOL.$debug;
+		if ($str_debug) {
+			$str_message = $str_message.PHP_EOL.self::strMessageSeparator().PHP_EOL.$str_debug;
 		}
 		
-		$class = (self::$arr_trouble[$code][2] ?? 'RealTrouble');
+		$class = (self::$arr_trouble[$mode_code][2] ?? 'RealTrouble');
 		
-		return new $class($msg, $code, $exception);
+		return new $class($str_message, $mode_code, $exception);
 	}
 
-	public static function label($code) {
+	public static function label($mode_code) {
 		
-		return (isset(self::$arr_trouble[$code]) ? self::$arr_trouble[$code][0] : self::$arr_trouble[0][0]);
+		return (isset(self::$arr_trouble[$mode_code]) ? self::$arr_trouble[$mode_code][0] : self::$arr_trouble[0][0]);
 	}
 	
-	public static function type($code) {
+	public static function type($mode_code) {
 		
-		return (isset(self::$arr_trouble[$code]) ? self::$arr_trouble[$code][1] : self::$arr_trouble[0][1]);
+		return (isset(self::$arr_trouble[$mode_code]) ? self::$arr_trouble[$mode_code][1] : self::$arr_trouble[0][1]);
 	}
 	
-	public static function core($code, $msg, $file, $line, $exception = null) {
+	public static function core($mode_code, $str_message, $file, $line, $exception = null) {
 	
-		$msg_system = $msg.'. Error on line '.$line.' in file '.$file;
+		$str_message_system = $str_message.'. Error on line '.$line.' in file '.$file;
 		
-		switch ($code) {
+		switch ($mode_code) {
 			case E_WARNING:
 			
-				self::fling($msg_system, TROUBLE_WARNING, LOG_BOTH, false, $exception);
+				self::fling($str_message_system, TROUBLE_WARNING, LOG_BOTH, null, $exception);
 				break;
 			case E_NOTICE:
 			
-				self::fling($msg_system, TROUBLE_NOTICE, LOG_BOTH, false, $exception);
+				self::fling($str_message_system, TROUBLE_NOTICE, LOG_BOTH, null, $exception);
 				break;
 			case E_ERROR:
 			case E_PARSE:
@@ -108,40 +148,40 @@ class Trouble {
 			case E_COMPILE_WARNING:
 			case E_RECOVERABLE_ERROR:
 		
-				$msg_user = false;
+				$str_message_user = null;
 					
-				if (strpos($msg, 'Maximum execution time of') !== false) {
+				if (strpos($str_message, 'Maximum execution time of') !== false) {
 					
-					preg_match("/^Maximum execution time of (\d+)/", $msg, $amount);
+					preg_match("/^Maximum execution time of (\d+)/", $str_message, $amount);
 					$amount = $amount[1];
 					
 					Labels::setVariable('amount', $amount);
 					
-					$msg_user = Labels::getSystemLabel('msg_error_time_limit');
-				} else if (strpos($msg, 'Allowed memory size of') !== false) {
+					$str_message_user = Labels::getSystemLabel('msg_error_time_limit');
+				} else if (strpos($str_message, 'Allowed memory size of') !== false) {
 					
-					preg_match("/^Allowed memory size of (\d+)/", $msg, $amount);
+					preg_match("/^Allowed memory size of (\d+)/", $str_message, $amount);
 					$amount = $amount[1];
 					$amount = bytes2String($amount);
 					
 					Labels::setVariable('amount', $amount);
 					
-					$msg_user = Labels::getSystemLabel('msg_error_memory_limit');
+					$str_message_user = Labels::getSystemLabel('msg_error_memory_limit');
 				}
 				
-				if ($msg_user) {
+				if ($str_message_user) {
 					
-					msg($msg_user, self::label(TROUBLE_FATAL), LOG_CLIENT, false, self::type(TROUBLE_FATAL), 5000);
+					message($str_message_user, self::label(TROUBLE_FATAL), LOG_CLIENT, null, self::type(TROUBLE_FATAL), 5000, $exception);
 					
-					self::fling($msg_system, TROUBLE_FATAL, LOG_SYSTEM, false, $exception);
+					self::fling($str_message_system, TROUBLE_FATAL, LOG_SYSTEM, null, $exception);
 				} else {
 					
-					self::fling($msg_system, TROUBLE_FATAL, LOG_BOTH, false, $exception);
+					self::fling($str_message_system, TROUBLE_FATAL, LOG_BOTH, null, $exception);
 				}
 				break;
 			default:
 			
-				self::fling($msg_system, TROUBLE_UNKNOWN, LOG_BOTH, false, $exception);
+				self::fling($str_message_system, TROUBLE_UNKNOWN, LOG_BOTH, null, $exception);
 				break;
 		}
 	}
@@ -150,40 +190,41 @@ class Trouble {
 		
 		if (!($exception instanceof RealTrouble)) {
 		
-			$msg = $exception->getMessage();
+			$str_message = $exception->getMessage();
 			$file = $exception->getFile();
 			$line = $exception->getLine();
 			
 			if ($exception instanceof ParseError) {
-				$code = E_PARSE;
+				$mode_code = E_PARSE;
 			} else {
-				$code = E_ERROR;
+				$mode_code = E_ERROR;
 			}
 			
 			try {
-				self::core($code, $msg, $file, $line, $exception);
+				self::core($mode_code, $str_message, $file, $line, $exception);
 			} catch (Exception $e_converted) {
 				$exception = $e_converted;
 			}
 		}
 		
-		$msg = self::strMsg($exception);
+		$arr_message = self::parseMessage($exception);
+		$str_message = $arr_message['message'];
 		$arr_code = self::parseCode($exception);
-		$debug = self::strDebug($exception);
+		$str_trace_debug = self::strTraceDebug($exception);
 		
 		if ($arr_code['code'] == TROUBLE_ERROR) {
-			$b_state = Mediator::SHUTDOWN_INIT_SCRIPT;
+			$bit_state = Mediator::SHUTDOWN_INIT_SCRIPT;
 		} else {
-			$b_state = Mediator::SHUTDOWN_INIT_SYSTEM;
+			$bit_state = Mediator::SHUTDOWN_INIT_SYSTEM;
 		}
-		Mediator::setShutdown((Mediator::getShutdown() & ~Mediator::SHUTDOWN_INIT_UNDETERMINED) | $b_state);
+		Mediator::setShutdown((Mediator::getShutdown() & ~Mediator::SHUTDOWN_INIT_UNDETERMINED) | $bit_state);
 		
 		if (!Mediator::inCleanup()) {
 			
-			$msg_log = Labels::getSystemLabel('msg_error');
+			$str_message_log = Labels::getSystemLabel('msg_error');
 		
-			Log::setMsg($msg_log);
-			msg($msg, self::label($arr_code['code']), $arr_code['suppress'], $debug, self::type($arr_code['code']));
+			Log::setHeader($str_message_log);
+			message($str_message, self::label($arr_code['code']), $arr_code['suppress'], $str_trace_debug, self::type($arr_code['code']));
 			
 			if (!headers_sent()) {
 				header($_SERVER['SERVER_PROTOCOL'].' 300 Multiple Choices');
@@ -193,16 +234,16 @@ class Trouble {
 				
 				Response::stop(function() {
 					
-						$obj = Log::addToObj(Response::getObject());
+						$obj = Log::addToObject(Response::getObject());
 						
-						$page = new ExitPage($obj->msg, 'error', 'error');
+						$page = new ExitPage($obj->message, 'error', 'error');
 						
-						if (isset($obj->system_msg)) {
-							$page->setSystem($obj->system_msg, 'important');
+						if (isset($obj->system_message)) {
+							$page->setSystem($obj->system_message, 'important');
 						}
 						
 						return $page->getPage();
-					}, Log::addToObj(Response::getObject())
+					}, Log::addToObject(Response::getObject())
 				);
 			} catch (Exception $e) {
 				
@@ -211,41 +252,43 @@ class Trouble {
 			}
 		} else {
 			
-			msg($msg, self::label($arr_code['code']), $arr_code['suppress'], $debug, self::type($arr_code['code']));
+			message($str_message, self::label($arr_code['code']), $arr_code['suppress'], $str_trace_debug, self::type($arr_code['code']));
 		}
 	}
 	
 	public static function parseCode($exception) {
 		
-		$code = $exception->getCode();
+		$mode_code = $exception->getCode();
 		
-		if ($code >= 1000) { // Suppression parameter is combined with error code
+		if ($mode_code >= 1000) { // Suppression parameter is combined with error code
 			
-			$suppress = floor($code/1000); // Division
-			$code = ($code % 1000); // Remainder
+			$mode_suppress = floor($mode_code/1000); // Division
+			$mode_code = ($mode_code % 1000); // Remainder
 		} else {
 			
-			$suppress = ($code >= TROUBLE_FATAL && $code <= TROUBLE_DATABASE && STATE == STATE_PRODUCTION && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH);
+			$mode_suppress = ($mode_code >= TROUBLE_FATAL && $mode_code <= TROUBLE_DATABASE && STATE == STATE_PRODUCTION && (!DB::isActive() || !getLabel('show_system_errors', 'D', true)) ? LOG_SYSTEM : LOG_BOTH);
 		}
 		
-		return ['code' => $code, 'suppress' => $suppress];
+		return ['code' => $mode_code, 'suppress' => $mode_suppress];
 	}
 	
-	public static function strMsg($exception) {
+	public static function parseMessage($exception) {
 		
-		$msg = $exception->getMessage();
-		$arr_msg = explode(self::strMsgSeparator(), $msg);
-		$str = trim($arr_msg[0]); // Get first message
+		$str_message = $exception->getMessage();
+		$arr_message = explode(self::strMessageSeparator(), $str_message);
 		
-		return $str;
+		$str_message = trim($arr_message[0]); // Get first message
+		$str_debug = (isset($arr_message[1]) ? trim($arr_message[1]) : null); // Get debug message
+		
+		return ['message' => $str_message, 'debug' => $str_debug];
 	}
 	
-	public static function strMsgSeparator() {
+	public static function strMessageSeparator() {
 		
 		return str_pad('', 4, '#');
 	}
 
-	public static function strDebug($exception, $arr_seen = null) {
+	public static function strTraceDebug($exception, $arr_seen = null) {
 		
 		// http://www.php.net/manual/en/exception.gettraceasstring.php#114980
 		
@@ -256,13 +299,13 @@ class Trouble {
 			$arr_seen = [];
 		}
 
-		$str_msg = $exception->getMessage();
-		$str_msg = str_replace(self::strMsgSeparator(), '', $str_msg);
-		$str_msg = strIndent($str_msg, ' ');
+		$str_message = $exception->getMessage();
+		$str_message = str_replace(self::strMessageSeparator(), '', $str_message);
+		$str_message = strIndent($str_message, ' ');
 		
 		$arr_result[] = $str_starter.get_class($exception).':'
 			.PHP_EOL.' '.str_pad('', 20, '-')
-			.PHP_EOL.$str_msg
+			.PHP_EOL.$str_message
 			.PHP_EOL.' '.str_pad('', 20, '-')
 		;
 		
@@ -348,7 +391,7 @@ class Trouble {
 		
 		$arr_result = implode(PHP_EOL, $arr_result);
 		if ($prev) {
-			$arr_result .= PHP_EOL.self::strDebug($prev, $arr_seen);
+			$arr_result .= PHP_EOL.self::strTraceDebug($prev, $arr_seen);
 		}
 		
 		return $arr_result;
@@ -363,50 +406,49 @@ class Trouble {
 		$obj = Response::getObject();
 		unset($obj->data, $obj->html, $obj->data_feedback);
 		
-		// Reset connection to default and clean it
-		try {
+		try { // Reset connection to default and clean it
 			
-			DB::setConnection();
+			DB::setConnection(null, DB::MODE_CONNECT_DEFAULT_DATABASE);
 			DB::rollbackTransaction(false);
 		} catch (Exception $e) { }
 
 		self::catchError($exception);
 	}
 	
-	public static function runtime($code, $msg, $file, $line) {
+	public static function runtime($mode_code, $str_message, $file, $line) {
 		
 		// Runtime errors
 
 		// Return false to execute the PHP internal error handler
-		/*if (!(error_reporting() & $code)) { // if error was suppressed with the @-operator, error_reporting() does not report error flags
+		/*if (!(error_reporting() & $mode_code)) { // if error was suppressed with the @-operator, error_reporting() does not report error flags
 			return false;
 		}*/
 		
 		// Coding style: Ignore undefined array indexes. Make sure to poperly check essential arrays, but ignore possible subsequent exceptions.
-		if (strStartsWith($msg, 'Undefined array key') || strStartsWith($msg, 'Trying to access array offset on')) {
-			$code = E_NOTICE;
+		if (strStartsWith($str_message, 'Undefined array key') || strStartsWith($str_message, 'Trying to access array offset on')) {
+			$mode_code = E_NOTICE;
 		}
-		if (strStartsWith($msg, 'Undefined index:') || strStartsWith($msg, 'Undefined offset:')) { // PHP 7.x
-			$code = E_NOTICE;
+		if (strStartsWith($str_message, 'Undefined index:') || strStartsWith($str_message, 'Undefined offset:')) { // PHP 7.x
+			$mode_code = E_NOTICE;
 		}
 		// Code has to be fixed
-		if (strStartsWith($msg, 'Undefined variable $')) {
-			$code = E_NOTICE;
+		if (strStartsWith($str_message, 'Undefined variable $')) {
+			$mode_code = E_NOTICE;
 		}
 
-		//if (($code == E_NOTICE || $code == E_DEPRECATED) && STATE == STATE_PRODUCTION) {
-		if ($code == E_NOTICE || ($code == E_DEPRECATED && STATE == STATE_PRODUCTION)) {
+		//if (($mode_code == E_NOTICE || $mode_code == E_DEPRECATED) && STATE == STATE_PRODUCTION) {
+		if ($mode_code == E_NOTICE || ($mode_code == E_DEPRECATED && STATE == STATE_PRODUCTION)) {
 			return true;
 		}
 
-		self::core($code, $msg, $file, $line); // Depending on the $code, it might or might not throw an error
+		self::core($mode_code, $str_message, $file, $line); // Depending on the $mode_code, it might or might not throw an error
 
 		return true;
 	}
 	
-	public static function system($code, $msg, $file, $line) {
+	public static function system($mode_code, $str_message, $file, $line) {
 	
-		switch ($code) {
+		switch ($mode_code) {
 			case E_ERROR:
 			case E_PARSE:
 			case E_CORE_ERROR:
@@ -420,7 +462,7 @@ class Trouble {
 				unset($obj->data, $obj->html, $obj->data_feedback);
 				
 				try {
-					self::core($code, $msg, $file, $line);
+					self::core($mode_code, $str_message, $file, $line);
 				} catch (Exception $e) {
 					self::catchError($e);
 				}

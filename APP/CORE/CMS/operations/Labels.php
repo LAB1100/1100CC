@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,41 +18,44 @@ class Labels {
 	
 	const NAMESPACE_SEPARATOR = ':';
 	
-	public static function getLabel($identifier, $type = 'L', $go_now = false) {
+	public static function getLabel($str_identifier, $str_type = null, $go_now = false) {
 		
-		$identifier = strtolower($identifier);
-		$code = '['.$type.']('.$identifier.')';
-		if (!isset(self::$arr_labels[$code])) {
-			self::$arr_identifiers[$type][$identifier] = $code;
+		$str_type = ($str_type ?? 'L');
+		
+		$str_identifier = strtolower($str_identifier);
+		$str_code = '['.$str_type.']('.$str_identifier.')';
+		
+		if (!isset(self::$arr_labels[$str_code])) {
+			self::$arr_identifiers[$str_type][$str_identifier] = $str_code;
 		}
-		self::$arr_labels_last[$code] = $code;
+		self::$arr_labels_last[$str_code] = $str_code;
 		
 		if ($go_now) {
-			return (Settings::isInitialised() ? self::printLabels($code) : false);
+			return (Settings::isInitialised() ? self::printLabels($str_code) : false);
 		}
 		
-		return $code;
+		return $str_code;
 	}
 	
-	public static function printLabels($value, $encode = false) {
+	public static function printLabels($value, $do_encode = false) {
 	
 		if (is_array($value) || is_object($value)) {
 		
-			array_walk_recursive($value, function(&$v, $k) use ($encode) {
+			array_walk_recursive($value, function(&$v, $k) use ($do_encode) {
 				
 				if (is_string($v)) {
-					$v = Labels::doPrintLabels($v, $encode);
+					$v = Labels::doPrintLabels($v, $do_encode);
 				}
 			});
 		} else {
 			
-			$value = self::doPrintLabels($value, $encode);
+			$value = self::doPrintLabels($value, $do_encode);
 		}
 		
 		return $value;
 	}
 	
-	public static function doPrintLabels($str_text, $encode = false) {
+	public static function doPrintLabels($str_text, $do_encode = false) {
 
 		if (self::$arr_identifiers) {
 			
@@ -99,7 +102,7 @@ class Labels {
 				
 				foreach ($arr_codes_print as $code_print) {
 					
-					self::$arr_labels[$code] = str_replace($code_print, self::$arr_labels[$code_print], self::$arr_labels[$code]);
+					self::$arr_labels[$code] = str_replace($code_print, (self::$arr_labels[$code_print] ?? ''), self::$arr_labels[$code]);
 				}
 			}
 		}
@@ -108,7 +111,7 @@ class Labels {
 			
 			// Print
 			
-			$func_parse = function($arr_match) use ($encode) {
+			$func_parse = function($arr_match) use ($do_encode) {
 
 				$str = (self::$arr_labels['['.$arr_match[1].']('.$arr_match[2].')'] ?? null);
 				
@@ -121,7 +124,7 @@ class Labels {
 					}
 				}
 				
-				if ($encode) {
+				if ($do_encode) {
 					$str = Response::encode($str);
 				}
 				
@@ -138,35 +141,45 @@ class Labels {
 		return $str_text;
 	}
 	
-	public static function override($identifier, $type, $value) {
+	public static function override($str_identifier, $str_type, $value) {
 	
-		$code = '['.$type.']('.$identifier.')';
+		$str_code = '['.$str_type.']('.$str_identifier.')';
 		
-		self::$arr_labels_override[$code] = $value;
+		self::$arr_labels_override[$str_code] = $value;
 	}
 	
 	public static function setSystemLabels() {
 		
 		self::$arr_system_labels = Settings::getShare('system_labels');
 		
-		if (!self::$arr_system_labels) {
-			
-			self::$arr_system_labels = [
-				'msg_error' => getLabel('msg_error'),
-				'msg_error_time_limit' => getLabel('msg_error_time_limit'),
-				'msg_error_memory_limit' => getLabel('msg_error_memory_limit'),
-				'msg_missing_information' => getLabel('msg_missing_information'),
-				'msg_api_limit' => getLabel('msg_api_limit'),
-				'inf_api_welcome' => getLabel('inf_api_welcome')
-			];
-			
-			self::$arr_system_labels = Labels::printLabels(self::$arr_system_labels);
-			
-			Settings::setShare('system_labels', self::$arr_system_labels, 3600);
+		if (self::$arr_system_labels) {
+			return;
 		}
+			
+		self::$arr_system_labels = [
+			'msg_error' => getLabel('msg_error'),
+			'msg_error_time_limit' => getLabel('msg_error_time_limit'),
+			'msg_error_memory_limit' => getLabel('msg_error_memory_limit'),
+			'msg_missing_information' => getLabel('msg_missing_information'),
+			'msg_api_limit' => getLabel('msg_api_limit'),
+			'inf_api_welcome' => getLabel('inf_api_welcome'),
+			'msg_request_invalid_encoding' => getLabel('msg_request_invalid_encoding'),
+			'msg_request_invalid_module_method' => getLabel('msg_request_invalid_module_method'),
+			'msg_request_invalid_path' => getLabel('msg_request_invalid_path'),
+			'msg_request_invalid_relay' => getLabel('msg_request_invalid_relay'),
+			'msg_request_invalid_authentication' => getLabel('msg_request_invalid_authentication')
+		];
+		
+		self::$arr_system_labels = Labels::printLabels(self::$arr_system_labels);
+		
+		Settings::setShare('system_labels', self::$arr_system_labels, 3600);
 	}
 	
 	public static function getSystemLabel($value) {
+		
+		if (!self::$arr_system_labels) {
+			self::$arr_system_labels = Settings::getShare('system_labels', true);
+		}
 		
 		$str = (self::$arr_system_labels[$value] ?? $value);
 		
@@ -261,28 +274,28 @@ class Labels {
 		
 		// Parse content that use single tags [[..]], e.g. language blocks
 
-		$pos_end = strpos($str, '[/LABEL]'); // Find and move to first closing tag
+		$num_pos_end = strpos($str, '[/LABEL]'); // Find and move to first closing tag
 		
-		if ($pos_end === false) {
+		if ($num_pos_end === false) {
 			
 			$str = self::parseLanguage($str);
 			
 			return $str;
 		}
 
-		while ($pos_end !== false) {
+		while ($num_pos_end !== false) {
 			
-			$len = strlen($str);
+			$num_length = strlen($str);
 			
-			$pos_start = strrpos($str, '[LABEL]', $pos_end-$len); // Lookup first leading opening tag
+			$num_pos_start = strrpos($str, '[LABEL]', $num_pos_end-$num_length); // Lookup first leading opening tag
 			
-			$str_parse = substr($str, $pos_start+7, $pos_end-($pos_start+7));
+			$str_parse = substr($str, $num_pos_start+7, $num_pos_end-($num_pos_start+7));
 			
 			$str_parse = self::parseLanguage($str_parse);
 			
-			$str = substr_replace($str, $str_parse, $pos_start, ($pos_end-$pos_start)+7+1);
+			$str = substr_replace($str, $str_parse, $num_pos_start, ($num_pos_end-$num_pos_start)+7+1);
 			
-			$pos_end = strpos($str, '[/LABEL]', $pos_start);
+			$num_pos_end = strpos($str, '[/LABEL]', $num_pos_start);
 		}
 		
 		return $str;
@@ -413,19 +426,19 @@ class Labels {
 	public static function parseNamespace($str, $do_strict = false) {
 		
 		if (!$str) {
-			return false;
+			return null;
 		}
 		
 		$num_pos = strpos($str, static::NAMESPACE_SEPARATOR);
 		
 		if ($num_pos === false) {
-			return false;
+			return null;
 		}
 		
 		$str_namespace = substr($str, 0, $num_pos);
 		
 		if ($do_strict && $str_namespace != strtoupper($str_namespace)) {
-			return false;
+			return null;
 		}
 		
 		$str_namespace = strtoupper($str_namespace);		

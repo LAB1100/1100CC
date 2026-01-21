@@ -80,4 +80,12 @@ Initial release.
 * Back-end: Added the possibility to run setup or initialisation routines, that should not be Jobs, that can be called by administrators. Setup routines that can be declared/defined by any module.
 * Various fixes, modernisation, and overall streamlining.
 
+## VERSION 10.9
+
+* API: Created base module class api_io to be used with any configured 1100CC API. The module provides extendable input/output functionalities and endpoint descriptors for e.g. OpenAPI.
+* Front-end: Developed new loading animators for wait and download, themed 'line chasing dot'.
+* Database SQL: Changed and added the necessary functions (class DBFunctions, functions with naming DateTime and NumericTime) to interchangeably generate, store, and compare datetime/timestamps with and without microsecond precision in and outside the database.
+* Database SQL: Increased database agnosticity, 'hot-swappable' support for MySQL/MariaDB/PostgreSQL. Full control over primary, secondary (optionally asynchronous), and transactional connections.
+* Various fixes, modernisation, and overall streamlining.
+
 ## VERSION x.x

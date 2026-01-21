@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -113,10 +113,8 @@ class SiteStartEnvironment {
 	public static function getRequestVariables($num_index = false) {
 		
 		if (IS_CMS) {
-			
 			$arr = self::$arr_request_variables;
 		} else {
-		
 			$arr = self::getModuleVariables(0);
 		}
 		
@@ -140,6 +138,16 @@ class SiteStartEnvironment {
 		}
 		
 		return self::$arr_modifier_variables;
+	}
+	
+	public static function getRequestURL($is_relative = true) {
+		
+		return (!$is_relative ? URL_BASE : '/').ltrim((isset($_SERVER['PATH_VIRTUAL']) ? $_SERVER['PATH_VIRTUAL'] : $_SERVER['PATH_INFO']), '/');
+	}
+	
+	public static function getRequestValue($str_identifier) {
+		
+		return ($_POST[$str_identifier] ?? ($_GET[$str_identifier] ?? null));
 	}
 	
 	public static function setModules($arr_modules, $mode_target = false) {
@@ -388,6 +396,15 @@ class SiteStartEnvironment {
 		ignore_user_abort(true); // Ignore user abort so we can run our own stuff
 	}
 	
+	public static function terminateSession($do_destroy = false) {
+		
+		$_SESSION = [];
+		
+		if ($do_destroy) {
+			session_destroy();
+		}
+	}
+	
 	public static function checkSession() {
 		
 		if (isset($_SESSION['session']) && $_SESSION['session'] == SiteStartEnvironment::$session) {
@@ -396,8 +413,8 @@ class SiteStartEnvironment {
 		
 		return false;
 	}
-	
-	public static function getSessionId($this_request = false) {
+
+	public static function getSessionID($this_request = false) {
 		
 		if ($this_request) {
 			return (self::$session ?: 0);
@@ -405,7 +422,7 @@ class SiteStartEnvironment {
 			return (session_id() ?: 0);
 		}
 	}
-	
+
 	public static function setCookie($name, $value, $include_sub_domains = false) {
 		
 		if (Response::isSent()) {
@@ -426,52 +443,52 @@ class SiteStartEnvironment {
 		require(DIR_SITE.'js_css.php');
 		$arr_site_self = $arr;
 		
-		foreach ($arr_core_self[self::MATERIAL_JS] as $value) {
+		foreach ($arr_core_self[self::MATERIAL_JS] as $value) { // Set in CORE
 			self::$arr_material[self::MATERIAL_JS][$value] = $value;
 		}
-		foreach ($arr_core_self[self::MATERIAL_CSS] as $value) {
+		foreach ($arr_core_self[self::MATERIAL_CSS] as $value) { // Set in CORE
 			self::$arr_material[self::MATERIAL_CSS][$value] = $value;
 		}
 		if (isset($arr_core[self::MATERIAL_JS])) {
-			foreach ($arr_core[self::MATERIAL_JS] as $value) {
+			foreach ($arr_core[self::MATERIAL_JS] as $value) { // Set in SITE
 				self::$arr_material[self::MATERIAL_JS][$value] = $value;
 			}
 		}
 		if (isset($arr_core[self::MATERIAL_CSS])) {
-			foreach ($arr_core[self::MATERIAL_CSS] as $value) {
+			foreach ($arr_core[self::MATERIAL_CSS] as $value) { // Set in SITE
 				self::$arr_material[self::MATERIAL_CSS][$value] = $value;
 			}
 		}
 		
-		self::$arr_material[self::MATERIAL_JS]['modules'] = 'modules';
 		self::$arr_material[self::MATERIAL_CSS]['modules'] = 'modules';
+		self::$arr_material[self::MATERIAL_JS]['modules'] = 'modules';
 		
-		foreach ($arr_site[self::MATERIAL_JS] as $value) {
+		foreach ($arr_site[self::MATERIAL_JS] as $value) { // Set in CORE
 			self::$arr_material[self::MATERIAL_JS][$value] = DIR_SITE.$value;
 		}
-		foreach ($arr_site[self::MATERIAL_CSS] as $value) {
+		foreach ($arr_site[self::MATERIAL_CSS] as $value) { // Set in CORE
 			self::$arr_material[self::MATERIAL_CSS][$value] = DIR_SITE.$value;
 		}
-		foreach ($arr_site_self[self::MATERIAL_JS] as $value) {
+		foreach ($arr_site_self[self::MATERIAL_JS] as $value) { // Set in SITE
 			self::$arr_material[self::MATERIAL_JS][$value] = DIR_SITE.$value;
 		}
-		foreach ($arr_site_self[self::MATERIAL_CSS] as $value) {
+		foreach ($arr_site_self[self::MATERIAL_CSS] as $value) { // Set in SITE
 			self::$arr_material[self::MATERIAL_CSS][$value] = DIR_SITE.$value;
 		}
-		
-		foreach ($arr_site_storage[self::MATERIAL_JS] as $value) {
+				
+		foreach ($arr_site_storage[self::MATERIAL_JS] as $value) { // Set in CORE
 			self::$arr_material[self::MATERIAL_JS][$value] = DIR_SITE_STORAGE.$value;
 		}
-		foreach ($arr_site_storage[self::MATERIAL_CSS] as $value) {
+		foreach ($arr_site_storage[self::MATERIAL_CSS] as $value) { // Set in CORE
 			self::$arr_material[self::MATERIAL_CSS][$value] = DIR_SITE_STORAGE.$value;
 		}
 		if (isset($arr_site_storage_self[self::MATERIAL_JS])) {
-			foreach ($arr_site_storage_self[self::MATERIAL_JS] as $value) {
+			foreach ($arr_site_storage_self[self::MATERIAL_JS] as $value) { // Set in SITE
 				self::$arr_material[self::MATERIAL_JS][$value] = DIR_SITE_STORAGE.$value;
 			}
 		}
 		if (isset($arr_site_storage_self[self::MATERIAL_CSS])) {
-			foreach ($arr_site_storage_self[self::MATERIAL_CSS] as $value) {
+			foreach ($arr_site_storage_self[self::MATERIAL_CSS] as $value) { // Set in SITE
 				self::$arr_material[self::MATERIAL_CSS][$value] = DIR_SITE_STORAGE.$value;
 			}
 		}
@@ -639,6 +656,28 @@ class SiteStartEnvironment {
 		return (PHP_SAPI == 'cli');
 	}
 	
+	public static function checkCookieSupport() {
+		
+		if (isset($_SESSION['LANDING_URL']) || self::isProcess()) { // Check for cookie support
+			return;
+		}
+		
+		$str_url = '/'.str_replace(URL_BASE, '', $_SERVER['HTTP_REFERER']);
+		Labels::setVariable('url', $str_url);
+		
+		Log::setHeader(getLabel('msg_no_cookie_support'));
+		message(getLabel('msg_enable_cookies'), 'SORRY', LOG_CLIENT, false, 'mediate', 20000);
+		
+		Response::stop(function() {
+			
+				$obj = Log::addToObject(Response::getObject());
+				$page = new ExitPage($obj->message, 'cookie', 'cookie');
+				
+				return $page->getPage();
+			}, Log::addToObject(Response::getObject())
+		);
+	}
+	
 	public static function getRequestState() {
 
 		if (SiteStartEnvironment::getAPI()) { // API calls
@@ -653,7 +692,7 @@ class SiteStartEnvironment {
 	}
 	
 	public static function checkRequestOptions() {
-				
+		
 		if (isset($_SERVER['HTTP_ORIGIN']) && static::getRequestState() == static::REQUEST_API) {
 
 			Response::addHeaders('Access-Control-Allow-Origin: *');
@@ -669,27 +708,6 @@ class SiteStartEnvironment {
 				
 				Response::stop('', '');
 			}
-		}
-	}
-	
-	public static function checkCookieSupport() {
-		
-		if (!isset($_SESSION['PAGE_LOADED']) && !self::isProcess()) { // Check for cookie support
-			
-			$url = '/'.str_replace(URL_BASE, '', $_SERVER['HTTP_REFERER']);
-			Labels::setVariable('url', $url);
-			
-			Log::setMsg(getLabel('msg_no_cookie_support'));
-			msg(getLabel('msg_enable_cookies'), 'SORRY', LOG_CLIENT, false, 'mediate', 20000);
-			
-			Response::stop(function() {
-				
-					$obj = Log::addToObj(Response::getObject());
-					$page = new ExitPage($obj->msg, 'cookie', 'cookie');
-					
-					return $page->getPage();
-				}, Log::addToObj(Response::getObject())
-			);
 		}
 	}
 		

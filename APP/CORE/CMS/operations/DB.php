@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -11,10 +11,11 @@ namespace DBBase;
 
 abstract class DB {
 	
-	const ENGINE = 1;
+	const ENGINE = null;
 	
 	const ENGINE_MYSQL = 1;
-	const ENGINE_POSTGRESQL = 2;
+	const ENGINE_MARIADB = 2;
+	const ENGINE_POSTGRESQL = 3;
 	
 	const ENGINE_IS_MYSQL = false;
 	const ENGINE_IS_MARIADB = false;
@@ -23,15 +24,16 @@ abstract class DB {
 	const CONNECT_HOME = 1;
 	const CONNECT_CMS = 2;
 	
-	public static $engine;
-
-	public static $connection_active = false;
-	public static $connection_active_is_async = false;
-	public static $connection_database = false;
-	public static $database_selected = false;
+	const MODE_CONNECT_SET_LEVEL = 1;
+	const MODE_CONNECT_DEFAULT_DATABASE = 2;
+	const MODE_CONNECT_SECONDARY = 4;
 	
-	public static $connection_level_default = false;
+	public static $connection_active = false;
+	public static $connection_is_secondary = false;
+	public static $connection_database = false;
+	
 	public static $connection_level = false;
+	public static $connection_level_default = false;
 
 	public static $localhost = 'localhost';
 	public static $database_core = '';
@@ -39,23 +41,24 @@ abstract class DB {
 	public static $database_home = '';
 	public static $table_prefix = '';
 			
-	protected static $arr_database_level_connection_details = [];
-	protected static $arr_database_level_connection = [];
-	protected static $arr_database_level_connection_async = [];
+	protected static $arr_databases_levels_connection_details = [];
+	protected static $arr_databases_levels_connection_primary = [];
+	protected static $arr_databases_levels_connections_secondary = [];
 	protected static $arr_connection_status = [];
-			
+	protected static $arr_databases_alias = [];
+	
 	protected static $arr_tables = [];
-	protected static $arr_override_tables = [];
+	protected static $arr_tables_override = [];
 	
 	protected static $last_query = '';
 	
-	public static function setConnection($level = false, $is_default = false) {
-
+	public static function setConnection($level = null, $num_mode = 0) {
+		
 		if ($level) {
 			
 			static::$connection_level = $level;
 			
-			if ($is_default) {
+			if (bitHasMode($num_mode, static::MODE_CONNECT_SET_LEVEL)) {
 				static::$connection_level_default = static::$connection_level;
 			}
 		} else {
@@ -63,21 +66,72 @@ abstract class DB {
 			static::$connection_level = (static::$connection_level_default ?: static::CONNECT_HOME);
 		}
 		
-		try {
-			
-			static::newConnection();
-		} catch (\Exception $e) {
-			
-			static::setDatabase(); // Make sure to set the database implicitly to unavailable
-			throw($e);
+		$use_connection_database = (bitHasMode($num_mode, static::MODE_CONNECT_DEFAULT_DATABASE) ? false : null); // Default/native database is 'false'
+		
+		static::$connection_is_secondary = bitHasMode($num_mode, static::MODE_CONNECT_SECONDARY);
+		
+		if (static::$connection_is_secondary) {
+
+			static::setConnectionDatabase($use_connection_database, false);
+
+			return;
 		}
 		
-		static::setDatabase();
+		static::setConnectionDatabase($use_connection_database, true);
+	}
+	
+	public static function setConnectionDatabase($database = null, $do_connection = null) {
+		
+		if ($database === null) {
+			$database = static::$connection_database;
+		}
+		
+		$database = (static::$arr_databases_alias[$database] ?? $database);
+		
+		static::$connection_database = (isset(static::$arr_databases_levels_connection_primary[$database]) ? $database : false);
+		
+		if (static::$connection_is_secondary) {
+			
+			if ($do_connection === false) { // Not initiating a new connection yet, wait for it really to be called
+				
+				static::$connection_active = false;
+			} else {
+				
+				try {
+			
+					static::$connection_active = static::newConnectionSecondary();
+				} catch (\Exception $e) {
+					
+					static::$connection_is_secondary = false;
+					static::setConnectionDatabase(false); // Make sure to set the database implicitly to unavailable
+					
+					throw($e);
+				}
+			}
+		} else {
+			
+			if ($do_connection === true) { // Check for new connections
+				
+				try {
+			
+					static::newConnection();
+				} catch (\Exception $e) {
+					
+					static::setConnectionDatabase(false); // Make sure to set the database implicitly to unavailable
+					
+					throw($e);
+				}
+			}
+			
+			static::$connection_active = (static::$arr_databases_levels_connection_primary[static::$connection_database][static::$connection_level] ?? false);
+		}
+		
+		return static::$connection_active;
 	}
 	
 	public static function getTable($identifier) {
 	
-		$name = (static::$arr_override_tables[$identifier] ?? (static::$arr_tables[$identifier] ?? $identifier));
+		$name = (static::$arr_tables_override[$identifier] ?? (static::$arr_tables[$identifier] ?? $identifier));
 		
 		$name = str_replace('"', '', $name); // Remove a possible previous getTable parsing
 		$arr_database_table = explode('.', $name);
@@ -85,11 +139,11 @@ abstract class DB {
 		if (count($arr_database_table) > 1) {
 			
 			$name = '"'.$arr_database_table[0].'".'.$arr_database_table[1];
-			static::setDatabase($arr_database_table[0]);
+			static::setConnectionDatabase($arr_database_table[0]);
 		} else {
 			
 			$name = '"'.$name.'"';
-			static::setDatabase(false);
+			static::setConnectionDatabase(false);
 		}
 		
 		return $name;
@@ -102,7 +156,7 @@ abstract class DB {
 	
 	public static function getTableName($identifier) {
 	
-		$name = (static::$arr_override_tables[$identifier] ?? (static::$arr_tables[$identifier] ?? $identifier));
+		$name = (static::$arr_tables_override[$identifier] ?? (static::$arr_tables[$identifier] ?? $identifier));
 
 		return $name;
 	}
@@ -114,14 +168,14 @@ abstract class DB {
 
 	public static function overrideTable($identifier, $name) {
 		
-		static::$arr_override_tables[$identifier] = $name;
+		static::$arr_tables_override[$identifier] = $name;
 	}
 	
 	public static function getDatabaseTables() {
 		
 		$arr_database_tables = [];
 		
-		foreach (array_merge(static::$arr_tables, static::$arr_override_tables) as $identifier => $name) {
+		foreach (array_merge(static::$arr_tables, static::$arr_tables_override) as $identifier => $name) {
 			
 			$database_table = explode('.', $name);
 			$table = ($database_table[1] ?? $database_table[0]);
@@ -132,40 +186,38 @@ abstract class DB {
 		return $arr_database_tables;
 	}
 	
-	public static function setConnectionDetails($host, $user, $password, $level = false, $database = false) {
+	public static function setConnectionDetails($host, $user, $password, $level = false, $database = false, $database_host = null) {
+		
+		// $database = 'schema', $database_host = 'database host/container'
 		
 		$password = \Settings::getSafeText($password);
 		
 		$level = ($level ?: static::CONNECT_HOME);
 				
-		static::$arr_database_level_connection_details[$database][$level] = ['host' => $host, 'user' => $user, 'password' => $password, 'level' => $level, 'database' => $database];
+		static::$arr_databases_levels_connection_details[$database][$level] = ['host' => $host, 'user' => $user, 'password' => $password, 'level' => $level, 'database' => ($database_host ?? $database_host)];
 		
-		ksort(static::$arr_database_level_connection_details[$database]); // Make sure the levels are sorted
+		ksort(static::$arr_databases_levels_connection_details[$database]); // Make sure the levels are sorted
 	}
 	
-	public static function overrideConnectionDetails($host, $user, $password, $level = false, $database = false) {
+	public static function overrideConnectionDetails($host, $user, $password, $level = false, $database = false, $database_host = null) {
 		
 		$level = ($level ?: static::CONNECT_HOME);
 	
-		unset(static::$arr_database_level_connection[$database]);
+		unset(static::$arr_databases_levels_connection_primary[$database]);
 		
-		static::setConnectionDetails($host, $user, $password, $level, $database);
+		static::setConnectionDetails($host, $user, $password, $level, $database, $database_host);
 	}
 	
-	public static function setConnectionAlias($alias, $database) {
-		
-		if (!isset(static::$arr_database_level_connection[$database])) {
-			static::$arr_database_level_connection[$database] = [];
-		}
-		
-		static::$arr_database_level_connection[$alias] = &static::$arr_database_level_connection[$database];
+	public static function setConnectionDetailsDatabaseAlias($alias, $database) {
+				
+		static::$arr_databases_alias[$alias] = $database;
 	}
-
+		
 	protected static function newConnection() {
 		
-		foreach (static::$arr_database_level_connection_details as $database => $arr_level_connection_details) {
+		foreach (static::$arr_databases_levels_connection_details as $database => $arr_level_connection_details) {
 
-			if (!empty(static::$arr_database_level_connection[$database][static::$connection_level])) {
+			if (!empty(static::$arr_databases_levels_connection_primary[$database][static::$connection_level])) {
 				continue;
 			}
 			
@@ -179,7 +231,7 @@ abstract class DB {
 				
 				for ($i = static::$connection_level; $i <= $level; $i++) {
 					
-					static::$arr_database_level_connection[$database][$i] = $connection;
+					static::$arr_databases_levels_connection_primary[$database][$i] = $connection;
 				}
 				
 				break;
@@ -187,71 +239,80 @@ abstract class DB {
 		}
 	}
 	
-	public static function closeConnection() {
-				
-		static::doClose();
+	protected static function newConnectionSecondary() {
 		
-		foreach (static::$arr_database_level_connection[static::$connection_database] as $level => $connection) { // The same connection could be used by multiple levels
+		if (isset(static::$arr_databases_levels_connections_secondary[static::$connection_database][static::$connection_level])) {
 			
-			if ($connection !== static::$connection_active) {
-				continue;
-			}
+			foreach (static::$arr_databases_levels_connections_secondary[static::$connection_database][static::$connection_level] as $connection_secondary) {
 				
-			unset(static::$arr_database_level_connection[static::$connection_database][$level]);
-		}
-	}
-
-	public static function fixConnection() {
-		
-		static::closeConnection();
-		
-		static::newConnection();
-		
-		static::setDatabase(static::$database_selected);
-	}
-	
-	abstract public static function clearConnection();
-	
-	protected static function newConnectionAsync() {
-		
-		if (isset(static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level])) {
-			
-			foreach (static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level] as $connection_async) {
-				
-				if (static::isReady($connection_async)) {
-					return $connection_async;
+				if (static::isReady($connection_secondary)) {
+					return $connection_secondary;
 				}
 			}
 		}
 		
-		foreach (static::$arr_database_level_connection_details[static::$connection_database] as $level => $arr_connection_details) {
+		foreach (static::$arr_databases_levels_connection_details[static::$connection_database] as $level => $arr_connection_details) {
 			
 			if ($level < static::$connection_level) {
 				continue;
 			}
 				
-			$connection_async = static::createConnection($arr_connection_details);
+			$connection_secondary = static::createConnection($arr_connection_details);
 			
 			break;
 		}
 		
-		static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level][] = $connection_async;
+		static::$arr_databases_levels_connections_secondary[static::$connection_database][static::$connection_level][] = $connection_secondary;
 
-		return $connection_async;
+		return $connection_secondary;
 	}
 	
+	public static function closeConnection() {
+				
+		static::doClose();
+		
+		if (static::$connection_is_secondary) {
+			
+			foreach (static::$arr_databases_levels_connections_secondary[static::$connection_database] as $level => $arr_connections) {
+				
+				foreach ($arr_connections as $key => $connection) {
+					
+					if ($connection !== static::$connection_active) {
+						continue;
+					}
+						
+					unset(static::$arr_databases_levels_connections_secondary[static::$connection_database][$level][$key]);
+				}
+			}
+			
+			static::$connection_active = false;
+			
+			return;
+		}
+		
+		foreach (static::$arr_databases_levels_connection_primary[static::$connection_database] as $level => $connection) { // The same connection could be used by multiple levels
+			
+			if ($connection !== static::$connection_active) {
+				continue;
+			}
+				
+			unset(static::$arr_databases_levels_connection_primary[static::$connection_database][$level]);
+		}
+		
+		static::$connection_active = false;
+	}
+
+	public static function fixConnection() {
+		
+		static::closeConnection();
+				
+		static::setConnectionDatabase(null, true);
+	}
+	
+	abstract public static function clearConnection();
+		
 	abstract protected static function createConnection($arr_connection_details);
-	
-	public static function setDatabase($database = false) {
 		
-		static::$database_selected = $database;
-		static::$connection_database = (isset(static::$arr_database_level_connection[$database]) ? $database : false);
-		
-		static::$connection_active = (static::$arr_database_level_connection[static::$connection_database][static::$connection_level] ?? false);
-		
-		return static::$connection_active;
-	}
-	
 	abstract public static function query($q);
 	
 	abstract public static function queryAsync($q);
@@ -262,7 +323,7 @@ abstract class DB {
 	
 	public static function startTransaction($identifier = 'default', $do_force = false) {
 		
-		$arr_connection_status =& static::$arr_connection_status[static::$connection_database];
+		$arr_connection_status =& static::$arr_connection_status[static::$connection_is_secondary][static::$connection_database];
 		
 		// When requested, force close any existing transaction
 		if ($do_force) {
@@ -286,7 +347,7 @@ abstract class DB {
 	
 	public static function commitTransaction($identifier = 'default', $commit = true) {
 		
-		$arr_connection_status =& static::$arr_connection_status[static::$connection_database];
+		$arr_connection_status =& static::$arr_connection_status[static::$connection_is_secondary][static::$connection_database];
 		
 		if (!$arr_connection_status['transaction'] || $arr_connection_status['transaction'] != $identifier) {
 			return false;
@@ -307,7 +368,7 @@ abstract class DB {
 		
 		if (!$identifier) {
 			
-			$arr_connection_status = (static::$arr_connection_status[static::$connection_database] ?? null);
+			$arr_connection_status = (static::$arr_connection_status[static::$connection_is_secondary][static::$connection_database] ?? null);
 			
 			if (!$arr_connection_status) {
 				return false;
@@ -325,7 +386,7 @@ abstract class DB {
 	
 	public static function getTransaction() {
 		
-		$arr_connection_status = (static::$arr_connection_status[static::$connection_database] ?? null);
+		$arr_connection_status = (static::$arr_connection_status[static::$connection_is_secondary][static::$connection_database] ?? null);
 		
 		if (!$arr_connection_status || !$arr_connection_status['transaction']) {
 			return false;
@@ -351,23 +412,21 @@ abstract class DB {
 			} catch (\Exception $ee) { }
 		}
 				
-		$msg = $e->getMessage();
+		$str_message = $e->getMessage();
 		$debug = static::$last_query;
 		
-		$msg_client = static::getErrorMessage($e->getCode());
+		$str_message_client = $e->getClientMessage();
 
-		if ($msg_client) {
-			msg($msg_client, \Trouble::label(TROUBLE_ERROR), LOG_CLIENT, false, \Trouble::type(TROUBLE_NOTICE));
+		if ($str_message_client) {
+			message($str_message_client, \Trouble::label(TROUBLE_ERROR), LOG_CLIENT, false, \Trouble::type(TROUBLE_NOTICE), null, $e);
 		}
 
-		error($msg, TROUBLE_DATABASE, LOG_BOTH, $debug, $e);
+		error($str_message, TROUBLE_DATABASE, LOG_BOTH, $debug, $e);
 	}
-	
-	abstract public static function getErrorMessage($code);
-	
-	public static function noCache() {
 		
-		static::query("SET SESSION query_cache_type = 0;");
+	public static function checkSQL($sql) { // Override to do checks/debug
+		
+		return $sql;
 	}
 	
 	public static function getRealNamespace() {
@@ -379,6 +438,9 @@ abstract class DB {
 
 abstract class DBTrouble extends \Exception {
 	
+	public function getClientMessage() {
+		return null;
+	}
 }
 
 abstract class DBStatement {
@@ -523,6 +585,11 @@ abstract class DBFunctions {
 	abstract public static function unescapeAs($value, $what);
 			
 	abstract public static function castAs($value, $what, $length = false);
+	
+	public static function castColumnAs($column, $what, $length = false) {
+		
+		return $column.' '.$what;
+	}
 	
 	public static function convertTo($value, $to, $from, $format = null) {
 		
@@ -700,9 +767,7 @@ abstract class DBFunctions {
 	abstract public static function interval($amount, $unit, $field = false);
 	
 	abstract public static function timeDifference($unit, $field_start, $field_end);
-	
-	abstract public static function timeNow($do_transaction = false);
-	
+
 	abstract public static function searchRegularExpression($sql_field, $sql_expression, $str_flags = false);
 	
 	public static function searchMatch($sql_field, $str, $do_dynamic = true, $do_array = false) {
@@ -780,15 +845,99 @@ abstract class DBFunctions {
 		return $sql_order;
 	}
 	
-	public static function str2Date($str) {
-				
+	abstract public static function dateTimeNow($do_transaction = false, $do_precision = true);
+	
+	public static function numTimeNow($do_precision = true) { // For outside DB use as well
+		
+		if ($do_precision) {
+			return microtime(true);
+		}
+		
+		return time();
+	}
+	
+	public static function str2DateTime($str, $str_precision = '>') {
+		
+		$str = (string)$str;
+		$str_datetime = $str;
+		
 		if (is_numeric($str)) {
-			$int = (($str > 0 && strlen((int)$str) == 4) ? strtotime('01-01-'.$str) : $str);
-		} else if ($str) {
-			$int = strtotime($str);
+			
+			if ($str > 0 && strlen($str) == 4) {
+				$str_datetime = '01-01-'.$str;
+			} else {
+				$str_datetime = '@'.$str; // Timestamp
+			}
+		}
+		
+		if ($str_datetime == '') {
+			return null;
+		}
+
+		$datetime = new \DateTimeImmutable($str_datetime);
+		
+		$has_precision = (strpos($str, '.') !== false);
+
+		if ($has_precision) { // Use fractional seconds
+			
+			$str = $datetime->format('Y-m-d H:i:s.u');
+		} else {
+			
+			$str = $datetime->format('Y-m-d H:i:s');
+			
+			// Enable comparison with fractional seconds, set this to include the whole second, or ending at the start of second
+			
+			if ($str_precision === '>' || $str_precision === '<=') { // Match a second related to the full passing of a second
+				$str .= '.999999';
+			} else if ($str_precision === '<' || $str_precision === '>=') { // Match a second related to the initialisation of a second
+				$str .= '.000000';
+			} // Else '=': do not add anything
 		}
 				
-		return ($int ? date('Y-m-d H:i:s', $int) : false);
+		return $str;
+	}
+	
+	public static function str2NumericTime($str, $str_precision = '>') {
+		
+		$str = (string)$str;
+		
+		if ($str == '') {
+			return null;
+		}
+		
+		if (is_numeric($str) && strlen($str) > 4) { // Timestamp
+			$str = '@'.$str;
+		}
+
+		$datetime = new \DateTimeImmutable($str);
+		
+		$has_precision = (strpos($str, '.') !== false);
+
+		if ($has_precision) { // Use fractional seconds
+			
+			$str = $datetime->format('U.u');
+			
+			$num = (float)$str;
+		} else {
+			
+			$str = $datetime->format('U');
+			
+			// See str2DateTime() for precision
+			
+			if ($str_precision === '>' || $str_precision === '<=') {
+				$str .= '.999999';
+			} else if ($str_precision === '<' || $str_precision === '>=') {
+				$str .= '.000000';
+			}
+			
+			if ($str_precision === '=') {
+				$num = (int)$str;
+			} else {
+				$num = (float)$str;
+			}
+		}
+				
+		return $num;
 	}
 	
 	public static function str2Search($str) {
@@ -806,10 +955,10 @@ abstract class DBFunctions {
 		return $str;
 	}
 	
-	abstract public static function sqlTableOptions($engine);
+	abstract public static function tableOptions($options);
 	
 	abstract public static function bulkSelect($q);
-	
+		
 	public static function cleanupTables($arr_tables, $nr_limit = 100000) {
 				
 		$arr_msg = [];
@@ -819,7 +968,7 @@ abstract class DBFunctions {
 			$count = count($arr_msg);
 			$debug = implode(EOL_1100CC, $arr_msg);
 		
-			msg('Cleaned up '.$count.' tables.', 'DATABASE', LOG_BOTH, $debug);
+			message('Cleaned up '.$count.' tables.', 'DATABASE', LOG_BOTH, $debug);
 		};
 		
 		try {
@@ -833,7 +982,7 @@ abstract class DBFunctions {
 						status SMALLINT,
 						id INT,
 						PRIMARY KEY (status, id)
-					) ".static::sqlTableOptions(static::TABLE_OPTION_MEMORY).";
+					) ".static::tableOptions(static::TABLE_OPTION_MEMORY).";
 
 					INSERT INTO cleanup_cache
 						(SELECT

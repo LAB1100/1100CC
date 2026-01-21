@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -542,7 +542,7 @@ class intf_api_authentication extends apis {
 			self::handleClient(false, $_POST['enabled'], $_POST);
 
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_client" && $id) {
@@ -550,7 +550,7 @@ class intf_api_authentication extends apis {
 			self::handleClient($id, $_POST['enabled'], $_POST, $_POST['regenerate']);
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 
 		if ($method == "del_client" && $id) {
@@ -558,7 +558,7 @@ class intf_api_authentication extends apis {
 			self::delClients($id);
 
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "insert_client_user" && $id) {
@@ -572,7 +572,7 @@ class intf_api_authentication extends apis {
 			self::handleClientUser($client_id, false, $_POST['enabled'], $_POST);
 
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_client_user" && $id) {
@@ -584,7 +584,7 @@ class intf_api_authentication extends apis {
 			self::handleClientUser($client_id, $user_id, $_POST['enabled'], $_POST, $_POST['regenerate']);
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_client_user" && $id) {
@@ -603,7 +603,7 @@ class intf_api_authentication extends apis {
 			self::delClientUsers($arr_ids);
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

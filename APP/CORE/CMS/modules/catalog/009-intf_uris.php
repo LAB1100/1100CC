@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -260,7 +260,7 @@ class intf_uris extends uris {
 			");
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_uri" || $method == "del_uri") {
@@ -286,7 +286,7 @@ class intf_uris extends uris {
 			");
 								
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_uri" && $id) {
@@ -297,7 +297,7 @@ class intf_uris extends uris {
 					AND identifier = '".DBFunctions::strEscape($str_cur_identifier)."'
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

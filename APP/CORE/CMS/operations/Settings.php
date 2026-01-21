@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -22,12 +22,12 @@ class Settings {
 		
 		$value = null;
 		
-		if ($key) {
+		if ($key !== null && $key !== false) {
 			
 			if (isset(self::$arr_override_keys[$setting][$key])) {
 				$value = self::$arr_override_keys[$setting][$key];
 			} else if (isset(self::$arr_override[$setting])) {
-				$value = self::$arr_override[$setting][$key];
+				$value = (self::$arr_override[$setting][$key] ?? null);
 			} else {
 				$value = (self::$arr[$setting][$key] ?? null);
 			}
@@ -42,8 +42,8 @@ class Settings {
 			$value = ($arr_override ?? (self::$arr[$setting] ?? null));
 		}
 		
-		if ($value === null) {
-			return null;
+		if ($value === null || $value === true || $value === false) {
+			return $value;
 		}
 		
 		if (is_callable($value)) {
@@ -67,7 +67,7 @@ class Settings {
 
 	public static function override($setting, $value, $key = null) {
 		
-		if ($key) {
+		if ($key !== null && $key !== false) {
 			self::$arr_override_keys[$setting][$key] = $value;
 		} else {
 			unset(self::$arr_override_keys[$setting]);
@@ -77,7 +77,7 @@ class Settings {
 	
 	public static function add($setting, $value, $key = null) {
 		
-		if ($key) {
+		if ($key !== null && $key !== false) {
 			self::$arr_add[$setting][$key] = $value;
 		} else {
 			self::$arr_add[$setting][] = $value;
@@ -118,7 +118,7 @@ class Settings {
 		opcache_invalidate($path);
 	}
 	
-	public static function getShare($key) {
+	public static function getShare($key, $use_invalid = false) {
 		
 		$path = self::get('path_temporary').'share_'.$key;
 		
@@ -130,7 +130,7 @@ class Settings {
 			// Nothing
 		}
 		
-		if (!$is_valid) {
+		if ($is_valid === null || ($is_valid === false && !$use_invalid)) {
 			return false;
 		}
 		
@@ -140,7 +140,6 @@ class Settings {
 	public static function getSafeText($str) {
 		
 		if (isPath(DIR_SAFE_SITE.$str)) {
-			
 			return readText(DIR_SAFE_SITE.$str);
 		}
 		

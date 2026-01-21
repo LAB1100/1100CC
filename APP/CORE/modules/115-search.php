@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -18,22 +18,24 @@ class search extends base_module {
 			
 		$str_search = static::decodeURLString($this->arr_query[0]);
 				
-		$return .= '<h1>'.getLabel('lbl_search').'</h1>
-		<form id="f:search:search-0">
-			<input type="search" name="string" value="'.strEscapeHTML($str_search).'" /><input type="submit" value="'.getLabel('lbl_search').'" />
-		</form>
+		$str_html = '<h1>'.getLabel('lbl_search').'</h1>
+		
+		<form id="f:search:search-0">'
+			.'<input type="search" name="string" value="'.strEscapeHTML($str_search).'" /><input type="submit" value="'.getLabel('lbl_search').'" />'
+		.'</form>
+		
 		<div class="result">';
 			
 			if ($this->arr_query[0]) {
 				
-				$return .= $this->doSearch($str_search);
+				$str_html .= $this->doSearch($str_search);
 				
 				SiteEndEnvironment::setModuleVariables($this->mod_id, [], true); // Clear the settings in the url
 			}
 		
-		$return .= '</div>';
+		$str_html .= '</div>';
 		
-		return $return;
+		return $str_html;
 	}
 	
 	public static function css() {
@@ -44,7 +46,7 @@ class search extends base_module {
 			.search dl { margin-top: 20px; }
 			.search dl > dt { margin-top: 12px; }
 			.search dl > dt > a { font-size: 1.4rem; font-weight: bold; }
-			.search dl > dt > .hits { font-size: 1rem; display: inline-block; }
+			.search dl > dt > .hits { font-size: 1rem; display: inline-block; margin-left: 0.6rem; }
 			.search dl > dt > .link { display: block; margin-top: 4px; }
 			.search dl > dd { color: #666666; margin-top: 8px; }
 			.search dl > dd em { font-style: normal; font-weight: bold; color: var(--text); background-color: #fffc5b; }
@@ -105,18 +107,20 @@ class search extends base_module {
 				if ($arr_search_properties[$arr_module['module']]['module_var']) {
 					
 					$arr_var = json_decode($arr_module['var'], true);
-					$var = $arr_var[$arr_search_properties[$arr_module['module']]['module_var']];
+					$num_var = (int)$arr_var[$arr_search_properties[$arr_module['module']]['module_var']];
 				} else {
 					
-					$var = $arr_module['var'];
+					$num_var = (int)$arr_module['var'];
 				}
 				
-				$arr_search_vars[$arr_module['module']][$var] = $arr_module['id'];
+				$arr_search_vars[$arr_module['module']][$num_var] = $arr_module['id'];
 			} else if (!$arr_search_properties[$arr_module['module']]['search_var']) {
 				
 				$arr_search_vars[$arr_module['module']] = $arr_module['id'];
 			}
 		}
+		
+		$str_html = '';
 
 		if ($arr_search_properties) {
 							
@@ -155,8 +159,8 @@ class search extends base_module {
 					$str_title = $str_title_highlight['result'];
 					$str_excerpt_highlight = FormatExcerpt::performHighlight($str_excerpt, $str_search);
 					$str_excerpt = $str_excerpt_highlight['result'];
-					$body_count = FormatExcerpt::countString($arr_bodies[$key], $str_search);
-					$arr_results[$key]['count'] = ($str_title_highlight['count']+($body_count ?: $str_excerpt_highlight['count']));
+					$num_body_count = FormatExcerpt::countString($arr_bodies[$key], $str_search);
+					$arr_results[$key]['count'] = ($str_title_highlight['count']+($num_body_count ?: $str_excerpt_highlight['count']));
 				}
 				
 				if (!$str_title) { // Get module name
@@ -181,12 +185,12 @@ class search extends base_module {
 					$str_url = $arr_cache_url['page'][$module_id];
 				}
 				
-				$arr_results[$key]['html'] = '<dt>
-					<a href="'.$str_url.'" target="_blank">'.$str_title.'</a>
-					<span class="hits">'.$arr_results[$key]['count'].' hit'.($arr_results[$key]['count'] > 1 ? 's' : '').'</span>
-					<span class="link">'.strEscapeHTML(Labels::parseTextVariables(($arr_modules[$module_id]['directory_title'] ? $arr_modules[$module_id]['directory_title'].' > ' : '> ').$arr_modules[$module_id]['page_title'])).'</span>
-				</dt>
-				<dd>'.$str_excerpt.'</dd>';
+				$arr_results[$key]['html'] = '<dt>'
+					.'<a href="'.$str_url.'" target="_blank">'.$str_title.'</a>'
+					.'<span class="hits">'.$arr_results[$key]['count'].' hit'.($arr_results[$key]['count'] > 1 ? 's' : '').'</span>'
+					.'<span class="link">'.strEscapeHTML(Labels::parseTextVariables(($arr_modules[$module_id]['directory_title'] ? $arr_modules[$module_id]['directory_title'].' > ' : '> ').$arr_modules[$module_id]['page_title'])).'</span>'
+				.'</dt>'
+				.'<dd>'.$str_excerpt.'</dd>';
 			}
 			
 			uasort($arr_results, function($a, $b) {
@@ -197,20 +201,20 @@ class search extends base_module {
 				return ($a['count'] > $b['count'] ? -1 : 1);
 			});
 			
-			$result = implode('', arrValuesRecursive('html', $arr_results));
+			$str_html = implode('', arrValuesRecursive('html', $arr_results));
 		}
 
-		if ($result) {
+		if ($str_html) {
 			
-			$return .= '<dl>
-			'.$result.'
-			</dl>';
+			$str_html = '<dl>'
+				.$str_html
+			.'</dl>';
 		} else {
 			
-			return '<p>'.getLabel('msg_search_no_result').'</p>';
+			$str_html = '<p>'.getLabel('msg_search_no_result').'</p>';
 		}
 		
-		return $return;
+		return $str_html;
 	}
 			
 	private static function moduleSearchTriggers($arr_search_properties, $arr_search_vars, $arr_strings) {

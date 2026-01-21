@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -250,7 +250,7 @@ class FormatTags {
 			
 			// [icon=name:category]
 			'icon' => [
-				'/\[icon=([^\s\'"<>:]+?)(?::([^\s\'"<>]+?))?\]/i', 
+				'/\[icon=([a-z0-9_\-]+?)(?::([^\s\'"<>]+?))?\]/i', 
 				function($arr_matches) {
 					return '<span class="icon" data-name="'.$arr_matches[1].'"'.($arr_matches[2] ? ' data-category="'.$arr_matches[2].'"' : '').'>'.getIcon($arr_matches[1]).'</span>';
 				}

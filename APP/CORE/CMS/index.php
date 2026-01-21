@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -57,21 +57,34 @@
 			$json = file_get_contents('php://input');
 			
 			if ($json) {
-				$_POST = JSON2Value($json);
+				
+				$json = JSON2Value($json);
+				
+				if (is_array($json)) {
+					$_POST = $json;
+				}
 			}
-		} else if (!empty($_POST['json'])) { // Posted data in serialized format, check for JSON data
+			unset($json);
+		} else if (!empty($_POST['json'])) { // Posted data in serialised format, check for JSON data
 			
-			$arr = JSON2Value($_POST['json']);
+			$json = JSON2Value($_POST['json']);
 			unset($_POST['json']);
 			
-			foreach ($arr as $key => $value) {
-				$_POST[$key] = $value;
+			if (is_array($json)) {
+				
+				foreach ($json as $key => $value) {
+					$_POST[$key] = $value;
+				}
 			}
-			unset($arr);
+			unset($json);
 		}
 	}
 	
 	Response::setFormat((SiteStartEnvironment::getRequestState() == SiteStartEnvironment::REQUEST_INDEX ? Response::OUTPUT_XML : Response::OUTPUT_JSON) | Response::RENDER_HTML);
+	
+	if (!strIsValidEncoding($_SERVER['PATH_INFO']) || !arrHasValidStringEncoding($_GET)) {
+		error(Labels::getSystemLabel('msg_request_invalid_encoding'), TROUBLE_INVALID_REQUEST, LOG_CLIENT);
+	}
 	
 	require('login.php');
 	
@@ -103,7 +116,7 @@
 	SiteStartEnvironment::setRequestVariables($arr_path_info);
 	SiteStartEnvironment::setModules(getModules());
 	
-	DB::setConnection(DB::CONNECT_HOME);
+	DB::setConnection(DB::CONNECT_HOME, DB::MODE_CONNECT_DEFAULT_DATABASE);
 	
 	Labels::setSystemLabels();
 	
@@ -113,11 +126,12 @@
 	// Async		
 	if ($run_module && $run_method) {
 		
-		DB::setConnection(DB::CONNECT_CMS, true);
+		DB::setConnection(DB::CONNECT_CMS, DB::MODE_CONNECT_SET_LEVEL | DB::MODE_CONNECT_DEFAULT_DATABASE);
 		
 		Response::setFormat(Response::OUTPUT_TEXT);
 		
 		Mediator::runModuleMethod($run_module, $run_method, $arr_run_options);
+		
 		exit;
 	}
 	
@@ -140,7 +154,9 @@
 		CombineJSCSS::combine(SiteStartEnvironment::getMaterial($type), $arr_modules, $type, $ie_tag);
 		
 		exit;
-	} else if ($str_path_start == 'cache') {
+	}
+	
+	if ($str_path_start == 'cache') {
 				
 		$cache = new FileCache($arr_path_info[2], $arr_path_info[3], implode('/', array_slice($arr_path_info, 4)));
 		$cache->cache();
@@ -156,13 +172,13 @@
 					
 		if ($str_path_start == 'script') {
 			
-			Log::setMsg(getLabel('msg_no_script_support'));
-			msg(getLabel('msg_enable_script'), 'SORRY', LOG_CLIENT);
+			Log::setHeader(getLabel('msg_no_script_support'));
+			message(getLabel('msg_enable_script'), 'SORRY', LOG_CLIENT);
 		}
 				
-		$obj = Log::addToObj(Response::getObject());
+		$obj = Log::addToObject(Response::getObject());
 		
-		$page = new ExitPage($obj->msg, $str_path_start, $str_path_start);
+		$page = new ExitPage($obj->message, $str_path_start, $str_path_start);
 		
 		Response::stop($page->getPage(), '');
 	}
@@ -184,7 +200,7 @@
 		CMSLogin::index();
 	}
 	
-	DB::setConnection(DB::CONNECT_CMS, true);
+	DB::setConnection(DB::CONNECT_CMS, DB::MODE_CONNECT_SET_LEVEL | DB::MODE_CONNECT_DEFAULT_DATABASE);
 
 	// Language
 	SiteStartEnvironment::checkLanguageSession();
@@ -200,7 +216,11 @@
 		}
 		
 		require('commands.php');
-	} else if ($str_path_last == 'manifest') {
+		
+		exit;
+	}
+	
+	if ($str_path_last == 'manifest') {
 
 		if ($str_path_start == 'login' || $str_path_start == 'manifest') {
 			
@@ -238,7 +258,7 @@
 			'background_color' => $arr_theme['background_color'],
 			'display' => 'standalone'
 		];
-				
+		
 		Response::setFormat(Response::OUTPUT_JSON);
 				
 		$json = Response::parse($arr_manifest);
@@ -248,157 +268,164 @@
 		Response::sendHeaders();
 		
 		echo $json;
+		
+		exit;
+	}
+
+	if (!isset($_SESSION['LANDING_URL'])) {
+		$_SESSION['LANDING_URL'] = SiteStartEnvironment::getRequestURL(false);
+	}
+	
+	if ($str_path_start == 'login') {
+		
+		if (!empty($_POST['login_user']) && !empty($_POST['login_password']) && is_string($_POST['login_user']) && is_string($_POST['login_password'])) {
+			
+			CMSLogin::indexProposeUser($_POST['login_user'], $_POST['login_password']);
+			
+			Response::location('/');
+		}
+		
+		SiteEndEnvironment::checkServerName();
+		
+		require('core_combine.php');
+		SiteStartEnvironment::setMaterial();
+				
+		$html_body = '<div id="cms-login">
+		
+			<form method="post" action="/login/" autocomplete="on">			
+				<label>'.getLabel('lbl_username').'</label>
+				<input name="login_user" type="text"'.(($arr_path_info[2] ?? '') == 'LOGIN_INCORRECT' ? ' class="input-error"' : '').' />
+				<label>'.getLabel('lbl_password').'</label>
+				<input name="login_password" type="password"'.(($arr_path_info[2] ?? '') == 'LOGIN_INCORRECT' ? ' class="input-error"' : '').' />
+				<menu><input type="submit" value="Login" /></menu>
+			</form>
+			
+			<div id="lab1100"><span><strong>1100CC</strong> is developed by</span><a href="https://lab1100.com" target="_blank"></a></div>
+		
+		</div>';
+		
+		$str_url = '/login/';
 	} else {
-
-		if (!isset($_SESSION['PAGE_LOADED'])) {
-			$_SESSION['PAGE_LOADED'] = 0;
-		}
-		$_SESSION['PAGE_LOADED']++;
 		
-		if ($str_path_start == 'login') {
+		SiteStartEnvironment::preloadModules();
+		
+		$str_module = (SiteStartEnvironment::getRequestVariables(1) ?? '');
+		
+		if (!$str_module || !SiteStartEnvironment::getModules($str_module)) {
 			
-			SiteEndEnvironment::checkServerName();
+			$str_module = 'cms_dashboard';
+
+			SiteEndEnvironment::setRequestVariables($str_module, 1);
+		}
+		
+		$str_mod_identifier = 'mod-'.$str_module;
+		
+		$JSON = Response::getObject();
+		
+		$class = new $str_module;
+		
+		$html_content = $class->contents();
+		
+		if (isset($class->validate)) {
+			$JSON->validate[$str_mod_identifier] = $class->validate;
+		}
+		
+		SiteEndEnvironment::checkServerName();
+
+		$JSON->data_feedback = SiteEndEnvironment::getFeedback();
+		$JSON = Log::addToObject($JSON);
+		if (Settings::get('timing') === true) {
+			$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
+		}
+		SiteEndEnvironment::addScript("PARSE = function() {"
+			."return JSON.parse(".value2JSON(value2JSON($JSON)).");"
+		."};");
+		
+		require('core_combine.php');
+		SiteStartEnvironment::setMaterial();
+		
+		$html_body = '<div id="cms-menu" class="section">
+			<h1>'.getLabel('lbl_modules').'</h1>
+			'.cms_general::selectModuleList(SiteStartEnvironment::getModules()).'
+			<div id="lab1100">'
+				.'<span><strong>1100CC</strong> is developed by</span>'
+				.'<a href="https://lab1100.com" target="_blank"></a>'
+			.'</div>
+			<div><span>version</span><span>'.Labels::getServerVariable('version').'</span></div>
+		</div>
+		<div class="cms-content" id="'.$str_mod_identifier.'">';
+		
+			$html_body .= $html_content;
+		
+		$html_body .= '</div>';
+		
+		$str_url = implode('/', $arr_path_info);
+	}
+	
+	$str_url_manifest = $str_url.'manifest';
+	
+	$arr_theme = SiteEndEnvironment::getTheme();
+	$str_image = SiteEndEnvironment::getImage();
+	$str_url_image = URL_BASE.ltrim($str_image, '/');
+	$html_icons = SiteEndEnvironment::getIcons();
+
+	$html = '<!DOCTYPE html>'.EOL_1100CC
+	.'<html lang="'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE).'">'.EOL_1100CC
+		.'<head>'.EOL_1100CC
+			.'<title>'.getLabel('title', 'D').' | 1100CC</title>'
+			.$html_icons
+			.'<meta property="og:image" content="'.$str_url_image.'" />'
+			.'<meta name="theme-color" content="'.$arr_theme['theme_color'].'">'
+			.'<link rel="manifest" href="'.$str_url_manifest.'" crossOrigin="use-credentials" />';
 			
-			require('core_combine.php');
-			SiteStartEnvironment::setMaterial();
+			$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_CSS), SiteStartEnvironment::getModules());
+			$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" />';
+			$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_JS), SiteStartEnvironment::getModules());
+			$html .= '<script type="text/javascript" src="/combine/js/'.$version.'"></script>';
+			
+			if ($str_path_start != 'login') {
+				
+				$html .= SiteEndEnvironment::getHeadTags();
+				$html .= '<noscript>'
+					.'<meta http-equiv="refresh" content="0;url=/script" />'
+				.'</noscript>';
+			}
+	
+		$html .= EOL_1100CC.'</head>'.EOL_1100CC
+		.'<body>'.EOL_1100CC
+			.'<div id="cms-header">';
+			
+				if ($str_path_start != 'login') {
 					
-			$html_body = '<div id="cms-login">
-			
-				<form method="post" action="/" autocomplete="on">			
-					<label>'.getLabel('lbl_username').'</label>
-					<input name="login_user" type="text"'.(($arr_path_info[2] ?? '') == 'LOGIN_INCORRECT' ? ' class="input-error"' : '').' />
-					<label>'.getLabel('lbl_password').'</label>
-					<input name="login_ww" type="password"'.(($arr_path_info[2] ?? '') == 'LOGIN_INCORRECT' ? ' class="input-error"' : '').' />
-					<menu><input type="submit" value="Login" /></menu>
-				</form>
+					$html .= '<span id="welcome"><strong>'.getLabel('lbl_welcome').': </strong>'.$_SESSION['CUR_USER']['name'].'</span>';
+				}
 				
-				<div id="lab1100"><span><strong>1100CC</strong> is developed by</span><a href="https://lab1100.com" target="_blank"></a></div>
-			
-			</div>';
-			
-			$str_url = '/login/';
-		} else {
-			
-			SiteStartEnvironment::preloadModules();
-			
-			$str_module = (SiteStartEnvironment::getRequestVariables(1) ?? '');
-			
-			if (!$str_module || !SiteStartEnvironment::getModules($str_module)) {
-				
-				$str_module = 'cms_dashboard';
-
-				SiteEndEnvironment::setRequestVariables($str_module, 1);
-			}
-			
-			$str_mod_identifier = 'mod-'.$str_module;
-			
-			$JSON = Response::getObject();
-			
-			$class = new $str_module;
-			
-			$html_content = $class->contents();
-			
-			if (isset($class->validate)) {
-				$JSON->validate[$str_mod_identifier] = $class->validate;
-			}
-			
-			SiteEndEnvironment::checkServerName();
-
-			$JSON->data_feedback = SiteEndEnvironment::getFeedback();
-			$JSON = Log::addToObj($JSON);
-			if (Settings::get('timing') === true) {
-				$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);
-			}
-			SiteEndEnvironment::addScript("PARSE = function() {"
-				."return JSON.parse(".value2JSON(value2JSON($JSON)).");"
-			."};");
-			
-			require('core_combine.php');
-			SiteStartEnvironment::setMaterial();
-			
-			$html_body = '<div id="cms-menu" class="section">
-				<h1>'.getLabel('lbl_modules').'</h1>
-				'.cms_general::selectModuleList(SiteStartEnvironment::getModules()).'
-				<div id="lab1100">'
-					.'<span><strong>1100CC</strong> is developed by</span>'
-					.'<a href="https://lab1100.com" target="_blank"></a>'
-				.'</div>
-				<div><span>version</span><span>'.Labels::getServerVariable('version').'</span></div>
-			</div>
-			<div class="cms-content" id="'.$str_mod_identifier.'">';
-			
-				$html_body .= $html_content;
-			
-			$html_body .= '</div>';
-			
-			$str_url = implode('/', $arr_path_info);
-		}
-		
-		$str_url_manifest = $str_url.'manifest';
-		
-		$arr_theme = SiteEndEnvironment::getTheme();
-		$str_image = SiteEndEnvironment::getImage();
-		$str_url_image = URL_BASE.ltrim($str_image, '/');
-		$html_icons = SiteEndEnvironment::getIcons();
-
-		$html = '<!DOCTYPE html>'.EOL_1100CC
-		.'<html lang="'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_LANGUAGE).'">'.EOL_1100CC
-			.'<head>'.EOL_1100CC
-				.'<title>'.getLabel('title', 'D').' | 1100CC</title>'
-				.$html_icons
-				.'<meta property="og:image" content="'.$str_url_image.'" />'
-				.'<meta name="theme-color" content="'.$arr_theme['theme_color'].'">'
-				.'<link rel="manifest" href="'.$str_url_manifest.'" crossOrigin="use-credentials" />';
-				
-				$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_CSS), SiteStartEnvironment::getModules());
-				$html .= '<link href="/combine/css/'.$version.'" rel="stylesheet" type="text/css" />';
-				$version = CombineJSCSS::getVersion(SiteStartEnvironment::getMaterial(SiteStartEnvironment::MATERIAL_JS), SiteStartEnvironment::getModules());
-				$html .= '<script type="text/javascript" src="/combine/js/'.$version.'"></script>';
+				$html .= '<div id="plate">'
+					.'<span></span>'
+					.'<span id="lab1100cc" title="1100CC"><a href="/"></a></span>'
+					.'<span id="site"><a href="'.URL_BASE_HOME.'" target="_blank">'.getLabel('title', 'D').'</a></span>'
+				.'</div>';
 				
 				if ($str_path_start != 'login') {
 					
-					$html .= SiteEndEnvironment::getHeadTags();
-					$html .= '<noscript>'
-						.'<meta http-equiv="refresh" content="0;url=/script" />'
-					.'</noscript>';
+					$html .= '<nav><ul>'
+						.'<li><span><a href="'.URL_BASE_HOME.'" title="'.getLabel('inf_new_window').'" target="_blank">'.getLabel('lbl_open_site').'</a></li>'
+						.'<li><span class="a" id="y:cms_users:my_edit-0">'.getLabel('lbl_account').'</span></li>'
+						.'<li><a href="/logout">'.getLabel('lbl_logout').'</a></span></li>'
+					.'</ul></nav>';
 				}
+				
+			$html .= '</div>';
+			
+			$html .= '<div id="cms-body">'
+				.$html_body
+			.'</div>';
+			
+		$html .= EOL_1100CC.'</body>'.EOL_1100CC
+	.'</html>';
 	
-			$html .= EOL_1100CC.'</head>'.EOL_1100CC
-			.'<body>'.EOL_1100CC
-				.'<div id="cms-header">';
-				
-					if ($str_path_start != 'login') {
-						
-						$html .= '<span id="welcome"><strong>'.getLabel('lbl_welcome').': </strong>'.$_SESSION['CUR_USER']['name'].'</span>';
-					}
-					
-					$html .= '<div id="plate">'
-						.'<span></span>'
-						.'<span id="lab1100cc" title="1100CC"><a href="/"></a></span>'
-						.'<span id="site"><a href="'.URL_BASE_HOME.'" target="_blank">'.getLabel('title', 'D').'</a></span>'
-					.'</div>';
-					
-					if ($str_path_start != 'login') {
-						
-						$html .= '<nav><ul>'
-							.'<li><span><a href="'.URL_BASE_HOME.'" title="'.getLabel('inf_new_window').'" target="_blank">'.getLabel('lbl_open_site').'</a></li>'
-							.'<li><span class="a" id="y:cms_users:my_edit-0">'.getLabel('lbl_account').'</span></li>'
-							.'<li><a href="/logout">'.getLabel('lbl_logout').'</a></span></li>'
-						.'</ul></nav>';
-					}
-					
-				$html .= '</div>';
-				
-				$html .= '<div id="cms-body">'
-					.$html_body
-				.'</div>';
-				
-			$html .= EOL_1100CC.'</body>'.EOL_1100CC
-		.'</html>';
-		
-		if ($str_path_start != 'login') {
-			SiteStartEnvironment::cooldownModules();
-		}
-
-		Response::stop($html, false);
+	if ($str_path_start != 'login') {
+		SiteStartEnvironment::cooldownModules();
 	}
+
+	Response::stop($html, false);

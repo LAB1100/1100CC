@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -258,7 +258,7 @@ class Mediator {
 			
 			if (($num_time_now - $num_time_notify) > static::$timeout_lock_notify) {
 				
-				msg('Lock status:'.EOL_1100CC
+				message('Lock status:'.EOL_1100CC
 					.'	'.$identifier.' = '.($num_time_now - $num_time_start).' seconds.'
 				, 'MEDIATOR', LOG_SYSTEM, 'Path lock: '.$str_path.EOL_1100CC.'Path pool: '.$str_path_pool);
 				
@@ -505,7 +505,7 @@ class Mediator {
 			 case SIGTERM:
 			 case SIGALRM:
 				 // handle shutdown task
-				 msg('Received signal '.$signal.'. Closing process:'.PHP_EOL
+				 message('Received signal '.$signal.'. Closing process:'.PHP_EOL
 					.'	'.SITE_NAME.' '.STATE.' '.self::$run_module.' '.self::$run_method.' '.value2JSON(self::$arr_run_options).'.',
 				'SYSTEM');
 				 exit;
@@ -538,10 +538,9 @@ function shutdown() {
 			Trouble::system($arr_error['type'], $arr_error['message'], $arr_error['file'], $arr_error['line']);
 		}
 		
-		// Reset connection to default and clean it
-		try {
+		try { // Reset connection to default and clean it
 			
-			DB::setConnection();
+			DB::setConnection(null, DB::MODE_CONNECT_DEFAULT_DATABASE);
 			DB::rollbackTransaction(false);
 		} catch (Exception $e) { }
 	}

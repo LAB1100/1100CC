@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -146,7 +146,7 @@ class intf_user_management extends user_management {
 				$mode = "insert";
 			} else {
 				
-				error('missing ID');
+				error(getLabel('msg_missing_information'));
 			}
 			
 			$arr_module_account = pages::getClosestModule('login', 0, 0, $user_group_id);
@@ -462,7 +462,7 @@ class intf_user_management extends user_management {
 							
 							$arr = explode(', ', $arr_row[$i]);
 							$count = count($arr);
-							$arr_data[] = '<span class="info"><span class="icon" title="'.($count ? implode('<br />', $arr) : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.$count.'</span></span>';
+							$arr_data[] = '<span class="info"><span class="icon" title="'.($count ? strEscapeHTML(implode('<br />', $arr)) : getLabel('inf_none')).'">'.getIcon('info').'</span><span>'.$count.'</span></span>';
 						} else {
 							
 							$arr_data[] = '';
@@ -470,7 +470,7 @@ class intf_user_management extends user_management {
 					} else if ($arr_sql_columns[$i] != ' ') {
 						
 						// General output
-						$arr_data[] = $arr_row[$i];
+						$arr_data[] = strEscapeHTML($arr_row[$i]);
 					}
 				}
 				$arr_data[] = '<input type="button" class="data popup edit" value="edit" />'
@@ -505,7 +505,7 @@ class intf_user_management extends user_management {
 			static::updateUserLinkedData($user_id, $_POST['col']);
 											
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del" && $id) {
@@ -516,7 +516,7 @@ class intf_user_management extends user_management {
 			}
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

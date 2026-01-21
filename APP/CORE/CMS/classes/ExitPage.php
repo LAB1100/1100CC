@@ -2,17 +2,17 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class ExitPage {
 
-    protected $msg;
+    protected $str_message;
     protected $str_header;
 	protected $str_type;
-	protected $system_msg;
+	protected $str_system_message;
 	protected $str_system_type;
 	
 	protected $str_html;
@@ -20,9 +20,9 @@ class ExitPage {
 	
 	protected $arr_head_tags = [];
 
-    public function __construct($msg, $str_header, $str_type) {
+    public function __construct($str_message, $str_header, $str_type) {
 
-		$this->msg = $msg;
+		$this->str_message = $str_message;
 		$this->str_header = $str_header;
 		$this->str_type = $str_type;
 		
@@ -39,9 +39,9 @@ class ExitPage {
 		$this->arr_head_tags[] = $tag;
 	}
 	
-	public function setSystem($msg, $str_type) {
+	public function setSystem($str_message, $str_type) {
 
-		$this->system_msg = $msg;
+		$this->str_system_message = $str_message;
 		$this->str_system_type = $str_type;
 		
 		$this->addStyle($this->getSystemDefaultStyle());
@@ -73,16 +73,16 @@ class ExitPage {
 				</head>
 				<body id="'.$this->str_type.'">';
 				
-					if ($this->system_msg) {
+					if ($this->str_system_message) {
 						
 						$str_html .= '<div class="system">
-							'.$this->system_msg.'
+							'.$this->str_system_message.'
 						</div>';
 					}
 					
 					$str_html .= '<div class="result">
 						<h1>'.$this->str_header.'</h1>
-						'.$this->msg.'
+						'.$this->str_message.'
 					</div>';
 					
 				$str_html .= '</body>

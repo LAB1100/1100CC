@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -15,7 +15,8 @@ class contact_form extends base_module {
 	}
 	
 	public static function moduleVariables() {
-		$return .= '<input type="checkbox" name="show_text" title="Show form text" value="1" />';
+		
+		$return = '<input type="checkbox" name="show_text" title="Show form text" value="1" />';
 		
 		return $return;
 	}
@@ -60,7 +61,7 @@ class contact_form extends base_module {
 		if ($method == "form") {
 
 			if (!$_POST['name'] || !$_POST['body'] || !filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
-				error('Missing information');
+				error(getLabel('msg_missing_information'));
 			}
 			
 			$name = $_POST['name'];
@@ -79,7 +80,7 @@ class contact_form extends base_module {
 			Labels::setVariable('email', $email);
 			msg(getLabel('msg_contact_mail_sent'), 'CONTACT');
 			
-			$this->msg = true;
+			$this->message = true;
 			$this->reset_form = true;
 		}
 	}

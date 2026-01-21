@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -125,16 +125,20 @@ class cms_general extends base_module {
 			if ($id) {
 				
 				$this->html = getLabel($id);
-			} else if ($value) {
-				
-				$arr = [];
-				
-				foreach ($value as $identifier) {
-					$arr[$identifier] = getLabel($identifier);
-				}
-				
-				$this->html = $arr;
+				return;
 			}
+			
+			if (!$value || !is_array($value)) {
+				return;
+			}
+				
+			$arr = [];
+			
+			foreach ($value as $identifier) {
+				$arr[$identifier] = getLabel($identifier);
+			}
+			
+			$this->html = $arr;
 		}
 		
 		if ($method == "get_text") {
@@ -640,6 +644,13 @@ class cms_general extends base_module {
 		$num_size_limit = FileStore::getSizeLimitClient(FileStore::STORE_FILE);
 		
 		return '<div class="input filebrowse"><div class="select"><input type="file" name="'.$name_file.'" data-size="'.$num_size_limit.'"'.($multi ? ' multiple="multiple"' : '').' /><label><span></span><input type="text" name="'.$name.'" placeholder="'.getLabel('lbl_size_max').': '.bytes2String($num_size_limit).'" /></label></div>'.($multi ? '<ul></ul>' : '').'<progress value="0" max="100"></progress></div>'; // Also include a input with type="text" and name="..." to make it 'visible' for normal POSTED data iteration
+	}
+	
+	public static function createPickColor($value, $name = '', $arr_options = []) {
+		
+		$name = ($name ?: 'color');
+		
+		return '<div class="input pickcolor'.($arr_options['class'] ? ' '.$arr_options['class'] : '').'"'.($arr_options['alpha'] ? ' data-alpha="1"' : '').($arr_options['info'] ? ' title="'.strEscapeHTML($arr_options['info']).'"' : '').'><input type="text" name="'.$name.'" value="'.$value.'" /></div>';
 	}
 	
 	public static function createImageSelector($value, $name = 'img') {

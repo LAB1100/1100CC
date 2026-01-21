@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -314,7 +314,7 @@ class cms_newsletters extends base_module {
 			$count = self::getDatabaseEmailAddressCount();
 			$this->html = self::createDatabaseEmailAddressCountInfo();
 			$this->reset_form = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "email_export") {
@@ -345,7 +345,7 @@ class cms_newsletters extends base_module {
 			DB::query("DELETE FROM ".DB::getTable('TABLE_EMAIL_ADDRESSES')."");
 			
 			$this->html = self::createDatabaseEmailAddressCountInfo();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "get_template" && (int)$value) {
@@ -501,14 +501,14 @@ class cms_newsletters extends base_module {
 			
 			self::sendNewsletter($arr_email, $id, $_POST['title'], $_POST['body']);
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del" && (int)$id) {
 		
 			$res = DB::query("DELETE n FROM ".DB::getTable('TABLE_NEWSLETTERS')." n
 									WHERE n.id='".$id."'");
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "insert_template") {
@@ -516,7 +516,7 @@ class cms_newsletters extends base_module {
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_NEWSLETTERS_TEMPLATES')." (name, body) VALUES ('".DBFunctions::strEscape($_POST['name'])."', '".DBFunctions::strEscape($_POST['body'])."')");
 												
 			$this->html = self::contentTabTemplates();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_template" && (int)$id) {
@@ -524,14 +524,14 @@ class cms_newsletters extends base_module {
 			$res = DB::query("UPDATE ".DB::getTable('TABLE_NEWSLETTERS_TEMPLATES')." SET name = '".DBFunctions::strEscape($_POST['name'])."', body = '".DBFunctions::strEscape($_POST['body'])."' WHERE id = ".$id."");
 				
 			$this->html = self::contentTabTemplates();
-			$this->msg = true;
+			$this->message = true;
 		}
 
 		if ($method == "del_template" && (int)$id) {
 		
 			$res = DB::query("DELETE nt FROM ".DB::getTable('TABLE_NEWSLETTERS_TEMPLATES')." nt
 									WHERE nt.id='".$id."'");
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_email_address" && $id) {
@@ -563,7 +563,7 @@ class cms_newsletters extends base_module {
 			}
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_email_address" && $id) {
@@ -574,7 +574,7 @@ class cms_newsletters extends base_module {
 								WHERE e.email = '".DBFunctions::strEscape($id)."'");
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

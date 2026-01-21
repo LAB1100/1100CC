@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -26,9 +26,11 @@ class FileStore {
 		'image/x-icon' => 'icon',
 		'image/svg+xml' => 'svg',
 		'text/csv' => 'csv',
+		'text/xml' => 'xml',
 		'application/pdf' => 'pdf',
 		'application/zip' => 'zip',
 		'application/json' => 'json',
+		'application/yaml' => 'yaml',
 		'application/javascript' => 'js',
 		'text/plain' => 'txt',
 		'text/css' => 'css',
@@ -104,11 +106,11 @@ class FileStore {
 			if ($do_image_only && !in_array($this->str_extension, static::$arr_img_extensions)) {
 				
 				Labels::setVariable('type', 'image');
-				error(getLabel('msg_invalid_file_type_specific'));
+				error(getLabel('msg_invalid_file_type_specific'), TROUBLE_ERROR, LOG_BOTH, $str_filename);
 			}
 			if (!$do_image_only && (!$this->str_extension || in_array($this->str_extension, static::$arr_disallowed_extensions))) {
 				
-				error(getLabel('msg_invalid_file_type'));
+				error(getLabel('msg_invalid_file_type'), TROUBLE_ERROR, LOG_BOTH, $str_filename);
 			}
 			
 			$str_filename = static::cleanFilename($str_filename);
@@ -259,16 +261,21 @@ class FileStore {
 		return $str_extension;
 	}
 	
-	public static function getMIMETypeExtension($mime) {
+	public static function getMIMETypeExtension($str_mime) {
 		
-		return (static::$arr_mime_types[$mime] ?? static::EXTENSION_UNKNOWN);
+		return (static::$arr_mime_types[$str_mime] ?? static::EXTENSION_UNKNOWN);
 	}
 	
-	public static function getExtensionMIMEType($what) {
+	public static function getExtensionMIMEType($str_extension) {
 		
-		$type = array_search($what, static::$arr_mime_types);
+		$str_mime = array_search($str_extension, static::$arr_mime_types);
 		
-		return ($type ?: false);
+		return ($str_mime ?: false);
+	}
+	
+	public static function addMIMETypes($arr_mimes) {
+		
+		static::$arr_mime_types += $arr_mimes;
 	}
 	
 	public static function setSizeLimit($mode, $num_size = false) {
@@ -314,12 +321,23 @@ class FileStore {
 	
 	public static function cleanFilename($str_filename) {
 		
-		$arr_check = ['\\', '/', ' ', '\'', '"', '%20', '!', '@', '#', '$', '%', '^', '&', '*'];
+		static $arr_check = ['\\', '/', ' ', '\'', '"', '%20', '!', '@', '#', '$', '%', '^', '&', '*'];
 		
 		return str_replace($arr_check, '', $str_filename); 
 	}
+	
+	public static function cleanPath($str_path) {
+		
+		static $arr_check = ['../', './'];
+		
+		while (strpos($str_path, './') !== false) {
+            $str_path = str_replace($arr_check, '', $str_path);
+        }
+		
+		return $str_path; 
+	}
 
-	public static function checkDuplicates($str_target, $count = 0) {		
+	public static function checkDuplicates($str_target, $count = 0) {
 		
 		if (isPath($str_target)) {
 			

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -10,55 +10,61 @@
 class FileCache {
 		
 	private $type = 'img';
-	private $url = [];
+	private $str_path_url = null;
 	private $arr_options = [];
 	private $target = false;
 
-	private $external_protocol = false;
+	private $is_external = false;
 	private $external_file = false;
-	private $str_options = false;
-	private $str_url = false;
+	private $str_hash_options = null;
+	private $str_hash_url = null;
 	
-	private $check = true;
-	private $create_archive = false;
-	private $archive_folder = '';
-	private $filename = false;
-	private $path_source = false;
-	private $path_destination = false;
+	private $do_check = true;
+	private $do_create_archive = false;
+	private $str_hash_filename = null;
+	private $str_path_source = null;
+	private $str_path_destination = null;
 	private $data = false;
 	private $is_new = false;
 	
-	public function __construct($type, $arr_options, $url, $target = false) {
+	public function __construct($type, $arr_options, $str_url, $target = false) {
 	
 		// $arr_options array(# => $type dependent options, "error_source" => local path to source on error)
 
 		$this->type = $type;
 		$this->arr_options = (array)(!is_array($arr_options) && $arr_options ? json_decode(base64_decode($arr_options), true) : $arr_options);
-		$this->url = (base64_decode($url, true) ? base64_decode($url) : $url);
+		$this->str_path_url = (base64_decode($str_url, true) ? base64_decode($str_url) : $str_url);
 		$this->target = $target;
 		
-		$this->external_protocol = FileGet::getProtocolExternal($this->url);
+		$this->str_hash_options = base64_encode(value2JSON($this->arr_options));
+		$this->str_hash_url = base64_encode($this->str_path_url);
 		
-		$this->create_archive = getLabel(($this->external_protocol ? 'caching_external' : 'caching'), 'D', true);
+		$this->is_external = (bool)FileGet::getProtocolExternal($this->str_path_url);
 		
-		$this->str_options = base64_encode(value2JSON($this->arr_options));
-		$this->str_url = base64_encode($this->url);
+		if ($this->is_external) {
+			
+			$this->do_create_archive = getLabel('caching_external', 'D', true);
+		} else {
+			
+			$this->str_path_url = ltrim(FileStore::cleanPath($this->str_path_url), '/');
+			$this->do_create_archive = getLabel('caching', 'D', true);
+		}
 		
-		$this->archive_folder = ($this->target == DIR_HOME ? DIR_ROOT_CACHE.DIR_HOME : DIR_SITE_CACHE).$this->type.'/';
-		$this->filename = value2HashExchange($this->str_options.'_'.$this->str_url);
-		$this->path_destination = $this->archive_folder.$this->filename;
+		$str_path_archive = ($this->target == DIR_HOME ? DIR_ROOT_CACHE.DIR_HOME : DIR_SITE_CACHE).$this->type.'/';
+		$this->str_hash_filename = value2HashExchange($this->str_hash_options.'_'.$this->str_hash_url);
+		$this->str_path_destination = $str_path_archive.$this->str_hash_filename;
 	}
 	
-	public function generate($check = true) {
+	public function generate($do_check = true) {
 		
-		$this->check = $check;
+		$this->do_check = $do_check;
 		
-		if ($this->check && $this->create_archive && !isPath($this->path_destination)) {
+		if ($this->do_check && $this->do_create_archive && !isPath($this->str_path_destination)) {
 			
 			$res = DB::query("INSERT INTO ".DB::getTable('SITE_CACHE_FILES')."
 				(filename)
 					VALUES
-				('".DBFunctions::strEscape($this->filename)."')
+				('".DBFunctions::strEscape($this->str_hash_filename)."')
 				".DBFunctions::onConflict('filename', ['filename'])."
 			");
 		}
@@ -66,15 +72,15 @@ class FileCache {
 		
 	public function cache() {
 		
-		if (!$this->create_archive || ($this->create_archive && !isPath($this->path_destination))) {
+		if (!$this->do_create_archive || ($this->do_create_archive && !isPath($this->str_path_destination))) {
 			
 			$this->is_new = true;
 			
-			if ($this->create_archive && $this->check) {
+			if ($this->do_create_archive && $this->do_check) {
 				
 				$res = DB::query("SELECT *
 					FROM ".DB::getTable('SITE_CACHE_FILES')."
-					WHERE filename = '".DBFunctions::strEscape($this->filename)."'
+					WHERE filename = '".DBFunctions::strEscape($this->str_hash_filename)."'
 				");
 				
 				if (!$res->getRowCount()) {
@@ -82,41 +88,50 @@ class FileCache {
 				}
 			}
 			
-			if ($this->external_protocol) {
+			if ($this->is_external) {
 				
 				$arr_settings = [];
 				
-				if ($this->create_archive) {
+				if ($this->do_create_archive) {
 					$arr_settings['redirect'] = 4; // Allow for more redirects when caching
 				}
 
-				$this->external_file = new FileGet($this->url, $arr_settings);
+				$this->external_file = new FileGet($this->str_path_url, $arr_settings);
 				$this->external_file->load();
 				
-				$this->path_source = $this->external_file->getPath();
+				$this->str_path_source = $this->external_file->getPath();
 			} else {
+
+				$str_path_use = $this->str_path_url;
+				$this->str_path_source = ($this->target == DIR_HOME ? DIR_ROOT_STORAGE.DIR_HOME : DIR_SITE_STORAGE).$str_path_use;
 				
-				$this->path_source = ($this->target == DIR_HOME ? DIR_ROOT_STORAGE.DIR_HOME : DIR_SITE_STORAGE).$this->url;
-				if (!isPath($this->path_source)) {
+				if (!isPath($this->str_path_source)) {
+					
 					if ($this->target == DIR_HOME) {
-						$this->path_source = (isPath(DIR_ROOT_SITE.$this->url) ? DIR_ROOT_SITE : DIR_ROOT_CORE).$this->url;
+						$this->str_path_source = (isPath(DIR_ROOT_SITE.$str_path_use) ? DIR_ROOT_SITE : DIR_ROOT_CORE).$str_path_use;
 					} else {
-						$this->path_source = (isPath(DIR_SITE.$this->url) ? DIR_SITE : DIR_CORE).$this->url;
+						$this->str_path_source = (isPath(DIR_SITE.$str_path_use) ? DIR_SITE : DIR_CORE).$str_path_use;
 					}
 				}
 			}
 			
-			if (!isPath($this->path_source)) {
+			if (!isPath($this->str_path_source)) {
 				
 				if (!empty($this->arr_options['error_source'])) { // Local path
-					
-					$error_source = ltrim($this->arr_options['error_source'], '/');
+
+					$str_path_use = ltrim(FileStore::cleanPath($this->arr_options['error_source']), '/');
+										
 					if ($this->target == DIR_HOME) {
-						$this->path_source = (isPath(DIR_ROOT_SITE.$error_source) ? DIR_ROOT_SITE : DIR_ROOT_CORE).$error_source;
+						$this->str_path_source = (isPath(DIR_ROOT_SITE.$str_path_use) ? DIR_ROOT_SITE : DIR_ROOT_CORE).$str_path_use;
 					} else {
-						$this->path_source = (isPath(DIR_SITE.$error_source) ? DIR_SITE : DIR_CORE).$error_source;
+						$this->str_path_source = (isPath(DIR_SITE.$str_path_use) ? DIR_SITE : DIR_CORE).$str_path_use;
 					}
-					$this->external_protocol = false; // Do not remove the new path later on
+					
+					if (!isPath($this->str_path_source)) {
+						$this->abort();
+					}
+					
+					$this->is_external = false; // Do not remove the new path later on
 				} else {
 					
 					$this->abort();
@@ -131,11 +146,11 @@ class FileCache {
 				$this->abort();
 			}
 			
-			if ($this->external_protocol) {
+			if ($this->is_external) {
 				$this->external_file->abort();
 			}
 			
-			if ($this->create_archive) {
+			if ($this->do_create_archive) {
 				$this->write();
 			}
 		}
@@ -163,10 +178,10 @@ class FileCache {
 		
 		$resize = new ImageResize();
 		$resize->setOutput($mode_quality);
-		$resize = $resize->resize($this->path_source, $str_file_type, $this->arr_options[0], $this->arr_options[1]);
+		$resize = $resize->resize($this->str_path_source, $str_file_type, $this->arr_options[0], $this->arr_options[1]);
 		
 		if (!$resize) {
-			echo file_get_contents($this->path_source);
+			echo file_get_contents($this->str_path_source);
 		}
 		
 		$this->data = ob_get_clean();
@@ -241,20 +256,20 @@ class FileCache {
 	
 	private function cacheJSON() {
 	
-		$this->data = file_get_contents($this->path_source);
+		$this->data = file_get_contents($this->str_path_source);
 	}
 		
 	private function write() {
 
-		FileStore::storeFile($this->path_destination, $this->data);
+		FileStore::storeFile($this->str_path_destination, $this->data);
 	}
 		
 	public function read() {
 		
 		$ie_tag = 0;
-		if ($this->create_archive && !$this->is_new) {
+		if ($this->do_create_archive && !$this->is_new) {
 			
-			$ie_tag = filemtime($this->path_destination);
+			$ie_tag = filemtime($this->str_path_destination);
 			$cur_ie_tag = (isset($_SERVER['HTTP_IF_NONE_MATCH']) ? trim($_SERVER['HTTP_IF_NONE_MATCH'], '"') : false);
 			
 			if ($cur_ie_tag == $ie_tag) {
@@ -263,36 +278,36 @@ class FileCache {
 			}
 		}
 
-		Response::sendFileHeaders(($this->is_new ? $this->data : $this->path_destination), false, [
+		Response::sendFileHeaders(($this->is_new ? $this->data : $this->str_path_destination), false, [
 			'ETag: "'.$ie_tag.'"',
 			'Cache-Control: max-age='.(60*60*24),
-			'1100CC-Cached: '.(int)$this->create_archive
+			'1100CC-Cached: '.(int)$this->do_create_archive
 		]);
 		
 		if ($this->is_new) {
 			echo $this->data;
 		} else {
-			readfile($this->path_destination);
+			readfile($this->str_path_destination);
 		}
 	}
 	
 	public function getOptionsString() {
 		
-		return $this->str_options;
+		return $this->str_hash_options;
 	}
 	
 	public function getURLString() {
 		
-		return $this->str_url;
+		return $this->str_hash_url;
 	}
 	
 	public function getPath() {
 		
-		if (!$this->create_archive) {
+		if (!$this->do_create_archive) {
 			return false;
 		}
 		
-		return $this->path_destination;
+		return $this->str_path_destination;
 	}
 	
 	public function getData() {
@@ -300,7 +315,7 @@ class FileCache {
 		if ($this->is_new) {
 			return $this->data;
 		} else {
-			return file_get_contents($this->path_destination);
+			return file_get_contents($this->str_path_destination);
 		}
 	}
 }

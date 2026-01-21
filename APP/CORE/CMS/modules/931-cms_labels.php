@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -358,7 +358,7 @@ class cms_labels extends base_module {
 			fwrite($resource, $str_csv);
 			rewind($resource);
 			
-			$arr_headers = fgetcsv($resource, 0, ',', '"', CSV_ESCAPE);
+			$arr_headers = fgetcsv($resource, null, ',', '"', CSV_ESCAPE);
 			$num_identifier = null;
 			
 			foreach ($arr_headers as $key => &$str_header) {
@@ -378,7 +378,7 @@ class cms_labels extends base_module {
 			
 			$arr_labels = [];
 		
-			while (($arr_line = fgetcsv($resource, 0, ',', '"', CSV_ESCAPE)) !== false) {
+			while (($arr_line = fgetcsv($resource, null, ',', '"', CSV_ESCAPE)) !== false) {
 				
 				$str_identifier = $arr_line[$num_identifier];
 				
@@ -405,7 +405,7 @@ class cms_labels extends base_module {
 			static::addLabelList($arr_labels, ($id == 'core' ? 'core' : 'cms'));
 
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		// DATATABLE
@@ -521,7 +521,7 @@ class cms_labels extends base_module {
 			self::addLabel($_POST['identifier'], $_POST['lang_code'], ($method == 'insert_label_cms' ? 'cms' : 'core'));
 
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 
 		if (($method == "update_label_cms" || $method == "update_label_core") && $id && $_POST['identifier']) {
@@ -535,7 +535,7 @@ class cms_labels extends base_module {
 			self::addLabel($_POST['identifier'], $_POST['lang_code'], ($method == 'update_label_cms' ? 'cms' : 'core'));
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "select_label") {
@@ -550,7 +550,7 @@ class cms_labels extends base_module {
 					self::delLabel($_POST['identifier']);
 					self::addLabel($_POST['identifier'], $_POST['lang_code']);
 
-					$this->msg = true;
+					$this->message = true;
 				}
 				
 				$this->html = '[L]['.str2Label($_POST['identifier']).']';
@@ -568,7 +568,7 @@ class cms_labels extends base_module {
 					
 			self::delLabel($id, ($method == 'del_label_cms' ? 'cms' : 'core'));
 
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	
@@ -740,7 +740,7 @@ class cms_labels extends base_module {
 				
 		foreach (self::getLabelDatabaseLocations() as $database => $arr_database) {
 			
-			DB::setDatabase($database);
+			DB::setConnectionDatabase($database);
 			
 			$arr_sql_query = [];
 			
@@ -757,7 +757,7 @@ class cms_labels extends base_module {
 			}
 		}
 		
-		DB::setDatabase();
+		DB::setConnectionDatabase(false);
 
 		return $arr;
 	}

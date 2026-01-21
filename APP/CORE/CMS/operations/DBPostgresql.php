@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -17,7 +17,7 @@ class DB extends \DBBase\DB {
 	
 	public static function getTableTemporary($identifier) { // Postgresql has its own temporary schema
 	
-		$name = (static::$arr_override_tables[$identifier] ?: (static::$arr_tables[$identifier] ?: $identifier));
+		$name = (static::$arr_tables_override[$identifier] ?: (static::$arr_tables[$identifier] ?: $identifier));
 	
 		$name = str_replace('"', '', $name); // Remove a possible previous getTable parsing
 		$arr_database_table = explode('.', $name);
@@ -25,11 +25,11 @@ class DB extends \DBBase\DB {
 		if (count($arr_database_table) > 1) {
 			
 			$name = '"'.$arr_database_table[1].'"';
-			static::setDatabase($arr_database_table[0]);
+			static::setConnectionDatabase($arr_database_table[0]);
 		} else {
 			
 			$name = '"'.$name.'"';
-			static::setDatabase(false);
+			static::setConnectionDatabase(false);
 		}
 		
 		return $name;
@@ -44,24 +44,27 @@ class DB extends \DBBase\DB {
 		$host = ($host == 'localhost' && $port ? '127.0.0.1' : $host); // Port is required, force TCP
 		$database = ($arr_connection_details['database'] ?: static::$database_home);
 		
-		$connection = pg_connect('host='.$host.' user='.$arr_connection_details['user'].' password='.$arr_connection_details['password'].' dbname='.$database.''.($port ? ' port='.$port : '').'');
+		$flags = (static::$connection_is_secondary ? PGSQL_CONNECT_FORCE_NEW : null);
+		
+		$connection = pg_connect('host='.$host.' user='.$arr_connection_details['user'].' password='.$arr_connection_details['password'].' dbname='.$database.''.($port ? ' port='.$port : ''), $flags);
 		
 		if (!$connection) {
 			
-			$str = pg_last_error($connection);
-
-			switch ($str) {
-				case 1040:
-				case 1203:
-				case 2002:
-					if (\SiteStartEnvironment::getRequestState() == \SiteStartEnvironment::REQUEST_INDEX) {
-						error('Server connection problem. Please refresh page to retry.');
-					} else {
-						error('Server connection problem.');
-					}
-				default:
-					error('Database trouble.');
+			$str_error = pg_last_error($connection);
+			$str_error_check = strtolower($str_error);
+			
+			$str_message = 'Database trouble.';
+			
+			if (strpos($str_error_check, 'too many connections') !== false || strpos($str_error_check, 'insufficient resources') !== false || strpos($str_error_check, 'out of memory') !== false) {
+				
+				if (\SiteStartEnvironment::getRequestState() == \SiteStartEnvironment::REQUEST_INDEX) {
+					$str_message = 'Server connection problem. Please refresh page to retry.';
+				} else {
+					$str_message = 'Server connection problem.';
+				}
 			}
+			
+			error($str_message, TROUBLE_ERROR, LOG_BOTH, $str_error);
 		}
 		
 		$q = "
@@ -89,28 +92,13 @@ class DB extends \DBBase\DB {
 		
 	public static function query($q) {
 		
-		if (!static::$connection_active_is_async) {
-			
-			try {
+		try {
 
-				$res = pg_query(static::$connection_active, $q);
-			} catch (\Exception $e) {
+			$res = pg_query(static::$connection_active, static::checkSQL($q));
+		} catch (\Exception $e) {
 
-				static::$last_query = $q;
-				static::error(new \DBTrouble(pg_last_error(static::$connection_active)));
-			}
-		} else {
-			
-			$connection_async = static::newConnectionAsync();
-			
-			try {
-				
-				$res = pg_query($connection_async, $q);
-			} catch (\Exception $e) {
-
-				static::$last_query = $q;
-				static::error(new \DBTrouble(pg_last_error($connection_async)));
-			}
+			static::$last_query = $q;
+			static::error(new \DBTrouble(pg_last_error(static::$connection_active)));
 		}
 		
 		return new \DBResult($res);
@@ -118,26 +106,28 @@ class DB extends \DBBase\DB {
 
 	public static function queryAsync($q) {
 							
-		pg_send_query(static::$connection_active, $q);
+		pg_send_query(static::$connection_active, static::checkSQL($q));
 
-		static::$connection_active_is_async = true;
+		$connection_async = static::$connection_active;
+		
+		static::setConnection(static::$connection_level, DB::MODE_CONNECT_SECONDARY); // Prepare/ready secondary connection
 					
-		onUserPoll(function() {
+		onUserPoll(function() use ($connection_async) {
 			
-			//if (!pg_connection_busy(static::$connection_active) && pg_transaction_status(static::$connection_active) === PGSQL_TRANSACTION_IDLE) {
-			if (!pg_connection_busy(static::$connection_active)) {
+			//if (!pg_connection_busy($connection_async) && pg_transaction_status($connection_async) === PGSQL_TRANSACTION_IDLE) {
+			if (!pg_connection_busy($connection_async)) {
 				return true;
 			} else {
 				return false;
 			}
-		}, function() {
+		}, function() use ($connection_async) {
 			
-			pg_cancel_query(static::$connection_active);
+			pg_cancel_query($connection_async);
 		});
 		
-		$res = pg_get_result(static::$connection_active);
+		static::setConnection(static::$connection_level); // Continue with primary connection
 		
-		static::$connection_active_is_async = false;
+		$res = pg_get_result(static::$connection_active);
 		
 		if (pg_result_status($res) == PGSQL_FATAL_ERROR) { // Something went wrong, but could not be caught since it happened asynchronously
 
@@ -150,7 +140,7 @@ class DB extends \DBBase\DB {
 	
 	public static function queryMulti($q) {
 		
-		pg_send_query(static::$connection_active, $q);
+		pg_send_query(static::$connection_active, static::checkSQL($q));
 		
 		$arr_res = [];
 
@@ -161,7 +151,7 @@ class DB extends \DBBase\DB {
 				static::$last_query = $q;
 				static::error(new \DBTrouble(pg_result_error($res)));
 			}
-								
+			
 			$arr_res[] = new \DBResult($res);
 		}
 		
@@ -176,7 +166,7 @@ class DB extends \DBBase\DB {
 			
 			$identifier = $statement->getIdentifier();
 			
-			$res = pg_prepare(static::$connection_active, $identifier, $q);
+			$res = pg_prepare(static::$connection_active, $identifier, static::checkSQL($q));
 		} catch (\Exception $e) {
 				
 			\DBStatement::reset();
@@ -188,9 +178,9 @@ class DB extends \DBBase\DB {
 		return $statement;
 	}
 	
-	public static function isReady($connection = false) {
+	public static function isReady($connection = null) {
 		
-		$connection = ($connection !== false ? $connection : static::$connection_active);
+		$connection = ($connection !== null ? $connection : static::$connection_active);
 			
 		if (!pg_connection_busy($connection) && pg_transaction_status($connection) === PGSQL_TRANSACTION_IDLE) {
 			return true;
@@ -199,15 +189,10 @@ class DB extends \DBBase\DB {
 		return false;
 	}
 	
-	public static function isActive($connection = false) {
+	public static function isActive($connection = null) {
 		
-		if ($connection === false) {
-			
-			if (static::$connection_active_is_async) {
-				$connection = static::newConnectionAsync();
-			} else {
-				$connection = static::$connection_active;
-			}
+		if ($connection === null) {
+			$connection = static::$connection_active;
 		}
 		
 		try {
@@ -223,9 +208,9 @@ class DB extends \DBBase\DB {
 		return true;
 	}
 	
-	protected static function doClose($connection = false) {
+	protected static function doClose($connection = null) {
 		
-		$connection = ($connection !== false ? $connection : static::$connection_active);
+		$connection = ($connection !== null ? $connection : static::$connection_active);
 		
 		try {
 			
@@ -242,33 +227,22 @@ class DB extends \DBBase\DB {
 			
 		return $arr_row[0];
 	}
-	
-	public static function getErrorMessage($code) {
-		
-		$msg = false;
-		
-		switch ($code) {
-			case 1264:
-			case 1406:
-				$msg = getLabel('msg_error_database_data_field_limit');
-				break;
-		}
-		
-		return $msg;
-	}
 }
 
 class DBStatement extends \DBBase\DBStatement {
 	
 	protected static $count_statement = 0;
 	
-	private $arr_parameters = [];
-	private $arr_parameters_template = [];
-	private $str_identifier = '';
+	protected $connection = null;
+	protected $arr_parameters = [];
+	protected $arr_parameters_template = [];
+	protected $str_identifier = '';
 	
 	public function __construct($statement) {
 		
 		parent::__construct($statement);
+		
+		$this->connection = \DB::$connection_active;
 		
 		$this->arr_parameters_template = array_fill(0, count($this->arr_variables), null); // Use template to make sure the keys remain in original position/sequence
 	}
@@ -303,7 +277,7 @@ class DBStatement extends \DBBase\DBStatement {
 	
 	public function execute() {
 		
-		$this->statement = pg_execute(\DB::$connection_active, $this->str_identifier, $this->arr_parameters);
+		$this->statement = pg_execute($this->connection, $this->str_identifier, $this->arr_parameters);
 		
 		return new \DBResult($this->statement);
 	}
@@ -564,7 +538,9 @@ class DBFunctions extends \DBBase\DBFunctions {
 		return $sql;
 	}
 	
-	public static function timeNow($do_transaction = false) {
+	public static function dateTimeNow($do_transaction = false, $do_precision = true) {
+		
+		// Precision is the default in PostgreSQL, hard (and not needed) to go away from
 		
 		if ($do_transaction) {
 			return 'TRANSACTION_TIMESTAMP()'; // Transaction init time
@@ -609,7 +585,7 @@ class DBFunctions extends \DBBase\DBFunctions {
 		return $sql;
 	}
 	
-	public static function sqlTableOptions($engine) {
+	public static function tableOptions($options) {
 		
 		$sql = '';
 
@@ -651,7 +627,29 @@ class DBFunctions extends \DBBase\DBFunctions {
 	}
 }
 
-class DBTrouble extends \DBBase\DBTrouble {}
+class DBTrouble extends \DBBase\DBTrouble {
+	
+	public function getClientMessage() {
+		
+		$str_message = null;
+		
+		$str_error = strtolower($this->getMessage());
+				
+		if (strpos($str_error, 'value too long for type') !== false) {
+			$str_message = getLabel('msg_error_database_data_field_limit');
+		} else if (strpos($str_error, 'duplicate key') !== false) {
+			$str_message = getLabel('msg_error_database_duplicate_record');
+		} else if (strpos($str_error, 'index row size') !== false) {
+			$str_message = getLabel('msg_error_database_index_limit');
+		} else if (strpos($str_error, 'connection has been closed unexpectedly') !== false) {
+			$str_message = getLabel('msg_error_database_interruption');
+		} else if (strpos($str_error, 'deadlock detected') !== false) {
+			$str_message = getLabel('msg_error_database_deadlock');
+		}
+		
+		return $str_message;
+	}
+}
 
 class DBSetup extends \DBBase\DBSetup {
 	

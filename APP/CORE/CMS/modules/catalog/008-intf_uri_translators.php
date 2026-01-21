@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -138,7 +138,7 @@ class intf_uri_translators extends uris {
 		$return = "SCRIPTER.static('#mod-intf_uri_translators', function(elm_scripter) {
 		
 			elm_scripter.on('change', '[id=f\\\:intf_uri_translators\\\:host_uri_translator-0] [name^=host_name]', function() {
-				$(this).formCommand();		
+				COMMANDS.formCommand(this);
 			});
 		});
 		";
@@ -172,7 +172,7 @@ class intf_uri_translators extends uris {
 				");
 			}
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	
 		// POPUP
@@ -250,7 +250,7 @@ class intf_uri_translators extends uris {
 			");
 			
 			$this->html = $this->contentTabURITranslators();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_uri_translator" && $id) {
@@ -270,7 +270,7 @@ class intf_uri_translators extends uris {
 			");
 								
 			$this->html = $this->contentTabURITranslators();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_uri_translator" && $id) {
@@ -279,7 +279,7 @@ class intf_uri_translators extends uris {
 				WHERE id = ".(int)$id."
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

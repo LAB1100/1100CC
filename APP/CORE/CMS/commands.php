@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -25,7 +25,7 @@
 		$arr_commands[] = $_POST;
 	}
 	
-	foreach ($arr_commands as $arr_command) {
+	foreach ($arr_commands as &$arr_command) {
 		
 		if ($is_multi) {
 			
@@ -40,7 +40,7 @@
 				$_POST[$key] = $value;
 			}
 			
-			if (!empty($arr_command['json'])) { // Posted data in serialized format, check for JSON data
+			if (!empty($arr_command['json'])) { // Posted data in serialised format, check for JSON data
 			
 				$arr = JSON2Value($arr_command['json']);
 				unset($arr_command['json']);
@@ -65,7 +65,7 @@
 			$is_valid = (is_string($module) && is_string($method));
 			
 			if (!$is_valid || str2Name($module.$method, '-_') != $module.$method) {
-				error('Request targets an invalid module or method.', TROUBLE_INVALID_REQUEST, LOG_CLIENT);
+				error(Labels::getSystemLabel('msg_request_invalid_module_method'), TROUBLE_INVALID_REQUEST, LOG_CLIENT);
 			}
 
 			$class = new $module;
@@ -75,11 +75,14 @@
 				if (isset($arr_command['is_confirm'])) {
 					$class->is_confirm = (bool)$arr_command['is_confirm'];
 				}
-				if (isset($arr_command['is_download'])) {
-					$class->is_download = (bool)$arr_command['is_download'];
-				}
 				if (isset($arr_command['is_discard'])) {
 					$class->is_discard = (bool)$arr_command['is_discard'];
+				}
+				if (isset($arr_command['is_download'])) {
+					
+					$class->is_download = (bool)$arr_command['is_download'];
+					
+					Response::setOutputUpdates(false); // Do not output anything that could mess up the export headers
 				}
 			}
 			
@@ -88,7 +91,6 @@
 			$class->commands($method, $arr_command['id'], $arr_command['value']);
 			
 			if ($class->refresh) {
-				
 				$JSON_command->html = $class->contents();
 			}
 			
@@ -101,11 +103,12 @@
 			$JSON_command->refresh_table = $class->refresh_table;
 			$JSON_command->reset_form = $class->reset_form;
 			
-			if ($class->msg) {
-				if ($class->msg !== true) {
-					Log::setMsg($class->msg);
+			if ($class->message) {
+				
+				if ($class->message !== true) {
+					Log::setHeader($class->message);
 				} else {
-					Log::setMsg(getLabel('msg_success'));
+					Log::setHeader(getLabel('msg_success'));
 				}
 			}
 		}
@@ -117,7 +120,7 @@
 	
 	$JSON->data_feedback = SiteEndEnvironment::getFeedback();
 	
-	$JSON = Log::addToObj($JSON);
+	$JSON = Log::addToObject($JSON);
 	$JSON->timestamp = date('c');
 	if (Settings::get('timing') === true) {
 		$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -32,17 +32,17 @@
 		
 		if ($arr_uri_translator['delay']) {
 			
-			Log::setMsg(getLabel('msg_redirect'));
+			Log::setHeader(getLabel('msg_redirect'));
 			
 			if ($arr_uri_translator['show_remark'] && $arr_uri['remark']) {
-				msg(parseBody($arr_uri['remark']), 'DESCRIPTION', LOG_CLIENT);
+				message(parseBody($arr_uri['remark']), 'DESCRIPTION', LOG_CLIENT);
 			}
 			
-			msg('<a href="'.$str_url.'">'.$str_url.'</a>', 'URL', LOG_CLIENT);
+			message('<a href="'.$str_url.'">'.$str_url.'</a>', 'URL', LOG_CLIENT);
 			
-			$obj = Log::addToObj(Response::getObject());
+			$obj = Log::addToObject(Response::getObject());
 			
-			$page = new ExitPage($obj->msg, 'redirect...', 'redirect');
+			$page = new ExitPage($obj->message, 'redirect...', 'redirect');
 			
 			$page->setTitle(getLabel('name', 'D').' | '.$arr_uri['identifier']);
 			

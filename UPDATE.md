@@ -230,3 +230,26 @@ ALTER TABLE `cms_language` ADD `host_canonical` VARCHAR(100) NOT NULL AFTER `lab
 The default database has been changed from MySQL to MariaDB. If the current installation is not using MariaDB, make sure to set the contents of file `./APP/SETTINGS/?SITE?/database` to 'mysql'.
 
 Update 1100CC [1100CC.core_labels.en.sql](/setup/1100CC.core_labels.en.sql).
+
+## VERSION 10.9
+
+Update 1100CC [1100CC.core_labels.en.sql](/setup/1100CC.core_labels.en.sql).
+
+---
+
+Run SQL queries in database ?SITE?_cms:
+
+```sql
+ALTER TABLE `users` CHANGE `last_login` `login_date` DATETIME NULL DEFAULT NULL, CHANGE `ip` `login_ip` VARBINARY(16) NULL DEFAULT NULL, CHANGE `ip_proxy` `login_ip_proxy` VARBINARY(16) NULL DEFAULT NULL;
+ALTER TABLE `users` ADD `login_identifier` VARCHAR(10) NULL DEFAULT NULL AFTER `lang_code`;
+
+ALTER TABLE `cms_users` CHANGE `last_login` `login_date` DATETIME NULL DEFAULT NULL, CHANGE `ip` `login_ip` VARBINARY(16) NULL DEFAULT NULL, CHANGE `ip_proxy` `login_ip_proxy` VARBINARY(16) NULL DEFAULT NULL;
+ALTER TABLE `cms_users` ADD `login_identifier` VARCHAR(10) NULL DEFAULT NULL AFTER `lang_code`;
+```
+
+Run SQL queries in database 1100CC:
+
+```sql
+ALTER TABLE `core_users` CHANGE `last_login` `login_date` DATETIME NULL DEFAULT NULL, CHANGE `ip` `login_ip` VARBINARY(16) NULL DEFAULT NULL, CHANGE `ip_proxy` `login_ip_proxy` VARBINARY(16) NULL DEFAULT NULL;
+ALTER TABLE `core_users` ADD `login_identifier` VARCHAR(10) NULL DEFAULT NULL AFTER `lang_code`;
+```

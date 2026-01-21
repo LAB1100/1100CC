@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -602,7 +602,7 @@ class intf_templates extends templates {
 			self::writeTemplateSheet();
 			
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "template_update" && (int)$id && !empty($_POST['html'])) {
@@ -615,7 +615,7 @@ class intf_templates extends templates {
 			self::writeTemplateSheet();
 			
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 					
 		if ($method == "template_del" && (int)$id){
@@ -624,7 +624,7 @@ class intf_templates extends templates {
 			
 			self::writeTemplateSheet();
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

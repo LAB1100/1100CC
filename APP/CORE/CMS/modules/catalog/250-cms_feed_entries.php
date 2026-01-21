@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -304,7 +304,7 @@ class cms_feed_entries extends base_module {
 			$id = static::handleFeedEntry(false, $arr_feed_entry, $_POST['feed'], $_POST['tags']);
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_feed_entry" && (int)$id) {
@@ -315,7 +315,7 @@ class cms_feed_entries extends base_module {
 			static::handleFeedEntry($id, $arr_feed_entry, $_POST['feed'], $_POST['tags']);
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 			
 		if ($method == "del_feed_entry" && $id) {
@@ -323,7 +323,7 @@ class cms_feed_entries extends base_module {
 			static::deleteFeedEntry($id);
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

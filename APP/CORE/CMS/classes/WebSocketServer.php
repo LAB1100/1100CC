@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -170,7 +170,7 @@ abstract class WebSocketServer {
 							
 							$this->count_connection_attemps++;
 
-							$this->msg('Client connected. Socket: '.$client.', IP: '.$user->ip.'.');
+							$this->message('Client connected. Socket: '.$client.', IP: '.$user->ip.'.');
 						}
 					}
 				} else { // Process existing clients
@@ -191,7 +191,7 @@ abstract class WebSocketServer {
 						$user = $this->getUserBySocket($socket);
 						
 						$this->disconnect($socket);
-						$this->msg('Client disconnected: Connection lost. Socket: '.$socket.', IP: '.$user->ip.'.');
+						$this->message('Client disconnected: Connection lost. Socket: '.$socket.', IP: '.$user->ip.'.');
 					} else if ($nr_bytes > 0) {
 						
 						$user = $this->getUserBySocket($socket);
@@ -214,7 +214,7 @@ abstract class WebSocketServer {
 								if ($user->has_sent_close) {
 									
 									$this->disconnect($socket);
-									$this->msg('Client disconnected: Sent close. Socket: '.$socket.', IP: '.$user->ip.'.');
+									$this->message('Client disconnected: Sent close. Socket: '.$socket.', IP: '.$user->ip.'.');
 									
 									break;
 								}
@@ -243,7 +243,7 @@ abstract class WebSocketServer {
 												if ($user->has_sent_close) {
 													
 													$this->disconnect($socket);
-													$this->msg('Client disconnected: Sent close. Socket: '.$socket.', IP: '.$user->ip.'.');
+													$this->message('Client disconnected: Sent close. Socket: '.$socket.', IP: '.$user->ip.'.');
 													
 													$nr_bytes = 0;
 													break;
@@ -294,9 +294,9 @@ abstract class WebSocketServer {
 				$this->disconnect($user->socket);
 				
 				if ($time) {
-					$this->msg('Client disconnected: User timed out. Socket: '.$user->socket.', IP: '.$user->ip.'.');
+					$this->message('Client disconnected: User timed out. Socket: '.$user->socket.', IP: '.$user->ip.'.');
 				} else {
-					$this->msg('Client disconnected: Cleanup. Socket: '.$user->socket.', IP: '.$user->ip.'.');
+					$this->message('Client disconnected: Cleanup. Socket: '.$user->socket.', IP: '.$user->ip.'.');
 				}
 			}
 		}
@@ -438,7 +438,7 @@ abstract class WebSocketServer {
 		
 			$this->disconnect($user->socket);
 
-			$this->msg('Client disconnected: Connection refused "'.$str_response.'". Socket: '.$user->socket.', IP: '.$user->ip.'.');
+			$this->message('Client disconnected: Connection refused "'.$str_response.'". Socket: '.$user->socket.', IP: '.$user->ip.'.');
 			
 			return;
 		}
@@ -506,7 +506,7 @@ abstract class WebSocketServer {
 		return ($this->arr_sockets_user[(string)$socket] ?? null);
 	}
 
-	public function msg($message) {
+	public function message($message) {
 	  
 		if (!$this->verbose) {
 			return;

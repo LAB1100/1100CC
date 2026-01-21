@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -213,7 +213,7 @@ class user_management extends base_module {
 		return $return;
 	}
 		
-	public static function recoverUser($str_uname, $user_group_id, $recover_confirmation_mail_url) {
+	public static function recoverUser($str_uname, $user_group_id, $str_recover_confirmation_mail_url) {
 
 		$res = DB::query("SELECT
 			u.*
@@ -243,7 +243,7 @@ class user_management extends base_module {
 		
 		DB::setConnection();
 							
-		self::sendMailConfirmation('recover', $user_id, $recover_confirmation_mail_url);
+		self::sendMailConfirmation('recover', $user_id, $str_recover_confirmation_mail_url);
 
 		return true;
 	}
@@ -336,6 +336,7 @@ class user_management extends base_module {
 				case 'tinyint':
 				case 'smallint':
 				case 'mediumint':
+				case 'integer':
 					$value = (int)$value;
 					break;
 			}
@@ -518,7 +519,7 @@ class user_management extends base_module {
 	
 	public static function checkUserIds($user_id, $other_id, $parent_or_group) {
 		
-		$sql_user_id = (is_array($user_id) ? "IN (".arrParseRecursive($user_id, 'int').")" : "= ".(int)$user_id);
+		$sql_user_id = (is_array($user_id) ? "IN (".arrParseRecursive($user_id, TYPE_INTEGER).")" : "= ".(int)$user_id);
 		
 		if ($parent_or_group == 'parent') {
 			

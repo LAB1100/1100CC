@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -31,18 +31,22 @@ class DB extends \DBBase\DB {
 			$connection = new \mysqli($host, $arr_connection_details['user'], $arr_connection_details['password'], $database, $port);
 		} catch (\Exception $e) {
 
+			$str_message = 'Database trouble.';
+			
 			switch ($e->getCode()) {
 				case 1040:
 				case 1203:
 				case 2002:
+				
 					if (\SiteStartEnvironment::getRequestState() == \SiteStartEnvironment::REQUEST_INDEX) {
-						error('Server connection problem. Please refresh page to retry.');
+						$str_message = 'Server connection problem. Please refresh page to retry.';
 					} else {
-						error('Server connection problem.');
+						$str_message = 'Server connection problem.';
 					}
-				default:
-					error('Database trouble.');
+					break;
 			}
+			
+			error($str_message, TROUBLE_ERROR, LOG_BOTH, false, $e);
 		}
 		
 		$connection->multi_query("
@@ -51,7 +55,7 @@ class DB extends \DBBase\DB {
 			SET SESSION
 				time_zone = '+00:00',
 				sql_mode = (SELECT CONCAT(@@sql_mode, ',ANSI_QUOTES')),
-				group_concat_max_len = 100000,
+				group_concat_max_len = 1000000,
 				wait_timeout = 28800
 			;
 			
@@ -90,28 +94,13 @@ class DB extends \DBBase\DB {
 		
 		$modifier = ($modifier ?? MYSQLI_STORE_RESULT);
 		
-		if (!static::$connection_active_is_async) {
-			
-			try {
+		try {
 
-				$res = static::$connection_active->query($q, $modifier);
-			} catch (\Exception $e) {
+			$res = static::$connection_active->query(static::checkSQL($q), $modifier);
+		} catch (\Exception $e) {
 
-				static::$last_query = $q;
-				static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
-			}
-		} else {
-			
-			$connection_async = static::newConnectionAsync();
-			
-			try {
-				
-				$res = $connection_async->query($q, $modifier);
-			} catch (\Exception $e) {
-
-				static::$last_query = $q;
-				static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
-			}
+			static::$last_query = $q;
+			static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 		
 		return new \DBResult($res);
@@ -121,54 +110,71 @@ class DB extends \DBBase\DB {
 					
 		try {
 			
-			static::$connection_active->query($q, MYSQLI_ASYNC);
+			static::$connection_active->query(static::checkSQL($q), MYSQLI_ASYNC);
 		} catch (\Exception $e) {
 
 			static::$last_query = $q;
 			static::error(new \DBTrouble($e->getMessage(), $e->getCode(), $e));
 		}
 		
-		static::$connection_active_is_async = true;
-					
-		onUserPoll(function() {
+		$connection_async = static::$connection_active;
+		
+		static::setConnection(static::$connection_level, DB::MODE_CONNECT_SECONDARY); // Prepare/ready secondary connection
+		
+		onUserPoll(function() use ($connection_async) {
 			
-			$links = $errors = $reject = [static::$connection_active];
+			$links = $errors = $reject = [$connection_async];
 			
 			return mysqli_poll($links, $errors, $reject, 0);
-		}, function() {
+		}, function() use ($connection_async) {
 			
-			// Create new database connection
-			$connection_async = static::newConnectionAsync();
-			$connection_async->query('KILL QUERY '.static::$connection_active->thread_id);
+			// Set/initiate secondary connection
+			static::setConnectionDatabase(null);
 			
-			// Remove and switch closed database connection with new connection
-			static::$arr_database_level_connection[static::$connection_database][static::$connection_level] = $connection_async;
-			static::$connection_active_is_async = false;
-			static::setDatabase(static::$database_selected);
-			
-			// Remove new connection from async library
-			foreach (static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level] as $key => $cur_connection_async) {
+			// Switch to-be-closed connection with new connection
+			foreach (static::$arr_databases_levels_connection_primary[static::$connection_database] as $level => $connection) {
 				
-				if ($cur_connection_async === $connection_async) {
-					
-					unset(static::$arr_database_level_connection_async[static::$connection_database][static::$connection_level][$key]);
-					break;
-				}					
+				if ($connection !== $connection_async) {
+					continue;
+				}
+				
+				static::$arr_databases_levels_connection_primary[static::$connection_database][$level] = static::$connection_active;
 			}
+			
+			// Remove new connection from secondary library
+			foreach (static::$arr_databases_levels_connections_secondary[static::$connection_database][static::$connection_level] as $key => $connection) {
+				
+				if ($connection !== static::$connection_active) {
+					continue;
+				}
+				
+				unset(static::$arr_databases_levels_connections_secondary[static::$connection_database][static::$connection_level][$key]);
+				break;					
+			}
+			
+			// Close old connection
+			static::$connection_active->query('KILL QUERY '.$connection_async->thread_id);
+			
+			static::setConnection(static::$connection_level); // Exit with newly set primary connection
 		});
 		
-		$res = static::$connection_active->reap_async_query();
+		static::setConnection(static::$connection_level); // Continue with primary connection
 		
-		static::$connection_active_is_async = false;
-		
-		if (!$res) { // Something went wrong, but could not be caught since it happened asynchronously
-
-			$e = new \DBTrouble(static::$connection_active->error, static::$connection_active->errno);
+		try {
 			
+			$res = static::$connection_active->reap_async_query();
+			
+			if (!$res) { // Possibly something else went wrong, but could not be caught since it happened asynchronously
+				error();
+			}
+		} catch (\Exception $e) {
+			
+			$e = new \DBTrouble(static::$connection_active->error, static::$connection_active->errno);
+				
 			static::$last_query = $q;
 			static::error($e);
 		}
-		
+			
 		return new \DBResult($res);
 	}
 	
@@ -178,7 +184,7 @@ class DB extends \DBBase\DB {
 
 		try {
 				
-			if (static::$connection_active->multi_query($q)) {
+			if (static::$connection_active->multi_query(static::checkSQL($q))) {
 				
 				do {
 					$arr_res[] = new \DBResult(static::$connection_active->store_result());
@@ -206,7 +212,7 @@ class DB extends \DBBase\DB {
 
 		try {
 			
-			$statement = static::$connection_active->prepare($q);
+			$statement = static::$connection_active->prepare(static::checkSQL($q));
 		} catch (\Exception $e) {
 			
 			\DBStatement::reset();
@@ -218,9 +224,9 @@ class DB extends \DBBase\DB {
 		return new \DBStatement($statement);
 	}
 	
-	public static function isReady($connection = false) {
+	public static function isReady($connection = null) {
 		
-		$connection = ($connection !== false ? $connection : static::$connection_active);
+		$connection = ($connection !== null ? $connection : static::$connection_active);
 			
 		$links = $errors = $reject = [$connection]; 
 		
@@ -231,15 +237,10 @@ class DB extends \DBBase\DB {
 		return false;
 	}
 	
-	public static function isActive($connection = false) {
+	public static function isActive($connection = null) {
 		
-		if ($connection === false) {
-			
-			if (static::$connection_active_is_async) {
-				$connection = static::newConnectionAsync();
-			} else {
-				$connection = static::$connection_active;
-			}
+		if ($connection === null) {
+			$connection = static::$connection_active;
 		}
 		
 		try {
@@ -255,9 +256,9 @@ class DB extends \DBBase\DB {
 		return true;
 	}
 	
-	protected static function doClose($connection = false) {
+	protected static function doClose($connection = null) {
 		
-		$connection = ($connection !== false ? $connection : static::$connection_active);
+		$connection = ($connection !== null ? $connection : static::$connection_active);
 		
 		try {
 			
@@ -271,50 +272,59 @@ class DB extends \DBBase\DB {
 
 		return static::$connection_active->insert_id;
 	}
-	
-	public static function getErrorMessage($code) {
+
+	/*public static function checkSQL($sql) {
 		
-		$msg = false;
-		
-		switch ($code) {
-			case 1264:
-			case 1406:
-				$msg = getLabel('msg_error_database_data_field_limit');
-				break;
-			case 1062:
-				$msg = getLabel('msg_error_database_duplicate_record');
-				break;
-			case 1070:
-				$msg = getLabel('msg_error_database_index_limit');
-				break;
+		if (static::getTransaction() === false) {
+			return $sql;
 		}
 		
-		return $msg;
+		$has_ddl = \DBFunctions::detectDDL($sql);
+		
+		if ($has_ddl !== false) {
+			error(getLabel('msg_error_database_transaction'), TROUBLE_DATABASE);
+		}
+		
+		return $sql;
+	}*/
+	
+	public static function noCache() {
+		
+		static::query("SET SESSION query_cache_type = 0;");
 	}
 }
 
 class DBStatement extends \DBBase\DBStatement {
 	
+	private $arr_parameters = [];
+	private $arr_parameters_template = [];
+	
+	public function __construct($statement) {
+		
+		parent::__construct($statement);
+		
+		$this->arr_parameters_template = array_fill(0, (count($this->arr_variables) + 1), null); // Use template to make sure the keys remain in original position/sequence, add one first position for 'format bind'
+		
+		$str_format = '';
+		$this->arr_parameters_template[0] =& $str_format;
+		
+		foreach ($this->arr_variables as $arr_variable) {
+			$str_format .= $arr_variable[1];
+		}
+	}
+	
 	public function bindParameters($arr) {
 
-		$arr_collect = [];
-		
-		$format = '';
-		
-		$arr_collect[0] =& $format;
-		
+		$this->arr_parameters = $this->arr_parameters_template;
+				
 		foreach ($arr as $variable => $value) {
 			
 			$num_position = $this->arr_variables[$variable][0]+1;
 			
-			$arr_collect[$num_position] = $value;
-			
-			$format .= $this->arr_variables[$variable][1];
+			$this->arr_parameters[$num_position] = $value;
 		}
 		
-		ksort($arr_collect);
-		
-		$this->statement->bind_param(...$arr_collect);
+		$this->statement->bind_param(...$this->arr_parameters);
 	}
 	
 	public function execute() {
@@ -483,6 +493,19 @@ class DBFunctions extends \DBBase\DBFunctions {
 		return 'CAST('.$value.' AS '.$what.($length ? '('.$length.')' : '').')';
 	}
 	
+	public static function castColumnAs($column, $what, $length = false) {
+		
+		$str_length = ($length ? '('.$length.')' : '');
+		
+		if ($what === static::CAST_TYPE_BINARY && !$length) {
+			$what = 'VARBINARY(1000)'; // Length is arbitrary, but still indexable
+		} else if ($what === static::CAST_TYPE_STRING && !$length) {
+			$what = 'VARCHAR(1000)'; // Length is arbitrary
+		}
+		
+		return $column.' '.$what.$str_length;
+	}
+	
 	public static function convertTo($value, $to, $from, $format = null) {
 		
 		if ($from === static::TYPE_BINARY && $to === static::TYPE_STRING) {
@@ -501,7 +524,7 @@ class DBFunctions extends \DBBase\DBFunctions {
 		
 		return parent::convertTo($value, $to, $from, $format);
 	}
-	
+
 	public static function group2String($sql_expression, $str_separator = ', ', $sql_clause = false) {
 		
 		$sql = 'GROUP_CONCAT('.$sql_expression.' '.$sql_clause.' SEPARATOR \''.$str_separator.'\')';
@@ -589,13 +612,22 @@ class DBFunctions extends \DBBase\DBFunctions {
 		return $sql;
 	}
 	
-	public static function timeNow($do_transaction = false) {
+	public static function dateTimeNow($do_transaction = false, $do_precision = false) {
 		
 		if ($do_transaction) {
 			// Not implemented, could use a SET variable with time at start of transaction 
 		}
 		
+		if ($do_precision) { // Precision is not the default in MySQL
+			return 'NOW(6)';
+		}
+		
 		return 'NOW()'; // Statement time
+	}
+	
+	public static function numTimeNow($do_precision = false) {
+		
+		return parent::numTimeNow($do_precision);
 	}
 	
 	public static function searchRegularExpression($sql_field, $sql_expression, $str_flags = false) {
@@ -641,12 +673,11 @@ class DBFunctions extends \DBBase\DBFunctions {
 		return $sql;
 	}
 	
-	public static function sqlTableOptions($engine) {
+	public static function tableOptions($options) {
 		
 		$sql = '';
 		
-		if ($engine == static::TABLE_OPTION_MEMORY) {
-			
+		if ($options == static::TABLE_OPTION_MEMORY) {
 			$sql .= ' ENGINE=MEMORY';
 		}
 		
@@ -663,8 +694,55 @@ class DBFunctions extends \DBBase\DBFunctions {
 			yield $arr_row;
 		}
 	}
+	
+	public static function detectDDL($q) { // Data Definition Language (DDL) statements
+		
+		static $arr_statements = [
+			'ALTER EVENT', 'ALTER FUNCTION', 'ALTER PROCEDURE', 'ALTER SERVER', 'ALTER TABLE', 'ALTER TABLESPACE', 'ALTER VIEW', 'CREATE DATABASE', 'CREATE EVENT', 'CREATE FUNCTION', 'CREATE INDEX',
+			'CREATE PROCEDURE', 'CREATE ROLE', 'CREATE SERVER', 'CREATE SPATIAL REFERENCE SYSTEM', 'CREATE TABLE', 'CREATE TABLESPACE', 'CREATE TRIGGER', 'CREATE VIEW', 'DROP DATABASE', 'DROP EVENT', 'DROP FUNCTION', 'DROP INDEX',
+			'DROP PROCEDURE', 'DROP ROLE', 'DROP SERVER', 'DROP SPATIAL REFERENCE SYSTEM', 'DROP TABLE', 'DROP TABLESPACE', 'DROP TRIGGER', 'DROP VIEW', 'INSTALL PLUGIN', 'RENAME TABLE', 'TRUNCATE TABLE', 'UNINSTALL PLUGIN'
+		];
+					
+		foreach ($arr_statements as $str_sql) {
+			
+			if (strpos($q, $str_sql) !== false) {
+				return $str_sql;
+			}
+		}
+		
+		return false;
+	}
 }
 
-class DBTrouble extends \DBBase\DBTrouble {}
+class DBTrouble extends \DBBase\DBTrouble {
+	
+	public function getClientMessage() {
+		
+		$str_message = null;
+		
+		switch ($this->getCode()) {
+			case 1264:
+			case 1406:
+				$str_message = getLabel('msg_error_database_data_field_limit');
+				break;
+			case 1062:
+				$str_message = getLabel('msg_error_database_duplicate_record');
+				break;
+			case 1070:
+				$str_message = getLabel('msg_error_database_index_limit');
+				break;
+			case 1317:
+			case 1053:
+				$str_message = getLabel('msg_error_database_interruption');
+				break;
+			case 1213:
+			case 1205:
+				$str_message = getLabel('msg_error_database_deadlock');
+				break;
+		}
+		
+		return $str_message;
+	}
+}
 
 class DBSetup extends \DBBase\DBSetup {}

@@ -156,6 +156,8 @@ fieldset > ul > li > label:first-child + * > .options { margin: 0px; }
 .options fieldset > ul > li > label:first-child + * input.datepicker { width: 9.4em; }
 .options fieldset > ul > li > label:first-child + input.date-time,
 .options fieldset > ul > li > label:first-child + * input.date-time { width: 4em; }
+.options fieldset > ul > li > label:first-child + .pickcolor > input[type=text],
+.options fieldset > ul > li > label:first-child + * .pickcolor > input[type=text] { width: 78px; }
 .options fieldset > ul > li > label:first-child + textarea,
 .options fieldset > ul > li > label:first-child + * textarea { width: 250px; }
 .options fieldset > ul > li > label:first-child + * .regex > input[name$="[flags]"] { width: 35px; }

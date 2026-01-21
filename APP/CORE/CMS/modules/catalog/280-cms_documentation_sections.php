@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -479,7 +479,7 @@ class cms_documentation_sections extends base_module {
 				)
 			");
 						
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_documentation_section" && (int)$id) {
@@ -503,7 +503,7 @@ class cms_documentation_sections extends base_module {
 					WHERE id = ".(int)$documentation_section_id."
 			");
 									
-			$this->msg = true;
+			$this->message = true;
 		}
 			
 		if ($method == "del_documentation_section" && (int)$id) {
@@ -518,7 +518,7 @@ class cms_documentation_sections extends base_module {
 				;
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

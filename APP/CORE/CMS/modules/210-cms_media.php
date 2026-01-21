@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -467,7 +467,7 @@ class cms_media extends base_module {
 	
 		if ($method == "insert") {
 
-			$arr_files = arrRearrangeParams($_FILES['file']);
+			$arr_files = arrRearrangeKeysValues($_FILES['file']);
 		
 			foreach ($arr_files as $file) {
 				
@@ -475,7 +475,7 @@ class cms_media extends base_module {
 			}
 						
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update" && (int)$id) {
@@ -487,7 +487,7 @@ class cms_media extends base_module {
 			}
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "multi_update" && $id) {
@@ -502,7 +502,7 @@ class cms_media extends base_module {
 			}
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del" && $id) {
@@ -510,7 +510,7 @@ class cms_media extends base_module {
 			self::deleteMedia($id);
 			
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "media_select") {

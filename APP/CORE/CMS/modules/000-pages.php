@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -24,7 +24,7 @@ class pages extends base_module {
 			'name' => 'pages',
 			'entries' => function() {
 				
-				$arr_pages = static::getPagesByScope(false, false, false, false, null, false);
+				$arr_pages = static::getDirectoryPages(directories::getRootDirectory(), false, null, false);
 				
 				foreach ($arr_pages as $arr_page) {
 					
@@ -149,6 +149,34 @@ class pages extends base_module {
 		return $arr;
 	}
 	
+	public static function getDirectoryPages($directory_id = 0, $directory_depth = false, $is_published = null, $is_clearance = null) {
+		
+		$res = DB::query("SELECT
+			p.*, i.id AS directory_id, i.require_login, i.user_group_id
+				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." d
+				JOIN ".DB::getTable('TABLE_DIRECTORIES')." i ON (i.id = d.descendant_id)
+				JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.directory_id = d.descendant_id)
+			WHERE d.ancestor_id = ".(int)$directory_id."
+				".($is_published !== null ? "AND p.publish = ".($is_published ? 'TRUE' : 'FALSE') : '')."
+				".($is_clearance !== null ? "AND p.clearance = ".($is_clearance ? 'TRUE' : 'FALSE'): '')."
+				".($directory_depth ? "AND d.path_length <= ".(int)$directory_depth."" : "")."
+			ORDER BY d.path_length DESC, p.sort
+		");
+
+		$arr = [];
+		
+		while ($arr_row = $res->fetchAssoc()) {
+			
+			$arr_row['publish'] = DBFunctions::unescapeAs($arr_row['publish'], DBFunctions::TYPE_BOOLEAN);
+			$arr_row['clearance'] = DBFunctions::unescapeAs($arr_row['clearance'], DBFunctions::TYPE_BOOLEAN);
+			$arr_row['require_login'] = DBFunctions::unescapeAs($arr_row['require_login'], DBFunctions::TYPE_BOOLEAN);
+			
+			$arr[$arr_row['id']] = $arr_row;
+		}
+		
+		return $arr;
+	}
+	
 	public static function getDirectoryModules($directory_id, $directory_depth = false) {
 		
 		$arr = [];
@@ -159,7 +187,7 @@ class pages extends base_module {
 				JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.directory_id = d.descendant_id)
 				JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.page_id = p.id)
 			WHERE d.ancestor_id = ".(int)$directory_id."
-			".($directory_depth ? "AND d.path_length <= ".$directory_depth."" : "")."
+			".($directory_depth ? "AND d.path_length <= ".(int)$directory_depth."" : "")."
 		");
 		
 		while ($arr_row = $res->fetchAssoc()) {
@@ -187,11 +215,11 @@ class pages extends base_module {
 				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." d
 				JOIN ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." cd ON (cd.descendant_id = d.descendant_id)
 				JOIN ".DB::getTable('TABLE_DIRECTORIES')." i ON (i.id = cd.ancestor_id)
-				LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.directory_id = cd.ancestor_id)
-				LEFT JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.page_id = p.id)
+				JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.directory_id = cd.ancestor_id)
+				JOIN ".DB::getTable('TABLE_PAGE_MODULES')." m ON (m.page_id = p.id)
 			WHERE 
 				d.ancestor_id = ".$root."
-				".($directory_id ? "AND cd.descendant_id = ".(int)$directory_id."" : "")."
+				AND cd.descendant_id = ".(int)$directory_id."
 				".($module ? "AND" : "")."
 				".($module && $is_num_module && $is_arr_module ? "m.id IN (".implode(",", $module).")" : "")."
 				".($module && $is_num_module && !$is_arr_module ? "m.id = ".$module : "")."
@@ -336,7 +364,8 @@ class pages extends base_module {
 					FROM ".DB::getTable('TABLE_PAGES')." p
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm ON (pm.id = p.master_id)
 					LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm2 ON (pm2.id = pm.master_id)
-				WHERE p.id != ".(int)$selected_page_id."
+				WHERE TRUE
+					".($selected_page_id ? "AND p.id != ".(int)$selected_page_id : '')."
 					".($directory_id && is_array($directory_id) ? "AND p.directory_id IN (".implode(",", $directory_id).")": "")."
 					".($directory_id && !is_array($directory_id) ? "AND p.directory_id = ".(int)$directory_id."": "")."
 					".($do_limit_master ? "AND CASE
@@ -393,12 +422,12 @@ class pages extends base_module {
 				FROM ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." d
 				JOIN ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." cd ON (cd.descendant_id = d.descendant_id)
 				JOIN ".DB::getTable('TABLE_DIRECTORIES')." i ON (i.id = cd.ancestor_id)
-				LEFT JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.directory_id = cd.ancestor_id)
+				JOIN ".DB::getTable('TABLE_PAGES')." p ON (p.directory_id = cd.ancestor_id)
 				LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm ON (pm.id = p.master_id)
 				LEFT JOIN ".DB::getTable('TABLE_PAGES')." pm2 ON (pm2.id = pm.master_id)
-			WHERE p.id != ".(int)$selected_page_id."
-				AND d.ancestor_id = ".$root."
-				".($directory_id ? "AND cd.descendant_id = ".(int)$directory_id."" : "")."
+			WHERE d.ancestor_id = ".$root."
+				AND cd.descendant_id = ".(int)$directory_id."
+				".($selected_page_id ? "AND p.id != ".(int)$selected_page_id : '')."
 				".($do_limit_master ? "AND CASE
 						WHEN pm.master_id != 0 THEN 2
 						WHEN p.master_id != 0 THEN 1
@@ -433,33 +462,44 @@ class pages extends base_module {
 		
 		// Check if array is split into directories or flat
 		$is_directory_divided = true;
+		
 		if (!$arr || !is_array(current(current($arr)))) {
+			
 			$arr = [$arr];
 			$is_directory_divided = false;
 		}
 		
 		foreach($arr as &$arr_directory) {
 			foreach($arr_directory as $page_id => &$arr_page) {
-				$name = $arr_page['name'];
+				
+				$str_name = $arr_page['name'];
+				
 				if ($add_directory) {
-					$name = $arr_directories[$arr_page['directory_id']]['path'].' / '.$name;
+					$str_name = $arr_directories[$arr_page['directory_id']]['path'].' / '.$str_name;
 				}
 				if ($add_master_level) {
-					$name = $name.' ('.$arr_page['master_level'].')';
+					$str_name = $str_name.' ('.$arr_page['master_level'].')';
 				}
-				$arr_page['name'] = $name;
+				
+				$arr_page['name'] = $str_name;
 			}
 		}
 		unset($arr_directory);
 		
 		// Sort and flatten directory divided array
 		if ($is_directory_divided) {
+			
 			$arr_sorted = [];
+			
 			foreach($arr_directories as $directory_id => $arr_directory) {
-				if ($arr[$directory_id]) {
-					$arr_sorted = $arr_sorted+$arr[$directory_id];
+				
+				if (!$arr[$directory_id]) {
+					continue;
 				}
+				
+				$arr_sorted = $arr_sorted+$arr[$directory_id];
 			}
+			
 			$arr = $arr_sorted;
 		}
 
@@ -620,15 +660,25 @@ class pages extends base_module {
 		templates::writeTemplateSheet();
 	}
 	
-	public static function filterClearance($arr_pages_or_modules, $user_group_id, $arr_clearance) {
+	public static function filterClearance($arr_pages_or_modules, $user_group_id, $arr_clearance, $do_peek = false) {
 		
 		foreach ($arr_pages_or_modules as $key => $arr_page_or_module) {
 			
-			$has_clearance = ($arr_clearance && !empty($arr_clearance[($arr_page_or_module['page_id'] ?: $arr_page_or_module['id'])]));
+			$has_clearance = ($arr_clearance && !empty($arr_clearance[($arr_page_or_module['page_id'] ?? $arr_page_or_module['id'])]));
 			
 			if ((!empty($arr_page_or_module['require_login']) && $arr_page_or_module['user_group_id'] != $user_group_id) || (!$arr_page_or_module['clearance'] && $has_clearance) || ($arr_page_or_module['clearance'] && !$has_clearance)) {
+				
 				unset($arr_pages_or_modules[$key]);
+				continue;
 			}
+			
+			if ($do_peek) {
+				return true;
+			}
+		}
+		
+		if ($do_peek) {
+			return false;
 		}
 		
 		return $arr_pages_or_modules;
@@ -757,7 +807,7 @@ class pages extends base_module {
 					$page = new ExitPage($str_msg, '404', '404');
 					
 					return $page->getPage();
-				}, (object)['msg' => $str_msg, 'msg_type' => 'alert']
+				}, (object)['message' => $str_msg, 'message_type' => 'alert']
 			);
 		} else {
 			

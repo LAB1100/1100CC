@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -361,7 +361,7 @@ class cms_calendar extends base_module {
 			self::handleCalendarEvent($_POST);
 												
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update" && (int)$id) {
@@ -369,7 +369,7 @@ class cms_calendar extends base_module {
 			self::handleCalendarEvent($_POST, (int)$id);
 							
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 			
 		if ($method == "del" && (int)$id) {
@@ -381,14 +381,14 @@ class cms_calendar extends base_module {
 				WHERE ae.id = ".(int)$id."
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}		
 	}
 
 	public static function handleCalendarEvent($arr_event, $event_id = false) {
 		
-		$date = DBFunctions::str2Date($arr_event['date'].' '.$arr_event['date_t']);
-		$date_end = DBFunctions::str2Date($arr_event['date_end'].' '.$arr_event['date_end_t']);
+		$date = DBFunctions::str2DateTime($arr_event['date'].' '.$arr_event['date_t'], '=');
+		$date_end = DBFunctions::str2DateTime($arr_event['date_end'].' '.$arr_event['date_end_t'], '=');
 		if ($date >= $date_end) {
 			error(getLabel('msg_date_incorrect'));
 		}

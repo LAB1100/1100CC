@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -41,11 +41,11 @@ function Feedback() {
 				elm.request.obj_request.abort();
 			}
 			
-			var elm_context = elm.request.elm_context;
+			const elm_context = elm.request.elm_context;
 			
 			if (elm_context) {
 				
-				var pos = elm_context.arr_requests.indexOf(elm);
+				const pos = elm_context.arr_requests.indexOf(elm);
 				elm_context.arr_requests.splice(pos, 1);
 			}
 		}
@@ -68,13 +68,13 @@ function Feedback() {
 			return;
 		}
 		
-		var arr_elms = [];
+		const arr_elms = [];
 		
-		for (var i = 0, len = elm_context.arr_requests.length; i < len; i++) {
+		for (let i = 0, len = elm_context.arr_requests.length; i < len; i++) {
 			arr_elms.push(elm_context.arr_requests[i]);
 		}
 		
-		for (var i = 0, len = arr_elms.length; i < len; i++) {
+		for (let i = 0, len = arr_elms.length; i < len; i++) {
 			SELF.stop(arr_elms[i]);
 		}
 	};
@@ -95,11 +95,20 @@ function Feedback() {
 			}
 		} else {
 			
-			if (obj_request.includeFeedback == null) {
-				obj_request.includeFeedback = true;
+			if (obj_request.xhr) { // Fully custom, already processed (e.g. already has feedback included)
+				
+				obj_request.xhr.open('POST', obj_request.url, true);
+				obj_request.xhr.send((obj_request.data ? obj_request.data : null));
+				
+				obj_request.abort = function() { obj_request.xhr.abort(); };
+			} else {
+			
+				if (obj_request.includeFeedback == null) {
+					obj_request.includeFeedback = true;
+				}
+			
+				obj_request = $.ajax(parseRequest(obj_request));
 			}
-		
-			obj_request = $.ajax(parseRequest(obj_request));
 		}
 		
 		elm.request = {obj_request: obj_request, elm_context: elm_context};
@@ -231,7 +240,6 @@ function Feedback() {
 		if (obj_request.contentType == FEEDBACK.CONTENT_TYPE_JSON) {
 			
 			if (obj_request.includeFeedback) {
-				
 				obj_request.data.feedback = SELF.getFeedback();
 			}
 			
@@ -273,17 +281,17 @@ function Feedback() {
 			console.log('1100CC server-side execution time: '+json.timing+' seconds.');
 		}
 		
-		const msg = json.msg;
-		const msg_type = json.msg_type;
-		const arr_msg_options = (json.msg_options ? json.msg_options : {});
-		arr_msg_options.duration = (arr_msg_options.duration !== undefined ? arr_msg_options.duration : (msg_type == 'status' ? 3000 : 5000));
-		arr_msg_options.identifier = (arr_msg_options.identifier !== undefined ? arr_msg_options.identifier : false);
+		const message = json.message;
+		const message_type = json.message_type;
+		const arr_message_options = (json.message_options ? json.message_options : {});
+		arr_message_options.duration = (arr_message_options.duration !== undefined ? arr_message_options.duration : (message_type == 'status' ? 3000 : 5000));
+		arr_message_options.identifier = (arr_message_options.identifier !== undefined ? arr_message_options.identifier : false);
 
 		if (json.location) {
 			
 			if (json.location.reload) {
 				
-				LOCATION.reload(json.location.real, (msg ? arr_msg_options.duration : false));
+				LOCATION.reload(json.location.real, (message ? arr_message_options.duration : false));
 			} else {
 				
 				if (json.location.replace) {
@@ -303,35 +311,35 @@ function Feedback() {
 		
 		// Messages
 		
-		MESSAGEBOX.checkSystem(json.system_msg);
+		MESSAGEBOX.checkSystem(json.system_message);
 		
-		if (arr_msg_options.clear) {
-			MESSAGEBOX.clear(arr_msg_options.clear);
+		if (arr_message_options.clear) {
+			MESSAGEBOX.clear(arr_message_options.clear);
 		}
 		
-		if (msg_type == 'status') { // Indication there could be a longer running process: show the loader as soon as possible
-			
+		if (message_type == 'status') { // Indication there could be a longer running process: show the loader as soon as possible
 			LOADER.show(elm);
 		} else {
-			
 			LOADER.stop(elm);
 		}
 		
-		if (msg) {
+		if (message) {
 			
-			MESSAGEBOX.add({msg: msg, type: msg_type, method: 'append', duration: arr_msg_options.duration, persist: arr_msg_options.persist, identifier: arr_msg_options.identifier});
+			MESSAGEBOX.add({message: message, type: message_type, method: 'append', duration: arr_message_options.duration, persist: arr_message_options.persist, identifier: arr_message_options.identifier});
 			
-			if (arr_msg_options.identifier) {
+			if (arr_message_options.identifier) {
 				
 				if (!elm.messagebox_identifiers) {
 					elm.messagebox_identifiers = {};
 				}
 				
-				elm.messagebox_identifiers[arr_msg_options.identifier] = arr_msg_options.identifier;
+				elm.messagebox_identifiers[arr_message_options.identifier] = arr_message_options.identifier;
 			}
 		}
 		
-		if (LOCATION.hasChanged() || msg_type == 'alert') {
+		if (LOCATION.hasChanged() || message_type == 'alert') {
+			
+			SCRIPTER.triggerEvent(elm, 'ajaxerror');
 			return false;
 		}
 		
@@ -350,7 +358,7 @@ function Feedback() {
 			json.validate = loopJSONFunctionEval(json.validate);
 		}
 		
-		if (msg_type == 'status') {
+		if (message_type == 'status') {
 			return true;
 		}
 		
@@ -457,23 +465,23 @@ function Feedback() {
 				
 				const elm_error = validator.errorList[0].element;
 				
-				let str_msg = 'conf_form_missing_value';
+				let str_message = 'conf_form_missing_value';
 				
 				if (num_errors > 1) {
-					str_msg = 'conf_form_missing_values';
+					str_message = 'conf_form_missing_values';
 				}
 				
-				ASSETS.getLabels(elm_error, [str_msg], function(data) {
+				ASSETS.getLabels(elm_error, [str_message], function(data) {
 					
-					str_msg = data[str_msg];
-					str_msg = str_msg.replace('[V]{errors}', num_errors);
+					str_message = data[str_message];
+					str_message = str_message.replace('[V]{errors}', num_errors);
 					
 					if (elm_box) {
-						elm_box.find('div').html(str_msg);
+						elm_box.find('div').html(str_message);
 					}
 				});
 				
-				var elm_box = MESSAGEBOX.add({msg: '<ul><li><label></label><div>'+str_msg+'</div></li></ul>', type: 'attention', method: 'append', duration: 5000});
+				var elm_box = MESSAGEBOX.add({message: '<ul><li><label></label><div>'+str_message+'</div></li></ul>', type: 'attention', method: 'append', duration: 5000});
 
 				validator.defaultShowErrors();
 								
@@ -527,6 +535,7 @@ function Loader() {
 				elm: false,
 				timeout: false,
 				timer: false,
+				progress: null,
 				updated: 0
 			};
 			
@@ -562,7 +571,7 @@ function Loader() {
 			if (obj_loader.updated == 240) { // Timeout connection after x seconds
 				
 				FEEDBACK.stop(elm);
-				FEEDBACK.check(elm, {msg_type: 'alert', msg: '<ul><li><label></label><div>Connection timed out.</div></li></ul>'});
+				FEEDBACK.check(elm, {message_type: 'alert', message: '<ul><li><label></label><div>Connection timed out.</div></li></ul>'});
 			}
 		}, 1000);
 	};
@@ -580,7 +589,26 @@ function Loader() {
 			clearTimeout(obj_loader.timeout);			
 		}
 				
-		obj_loader.elm = MESSAGEBOX.add({msg: '<span></span>', counter: false, type: 'loading', duration: 0, persist: true, method: 'prepend'});
+		obj_loader.elm = MESSAGEBOX.add({message: '<span></span>', counter: false, type: 'loading', duration: 0, persist: true, method: 'prepend'});
+		
+		if (obj_loader.progress !== null) {
+			SELF.progress(elm, obj_loader.progress);
+		}
+	};
+	
+	this.progress = function(elm, num_progress) {
+		
+		var elm = getElement(elm);
+		const obj_loader = elm.loader;
+		
+		obj_loader.progress = num_progress;
+		
+		if (!obj_loader.elm) {
+			return;
+		}
+		
+		obj_loader.elm[0].dataset.progress = num_progress;
+		obj_loader.elm[0].style.setProperty('--progress', num_progress+'%');
 	};
 	
 	this.stop = function(elm) {
@@ -770,9 +798,9 @@ function WebService(host, port) {
 	this.receive = function(data) {};
 	this.closed = function() {};
 	
-	this.log = function(msg) {
+	this.log = function(str_message) {
 		
-		console.log('1100CC Webservice: '+msg);
+		console.log('1100CC Webservice: '+str_message);
 	};
 }
 
@@ -912,15 +940,128 @@ function WebServices() {
 }
 var WEBSERVICES = new WebServices();
 
-(function($) {
+function ProcessResponse(elm, xhr_use) {
 	
-	$(document).ajaxError(function(e, xhr, settings, exception) {
+	const SELF = this;
+	
+	let xhr = xhr_use;
+	let is_buffering = true;
+	let str_response = '';
+	let num_pos_processed = 0;
+	let str_processed = '';
+	
+	SELF.setXHR = function(xhr_use) {
+		xhr = xhr_use;
+	};
+	
+	SELF.check = function() {
+
+		if (!is_buffering) {
+			
+			func_update();
+			return;
+		}
+
+		// Make sure we have a fully processed first response and no buffer issues (IE)
+		
+		const str_check = xhr.responseText;
+		
+		if (!str_check) {
+			return;
+		}
+		
+		if (str_check.indexOf('[-PROCESS]') !== -1) {
+			is_buffering = false;
+		} else if (str_check.indexOf('{') !== -1) { 
+			is_buffering = false;
+		}
+		
+		if (!is_buffering) {
+			
+			func_update();
+			return;
+		}
+			
+		setTimeout(function() { // Wait a bit for the first response to get ready
+			func_update();
+		}, 50);
+	};
+	
+	var func_update = function() {
+		
+		LOADER.reset(elm);
+
+		if (!xhr.responseText || (xhr.responseText.length <= str_response.length)) {
+			return;
+		}
+		
+		str_response = xhr.responseText;
+		
+		func_parse();
+	};
+	
+	SELF.checkDone = function(str_data) {
+		
+		if (!str_data) {
+			return false;
+		}
+		
+		str_response = str_data+'[PROCESS][-PROCESS]'; // Trigger and parse until the end
+		
+		func_parse();
+		
+		return str_processed;
+	};
+	
+	var func_parse = function() {
+		
+		const arr_pos_delimiters = [];
+		
+		let num_pos_search = num_pos_processed;
+		let num_pos_delimiter_found = str_response.indexOf('[-PROCESS]', num_pos_search);
+		
+		while (num_pos_delimiter_found !== -1) {
+			
+			const num_pos_delimiter_open = str_response.indexOf('[PROCESS]', num_pos_search);
+			
+			arr_pos_delimiters.push([num_pos_delimiter_open, num_pos_delimiter_found + 10]);
+			
+			num_pos_search = num_pos_delimiter_found + 10;
+			num_pos_delimiter_found = str_response.indexOf('[-PROCESS]', num_pos_search);
+		}
+		
+		for (let i = 0, len = arr_pos_delimiters.length; i < len; i++) {
+			
+			const arr_pos_delimiter = arr_pos_delimiters[i];
+			
+			const num_pos_start = arr_pos_delimiter[0];
+			const num_pos_stop = arr_pos_delimiter[1];
+			
+			if (num_pos_start > num_pos_processed) {
+				str_processed += str_response.substring(num_pos_processed, num_pos_start);
+			}
+			
+			const str = str_response.substring(num_pos_start + 9, num_pos_stop - 10);
+			
+			num_pos_processed = num_pos_stop;
+			
+			let json = null;
+			
+			try {
+				json = JSON.parse(str);
+			} catch(e) { }
+			
+			if (json) {
+				FEEDBACK.check(elm, json);
+			}
+		}
+	};
+	
+	SELF.checkError = function(exception) {
 		
 		if (exception == 'abort') { // Abort is invoked client side, already handled
 			return;
 		}
-		
-		const elm = settings.context;
 		
 		if (xhr.responseText) {
 			
@@ -936,12 +1077,33 @@ var WEBSERVICES = new WebServices();
 			}
 		}
 		
-		let msg = '<ul><li><label></label><div>Connection lost.</div></li></ul>';
+		let str_message = '<ul><li><label></label><div>Connection lost.</div></li></ul>';
 		if (exception) {
-			msg = '<ul><li><label></label><div>Connection error: '+exception+'.</div></li></ul>';
+			str_message = '<ul><li><label></label><div>Connection error: '+exception+'.</div></li></ul>';
 		}
 		
-		FEEDBACK.check(elm, {msg_type: 'alert', msg: msg});
+		FEEDBACK.check(elm, {message_type: 'alert', message: str_message});
+	};
+	
+	SELF.checkUpload = function(e, callback) {
+		
+		const num_loaded = e.loaded;
+		const num_total = e.total;
+		const num_percent = (num_loaded / num_total) * 100;
+		
+		LOADER.reset(elm);
+		
+		callback(e, num_loaded, num_total, num_percent);
+	};
+}
+
+(function($) {
+	
+	$(document).ajaxError(function(e, xhr, settings, exception) {
+		
+		const process_response = new ProcessResponse(settings.context, xhr);
+		
+		process_response.checkError(exception);
 	}).ajaxSend(function(e, xhr, settings) {
 		
 		xhr.setRequestHeader('1100CC-Status', '1');
@@ -970,45 +1132,7 @@ var WEBSERVICES = new WebServices();
 
 	$.ajaxPrefilter(function(options, options_original, jqXHR) {
 		
-		let is_buffering = true;
-		let arr_response = false;
-		let str_response = '';
-		let pos_processed = 0;
-		let str_processed = '';
-		
-		const str2Bytes = function(str) {
-
-			let num_bytes = 0;
-			
-			for (let i = 0, len = str.length; i < len; i++) {
-				
-				const c = str.charCodeAt(i);
-				
-				num_bytes += c < (1 <<  7) ? 1 :
-						   c < (1 << 11) ? 2 :
-						   c < (1 << 16) ? 3 :
-						   c < (1 << 21) ? 4 :
-						   c < (1 << 26) ? 5 :
-						   c < (1 << 31) ? 6 : Number.NaN;
-			}
-			
-			return num_bytes;
-		};
-		
-		options.uploadProgress = function(e) {
-			
-			if (!options_original.uploadProgress) {
-				return;
-			}
-			
-			const position = e.loaded;
-			const total = e.total;
-			const percent = (position / total) * 100;
-			
-			LOADER.reset(options.context);
-			
-			options_original.uploadProgress(e, position, total, percent);
-		};
+		const process_response = new ProcessResponse(options.context);
 		
 		// Processing: XHR.readyState = 2/3 (parsing request) or 4 (full request)
 		
@@ -1017,110 +1141,27 @@ var WEBSERVICES = new WebServices();
 			if (!(e.currentTarget instanceof window.XMLHttpRequest)) { // The send request progress
 				return;
 			}
-
-			if (!e.currentTarget.responseText) {
-				return;
-			}
 			
-			arr_response = e.currentTarget;
-			
-			if (is_buffering) { // Make sure we have an fully processed first response and no buffer issues (IE)
-
-				const str_check = arr_response.responseText;
-				
-				if (str_check.indexOf('[-PROCESS]') !== -1) {
-					
-					is_buffering = false;
-				} else if (str_check.indexOf('{') !== -1) { 
-					
-					is_buffering = false;
-				}
-
-				if (is_buffering) {
-					
-					setTimeout(function() { // Wait a bit for the first response to get ready
-						update();
-					}, 50);
-				} else {
-					
-					update();
-				}						
-			} else {
-				
-				update();
-			}
-		}
-		
-		var update = function() {
-			
-			LOADER.reset(options.context);
-
-			if (arr_response.responseText && (arr_response.responseText.length > str_response.length)) {
-				
-				str_response = arr_response.responseText;
-				
-				parse();
-			}
+			process_response.setXHR(e.currentTarget);
+			process_response.check();
 		};
-		
-		var parse = function() {
-			
-			const arr_pos_delimiters = [];
-			
-			let pos_search = pos_processed;
-			let pos_delimiter_found = str_response.indexOf('[-PROCESS]', pos_search);
-			
-			while (pos_delimiter_found !== -1) {
-				
-				const pos_delimiter_open = str_response.indexOf('[PROCESS]', pos_search);
-				
-				arr_pos_delimiters.push([pos_delimiter_open, pos_delimiter_found + 10]);
-				
-				pos_search = pos_delimiter_found + 10;
-				pos_delimiter_found = str_response.indexOf('[-PROCESS]', pos_search);
-			}
-			
-			for (let i = 0, len = arr_pos_delimiters.length; i < len; i++) {
-				
-				const arr_pos_delimiter = arr_pos_delimiters[i];
-				
-				const pos_start = arr_pos_delimiter[0];
-				const pos_stop = arr_pos_delimiter[1];
-				
-				if (pos_start > pos_processed) {
-					str_processed += str_response.substring(pos_processed, pos_start);
-				}
-				
-				const str = str_response.substring(pos_start + 9, pos_stop - 10);
-				
-				pos_processed = pos_stop;
-				
-				let json = null;
-				
-				try {
-					json = JSON.parse(str);
-				} catch(e) { }
-				
-				if (json) {				
-					FEEDBACK.check(options.context, json);
-				}
-			}
-		}
 		
 		// Processed: XHR.readyState = 4
 		
 		options.dataFilter = function(data, type) {
 			
-			if (data) {
-				
-				str_response = data+'[PROCESS][-PROCESS]';
-
-				parse();
-
-				return str_processed;
+			return process_response.checkDone(data);
+		};
+		
+		// Track upload
+		
+		options.uploadProgress = function(e) {
+			
+			if (!options_original.uploadProgress) {
+				return;
 			}
 			
-			return false;
+			process_response.checkUpload(e, options_original.uploadProgress);
 		};
 	});
 })(jQuery);

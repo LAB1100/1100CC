@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -304,7 +304,7 @@ class intf_directories extends directories {
 			DB::query("INSERT INTO ".DB::getTable('TABLE_DIRECTORY_CLOSURE')." (ancestor_id, descendant_id, path_length) VALUES (".$new_id.", ".$new_id.", 0)");
 													 
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "directory_update" && (int)$id) {
@@ -404,7 +404,7 @@ class intf_directories extends directories {
 			}
 				
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 			
 		if ($method == "directory_del" && (int)$id) {
@@ -445,7 +445,7 @@ class intf_directories extends directories {
 			");
 			
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

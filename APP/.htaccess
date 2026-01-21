@@ -1,7 +1,7 @@
 
 ###
  # 1100CC - web application framework.
- # Copyright (C) 2025 LAB1100.
+ # Copyright (C) 2026 LAB1100.
  #
  # See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  ##
@@ -50,9 +50,9 @@ RewriteRule ^.*$ - [E=!Q1,E=!Q2,E=!Q3,E=!Q4,E=!Q5,E=!Q6,E=!QTOP]
 RewriteRule ^.*$ - [E=SERVER_NAME_SITE_NAME:${alias:SITE_NAME:%{ENV:SERVER_NAME_1100CC}|%{ENV:SERVER_NAME_1100CC}},E=SERVER_NAME_MODIFIER:${alias:MODIFIER:%{ENV:SERVER_NAME_1100CC}}]
 RewriteRule ^.*$ - [E=SITE_NAME:${alias:%{ENV:SERVER_NAME_SITE_NAME}}]
 
-# Continue if SITE_NAME is set
+# Forbidden if SITE_NAME is not set
 	RewriteCond %{ENV:SITE_NAME} =""
-RewriteRule ^.*$ - [PT,R=403]
+RewriteRule ^.*$ - [F]
 
 # Determine custom section
 	RewriteCond %{ENV:SERVER_NAME_SUB} ((?:cms|s[0-9])[\.-])?((?:[^\.-]+[\.-])*)$
@@ -61,9 +61,9 @@ RewriteRule ^.*$ - [E=SERVER_NAME_SUB:%1,E=SERVER_NAME_CUSTOM:%2]
 # Redirect if SITE_NAME is not a directory or certificate challenge
 	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME} !-d
 	RewriteCond %{ENV:PATH} !/\.well-known/acme-challenge/
-	# Http or http(s)
+	# Include http or http(s)
 	RewriteCond %{SERVER_PORT}s ^(?:443(s)|[0-9]+s)$
-RewriteRule ^.*$ http%1://%{ENV:SERVER_NAME_SUB}%{ENV:SERVER_NAME_CUSTOM}%{ENV:SITE_NAME}%{ENV:PATH} [L,R]
+RewriteRule ^.*$ http%1://%{ENV:SERVER_NAME_SUB}%{ENV:SERVER_NAME_CUSTOM}%{ENV:SITE_NAME}%{ENV:PATH} [R,L]
 
 ################################################
 
@@ -77,53 +77,60 @@ RewriteRule ^.*$ - [E=PATH_CMS:/CMS,E=PATH:/%1]
 	RewriteCond %{REQUEST_FILENAME} \.php$
 	RewriteCond %{REQUEST_FILENAME} !/CORE/index\.php$
 	RewriteCond %{REQUEST_FILENAME} !/CORE/CMS/index\.php$
-RewriteRule ^.+$ - [F,NC]
+RewriteRule ^.+$ - [F]
 
 # Disallow access to SETTINGS or something PRIVATE
 	RewriteCond %{REQUEST_FILENAME} /SETTINGS/ [OR]
 	RewriteCond %{REQUEST_FILENAME} /PRIVATE/
-RewriteRule ^.+$ - [F,NC]
+RewriteRule ^.+$ - [F]
 
 # If the file or symbolic link truly exists in the relevant directories, show it!
 	RewriteCond %{DOCUMENT_ROOT}##%{ENV:SITE_NAME}##%{REQUEST_FILENAME} ^(.+)##(.+)##(\1/\2|\1/CORE|\1/STORAGE/\2)/.+$
-# Continue if REQUEST_FILENAME is not a file
+# If REQUEST_FILENAME is a file
 	RewriteCond %{REQUEST_FILENAME} -f [OR]
-# Continue if REQUEST_FILENAME is not a symbolic link
+# Or if REQUEST_FILENAME is a symbolic link
 	RewriteCond %{REQUEST_FILENAME} -l
 RewriteRule ^.+$ - [PT,L]
 
 # If the file exists in the SITE directory, create path
-# Continue if the path is not a file
+# If the path is a file
 	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -f [OR]
-# Continue if the path is not a symbolic link
+# Or if the path is a symbolic link
 	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -l
-RewriteRule ^(.+)$ /%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
+RewriteRule ^.+$ /%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
 
 # If the file exists in the CORE directory, create path
-# Continue if the path is not a file
+# If the path is a file
 	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:PATH_CMS}%{ENV:PATH} -f [OR]
-# Continue if the path is not a symbolic link
+# Or if the path is a symbolic link
 	RewriteCond %{DOCUMENT_ROOT}/CORE%{ENV:PATH_CMS}%{ENV:PATH} -l
-RewriteRule ^(.+)$ /CORE%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
+RewriteRule ^.+$ /CORE%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
 
 # If the file exists in the SITE STORAGE directory, create path
-# Continue if the path is not a file
+# If the path is a file
 	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -f [OR]
-# Continue if the path is not a symbolic link
+# Or if the path is a symbolic link
 	RewriteCond %{DOCUMENT_ROOT}/STORAGE/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} -l
-RewriteRule ^(.+)$ /STORAGE/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
+RewriteRule ^.+$ /STORAGE/%{ENV:SITE_NAME}%{ENV:PATH_CMS}%{ENV:PATH} [PT,L]
+
+# Forbidden if SITE_NAME is not a directory but has gotten this far (i.e. certificate challenge)
+	RewriteCond %{DOCUMENT_ROOT}/%{ENV:SITE_NAME} !-d
+RewriteRule ^.*$ - [F]
 
 # All other queries get sent to the CORE index as index.php/whatever
-RewriteRule ^(.*)$ /CORE%{ENV:PATH_CMS}/index.php%{ENV:PATH} [L]
+RewriteRule ^.*$ /CORE%{ENV:PATH_CMS}/index.php%{ENV:PATH} [L]
 
 ################################################
-
-# Pass authorization headers
-CGIPassAuth on
 
 # Allow compression
 AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css
 AddOutputFilterByType DEFLATE application/html application/xml application/xhtml+xml application/rss+xml application/javascript application/json image/svg+xml
+
+# Pass input authorization headers
+CGIPassAuth on
+
+# Pass output content-length HTTP headers
+SetEnv ap_trust_cgilike_cl 1
 
 # Set always applicable headers
 Header always set X-Content-Type-Options "nosniff"

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -136,7 +136,7 @@ class intf_apis extends apis {
 		$return = "SCRIPTER.static('#mod-intf_apis', function(elm_scripter) {
 		
 			elm_scripter.on('change', '[id=f\\\:intf_apis\\\:host_api-0] [name^=host_name]', function() {
-				$(this).formCommand();		
+				COMMANDS.formCommand(this);
 			});
 		});
 		
@@ -144,7 +144,7 @@ class intf_apis extends apis {
 			
 			elm_scripter.on('change', '[id=y\\\:intf_apis\\\:lookup_user_groups-0]', function() {
 				var elm_target = elm_scripter.find('[name=client_users_user_group_id]');
-				$(this).quickCommand(elm_target);		
+				COMMANDS.quickCommand(this, elm_target);
 			});
 		});
 		";
@@ -176,7 +176,7 @@ class intf_apis extends apis {
 				");
 			}
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	
 		// POPUP
@@ -293,7 +293,7 @@ class intf_apis extends apis {
 			");
 			
 			$this->html = $this->contentTabAPIs();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_api" && $id){
@@ -311,7 +311,7 @@ class intf_apis extends apis {
 			self::setAPILimits($id, $_POST['request_limit_ip'] ,$_POST['request_limit_global']);
 			
 			$this->html = $this->contentTabAPIs();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_api" && $id) {
@@ -320,7 +320,7 @@ class intf_apis extends apis {
 								WHERE id = ".(int)$id."
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

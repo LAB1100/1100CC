@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -89,7 +89,7 @@ class form extends base_module {
 			}
 			
 			msg((Labels::parseTextVariables($arr_form['response']) ?: getLabel('msg_form_submitted')), 'FORM', LOG_BOTH, false, false, 3000);
-			Log::setMsg(getLabel('msg_success'));
+			Log::setHeader(getLabel('msg_success'));
 			
 			if ($arr_form['redirect_page_id']) {
 				

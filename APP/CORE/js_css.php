@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -25,6 +25,7 @@
 		DIR_CMS.DIR_JS.'core_feedback.js',
 		DIR_CMS.DIR_JS.'core_shed.js',
 		DIR_CMS.DIR_JS.'core_methods.js',
+		DIR_CORE.DIR_JS.'DocumentEmbeddingListener.js',
 		DIR_CORE.DIR_JS.'home.js'
 	];
 	$arr['css'] = [

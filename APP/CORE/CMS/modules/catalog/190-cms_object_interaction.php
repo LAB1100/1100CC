@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -525,7 +525,7 @@ class cms_object_interaction extends base_module {
 			self::handleStageLevels($stage_id);
 						
 			$this->html = self::contentTabStages();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_stage" && (int)$id) {
@@ -556,7 +556,7 @@ class cms_object_interaction extends base_module {
 			}
 				
 			$this->html = self::contentTabStages();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_stage" && (int)$id) {
@@ -571,7 +571,7 @@ class cms_object_interaction extends base_module {
 				FileStore::deleteDirectoryTree($path);
 			}
 		
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 							
@@ -586,7 +586,7 @@ class cms_object_interaction extends base_module {
 			$res = DB::query("INSERT INTO ".DB::getTable("DEF_OBJECT_INTERACTION_OBJECTS")." (name, img, shape, class, redirect_page_id, body) VALUES ('".DBFunctions::strEscape($_POST["name"])."', '".$value_img."', '".$value_shape."', '".DBFunctions::strEscape($_POST["class"])."', ".(int)$_POST["redirect_page_id"].", '".DBFunctions::strEscape($_POST["body"])."')");
 												
 			$this->html = self::contentTabObjects();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_object" && (int)$id) {
@@ -607,7 +607,7 @@ class cms_object_interaction extends base_module {
 							WHERE id = ".$id."");
 				
 			$this->html = self::contentTabObjects();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del_object" && (int)$id) {
@@ -615,7 +615,7 @@ class cms_object_interaction extends base_module {
 			$res = DB::query("DELETE oi_o, oi_ol FROM ".DB::getTable("DEF_OBJECT_INTERACTION_OBJECTS")." oi_o
 								LEFT JOIN ".DB::getTable("DEF_OBJECT_INTERACTION_OBJECT_LINK")." oi_ol ON (oi_ol.object_interaction_object_id = oi_o.id)
 									WHERE oi_o.id=".(int)$id."");
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

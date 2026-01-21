@@ -11,3 +11,5 @@
 		DB::setConnectionDetails('localhost', '1100CC_cms', './database_cms.pass', DB::CONNECT_CMS);
 		DB::setConnectionDetails('localhost', '1100CC_home', './database_home.pass', DB::CONNECT_HOME);
 	}
+	
+	//Settings::set('setup_core_user', true);

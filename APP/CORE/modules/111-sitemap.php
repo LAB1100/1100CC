@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -31,8 +31,8 @@ class sitemap extends base_module {
 			
 			$base_url = pages::getBaseURL($row_directory);
 			
-			$return .= '<ul>
-				<li>'.($row_directory['title'] ? '<a href="'.$base_url.'">'.strEscapeHTML(Labels::parseTextVariables($row_directory['title'])).'</a>' : '').'</li>';
+			$return .= '<ul>'
+				.'<li>'.($row_directory['title'] ? '<a href="'.$base_url.'">'.strEscapeHTML(Labels::parseTextVariables($row_directory['title'])).'</a>' : '').'</li>';
 				
 				if ($arr_directory_pages[$row_directory['id']]) {
 					

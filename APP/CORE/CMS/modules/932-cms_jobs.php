@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -218,7 +218,7 @@ class cms_jobs extends base_module {
 			self::runJob($id[0], $id[1]);
 			
 			$this->html = $this->createTable();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "stop_job") {
@@ -248,7 +248,7 @@ class cms_jobs extends base_module {
 			}
 				
 			$this->html = $this->createTable();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "set_job_options") {
@@ -283,7 +283,7 @@ class cms_jobs extends base_module {
 			self::handleJobs($_POST['jobs']);
 			
 			$this->html = $this->createTable();
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	
@@ -361,7 +361,7 @@ class cms_jobs extends base_module {
 					$res = DB::query("INSERT INTO ".DB::getTable('TABLE_SITE_JOBS')."
 						(module, method, seconds, options, date_executed)
 							VALUES
-						('".DBFunctions::strEscape($module)."', '".DBFunctions::strEscape($method)."', ".(int)$timer.", '".DBFunctions::strEscape($str_options)."', NOW())
+						('".DBFunctions::strEscape($module)."', '".DBFunctions::strEscape($method)."', ".(int)$timer.", '".DBFunctions::strEscape($str_options)."', ".DBFunctions::dateTimeNow().")
 						".DBFunctions::onConflict('module, method', ['seconds', 'options'])."
 					");
 									
@@ -413,7 +413,7 @@ class cms_jobs extends base_module {
 		$insert = DB::query("INSERT INTO ".DB::getTable('TABLE_SITE_JOBS_TIMER')."
 			(date)
 				VALUES
-			(NOW())
+			(".DBFunctions::dateTimeNow().")
 			".DBFunctions::onConflict('unique_row', false, 'unique_row = TRUE')."
 		");
 	}
@@ -462,8 +462,8 @@ class cms_jobs extends base_module {
 		$res = DB::query("SELECT TRUE
 				FROM ".DB::getTable('TABLE_SITE_JOBS')." j,
 				".DB::getTable('TABLE_SITE_JOBS_TIMER')." jt
-			WHERE j.seconds >= 0 AND j.date_executed < NOW()
-				AND (jt.unique_row IS NOT NULL AND jt.date IS NULL OR jt.date < NOW())
+			WHERE j.seconds >= 0 AND j.date_executed < ".DBFunctions::dateTimeNow()."
+				AND (jt.unique_row IS NOT NULL AND jt.date IS NULL OR jt.date < ".DBFunctions::dateTimeNow().")
 			LIMIT 1
 		");
 		
@@ -492,7 +492,7 @@ class cms_jobs extends base_module {
 		// Update job timer to allow for a new update run
 		
 		$insert = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS_TIMER')." SET
-			date = NOW()
+			date = ".DBFunctions::dateTimeNow()."
 		");
 		
 		// Start a new job service if it does not exist
@@ -529,11 +529,11 @@ class cms_jobs extends base_module {
 	
 	public static function runJobs() {
 		
-		$count = 0;
+		$num_count = 0;
 		
 		while (true) {
 			
-			$count++;
+			$num_count++;
 				
 			self::cleanupJobs();
 									
@@ -542,7 +542,7 @@ class cms_jobs extends base_module {
 			$res = DB::query("SELECT j.*
 					FROM ".DB::getTable('TABLE_SITE_JOBS')." j
 				WHERE j.seconds >= 0
-					AND (j.date_executed + ".DBFunctions::interval(1, 'SECOND', 'j.seconds').") < NOW()
+					AND (j.date_executed + ".DBFunctions::interval(1, 'SECOND', 'j.seconds').") < ".DBFunctions::dateTimeNow()."
 					AND j.date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 					AND j.running = FALSE
 			");
@@ -558,7 +558,7 @@ class cms_jobs extends base_module {
 							FROM".DB::getTable('TABLE_SITE_JOBS')." j
 						WHERE j.module = '".$module."' AND j.method = '".$method."'
 							AND j.seconds >= 0
-							AND (j.date_executed + ".DBFunctions::interval(1, 'SECOND', 'j.seconds').") < NOW()
+							AND (j.date_executed + ".DBFunctions::interval(1, 'SECOND', 'j.seconds').") < ".DBFunctions::dateTimeNow()."
 							AND j.date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 							AND j.running = FALSE
 					");
@@ -578,7 +578,7 @@ class cms_jobs extends base_module {
 										running = TRUE
 									WHERE module = '".$module."' AND method = '".$method."'
 										AND seconds >= 0
-										AND (date_executed + ".DBFunctions::interval(1, 'SECOND', 'seconds').") < NOW()
+										AND (date_executed + ".DBFunctions::interval(1, 'SECOND', 'seconds').") < ".DBFunctions::dateTimeNow()."
 										AND date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 								");
 								
@@ -614,7 +614,7 @@ class cms_jobs extends base_module {
 			
 			Mediator::runListeners('cleanup.program');
 			
-			if ($count % 100 == 0) { // Run system-related garbage collections
+			if ($num_count % 100 == 0) { // Run system-related garbage collections
 
 				// Cleanup PHP sessions
 				session_start();
@@ -640,7 +640,7 @@ class cms_jobs extends base_module {
 		
 		$res = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET
 				process_id = ".(int)$process_id.",
-				process_date = NOW()
+				process_date = ".DBFunctions::dateTimeNow()."
 			WHERE module = '".$module."' AND method = '".$method."'
 		");
 				
@@ -664,12 +664,11 @@ class cms_jobs extends base_module {
 					running = TRUE
 				WHERE module = '".$module."' AND method = '".$method."'
 					AND seconds >= 0
-					AND (date_executed + ".DBFunctions::interval(1, 'SECOND', 'seconds').") < NOW()
+					AND (date_executed + ".DBFunctions::interval(1, 'SECOND', 'seconds').") < ".DBFunctions::dateTimeNow()."
 					AND date_executed < (SELECT date FROM ".DB::getTable('TABLE_SITE_JOBS_TIMER').")
 			");
 			
 			if ($update->getAffectedRowCount()) {
-
 				self::executeJobTask($arr_module_method);
 			}
 			
@@ -736,7 +735,7 @@ class cms_jobs extends base_module {
 					DB::setConnection(DB::CONNECT_CMS);
 					
 					$update = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET 
-							process_date = NOW()
+							process_date = ".DBFunctions::dateTimeNow()."
 						WHERE module = '".$module."' AND method = '".$method."'
 					");
 					
@@ -771,9 +770,9 @@ class cms_jobs extends base_module {
 		DB::setConnection(DB::CONNECT_CMS);
 		
 		$res = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET
-				date_executed = NOW(),
+				date_executed = ".DBFunctions::dateTimeNow().",
 				process_id = ".(int)$process_id.",
-				process_date = NOW()
+				process_date = ".DBFunctions::dateTimeNow()."
 			WHERE module = '".$module."' AND method = '".$method."'
 		");
 
@@ -804,12 +803,13 @@ class cms_jobs extends base_module {
 		
 		try {
 
-			$float_time = microtime(true);
+			$time = DBFunctions::numTimeNow();
 
-			// Make sure the Job does not run in this same second; this allows us to catch the true state of things for the current second as well
-			time_sleep_until($float_time + 1);
+			if (is_integer($time)) { // If no precision, make sure the Job does not run in this same second; this allows us to catch the true state of things for the current second as well
+				time_sleep_until($time + 1);
+			}
 			
-			$arr_job['date_executed']['now'] = DBFunctions::str2Date((int)$float_time);
+			$arr_job['date_executed']['now'] = DBFunctions::str2DateTime($time, '=');
 			
 			$module::$method($arr_job);
 		} catch (Exception $e) {
@@ -823,7 +823,7 @@ class cms_jobs extends base_module {
 		DB::setConnection(DB::CONNECT_CMS);
 		
 		DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET
-				date_executed = '".DBFunctions::str2Date($arr_job['date_executed']['now'])."'
+				date_executed = '".DBFunctions::str2DateTime($arr_job['date_executed']['now'], '=')."'
 			WHERE module = '".$module."' AND method = '".$method."'
 		");
 		
@@ -841,7 +841,7 @@ class cms_jobs extends base_module {
 		$res = DB::query("SELECT j.*
 			FROM ".DB::getTable('TABLE_SITE_JOBS')." j
 			WHERE j.running = TRUE
-				AND j.process_date < NOW()
+				AND j.process_date < ".DBFunctions::dateTimeNow()."
 				".($module ? "AND j.module = '".$module."'" : "")."
 				".($method ? "AND j.method = '".$method."'" : "")."
 		");
@@ -851,7 +851,7 @@ class cms_jobs extends base_module {
 			DB::setConnection(DB::CONNECT_CMS);
 			
 			$update = DB::query("UPDATE ".DB::getTable('TABLE_SITE_JOBS')." SET
-					process_date = NOW()
+					process_date = ".DBFunctions::dateTimeNow()."
 				WHERE module = '".$arr_row['module']."' AND method = '".$arr_row['method']."'
 			");
 			

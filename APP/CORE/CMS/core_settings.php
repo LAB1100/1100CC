@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -35,12 +35,15 @@
 		$_SERVER['DOCUMENT_ROOT'] = DIR_ROOT;
 	}
 	
-	$dir_parent = explode('/', DIR_ROOT);
-	$dir_parent = array_slice($dir_parent, 0, -2);
-	$dir_parent = implode('/', $dir_parent).'/';
-	define('DIR_SAFE', $dir_parent.'SAFE/');
+	$arr_dir = explode('/', DIR_ROOT);
+	$str_dir_alternative = $arr_dir[count($arr_dir)-2];
+	$str_dir_alternative = ($str_dir_alternative != 'APP' ? substr($str_dir_alternative, 3) : '');
+	$str_dir_parent = array_slice($arr_dir, 0, -2);
+	$str_dir_parent = implode('/', $str_dir_parent).'/';
+	
+	define('DIR_SAFE', $str_dir_parent.'SAFE'.$str_dir_alternative.'/');
 	define('DIR_SAFE_SITE', DIR_SAFE.SITE_NAME.'/');
-	define('DIR_PROGRAMS', $dir_parent.'PROGRAMS/');
+	define('DIR_PROGRAMS', $str_dir_parent.'PROGRAMS/');
 	define('DIR_PROGRAMS_RUN', DIR_PROGRAMS.'RUN/');
 
 	define('DIR_HOME', SITE_NAME.'/');
@@ -59,13 +62,12 @@
 	define('DIR_INFO', 'info/');
 	
 	spl_autoload_register('autoLoadClass');
-	
-	define('SERVER_NAME_SUB', strtolower($_SERVER['SERVER_NAME_SUB'])); // Custom environment variable
-	define('SERVER_NAME_CUSTOM', strtolower($_SERVER['SERVER_NAME_CUSTOM'])); // Custom environment variable
-	
-	define('SERVER_NAME_1100CC', strtolower($_SERVER['SERVER_NAME_1100CC'])); // Custom environment variable
-	define('SERVER_NAME_MODIFIER', strtolower($_SERVER['SERVER_NAME_MODIFIER'])); // Custom environment variable
-	define('SERVER_NAME_SITE_NAME', strtolower($_SERVER['SERVER_NAME_SITE_NAME'])); // Custom environment variable
+
+	define('SERVER_NAME_SUB', strtolower($_SERVER['SERVER_NAME_SUB'])); // .cms|.s[0-9]
+	define('SERVER_NAME_CUSTOM', strtolower($_SERVER['SERVER_NAME_CUSTOM'])); // more.custom.
+	define('SERVER_NAME_1100CC', strtolower($_SERVER['SERVER_NAME_1100CC'])); // e.1100cc.xyz
+	define('SERVER_NAME_MODIFIER', strtolower($_SERVER['SERVER_NAME_MODIFIER'])); // e.
+	define('SERVER_NAME_SITE_NAME', strtolower($_SERVER['SERVER_NAME_SITE_NAME'])); // 1100cc.xyz
 	
 	define('SERVER_NAME_BASE', SERVER_NAME_CUSTOM.SERVER_NAME_1100CC);
 	define('SERVER_NAME', SERVER_NAME_SUB.SERVER_NAME_BASE);
@@ -109,7 +111,7 @@
 	DB::$database_cms = SITE_NAME.'_cms';
 	DB::$database_home = SITE_NAME.'_home';
 	
-	Settings::set('path_temporary', sys_get_temp_dir().'/1100CC/'.DIR_HOME);
+	Settings::set('path_temporary', sys_get_temp_dir().'/1100CC'.$str_dir_alternative.'/'.DIR_HOME);
 	Settings::set('chmod_file', 00660);
 	Settings::set('chmod_directory', 02775);
 	

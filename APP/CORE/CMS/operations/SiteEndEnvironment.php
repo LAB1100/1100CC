@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -183,12 +183,14 @@ class SiteEndEnvironment {
 		return $arr_theme;
 	}
 	
-	public static function setFeedback($str_variable, $data, $store = false) {
+	public static function setFeedback($str_variable, $data, $do_store = false) {
 		
-		if ($store) {
+		if ($do_store) {
+			
 			self::$arr_feedback['store'][$str_variable] = $data;
 			SiteStartEnvironment::setFeedback($data, $str_variable); // Also update the possible original value
 		} else {
+			
 			self::$arr_feedback['broadcast'][$str_variable] = $data;
 		}
 	}

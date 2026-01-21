@@ -2,28 +2,28 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class StreamJSONOutput {
 	
-	protected $resource = false;
+	protected $resource = null;
 	protected $is_temporary = false;
 	
-	protected $str_identifier = false;
+	protected $str_identifier = null;
 	protected $use_parse_simple = false;
 	
-	protected $str_open = false;
-	protected $str_close = false;
+	protected $str_open = null;
+	protected $str_close = null;
 	
 	protected $str_stream_close = '';
-	protected $count_stream = 1;
+	protected $num_count_stream = 1;
 	
-	protected static $count_streams = 0;
+	protected static $num_count_streams = 0;
 	
-	public function __construct($resource = false, $use_parse_simple = true) {
+	public function __construct($resource = null, $use_parse_simple = true) {
 		
 		if (!$resource) {
 			
@@ -34,8 +34,8 @@ class StreamJSONOutput {
 			$this->resource = $resource;
 		}
 
-		static::$count_streams++;
-		$this->str_identifier = '[STREAM'.static::$count_streams.']';
+		static::$num_count_streams++;
+		$this->str_identifier = '[STREAM'.static::$num_count_streams.']';
 		
 		$this->use_parse_simple = (bool)$use_parse_simple;
 	}
@@ -88,13 +88,13 @@ class StreamJSONOutput {
 		
 		$str = substr($str, 1, -1); // Remove the encapsulating {} or []
 		
-		if ($this->count_stream > 1) {
+		if ($this->num_count_stream > 1) {
 			$str = ', '.$str;
 		}
 		
 		fwrite($this->resource, $str);
 		
-		$this->count_stream++;
+		$this->num_count_stream++;
 	}
 	
 	public function close() {

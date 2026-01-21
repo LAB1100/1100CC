@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -178,7 +178,7 @@ class WebSocketClient {
 				if ($buffer === false) {
 										
 					$this->disconnect($socket);
-					$this->msg('Server disconnected: Connection lost. IP: '.$this->address.'.');
+					$this->message('Server disconnected: Connection lost. IP: '.$this->address.'.');
 				} else if ($nr_bytes > 0) {
 					
 					if (!$this->handshake) {
@@ -199,7 +199,7 @@ class WebSocketClient {
 							if ($this->has_sent_close) {
 								
 								$this->disconnect($socket);
-								$this->msg('Server disconnected: Sent close. IP: '.$this->address.'.');
+								$this->message('Server disconnected: Sent close. IP: '.$this->address.'.');
 								
 								break;
 							}
@@ -228,7 +228,7 @@ class WebSocketClient {
 											if ($this->has_sent_close) {
 												
 												$this->disconnect($socket);
-												$this->msg('Server disconnected: Sent close. IP: '.$this->address.'.');
+												$this->message('Server disconnected: Sent close. IP: '.$this->address.'.');
 												
 												$nr_bytes = 0;
 												break;
@@ -285,9 +285,9 @@ class WebSocketClient {
 			$this->disconnect(($time ? false : true)); // Soft-close vs hard-close
 			
 			if ($time) {
-				$this->msg('Server disconnected: Server timed out. IP: '.$this->address.'.');
+				$this->message('Server disconnected: Server timed out. IP: '.$this->address.'.');
 			} else {
-				$this->msg('Server disconnected: Cleanup. IP: '.$this->address.'.');
+				$this->message('Server disconnected: Cleanup. IP: '.$this->address.'.');
 			}
 		}
 	}
@@ -333,7 +333,7 @@ class WebSocketClient {
 		call_user_func($this->opened);
 	}
 
-	public function msg($message) {
+	public function message($message) {
 	  
 		if (!$this->verbose) {
 			return;

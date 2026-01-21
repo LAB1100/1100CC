@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -194,7 +194,7 @@ class intf_cms_language extends cms_language {
 				UPDATE ".DB::getTable('TABLE_CMS_LANGUAGE')." SET is_default = TRUE WHERE lang_code = '".DBFunctions::strEscape($id)."';
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "host_language") {
@@ -213,7 +213,7 @@ class intf_cms_language extends cms_language {
 				");
 			}
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	
 		// POPUP
@@ -311,7 +311,7 @@ class intf_cms_language extends cms_language {
 			");
 			
 			$this->html = ($method == 'language_cms_insert' ? self::contentTabCMS() : self::contentTabCore());
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if (($method == "language_cms_update" || $method == "language_core_update") && $id){
@@ -331,7 +331,7 @@ class intf_cms_language extends cms_language {
 			");
 			
 			$this->html = ($method == 'language_cms_update' ? self::contentTabCMS() : self::contentTabCore());
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if (($method == "language_cms_del" || $method == "language_core_del") && $id) {
@@ -344,7 +344,7 @@ class intf_cms_language extends cms_language {
 				WHERE lang_code = '".DBFunctions::strEscape($id)."' LIMIT 1
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

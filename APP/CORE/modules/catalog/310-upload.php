@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -70,7 +70,7 @@ class upload extends base_module {
 			msg(getLabel('msg_file_upload_successful').' Name: '.$arr_result['name'].' Size: '.bytes2String($arr_result['size']).' Type: '.$arr_result['type'], 'UPLOAD');
 
 			$this->reset_form = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

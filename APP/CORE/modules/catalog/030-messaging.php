@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -367,7 +367,7 @@ class messaging extends base_module {
 			self::updateUserLastSeen($conversation_id, $_SESSION['USER_ID']);
 		
 			$this->html = (is_array($conversation_id) ? $this->createConversationList() : $this->createConversation($conversation_id));
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update") {
@@ -394,7 +394,7 @@ class messaging extends base_module {
 			self::updateUserLastSeen($id, $_SESSION['USER_ID']);
 		
 			$this->html = $this->createConversation($id);
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "del" && $id) {
@@ -420,7 +420,7 @@ class messaging extends base_module {
 			}
 								
 			$this->refresh_table = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

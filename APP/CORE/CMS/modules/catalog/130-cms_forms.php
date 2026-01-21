@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -230,7 +230,7 @@ class cms_forms extends base_module {
 		if ($method == "insert") {
 		
 			if (!$_POST['field']) {
-				error('Missing information');
+				error(getLabel('msg_missing_information'));
 			}
 			
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_FORMS')."
@@ -244,7 +244,7 @@ class cms_forms extends base_module {
 			self::updateForm($new_id, $_POST['field']);
 						
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update" && (int)$id) {
@@ -264,7 +264,7 @@ class cms_forms extends base_module {
 			self::updateForm($id, $_POST['field']);
 			
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 
 		if ($method == "del" && (int)$id) {
@@ -287,7 +287,7 @@ class cms_forms extends base_module {
 				;
 			");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	

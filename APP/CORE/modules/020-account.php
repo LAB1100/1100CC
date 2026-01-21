@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -95,8 +95,13 @@ class account extends base_module {
 		
 		if ($method == "account_update") {
 		
-			if ($_POST['password'] && $_POST['password'] != $_POST['password_confirm']) {
-				error('Missing information');
+			if ($_POST['password']) {
+				
+				if ($_POST['password'] != $_POST['password_confirm']) {
+					error(getLabel('msg_missing_information'));
+				}
+				
+				static::checkPasswordStrength($_POST['password']);
 			}
 						
 			$arr_update = ['email' => $_POST['email']];
@@ -116,7 +121,6 @@ class account extends base_module {
 				$arr_language = cms_language::getLanguage($_POST['lang_code']);
 				
 				if ($arr_language['is_user_selectable']) {
-					
 					user_management::updateUserData($_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')]['id'], ['lang_code' => $_POST['lang_code']]);
 				}
 			}
@@ -125,7 +129,7 @@ class account extends base_module {
 				$arr_setting['update']($_POST);
 			}
 					
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	
@@ -141,6 +145,28 @@ class account extends base_module {
 		$return .= '</ul>';
 		
 		return $return;
+	}
+	
+	public static function checkPasswordStrength($str_password) {
+		
+		$has_strength = Settings::get('hook_user_password_strength', null, [$str_password]);
+		
+		if ($has_strength !== null) {
+			
+			if (!$has_strength) { // Errors can also be thrown in the hook
+				error(getLabel('msg_account_password_weak'), TROUBLE_ERROR, LOG_CLIENT);
+			}
+			
+			return true;
+		}
+		
+		$has_strength = checkPasswordStrength($str_password);
+		
+		if (!$has_strength) {
+			error(getLabel('msg_account_password_weak'), TROUBLE_ERROR, LOG_CLIENT);
+		}
+		
+		return true;
 	}
 	
 	public static function findAccount() {

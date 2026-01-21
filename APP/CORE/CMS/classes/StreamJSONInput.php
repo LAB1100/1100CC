@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -34,46 +34,46 @@ class StreamJSONInput {
 	
 	protected $stream;
 	protected $str_path_capture;
-	protected $func_return_captured;
+	protected $func_return_capture;
 	
 	protected $num_buffer_size = 8192;
-	protected $str_line_end = "\n";
 	protected $bom_utf;
 	protected $do_parse;
 	protected $state;
 	protected $str_character;
-	protected $pos_line;
-	protected $pos_character;
+	protected $num_position;
 	
 	protected $arr_path;
 	protected $str_object_key;
 	
 	protected $arr_stack;
-	protected $count_stack_level;
+	protected $num_stack_level_count;
 	protected $stacked;
 	
-	protected $num_capture_stack_level;
+	protected $num_stack_level_capture;
 	protected $str_capture;
 	protected $do_capture;
+	protected $do_capture_positions = false;
+	protected $num_capture_position = null;
+	protected $arr_capture_positions = [];
 	
-	protected $str_buffer = false;
-	protected $length_buffer = false;
-	protected $count_buffer = false;
-	protected $is_eol = false;
+	protected $str_buffer = null;
+	protected $num_buffer_length = 0;
+	protected $num_buffer_count = 0;
 	
 	public function __construct($stream) {
 		
 		$this->stream = $stream;
 	}
 	
-	public function init($str_path_capture, $func_return_captured) {
+	public function init($str_path_capture, $func_return_capture) {
 		
 		$this->str_path_capture = $str_path_capture;
-		$this->func_return_captured = $func_return_captured;
+		$this->func_return_capture = $func_return_capture;
 		
-		$this->num_capture_stack_level = 0;
-		$this->num_capture_stack_level += substr_count($this->str_path_capture, '{');
-		$this->num_capture_stack_level += substr_count($this->str_path_capture, '[');
+		$this->num_stack_level_capture = 0;
+		$this->num_stack_level_capture += substr_count($this->str_path_capture, '{');
+		$this->num_stack_level_capture += substr_count($this->str_path_capture, '[');
 
 		$this->reset();
 		
@@ -85,9 +85,8 @@ class StreamJSONInput {
 		$this->do_parse = true;
 		
 		// Buffer
-		$this->str_buffer = false;
-		$this->pos_line = 1;
-		$this->pos_character = 1;
+		$this->str_buffer = null;
+		$this->num_position = 0;
 		
 		// Stack
 		$this->state = self::STATE_START_DOCUMENT;
@@ -95,9 +94,10 @@ class StreamJSONInput {
 		$this->str_object_key = '';
 		$this->arr_stack = [];
 		$this->stacked = null;
-		$this->count_stack_level = 0;
+		$this->num_stack_level_count = 0;
 		$this->str_capture = '';
 		$this->do_capture = false;
+		$this->num_capture_position = null;
 
 		rewind($this->stream);
 	}
@@ -116,80 +116,108 @@ class StreamJSONInput {
 	
 	protected function parse() {
 		
-		$is_eof = false;
-		
-		while ($this->str_buffer !== false || (!feof($this->stream) && !$is_eof)) {
+		while ($this->str_buffer !== null || !feof($this->stream)) {
 			
-			if ($this->str_buffer === false) {
+			if ($this->str_buffer === null) {
 				
-				$pos = ftell($this->stream);
+				$this->num_position = ftell($this->stream);
 				
-				$this->str_buffer = stream_get_line($this->stream, $this->num_buffer_size, $this->str_line_end);
-				$this->length_buffer = strlen($this->str_buffer);
-				$this->is_eol = (bool)(ftell($this->stream) - $this->length_buffer - $pos); // Is end of line
-				$this->count_buffer = 0;
-				
-				// If we're still at the same place after stream_get_line, we're done
-				$is_eof = ftell($this->stream) == $pos;
+				$this->str_buffer = fread($this->stream, $this->num_buffer_size);
+				$this->num_buffer_length = strlen($this->str_buffer);
+				$this->num_buffer_count = 0;
 			}
 			
-			for ($this->count_buffer; $this->count_buffer < $this->length_buffer; $this->count_buffer++) {
+			for ($this->num_buffer_count; $this->num_buffer_count < $this->num_buffer_length; $this->num_buffer_count++) {
 				
-				$this->str_character = $this->str_buffer[$this->count_buffer];
+				$this->str_character = $this->str_buffer[$this->num_buffer_count];
+				
+				$this->num_position++;
 				
 				$this->consumeCharacter();
-				
-				$this->pos_character++;
 				
 				if (!$this->do_parse) {
 					return true;
 				}
 			}
 			
-			$this->str_buffer = false;
-			
-			if ($this->is_eol) {
-				
-				$this->pos_line++;
-				$this->pos_character = 1;
-			}
+			$this->str_buffer = null;
 		}
 		
 		return false;
 	}
 	
-	public function returnCaptured() {
+	public function returnCapture() {
 		
-		$func_return_captured = $this->func_return_captured;
+		$func_return_capture = $this->func_return_capture;
 		
-		if ($this->stacked === self::STACK_ARRAY) {
-			$func_return_captured('['.$this->str_capture.']');
+		$is_array = ($this->stacked === self::STACK_ARRAY);
+		
+		if ($is_array) {
+			$func_return_capture('['.$this->str_capture.']');
 		} else {
-			$func_return_captured('{'.$this->str_capture.'}');
+			$func_return_capture('{'.$this->str_capture.'}');
 		}
 		
 		$this->str_capture = '';
+		
+		if (!$this->do_capture_positions) {
+			return;
+		}
+		
+		$this->arr_capture_positions[] = [$this->num_capture_position, $this->num_position, $is_array];
+		$this->num_capture_position = null;
+	}
+	
+	public function getCapture($num_capture) {
+		
+		if (!isset($this->arr_capture_positions[$num_capture])) {
+			return null;
+		}
+		
+		list($num_position_start, $num_position_end, $is_array) = $this->arr_capture_positions[$num_capture];
+		
+		$num_position = ftell($this->stream);
+		
+		fseek($this->stream, $num_position_start);
+		$str_data = fread($this->stream, ($num_position_end - $num_position_start));
+		
+		fseek($this->stream, $num_position);
+		
+		if ($is_array) {
+			return '['.$str_data.']';
+		} else {
+			return '{'.$str_data.'}';
+		}
+	}
+	
+	public function setCapturePositions($arr) {
+		
+		if (is_bool($arr)) {
+			
+			$this->do_capture_positions = (bool)$arr;
+			return;
+		}
+		
+		$this->arr_capture_positions += $arr;
+	}
+	
+	public function getCapturePositions() {
+		
+		return $this->arr_capture_positions;
 	}
 	
 	private function consumeCharacter() {
 				
-		if ($this->pos_character < 5 && $this->pos_line == 1 && $this->checkAndSkipUtfBom()) { // See https://en.wikipedia.org/wiki/Byte_order_mark
+		if ($this->num_position < 5 && $this->checkAndSkipUtfBom()) { // See https://en.wikipedia.org/wiki/Byte_order_mark
 			return;
 		}
 		
-		// Valid whitespace characters in JSON (from RFC4627 for JSON) include: space, horizontal tab, line feed or new line, and carriage return. thanks: http://stackoverflow.com/questions/16042274/definition-of-whitespace-in-json
 		if (
 			($this->str_character === " " || $this->str_character === "\t" || $this->str_character === "\n" || $this->str_character === "\r")
 			&&
-			!(
-				$this->state === self::STATE_IN_KEY ||
-				$this->state === self::STATE_START_ESCAPE_IN_KEY ||
-				$this->state === self::STATE_IN_VALUE_STRING ||
-				$this->state === self::STATE_START_ESCAPE_IN_VALUE_STRING
-			)
-		) {
-			
-			// We wrap this so that we don't make a ton of unnecessary function calls
+			$this->state !== self::STATE_IN_KEY && $this->state !== self::STATE_START_ESCAPE_IN_KEY && $this->state !== self::STATE_IN_VALUE_STRING && $this->state !== self::STATE_START_ESCAPE_IN_VALUE_STRING
+		) { // Valid whitespace characters in JSON (from RFC4627 for JSON) include: space, horizontal tab, line feed or new line, and carriage return. thanks: http://stackoverflow.com/questions/16042274/definition-of-whitespace-in-json
+
 			return;
 		}
 
@@ -327,17 +355,22 @@ class StreamJSONInput {
 				break;
 		}
 		
-		if ($this->do_capture && $this->str_character !== false) {
-			
-			$this->str_capture .= $this->str_character;
+		if (!$this->do_capture || $this->str_character === null) {
+			return;
 		}
+		
+		if ($this->num_capture_position === null) {
+			$this->num_capture_position = ($this->num_position - 1); // Subtract 1 to start before (include) the starting character
+		}
+		
+		$this->str_capture .= $this->str_character;
 	}
 	
 	private function checkKey() {
 		
-		if (!$this->do_capture && $this->count_stack_level <= $this->num_capture_stack_level) {
+		if (!$this->do_capture && $this->num_stack_level_count <= $this->num_stack_level_capture) {
 			
-			$this->arr_path[$this->count_stack_level] = ($this->count_stack_level > 1 ? $this->arr_path[$this->count_stack_level-1] : '').'{"'.$this->str_object_key.'":';
+			$this->arr_path[$this->num_stack_level_count] = ($this->num_stack_level_count > 1 ? $this->arr_path[$this->num_stack_level_count-1] : '').'{"'.$this->str_object_key.'":';
 		}
 		
 		$this->str_object_key = '';
@@ -376,35 +409,34 @@ class StreamJSONInput {
 	
 	private function startArray() {
 		
-		$this->count_stack_level++;
+		$this->num_stack_level_count++;
 		$this->stacked = self::STACK_ARRAY;
 		$this->arr_stack[] = self::STACK_ARRAY;
 		
 		$this->state = self::STATE_IN_ARRAY;
 		
-		if (!$this->do_capture && $this->count_stack_level <= $this->num_capture_stack_level) {
+		if (!$this->do_capture && $this->num_stack_level_count <= $this->num_stack_level_capture) {
 
-			$this->arr_path[$this->count_stack_level] = ($this->count_stack_level > 1 ? $this->arr_path[$this->count_stack_level-1] : '').'[';
+			$this->arr_path[$this->num_stack_level_count] = ($this->num_stack_level_count > 1 ? $this->arr_path[$this->num_stack_level_count-1] : '').'[';
 			
-			if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
+			if ($this->num_stack_level_count === $this->num_stack_level_capture && $this->arr_path[$this->num_stack_level_count] === $this->str_path_capture) {
 								
 				$this->do_capture = true;
-				$this->str_character = false;
+				$this->str_character = null;
 			}
 		}
 	}
 	
 	private function checkArray() {
 		
-		if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
+		if ($this->num_stack_level_count === $this->num_stack_level_capture && $this->arr_path[$this->num_stack_level_count] === $this->str_path_capture) {
 			
 			if ($this->do_capture) {
-				
-				$this->returnCaptured();
+				$this->returnCapture();
 			}
 			
 			$this->do_capture = true;
-			$this->str_character = false;
+			$this->str_character = null;
 		}
 		
 		$this->state = self::STATE_IN_ARRAY;
@@ -412,57 +444,56 @@ class StreamJSONInput {
 	
 	private function endArray() {
 		
-		$this->count_stack_level--;
+		$this->num_stack_level_count--;
 		array_pop($this->arr_stack);
 		$this->stacked = end($this->arr_stack);
 		
-		if ($this->do_capture && $this->count_stack_level === $this->num_capture_stack_level) {
+		if ($this->do_capture && $this->num_stack_level_count === $this->num_stack_level_capture) {
 			
 			$this->str_capture .= ']';
 
-			$this->returnCaptured();
+			$this->returnCapture();
 			
 			$this->do_capture = false;
 		}
 		
 		$this->state = self::STATE_AFTER_VALUE;
 	
-		if (!$this->count_stack_level) {
+		if (!$this->num_stack_level_count) {
 			$this->endDocument();
 		}
 	}
 	
 	private function startObject() {
 		
-		$this->count_stack_level++;
+		$this->num_stack_level_count++;
 		$this->stacked = self::STACK_OBJECT;
 		$this->arr_stack[] = self::STACK_OBJECT;
 		
 		$this->state = self::STATE_IN_OBJECT;
 		
-		if (!$this->do_capture && $this->count_stack_level <= $this->num_capture_stack_level) {
+		if (!$this->do_capture && $this->num_stack_level_count <= $this->num_stack_level_capture) {
 
-			$this->arr_path[$this->count_stack_level] = ($this->count_stack_level > 1 ? $this->arr_path[$this->count_stack_level-1] : '').'{';
+			$this->arr_path[$this->num_stack_level_count] = ($this->num_stack_level_count > 1 ? $this->arr_path[$this->num_stack_level_count-1] : '').'{';
 			
-			if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
+			if ($this->num_stack_level_count === $this->num_stack_level_capture && $this->arr_path[$this->num_stack_level_count] === $this->str_path_capture) {
 				
 				$this->do_capture = true;
-				$this->str_character = false;
+				$this->str_character = null;
 			}
 		}
 	}
 	
 	private function checkObject() {
 					
-		if ($this->count_stack_level === $this->num_capture_stack_level && $this->arr_path[$this->count_stack_level] === $this->str_path_capture) {
+		if ($this->num_stack_level_count === $this->num_stack_level_capture && $this->arr_path[$this->num_stack_level_count] === $this->str_path_capture) {
 			
 			if ($this->do_capture) {
-				
-				$this->returnCaptured();
+				$this->returnCapture();
 			}
 			
 			$this->do_capture = true;
-			$this->str_character = false;
+			$this->str_character = null;
 		}
 		
 		$this->state = self::STATE_IN_OBJECT;
@@ -470,23 +501,22 @@ class StreamJSONInput {
 	
 	private function endObject() {
 		
-		$this->count_stack_level--;
+		$this->num_stack_level_count--;
 		array_pop($this->arr_stack);
 		$this->stacked = end($this->arr_stack);
 		
 		$this->state = self::STATE_AFTER_VALUE;
 		
-		if ($this->do_capture && $this->count_stack_level === $this->num_capture_stack_level) {
+		if ($this->do_capture && $this->num_stack_level_count === $this->num_stack_level_capture) {
 			
 			$this->str_capture .= '}';
 
-			$this->returnCaptured();
+			$this->returnCapture();
 			
 			$this->do_capture = false;
 		}
 
-		if (!$this->count_stack_level) {
-			
+		if (!$this->num_stack_level_count) {
 			$this->endDocument();
 		}
 	}
@@ -498,7 +528,7 @@ class StreamJSONInput {
 		
     private function checkAndSkipUtfBom() {
 		
-		if ($this->pos_character == 1) {
+		if ($this->num_position == 1) {
 			
 			if ($this->str_character == chr(239)) {
 				$this->bom_utf = self::BOM_UTF8;
@@ -511,17 +541,16 @@ class StreamJSONInput {
 			}
 		}
 	
-		if ($this->bom_utf == self::BOM_UTF16 && $this->pos_character == 2 && $this->str_character == chr(254)) {
-			
+		if ($this->bom_utf == self::BOM_UTF16 && $this->num_position == 2 && $this->str_character == chr(254)) {
 			$this->bom_utf = self::BOM_UTF32;
 		}
 	
-		if ($this->bom_utf == self::BOM_UTF8 && $this->pos_character < 4) {
+		if ($this->bom_utf == self::BOM_UTF8 && $this->num_position < 4) {
 			// UTF-8 BOM starts with chr(239) . chr(187) . chr(191)
 			return true;
-		} elseif ($this->bom_utf == self::BOM_UTF16 && $this->pos_character < 3) {
+		} elseif ($this->bom_utf == self::BOM_UTF16 && $this->num_position < 3) {
 			return true;
-		} elseif ($this->bom_utf == self::BOM_UTF32 && $this->pos_character < 5) {
+		} elseif ($this->bom_utf == self::BOM_UTF32 && $this->num_position < 5) {
 			return true;
 		}
 	

@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -16,11 +16,11 @@ class header extends base_module {
 	
 	public static function moduleVariables() {
 		
-		$return = '<select name="directory_id" title="Directory">';
-		$return .= directories::createDirectoriesDropdown(directories::getDirectories(), false, true);
-		$return .= '</select>';
+		$str_html = '<select name="directory_id" title="Directory">'
+			.directories::createDirectoriesDropdown(directories::getDirectories(), false, true)
+		.'</select>';
 		
-		return $return;
+		return $str_html;
 	}
 	
 	protected $arr_access = [
@@ -29,18 +29,18 @@ class header extends base_module {
 	
 	public function contents() {
 		
-		$return .= '<a href="'.(SiteStartEnvironment::getDirectory(false, SiteStartEnvironment::DIRECTORY_LOGIN) ? SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN).'/' : '/').'" alt="'.getLabel('name', 'D').'"></a>';
-				
+		$str_html = '<a href="'.(SiteStartEnvironment::getDirectory(false, SiteStartEnvironment::DIRECTORY_LOGIN) ? SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN).'/' : '/').'" alt="'.getLabel('name', 'D').'"></a>';
+		
 		$search_box = new search_box;
 		$search_box = $search_box->contents();
 		
-		$return .= '<div class="search_box">'.$search_box.'</div>';
+		$str_html .= '<div class="search_box">'.$search_box.'</div>';
 		
 		$language = new language;
 		$language = $language->contents();
 		
 		if ($language) {
-			$return .= '<div class="language">'.$language.'</div>';
+			$str_html .= '<div class="language">'.$language.'</div>';
 		}
 
 		$navigation = new navigation;
@@ -54,12 +54,12 @@ class header extends base_module {
 		$logout = new logout;
 		$logout = $logout->contents();
 		
-		$return .= '<div class="navigation">'
+		$str_html .= '<div class="navigation">'
 			.'<input id="toggle-navigation-'.$this->mod_id.'" type="checkbox" /><label for="toggle-navigation-'.$this->mod_id.'">☰</label>'
 			.$navigation.($logout ? '<div class="logout">'.$logout.'</div>' : '')
 		.'</div>';
 		
-		return $return;
+		return $str_html;
 	}
 	
 	public static function css() {

@@ -21,7 +21,7 @@ Closed related: #ffdcdc border: #f6bcbc
 
 html {
 	font-size: 62.5%;
- }
+}
 /* Ensure body will stretch along with its content */
 body {
 	--font-body: var(--font-cms);

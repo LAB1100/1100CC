@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -25,7 +25,7 @@
 		$arr_commands[] = $_POST;
 	}
 	
-	foreach ($arr_commands as $arr_command) {
+	foreach ($arr_commands as &$arr_command) {
 		
 		if ($is_multi) {
 			
@@ -40,7 +40,7 @@
 				$_POST[$key] = $value;
 			}
 			
-			if (!empty($arr_command['json'])) { // Posted data in serialized format, check for JSON data
+			if (!empty($arr_command['json'])) { // Posted data in serialised format, check for JSON data
 			
 				$arr = JSON2Value($arr_command['json']);
 				unset($arr_command['json']);
@@ -75,7 +75,7 @@
 			$is_valid = (is_string($module) && is_string($method) && is_string($page_module));
 			
 			if (!$is_valid || str2Name($module.$method, '-_') != $module.$method) {
-				error('Request targets an invalid module or method.', TROUBLE_INVALID_REQUEST, LOG_CLIENT);
+				error(Labels::getSystemLabel('msg_request_invalid_module_method'), TROUBLE_INVALID_REQUEST, LOG_CLIENT);
 			}
 			
 			if ($is_multi) {
@@ -111,7 +111,7 @@
 				
 				$arr_page_directory = directories::getDirectories(SiteStartEnvironment::getPage('directory_id'));
 				
-				error('Request originates from invalid path.', TROUBLE_INVALID_REQUEST,
+				error(Labels::getSystemLabel('msg_request_invalid_path'), TROUBLE_INVALID_REQUEST,
 					(STATE == STATE_DEVELOPMENT || getLabel('show_system_errors', 'D', true) ? LOG_BOTH : LOG_CLIENT),
 					'Path '.SiteStartEnvironment::getDirectory('path').' targets '.strEscapeHTML($module).':'.strEscapeHTML($method).'. Using: '.str_replace(' ', '', $arr_page_directory['path']).' '.strEscapeHTML($page_module)
 				);
@@ -171,7 +171,7 @@
 				
 				if ($module == false) {
 					
-					error('Module does not allow the requested relay.', TROUBLE_INVALID_REQUEST,
+					error(Labels::getSystemLabel('msg_request_invalid_relay'), TROUBLE_INVALID_REQUEST,
 						(STATE == STATE_DEVELOPMENT || getLabel('show_system_errors', 'D', true) ? LOG_BOTH : LOG_CLIENT),
 						'Module '.$arr['module'].' does not allow relaying '.strEscapeHTML($module_target)
 					);
@@ -189,11 +189,14 @@
 				if (isset($arr_command['is_confirm'])) {
 					$mod->is_confirm = (bool)$arr_command['is_confirm'];
 				}
-				if (isset($arr_command['is_download'])) {
-					$mod->is_download = (bool)$arr_command['is_download'];
-				}
 				if (isset($arr_command['is_discard'])) {
 					$mod->is_discard = (bool)$arr_command['is_discard'];
+				}
+				if (isset($arr_command['is_download'])) {
+					
+					$mod->is_download = (bool)$arr_command['is_download'];
+					
+					Response::setOutputUpdates(false); // Do not output anything that could mess up the export headers
 				}
 			}
 			
@@ -202,7 +205,6 @@
 			$mod->commands($method, $arr_command['id'], $arr_command['value']);
 			
 			if ($mod->refresh) {
-				
 				$JSON_command->html = $mod->contents();
 			}
 			
@@ -215,12 +217,12 @@
 			$JSON_command->refresh_table = $mod->refresh_table;
 			$JSON_command->reset_form = $mod->reset_form;
 			
-			if ($mod->msg) {
+			if ($mod->message) {
 				
-				if ($mod->msg !== true) {
-					Log::setMsg($mod->msg);
+				if ($mod->message !== true) {
+					Log::setHeader($mod->message);
 				} else {
-					Log::setMsg(getLabel('msg_success'));
+					Log::setHeader(getLabel('msg_success'));
 				}
 			}
 		}
@@ -232,7 +234,7 @@
 
 	$JSON->data_feedback = SiteEndEnvironment::getFeedback();
 
-	$JSON = Log::addToObj($JSON);
+	$JSON = Log::addToObject($JSON);
 	$JSON->timestamp = date('c');
 	if (Settings::get('timing') === true) {
 		$JSON->timing = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']);

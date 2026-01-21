@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -141,7 +141,7 @@ class ExchangePackage {
 				$file_dump = fopen($path_dump, 'w');
 				
 				$sql_table_name_source = DB::getTable($arr_table['name']); // Parse for processing
-				DB::setDatabase($database_from);
+				DB::setConnectionDatabase($database_from);
 				
 				if (DB::ENGINE_IS_MYSQL) {
 					DB::query('USE '.$database_from);
@@ -290,7 +290,7 @@ class ExchangePackage {
 					$res->freeResult();
 				}
 				
-				DB::setDatabase();
+				DB::setConnectionDatabase(false);
 
 				fclose($file_dump);
 
@@ -455,7 +455,7 @@ class ExchangePackage {
 	
 	protected function uploadSQL($str_resource, $database) {
 		
-		DB::setDatabase($database);
+		DB::setConnectionDatabase($database);
 		
 		if (DB::ENGINE_IS_MYSQL) {
 			DB::query('USE '.$database);
@@ -499,7 +499,7 @@ class ExchangePackage {
 		
 		DB::commitTransaction('cms_admin_sql');
 
-		DB::setDatabase();
+		DB::setConnectionDatabase(false);
 		
 		fclose($file);
 	}

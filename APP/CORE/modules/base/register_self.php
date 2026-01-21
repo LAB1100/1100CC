@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -87,9 +87,10 @@ abstract class register_self extends base_module {
 		if ($method == "user_add") {
 		
 			if (!$_POST['password'] || $_POST['password'] != $_POST['password_confirm']) {
-				
 				error(getLabel('msg_missing_information'));
 			}
+			
+			account::checkPasswordStrength($_POST['password']);
 			
 			$user_data = $this->processForm();
 			
@@ -100,7 +101,7 @@ abstract class register_self extends base_module {
 			user_management::updateUserLinkedData($user['id'], $user_data);
 			
 			$this->reset_form = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 }

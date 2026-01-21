@@ -1,7 +1,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -37,6 +37,10 @@ document.addEventListener("DOMContentLoaded", function(e) {
 	SCRIPTER.runStatic();
 	
 	SCRIPTER.triggerEvent(document, 'documentloaded', {elm: $(document.body)});
+	window.addEventListener('load', function() {
+		SCRIPTER.triggerEvent(window, 'windowloaded');
+	});
+	
 	SCRIPTER.triggerEvent(window, 'resize');
 	
 	document.body.setAttribute('tabindex', '0');
@@ -88,6 +92,10 @@ const EOL_1100CC = "\n";
 const EOL_EXCHANGE = "\r\n";
 
 function getElement(elm) {
+	
+	if (elm === null || elm === false) {
+		return null;
+	}
 	
 	if (elm instanceof Element) {
 		return elm;
@@ -863,6 +871,60 @@ const func_content_loaded = function(e) {
 };
 document.addEventListener('documentloaded', func_content_loaded);
 document.addEventListener('ajaxloaded', func_content_loaded);
+
+function unloadClonedElements(elms) {
+	
+	// Unload elements (cloned) to prepare for new func_content_loaded run
+	
+	if (elms instanceof Element) {
+		var elms = [elms];
+	}
+	
+	for (let i = 0, len = elms.length; i < len; i++) {
+		
+		const elm = elms[i];
+		
+		runElementSelectorFunction(elm, 'input, select, textarea', function(elm_found) {
+			
+			elm_found.disabled = false;
+			
+			if (!elm_found.matches('[type=checkbox], [type=radio], select, [type=button], [type=submit]')) {
+				elm_found.value = '';
+			}
+			
+			if (elm_found.matches('[type=checkbox], [type=radio]')) {
+				elm_found.checked = (elm_found.getAttribute('checked') == 'checked');
+			}
+			
+			if (elm_found.matches('select')) {
+				
+				const elm_child = elm_found.querySelector(':scope > option[value=""][hidden=""]:last-child');
+				if (elm_child) {
+					elm_child.remove(); // Remove dynamic DropDown placeholder
+				}
+				
+				elm_found.selectedIndex = 0;
+			}
+		});
+		
+		runElementSelectorFunction(elm, 'input.autocomplete', function(elm_found) {
+			
+			if (elm_found.placeholder) {
+				elm_found.placeholder = '';
+			}
+			
+			let elm_tags = elm_found.previousSibling;
+			elm_tags = (elm_tags && elm_tags.matches('.tags') ? elm_tags.querySelector(':scope > ul') : null);
+			
+			if (elm_tags) {
+			
+				while (elm_tags.firstChild) {
+					elm_tags.removeChild(elm_tags.firstChild);
+				}
+			}
+		});
+	}
+}
 
 $(document).on('click', '.hide-edit.hide + *', function() {
 	
@@ -1924,13 +1986,37 @@ function Location() {
 		return str_location_client;
 	};
 	
-	var func_check_hash = function() {
+	this.getHashParameter = function(str_parameter) {
 		
 		if (!window.location.hash) {
 			return;
 		}
+		
+		const obj_parameters = new URLSearchParams(window.location.hash.substring(1));
+		
+		if (str_parameter == null) { // Check anchor, could be first entry when valueless
+			
+			const arr_value = Array.from(obj_parameters.entries())[0];
+			
+			if (arr_value[1] === '') {
+				return arr_value[0];
+			}
+			
+			return;
+		}
+		
+		return obj_parameters.get(str_parameter);
+	};
 	
-		const str_selector = window.location.hash+', .host '+window.location.hash;
+	var func_check_hash = function() {
+		
+		const str_anchor = SELF.getHashParameter();
+		
+		if (!str_anchor) {
+			return;
+		}
+		
+		const str_selector = '#'+str_anchor+', .host #'+str_anchor;
 		const elms_match = getElementSelector(document.body, str_selector, true);
 
 		if (!elms_match) {
@@ -2026,9 +2112,10 @@ function Location() {
 			return;
 		}
 		
-		e.returnValue = str_locked_page;
+		e.preventDefault();
+		e.returnValue = str_locked_page; // Legacy
 		
-		return str_locked_page;
+		return str_locked_page; // Legacy
 	};
 	
 	var func_locked_leave = function (e) {
@@ -2063,7 +2150,6 @@ function Location() {
 		});
 		
 		if (is_locked) {
-			
 			e.preventDefault();
 		}
 	};
@@ -2431,14 +2517,13 @@ function DocumentEmbedding() {
 	
 	const SELF = this;
 	
-	var num_height_window = window.innerHeight;
-	const str_selector_frame = 'iframe.resize, iframe.embed';
+	let num_height_window = window.innerHeight;
 
 	window.addEventListener('message', function(e) { // Get size messages from embedded document
 		
 		if (e.data.embedded) {
 			
-			const elms = document.body.querySelectorAll(str_selector_frame);
+			const elms = document.body.querySelectorAll(DOCUMENTEMBEDDINGLISTENER.getSelector());
 
 			for (let i = 0, len = elms.length; i < len; i++) {
 				
@@ -2449,19 +2534,16 @@ function DocumentEmbedding() {
 				}
 				
 				if (e.data.initialise) {
-					
 					initialiseEmbedded(elm_found);
 				}
 				
 				if (e.data.embedded !== true) {
 					
 					if (e.data.embedded.height != undefined) {
-						
 						useEmbeddedSize(elm_found, e.data.embedded.height);
 					}
 					
 					if (e.data.embedded.location != undefined) {
-						
 						useEmbeddedLocation(elm_found, e.data.embedded.location);
 					}
 				}
@@ -2503,7 +2585,6 @@ function DocumentEmbedding() {
 	this.setEmbeddedLocation = function(elm_frame, str_location) {
 		
 		if (str_location == undefined) {
-			
 			var str_location = window.location.pathname+window.location.search; // Only relative parth of the location and no client-side hash
 		}
 						
@@ -2517,7 +2598,7 @@ function DocumentEmbedding() {
 	
 	this.requestEmbeddedAll = function() {
 			
-		const elms = document.body.querySelectorAll(str_selector_frame);
+		const elms = document.body.querySelectorAll(DOCUMENTEMBEDDINGLISTENER.getSelector());
 
 		for (let i = 0, len = elms.length; i < len; i++) {
 			
@@ -2535,7 +2616,7 @@ function DocumentEmbedding() {
 		
 		num_height_window = window.innerHeight;
 		
-		const elms = document.body.querySelectorAll(str_selector_frame);
+		const elms = document.body.querySelectorAll(DOCUMENTEMBEDDINGLISTENER.getSelector());
 
 		for (let i = 0, len = elms.length; i < len; i++) {
 			
@@ -2547,7 +2628,7 @@ function DocumentEmbedding() {
 	
 	this.setEmbeddedAllLocation = function(str_location) { // Message location to embedded documents
 				
-		const elms = document.body.querySelectorAll(str_selector_frame);
+		const elms = document.body.querySelectorAll(DOCUMENTEMBEDDINGLISTENER.getSelector());
 
 		for (let i = 0, len = elms.length; i < len; i++) {
 			
@@ -2597,65 +2678,7 @@ function DocumentEmbedding() {
 	};
 }
 
-function DocumentEmbeddingListener() {
-	
-	window.addEventListener('message', function handler(e) {
-	
-		if (!e.data.embedded) {
-			return;
-		}
-		
-		this.removeEventListener('message', handler);
-		e.source.postMessage({script: true}, '*');
-
-		window.addEventListener('message', function handler(e) {
-			
-			if (!e.data.script) {
-				return;
-			}
-			
-			this.removeEventListener('message', handler);
-			eval?.('"use strict"; '+e.data.script); // Use global scope, but apply variables in contained scope.
-		}, false);
-		
-	}, false);
-	
-	this.checkLocationEmbed = function(arr_location, elm_frame) { // Default solution, override checkLocation() for custom procedures
-		
-		const arr_url = new URL(LOCATION.getURL(), LOCATION.getHost());
-		let str_location = arr_url.pathname; // Only need the path
-		
-		var regex_embed = new RegExp('(/\\d+\.m)?/embed.v/([^/]*)');
-		
-		if (arr_location.client && arr_location.client != '/') {
-			
-			const arr_url_client = new URL(arr_location.client, LOCATION.getHost());
-			let str_location_client = arr_url_client.pathname; // Only need the path, no passing of search/hash
-			
-			str_location_client = str_location_client.replace(new RegExp('^/+'), ''); // Trim left '/'
-			str_location_client = str_location_client.replaceAll('/', '|'); // Replace '/' with '|', the safe path separators
-			
-			if (regex_embed.test(str_location)) {
-				str_location = str_location.replace(regex_embed, '$1/embed.v/'+str_location_client);
-			} else {
-				str_location = str_location.replace(new RegExp('/+$'), ''); // Trim right '/'
-				str_location = str_location+'/0.m/embed.v/'+str_location_client;
-			}
-		} else {
-			
-			if (regex_embed.test(str_location)) {
-				str_location = str_location.replace(regex_embed, '');
-			}
-		}
-		
-		arr_location.client = str_location+arr_url.search+arr_url.hash;
-		
-		return arr_location;
-	};
-	
-	this.checkLocation = this.checkLocationEmbed;
-}
-var DOCUMENTEMBEDDINGLISTENER = new DocumentEmbeddingListener();
+//var DOCUMENTEMBEDDINGLISTENER = new DocumentEmbeddingListener(); // In separate file
 
 function Assets() {
 	
@@ -2707,58 +2730,67 @@ function Assets() {
 		
 		if (arr_options.script) {
 			
-			var call = function() {
+			const call = function() {
 			
-				var count = arr_options.script.length;
+				let num_count = arr_options.script.length;
 				
-				var func_asset = function(script, text) {
+				const func_asset = function(script, text) {
 					
-					count--;
+					num_count--;
 					
-					if (text) {
-						
+					if (text != null) {
 						obj_fetched.script[script] = text;
 					}
 					
-					if (!count) {
-						
-						for (let i = 0, len = arr_options.script.length; i < len; i++) {
-							
-							const script = arr_options.script[i];
-							const str_script = obj_fetched.script[script];
-							
-							if (str_script) {
-								
-								// Call in global scope
-								(function() {
-									eval.apply(this, arguments);
-								}(str_script))
-
-								obj_fetched.script[script] = '';
-							}
-						}
-						
-						func_loaded();
+					if (num_count) {
+						return;
 					}
+					
+					func_check();
 				};
 				
-				for (var i = 0, len = arr_options.script.length; i < len; i++) {
+				const func_check = function() { // Check if scripts are loading from possible other call
 
-					var script = arr_options.script[i];
+					for (let i = 0, len = arr_options.script.length; i < len; i++) {
+						
+						const script = arr_options.script[i];
+						const str_script = obj_fetched.script[script];
+						
+						if (str_script !== null && str_script !== '') {
+							
+							// Call in global scope
+							(function() {
+								eval.apply(this, arguments);
+							}(str_script))
+
+							obj_fetched.script[script] = '';
+						} else if (str_script === null) { // Script is still loading in other call
+							
+							setTimeout(func_check, 50);
+							return;
+						}
+					}
 					
-					if (obj_fetched.script[script] != undefined) {
+					func_loaded();
+				};
+				
+				for (let i = 0, len = arr_options.script.length; i < len; i++) {
+
+					const script = arr_options.script[i];
+					
+					if (obj_fetched.script[script] !== undefined) {
 
 						func_asset(script);
 						continue;
 					}
 					
-					obj_fetched.script[script] = '';
+					obj_fetched.script[script] = null; // Set as loading, not undefined anymore
 					
-					var call_script = function() {
+					const call_script = function() {
 						
-						var cur_script = script;
+						const cur_script = script;
 						
-						var xhr = new XMLHttpRequest();
+						const xhr = new XMLHttpRequest();
 						xhr.onreadystatechange = function() {
 							
 							if (this.readyState == 4) {
@@ -2783,22 +2815,24 @@ function Assets() {
 		
 		if (arr_options.font) {
 			
-			var call = function() {
+			const call = function() {
 				
-				var count = arr_options.font.length;
+				let num_count = arr_options.font.length;
 				
-				var func_asset = function() {
+				const func_asset = function() {
 					
-					count--;
+					num_count--;
 					
-					if (!count) {
-						func_loaded();
+					if (num_count) {
+						return;
 					}
+					
+					func_loaded();
 				};
 				
-				for (var i = 0, len = arr_options.font.length; i < len; i++) {
+				for (let i = 0, len = arr_options.font.length; i < len; i++) {
 					
-					var font = arr_options.font[i];
+					const font = arr_options.font[i];
 					
 					if (obj_fetched.font[font]) {
 						
@@ -2816,90 +2850,92 @@ function Assets() {
 		
 		if (arr_options.media) {
 			
-			var call = function() {
+			const call = function() {
 				
-				var count = arr_options.media.length;
+				let num_count = arr_options.media.length;
 				
-				var func_process = function() {
+				const func_process = function() {
 			
-					var timer_check = false;
+					let timer_check = false;
 					
-					var func_check = function() {
+					const func_check = function() {
 						
-						var wait = false;
+						let do_wait = false;
 						
-						for (var i = 0, len = arr_options.media.length; i < len; i++) {
+						for (let i = 0, len = arr_options.media.length; i < len; i++) {
 
-							var resource = arr_options.media[i];
-							var arr_resource = obj_fetched.media[resource];
+							const resource = arr_options.media[i];
+							const arr_resource = obj_fetched.media[resource];
 							
 							if (!arr_resource.image) {
 								
 								// Something could be wrong, do not stall
-							} else if (arr_resource.image.width) {
+							} else if (arr_resource.image.width || arr_resource.image.complete) {
 
-								arr_resource.width = arr_resource.image.width;
-								arr_resource.height = arr_resource.image.height;
+								arr_resource.width = (arr_resource.image.width ? arr_resource.image.width : 100);
+								arr_resource.height = (arr_resource.image.height ? arr_resource.image.height : 100);
 							} else {
 								
-								wait = true;
-							}						
+								do_wait = true;
+							}
 						}
 						
-						if (!wait) {
+						if (!do_wait) {
 							
 							if (timer_check) {
 								clearInterval(timer_check);
 							}
+							
 							func_loaded();
 							
 							return;
 						}
 
 						if (!timer_check) {
-							
 							timer_check = setInterval(func_check, 10);
 						}
 					};
 					func_check();
 				};
 
-				var func_asset = function(resource, value) {
+				const func_asset = function(resource, value) {
 					
-					count--;
+					num_count--;
 					
-					if (value != undefined) {
+					if (value != null) {
 
-						var store = (window.URL || window.webkitURL).createObjectURL(value);
+						const store = (window.URL || window.webkitURL).createObjectURL(value);
 						
-						var image = new Image();
+						const image = new Image();
 						image.src = store;
 						
 						obj_fetched.media[resource] = {resource: store, image: image, width: null, height: null};
 					}
 					
-					if (!count) {
-						func_process();
+					if (num_count) {
+						return;
 					}
+					
+					func_process();
 				};
 				
-				for (var i = 0, len = arr_options.media.length; i < len; i++) {
+				for (let i = 0, len = arr_options.media.length; i < len; i++) {
 
-					var resource = arr_options.media[i];
+					const resource = arr_options.media[i];
 					
-					if (obj_fetched.media[resource] != undefined) {
+					if (obj_fetched.media[resource] !== undefined) {
 
 						func_asset(resource);
 						continue;
 					}
 					
-					obj_fetched.media[resource] = false;
+					obj_fetched.media[resource] = null; // Set as loading, not undefined anymore
 					
-					var call_media = function() {
+					const call_media = function() {
 						
-						var cur_resource = resource;
+						const cur_resource = resource;
 						
-						var xhr = new XMLHttpRequest();
+						const xhr = new XMLHttpRequest();
 						xhr.onreadystatechange = function() {
 							
 							if (this.readyState == 4) {
@@ -2925,7 +2961,6 @@ function Assets() {
 		if (arr_options.labels) {
 			
 			SELF.getLabels(elm, arr_options.labels, function(data) {
-				
 				func_loaded();
 			});
 		}
@@ -2940,7 +2975,7 @@ function Assets() {
 	
 	this.getFiles = function(elm, arr, callback, obj_store, str_type, str_url_prefix, str_url_affix) {
 
-		var count = arr.length;
+		let num_count = arr.length;
 		
 		var func_process = function() {
 			
@@ -2978,14 +3013,14 @@ function Assets() {
 		
 		var func_asset = function(file, content) {
 			
-			count--;
+			num_count--;
 			
 			if (content != undefined) {
 				
 				obj_store[file] = content;
 			}
 			
-			if (!count) {
+			if (!num_count) {
 				
 				func_process();
 			}
@@ -3114,14 +3149,14 @@ function Assets() {
 		
 		if (arr_scripts) {
 
-			var str_host_use = (str_host ? str_host : LOCATION.getHost());
+			const str_host_use = (str_host ? str_host : LOCATION.getHost());
 			
-			for (var i = 0, len = arr_scripts.length; i < len; i++) {
+			for (let i = 0, len = arr_scripts.length; i < len; i++) {
 				arr_scripts[i] = str_host_use+arr_scripts[i];
 			}
 		}
 		
-		var blob_url = URL.createObjectURL(new Blob([
+		const blob_url = URL.createObjectURL(new Blob([
 				(func_before ? '('+((typeof func_before === 'string' || func_before instanceof String) ? func_before : func_before.toString())+')();' : ''),
 				(arr_scripts ? 'importScripts(\''+arr_scripts.join('\',\'')+'\');' : ''),
 				'('+((typeof func === 'string' || func instanceof String) ? func : func.toString())+')();'
@@ -3129,7 +3164,7 @@ function Assets() {
 			{type: 'application/javascript'}
 		));
 		
-		var worker = new Worker(blob_url);
+		const worker = new Worker(blob_url);
 		
 		URL.revokeObjectURL(blob_url);
 		
@@ -3140,6 +3175,8 @@ function Assets() {
 		
 		var elm_host = getElement(elm_host);
 		let elm_root = false;
+
+		const elm_host_context = getElementClosestSelector(elm_host, '[data-host]');
 		
 		if (elm_host.nodeName == 'TEMPLATE') {
 			
@@ -3161,6 +3198,13 @@ function Assets() {
 			var arr_match_rules = [];
 		}
 		arr_match_rules.push(':host(.host.'+str_class+')');
+		
+		if (elm_host_context && elm_host_context.dataset.host) {
+			
+			const str_class_context = elm_host_context.dataset.host;
+			elm_host.classList.add(str_class_context);
+			arr_match_rules.push(':host(.host.'+str_class+'.'+str_class_context+')');
+		}
 		
 		const sheet = new CSSStyleSheet();
 		
@@ -3337,8 +3381,8 @@ function MessageBox(elm) {
 		
 	this.add = function(options) {
 		
-		var arr_options = $.extend({
-			msg: '',
+		const arr_options = $.extend({
+			message: '',
 			type: 'attention',
 			method: 'replace',
 			identifier: false,
@@ -3348,23 +3392,23 @@ function MessageBox(elm) {
 			follow_click: false
 		}, options || {});
 		
-		var elm_box = false;
+		let elm_box = false;
 				
 		if (arr_options.follow_click) {
 			elm_con.css({'position': 'absolute', 'z-index': '99999', 'top': POSITION.mouse.y, 'left': POSITION.mouse.x});
 		}
 
-		var elm_msg = $(arr_options.msg).clone().wrap('<div/>').parent(); // wrap to return own html
+		const elm_message = $(arr_options.message).clone().wrap('<div/>').parent(); // wrap to return own html
 		
 		if (arr_options.counter) {
 			
 			num_count++;
-			elm_msg.find('label:first').text("#"+num_count);
+			elm_message.find('label:first').text("#"+num_count);
 		}
 		
-		elm_box = $('<div class="'+arr_options.type+'"'+(arr_options.identifier ? ' data-identifier="'+arr_options.identifier+'"' : '')+'>'+elm_msg.html()+'</div>');
+		elm_box = $('<div class="'+arr_options.type+'"'+(arr_options.identifier ? ' data-identifier="'+arr_options.identifier+'"' : '')+'>'+elm_message.html()+'</div>');
 
-		var obj_messagebox = {
+		const obj_messagebox = {
 			active: true,
 			time: false,
 			duration: arr_options.duration,
@@ -3390,27 +3434,27 @@ function MessageBox(elm) {
 		return elm_box;
 	};
 	
-	this.end = function(elm_box, quick) {
+	this.end = function(elm_box, do_quick) {
 		
 		var elm_box = getElement(elm_box);
-		var obj_messagebox = elm_box.messagebox;
+		const obj_messagebox = elm_box.messagebox;
 				
 		obj_messagebox.active = false;
 				
-		if (quick) {
+		if (do_quick) {
 			
 			if (obj_messagebox.tween) {
 				obj_messagebox.tween.stop();
 			}
 
-			$(elm_box).remove();
+			elm_box.remove();
 		} else {
 			
 			if (obj_messagebox.tween) {
 				return;
 			}
 			
-			var arr_tween = {opacity: 1};
+			const arr_tween = {opacity: 1};
 			
 			obj_messagebox.tween = new TWEEN.Tween(arr_tween)
 				.to({opacity: 0}, 500)
@@ -3420,7 +3464,7 @@ function MessageBox(elm) {
 					elm_box.style.opacity = arr_tween.opacity;
 				}).onComplete(function() {
 					
-					$(elm_box).remove();
+					elm_box.remove();
 				})
 			.start();
 		}
@@ -3430,18 +3474,18 @@ function MessageBox(elm) {
 		
 		// Identifiers are matched using a wildcard at the end to be able to easily match groups
 		
-		var elms_box = false;
+		let elms_box = false;
 		
 		if (!arr_options.identifier) {
 			
 			elms_box = elm_con[0].children;
 		} else {
 				
-			var arr_identifiers = [];
+			const arr_identifiers = [];
 
 			if (typeof arr_options.identifier == 'object') {
 				
-				for (var i = 0, len = arr_options.identifier.length; i < len; i++) {
+				for (let i = 0, len = arr_options.identifier.length; i < len; i++) {
 					arr_identifiers.push('[data-identifier^="'+arr_options.identifier[i]+'"]');
 				}
 			} else {
@@ -3450,7 +3494,6 @@ function MessageBox(elm) {
 			}
 
 			if (arr_identifiers.length) {
-				
 				elms_box = elm_con[0].querySelectorAll(arr_identifiers.join(','));
 			}
 		}
@@ -3481,9 +3524,10 @@ function MessageBox(elm) {
 				} else {
 					SELF.end(elm_box);
 				}
-				
 			}
 		}
+		
+		func_check_interact();
 	};
 
 	var func_run = function() {
@@ -3503,7 +3547,7 @@ function MessageBox(elm) {
 				return true;
 			}
 			
-			var elms_box = elm_con[0].childNodes;
+			const elms_box = elm_con[0].childNodes;
 		
 			if (!elms_box.length) {
 				
@@ -3543,14 +3587,59 @@ function MessageBox(elm) {
 		}, key_animate);
 	};
 	
+	var func_check_pointer = function(elm_point) {
+		
+		if (!elm_point) {
+			var elm_point = POSITION.getElementFromMouse();
+		}
+		
+		if (elm_point) {
+			
+			if (!hasElement(elm_con, elm_point)) {
+				elm_point = null;
+			}
+		}
+		
+		if (elm_point) { // Get and check the box
+			
+			const elm_box = getElementClosestSelector(elm_point, '.result > div');
+			
+			if (elm_box && !elm_box.messagebox.active) {
+				elm_point = null;
+			}
+		}
+		
+		return elm_point;
+	};
+		
+	var func_check_interact = function() {
+		
+		const elm_point = func_check_pointer();
+
+		if (is_hovering && !elm_point) {
+			func_end();
+		} else if (!is_hovering && elm_point) {
+			func_over();
+		}
+	};
+	
 	var func_over = function(e) {
 		
 		if (is_hovering) {
 			return;
 		}
 		
-		if (POSITION.isTouch() && e.type == 'mouseover') { // Prevent touch and triggered mouse events mixup
-			return;
+		if (e != null) {
+			
+			if (e.type == 'mouseover' && POSITION.isTouch()) { // Prevent touch and triggered mouse events mixup
+				return;
+			}
+			
+			const elm_point = func_check_pointer(e.target);
+			
+			if (!elm_point) {
+				return;
+			}
 		}
 		
 		is_hovering = true;
@@ -3561,16 +3650,19 @@ function MessageBox(elm) {
 	
 	var func_end = function(e) {
 		
-		if (e.type == 'mouseout' && e.relatedTarget && hasElement(elm_con, e.relatedTarget)) { // Check when it's a mouse event whether it has left the document (empty e.relatedTarget) and is still on the main element
-			return;
+		if (e != null) {
+			
+			if (e.type == 'mouseout' && e.relatedTarget && hasElement(elm_con, e.relatedTarget)) { // Check when it's a mouse event whether it has not left the document (e.relatedTarget is not empty) and is still on the main element
+				return;
+			}
 		}
 	
 		is_hovering = false;
 
 		elm_con[0].removeEventListener('touchend', func_end, true);
 		elm_con[0].removeEventListener('mouseout', func_end, true);
-	}
-	
+	};
+		
 	elm_con[0].addEventListener('mouseover', func_over, true);
 	elm_con[0].addEventListener('touchstart', func_over, {capture: true, passive: true});
 	
@@ -4084,42 +4176,91 @@ function arrUnique(arr) {
     }, []);
 }
 
-function guid() {
+function uniqid(str_prefix = '', do_more_entropy = false) {
+
+	const num_time = window.performance.timeOrigin + window.performance.now();
+	const num_seconds = Math.floor(num_time / 1000);
+	const str_part = num_seconds.toString(16).substring(0, 8);
 	
-	function s4() {
-		return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-	}
+	const num_microseconds = Math.floor((num_time - num_seconds * 1000) * 1000);
+	const str_part2 = num_microseconds.toString(16).substring(0, 5).padStart(5, '0');
 	
-	return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+	return str_prefix + str_part + str_part2 + (do_more_entropy ? (Math.random() * 10).toFixed(8).toString() : '');
 }
 
 function parseCSSColor(input) {
 	
 	if (input[0] == '#') {
 		
-		var int = parseInt(input.substring(1), 16);
-		var r = (int >> 16) & 255;
-		var g = (int >> 8) & 255;
-		var b = int & 255;
-
-		return {r: r, g: g, b: b, a: 1};
-	} else {
-	
-		var arr = input.match(/^rgb(?:a)?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?.*/i);
+		let num_r, num_g, num_b = null;
+		let num_a = 1;
+		const num_length = input.length;
+		
+		if (num_length == 4 || num_length == 5) {
+			num_r = +("0x" + input[1] + input[1]);
+			num_g = +("0x" + input[2] + input[2]);
+			num_b = +("0x" + input[3] + input[3]);
+			if (num_length == 5) {
+				num_a = (+("0x" + input[4] + input[4]) / 255);
+			}
+		} else if (num_length == 7 || num_length == 9) {
+			num_r = +("0x" + input[1] + input[2]);
+			num_g = +("0x" + input[3] + input[4]);
+			num_b = +("0x" + input[5] + input[6]);
+			if (num_length == 9) {
+				num_a = (+("0x" + input[7] + input[8]) / 255);
+			}
+		}
+		
+		return {r: num_r, g: num_g, b: num_b, a: num_a};
+	} else if (input.startsWith('rgb')) {
+		
+		const arr = input.match(/^rgb(?:a)?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?/i);
 		
 		if (arr) {
-			return {r: parseInt(arr[1]), g: parseInt(arr[2]), b: parseInt(arr[3]), a: (typeof arr[4] != 'undefined' ? parseFloat(arr[4]) : 1)};
-		} else {
-			return {r: 255, g: 255, b: 255, a: 1};
+			
+			const num_r = parseInt(arr[1]);
+			const num_g = parseInt(arr[2]);
+			const num_b = parseInt(arr[3]);
+			const num_a = (typeof arr[4] != 'undefined' ? parseFloat(arr[4]) : 1);
+			
+			return {r: num_r, g: num_g, b: num_b, a: num_a};
+		}
+	} else if (input.startsWith('hsl')) {
+		
+		const arr = input.match(/^hsl(?:a)?\((\d+)[,\s]+(\d+%)[,\s]+(\d+%)(?:\s?[\/,]\s?(\d+(?:\.\d+)?))?/i);
+		
+		if (arr) {
+			
+			const num_h = parseInt(arr[1]); // 0-360
+			const num_s = parseInt(arr[2]) / 100; // 0-1
+			const num_l = parseInt(arr[3]) / 100; // 0-1
+			const num_a = (typeof arr[4] != 'undefined' ? parseFloat(arr[4]) : 1); // 0-1
+		
+			const num_mix = num_s * Math.min(num_l, 1-num_l);
+			const func_convert = function(num_n) {
+				
+				const num_k = (num_n + num_h/30) % 12;
+				const num_c = num_l - num_mix * Math.max(Math.min(num_k-3, 9-num_k, 1), -1);
+				
+				return Math.round(num_c * 255);
+			};
+			
+			return {r: func_convert(0), g: func_convert(8), b: func_convert(4), a: num_a};
 		}
 	}
+	
+	return {r: 255, g: 255, b: 255, a: 1};
 }
 
-function parseCSSColorToHex(str) {
+function parseColorToHex(arr_color) {
 	
-	var arr_color = parseCSSColor(str);
-	var hex = '0x'+(0x1000000 + (arr_color.r << 16) + (arr_color.g << 8) + arr_color.b).toString(16).slice(1);
-
+	let hex = '0x'+(1 << 24 | (arr_color.r << 16) | (arr_color.g << 8) | arr_color.b).toString(16).slice(1);
+	
+	if (arr_color.a !== 1) {
+		hex += (1 << 8 | Math.round(arr_color.a*255)).toString(16).slice(1);
+	}
+	
 	return hex;
 }
 
@@ -4482,7 +4623,8 @@ function ToolExtras(elm, options) {
 		tools: false,
 		capture: false,
 		class: '',
-		timeout: 2000
+		hash: false,
+		timeout: 2000,
 	}, options);
 		
 	var elm = $(elm);
@@ -4516,9 +4658,17 @@ function ToolExtras(elm, options) {
 		elm_extras[0].style.top = ((pos.top - pos_mod.top) + arr_margin.top)+'px';
 	};
 	
+	let arr_settings_client = [];
+	
+	if (arr_options.hash) {
+		
+		const str_settings = LOCATION.getHashParameter(arr_options.hash);
+		arr_settings_client = (str_settings ? str_settings.split(',') : []);
+	}
+		
 	if (arr_options.fullscreen) {
 		
-		var elm_button_fullscreen = $('<button type="button" class="fullscreen" title="Fullscreen"><span class="icon"></span><span class="icon"></span></button>').appendTo(elm_extras);
+		const elm_button_fullscreen = $('<button type="button" class="fullscreen" title="Fullscreen"><span class="icon"></span><span class="icon"></span></button>').appendTo(elm_extras);
 		
 		ASSETS.getIcons(elm, ['maximize', 'minimize'], function(data) {
 			
@@ -4528,9 +4678,11 @@ function ToolExtras(elm, options) {
 			func_position();
 		});
 		
+		let func_fullscreen = null;
+		
 		if (arr_options.maximize && arr_options.maximize === 'fixed') {
 
-			var func_fullscreen = function(e) {
+			func_fullscreen = function(e) {
 				
 				if (elm_button_fullscreen.hasClass('minimize')) {
 					
@@ -4551,7 +4703,7 @@ function ToolExtras(elm, options) {
 			};
 		} else {
 			
-			var func_fullscreen = function(e) {
+			func_fullscreen = function(e) {
 
 				elm_button_fullscreen.addClass('hide');
 				elm_extras.addClass('hide');
@@ -4623,37 +4775,45 @@ function ToolExtras(elm, options) {
 		}
 		
 		elm_button_fullscreen.on('click', func_fullscreen);
+		
+		if (arr_settings_client.includes('fullscreen')) {
+			func_fullscreen();
+		}
 	}
 	
 	if (arr_options.tools) {
 		
-		var elm_tools = $('<button type="button" class="tools" title="Tools"><span class="icon"></span></button>').prependTo(elm_extras);
+		const elm_button_tools = $('<button type="button" class="tools" title="Tools"><span class="icon"></span></button>').prependTo(elm_extras);
 		
 		ASSETS.getIcons(elm, ['tool'], function(data) {
 			
-			elm_tools[0].children[0].innerHTML = data.tool;
+			elm_button_tools[0].children[0].innerHTML = data.tool;
 			
 			func_position();
 		});
 		
-		elm_tools.on('click', function(e) {
-			
-			var elm_button = $(this);
-			
+		const func_tools = function() {
+						
 			if (elm[0].dataset.tools) {
 				
 				elm[0].dataset.tools = '';
 				SCRIPTER.triggerEvent(elm, 'toolsdisable');
-				elm_button.addClass('active');
+				elm_button_tools.addClass('active');
 			} else {
 				
-				elm[0].dataset.tools = 1;
+				elm[0].dataset.tools = '1';
 				SCRIPTER.triggerEvent(elm, 'toolsenable');
-				elm_button.removeClass('active');
+				elm_button_tools.removeClass('active');
 			}			
-		});
+		};
 		
-		elm[0].dataset.tools = 1;
+		elm[0].dataset.tools = '1';
+		
+		elm_button_tools.on('click', func_tools);
+
+		if (arr_settings_client.includes('notools')) {
+			func_tools();
+		}
 	}
 	
 	if (arr_options.capture) {
@@ -4661,16 +4821,16 @@ function ToolExtras(elm, options) {
 		arr_options.capture = (typeof arr_options.capture == 'object' ? arr_options.capture : {});
 		const arr_selectors = (arr_options.capture.selectors ? arr_options.capture.selectors : {});
 		
-		var elm_capture = $('<button type="button" class="capture" title="Download"><span class="icon"></span></button>').prependTo(elm_extras);
+		const elm_button_capture = $('<button type="button" class="capture" title="Download"><span class="icon"></span></button>').prependTo(elm_extras);
 		
 		ASSETS.getIcons(elm, ['download'], function(data) {
 			
-			elm_capture[0].children[0].innerHTML = data.download;
+			elm_button_capture[0].children[0].innerHTML = data.download;
 			
 			func_position();
 		});
 		
-		elm_capture.on('click', function(e) {
+		const func_capture = function() {
 			
 			const elm_source = (arr_selectors.source ? elm.find(arr_selectors.source) : elm);
 			
@@ -4685,17 +4845,17 @@ function ToolExtras(elm, options) {
 			obj_capture.addLayers(arr_selectors.target);
 			obj_capture.setBackgroundLayer(arr_selectors.background);
 			obj_capture.download();
-		});
+		};
 		
-		elm[0].dataset.tools = 1;
+		elm_button_capture.on('click', func_capture);
 	}
 	
 	let is_listening = false;
 	let timer_hide = false;
-	let func_caller = false;
+	let func_caller = null;
 	const num_timeout_hide = arr_options.timeout;
 	
-	var func_hide = function() {
+	const func_hide = function() {
 		
 		elm_extras.addClass('hide');
 		
@@ -6146,16 +6306,13 @@ function FormManager(elm, arr_options) {
 				}
 			}
 		});
-		
-		// Checking values after reset requires pushing code onto the event stack
-		
-		setTimeout(function() {
+
+		runElementSelectorFunction(elm, '.editor-content', function(elm_found) {
 			
-			runElementSelectorFunction(elm, '.editor-content', function(elm_found) {
-				
+			setTimeout(function() { // Checking values after reset requires pushing code onto the event stack
 				elm_found.edit_content.update();
-			});
-		}, 0);
+			}, 0);
+		});
 	});
 }
 
@@ -6256,54 +6413,57 @@ function AutoCompleter(elm, arr_options) {
 		multi: false,
 		order: false,
 		name: '',
-		delay: 0
+		delay: 0,
+		input_clear: true,
+		call_request: null, // Custom data provider
+		call_active: null,
+		call_select: null
 	}, arr_options);
 
-	var cur = $(elm);
+	var elm = $(elm);
 	
-	if (cur[0].autocompleter) {
+	if (elm[0].autocompleter) {
 		return;
 	}
-	cur[0].autocompleter = this;
+	elm[0].autocompleter = this;
 	
-	cur[0].autocomplete = 'off'; // Disable browser property
+	elm[0].autocomplete = 'off'; // Disable browser property
 	
-	var elm_toolbox = getContainerToolbox(cur);
-	var elm_dropdown = $('<ul class="dropdown hide"></ul>').appendTo(elm_toolbox);
-	
-	var arr_elm = {};
-	var value_default = false;
+	let arr_elm = {};
+	let value_default = false;
 	
 	if (arr_options.multi) {
 		
-		var elm_tags = cur.prev('.autocomplete');
+		const elm_tags = elm.prev('.autocomplete');
 		
 		arr_elm.values = elm_tags.find('ul');
 		arr_elm.input_id = elm_tags.prev('input:hidden');
-		if (!arr_options.name) {
-			arr_options.name = arr_elm.input_id.attr('name');
+		arr_elm.input_id = (arr_elm.input_id.length ? arr_elm.input_id[0] : null);
+		
+		if (!arr_options.name && arr_elm.input_id) {
+			arr_options.name = arr_elm.input_id.name;
 		}
 		
-		ASSETS.getIcons(cur, ['min'], function(data) {
+		ASSETS.getIcons(elm, ['min'], function(data) {
 			
 			elms_tags = arr_elm.values[0].getElementsByClassName('handler');
 			
-			for (var i = 0, len = elms_tags.length; i < len; i++) {
+			for (let i = 0, len = elms_tags.length; i < len; i++) {
 			
 				elms_tags[i].innerHTML = '<span class="icon">'+data.min+'</span>';
 			}
 		});
 		
-		var elms_input = arr_elm.values[0].querySelectorAll('input');
+		const elms_input = arr_elm.values[0].querySelectorAll('input');
 		
 		if (elms_input) {
 			
 			value_default = [];
 		
-			for (var i = 0, len = elms_input.length; i < len; i++) {
+			for (let i = 0, len = elms_input.length; i < len; i++) {
 				
-				var str_value = '';
-				var elm_node = elms_input[i];
+				let str_value = '';
+				let elm_node = elms_input[i];
 				
 				while (elm_node = elm_node.nextSibling) {
 					str_value += (elm_node.nodeType == 3 ? elm_node.textContent : elm_node.innerHTML);
@@ -6324,86 +6484,101 @@ function AutoCompleter(elm, arr_options) {
 		}
 	} else {
 		
-		arr_elm.input_id = cur.prev('input:hidden');
+		arr_elm.input_id = elm.prev('input:hidden');
+		arr_elm.input_id = (arr_elm.input_id.length ? arr_elm.input_id[0] : null);
 		
-		if (arr_elm.input_id.val()) {
-			value_default = [cur.val(), arr_elm.input_id.val()];
+		if (arr_elm.input_id && arr_elm.input_id.value) {
+			value_default = [elm[0].value, arr_elm.input_id.value];
 		}
 	}
 	
-	var input = cur.val();
+	const value_initialise = elm[0].value;
+	let value_input = value_initialise;
+	let value_stored = value_initialise;
 	
-	var value_input = input;
-	var value_stored = input;
-	
-	var str_placeholder_default = (cur[0].placeholder ? cur[0].placeholder : '');
-	if (input) {
-		cur[0].placeholder = input;
+	const str_placeholder_default = (elm[0].placeholder ? elm[0].placeholder : '');
+	if (value_initialise) {
+		elm[0].placeholder = value_initialise;
 	}
 	
-	var timer_delay = false;
+	let timer_delay = false;
 	
-	var dropdown_is_opening = false;
-	var dropdown_is_open = false;
+	let elm_toolbox = getContainerToolbox(elm);
+	const elm_popout = $('<dialog class="popout dropdown"></dialog>').appendTo(elm_toolbox);
+	let popout_is_opening = false;
+	let popout_is_open = false;
 	
-	var func_update = function(e) {
+	const elm_dropdown = $('<ul></ul>').appendTo(elm_popout);
+	
+	var func_draw = function(arr) {
 		
-		dropdown_is_opening = true;
+		SELF.position(true);
+		
+		if (!arr) {
+			return;
+		}
+
+		for (let i = 0, len = arr.length; i < len; i++) {
+
+			const arr_value = arr[i];
+			
+			const elm_item = $('<li>');
+			const elm_label = $('<a tabindex="-1">'+arr_value.label+'</a>').appendTo(elm_item);
+			if (arr_value.title) {
+				elm_label.attr('title', arr_value.title);
+			}
+			const elm_target = elm_label.children();
+			
+			if (elm_target.length && elm_target.attr('id')) {
+				
+				COMMANDS.setTarget(elm_target, function(data) {
+					
+					if (data instanceof Array) {
+						
+						for (let j = 0; j < data.length; j++) {
+							
+							if (!data[j].id) {
+								continue;
+							}
+							
+							SELF.add(data[j].value, data[j].id);
+						}
+					} else if (data.id) {
+						
+						SELF.add(data.value, data.id);
+					}
+				});
+				COMMANDS.setOptions(elm_target, {overlay: elm.closest('.mod')});
+			}
+
+			elm_label[0].autocomplete_value = arr_value;
+			
+			elm_item.appendTo(elm_dropdown);							
+		}
+	};
+
+	var func_request = function() {
+	
+		FEEDBACK.stop(elm);
+		COMMANDS.quickCommand(elm, func_draw);
+	};
+	
+	var func_update = function() {
+		
+		popout_is_opening = true;
 		
 		var func_call = function() {
 			
 			if (timer_delay) {
-				cur.removeClass('waiting');
+				elm.removeClass('waiting');
 				timer_delay = false;
 			}
-
-			FEEDBACK.stop(cur);
-			COMMANDS.quickCommand(cur, function(arr) {
-				
-				SELF.position(true);
-				
-				if (!arr) {
-					return;
-				}
-
-				for (let i = 0, len = arr.length; i < len; i++) {
-
-					const cur_value = arr[i];
-					
-					const elm_item = $('<li>');
-					const elm_label = $('<a tabindex="-1">'+cur_value.label+'</a>').appendTo(elm_item);
-					if (cur_value.title) {
-						elm_label.attr('title', cur_value.title);
-					}
-					const elm_target = elm_label.children();
-					
-					if (elm_target.length && elm_target.attr('id')) {
-						
-						COMMANDS.setTarget(elm_target, function(data) {
-							
-							if (data instanceof Array) {
-								
-								for (let j = 0; j < data.length; j++) {
-									
-									if (!data[j].id) {
-										continue;
-									}
-									
-									SELF.add(data[j].value, data[j].id);
-								}
-							} else if (data.id) {
-								
-								SELF.add(data.value, data.id);
-							}
-						});
-						COMMANDS.setOptions(elm_target, {overlay: cur.closest('.mod')});
-					}
-
-					elm_label[0].autocomplete_value = cur_value;
-					
-					elm_item.appendTo(elm_dropdown);							
-				}
-			});
+			
+			if (arr_options.call_request) {
+				arr_options.call_request(value_input, func_draw);
+			} else {
+				func_request();
+			}
 		};
 		
 		if (arr_options.delay) {
@@ -6411,10 +6586,10 @@ function AutoCompleter(elm, arr_options) {
 			if (timer_delay) {
 				clearTimeout(timer_delay);
 			} else {
-				cur.addClass('waiting');
+				elm.addClass('waiting');
 			}
 			
-			if (cur.val()) { // Only delay when there is a value
+			if (elm[0].value) { // Only delay when there is a value
 				timer_delay = setTimeout(func_call, arr_options.delay * 1000);
 				return;
 			} else {
@@ -6426,36 +6601,62 @@ function AutoCompleter(elm, arr_options) {
 	};
 	
 	// Input interaction
-	
-	cur.on('keyup.autocomplete', function(e) {
+
+	let is_input_keys = false;
+	const func_check_input = function(do_force) {
 		
-		if (e.which == 27 && value_input && (dropdown_is_open || dropdown_is_opening)) { // Key escape
+		if (!do_force && value_input == elm[0].value) { // New input value
+			return;
+		}
+		
+		value_input = elm[0].value;
+		func_update();
+	};
+	
+	elm.on('input.autocomplete', function(e) {
+		
+		if (is_input_keys) {
+			return;
+		}
+		
+		func_check_input();
+	}).on('keydown.autocomplete', function(e) {
+		
+		is_input_keys = true;
+	}).on('keyup.autocomplete', function(e) {
+		
+		is_input_keys = false;
+		
+		if (e.which == 27 && value_input && (popout_is_open || popout_is_opening)) { // Key escape
 			
 			SELF.close();
-			SCRIPTER.triggerEvent(cur, 'focus');
-		} else if (e.which == 40 && value_input && dropdown_is_open) { // Key down
+			SCRIPTER.triggerEvent(elm, 'focus');
+		} else if (e.which == 40 && value_input && popout_is_open) { // Key down
 			
 			SCRIPTER.triggerEvent(elm_dropdown.find('a:first'), 'focus');
 			e.stopPropagation();
-		} else if (value_input != cur.val()) { // New input value
+		} else if ((e.which == 8 || e.which == 46) && !value_input && !elm[0].value) { // Backspace or delete
 			
-			value_input = cur.val();
-			func_update();
-		} else if ((e.which == 8 || e.which == 46) && !value_input && !cur.val()) { // Backspace or delete
+			if (arr_elm.input_id) {
+				arr_elm.input_id.value = '';
+			}
 			
-			arr_elm.input_id.val('');
 			value_stored = '';
 			value_input = '';
-			cur[0].placeholder = str_placeholder_default;
+			elm[0].placeholder = str_placeholder_default;
+		} else {
+			
+			func_check_input();
 		}
 	}).on('click.autocomplete focus.autocomplete', function(e) {
 		
-		if (!dropdown_is_open && !dropdown_is_opening) {
+		if (!popout_is_open && !popout_is_opening) {
 			
-			cur.val('');
-			value_input = '';
+			if (arr_options.input_clear) {
+				elm[0].value = '';
+			}
 			
-			func_update();
+			func_check_input(true);
 		}
 	});
 	
@@ -6472,50 +6673,59 @@ function AutoCompleter(elm, arr_options) {
 		}
 	}).on('mouseenter.autocomplete focus.autocomplete', '> li > a', function(e) {
 		
-		var elm = $(this);
+		const elm_label = this;
+		
+		if (arr_options.call_active) {
+			arr_options.call_active(elm_label, elm_label.autocomplete_value);
+		}
 		
 		elm_dropdown.find('a').removeClass('active');
-		elm.addClass('active');
+		elm_label.classList.add('active');
 	}).on('click.autocomplete enter.autocomplete', '> li > a', function(e) {
 		
-		var elm = $(this);
-		var value = elm[0].autocomplete_value;
-		var target = elm.children();
+		const elm_label = $(this);
+		const elm_target = elm_label.children();
 		
-		if (target.length && target.is('[type=button]')) {
+		if (elm_target.length && elm_target.is('[type=button]')) {
 			
-			if (target[0] != e.target) {
-				SCRIPTER.triggerEvent(target, 'click');
+			if (elm_target[0] != e.target) {
+				SCRIPTER.triggerEvent(elm_target, 'click');
 			}
 		} else {
 			
-			if (value.value) {
-				SELF.add(value.value, value.id);
+			let arr_value = elm_label[0].autocomplete_value;
+			
+			if (arr_options.call_select) {
+				arr_value = arr_options.call_select(elm_label[0], arr_value);
+			}
+			
+			if (arr_value.value) {
+				SELF.add(arr_value.value, arr_value.id);
 			}
 
 			if (e.type == 'enter') { // On keys interaction keep the dropdown active
 				SELF.close();
-				SCRIPTER.triggerEvent(cur, 'focus');
+				SCRIPTER.triggerEvent(elm, 'focus');
 			} else if (arr_options.multi) { // On mouse with a multi selector, keep focus, but remove dropdown
-				SCRIPTER.triggerEvent(cur, 'focus');
+				SCRIPTER.triggerEvent(elm, 'focus');
 				SELF.close();
 			} else { // On mouse with single select, no focus and no dropdown
 				SELF.close();
-				SCRIPTER.triggerEvent(cur, 'blur');
+				SCRIPTER.triggerEvent(elm, 'blur');
 			}
 		}
 	}).on('keyup.autocomplete', '> li > a', function(e) {
 		
-		var elm = $(this);
+		const elm_label = $(this);
 		
-		if (e.which == 27 || e.which == 8 || (e.which == 38 && elm.parent('li').is(':first-child'))) { // Key escape, backspace or up
+		if (e.which == 27 || e.which == 8 || (e.which == 38 && elm_label.parent('li').is(':first-child'))) { // Key escape, backspace or up
 			
 			e.stopPropagation();
 			SELF.close();
-			SCRIPTER.triggerEvent(cur, 'focus');
+			SCRIPTER.triggerEvent(elm, 'focus');
 		} else if (e.which == 38 || e.which == 40) { // Key up, down
 			
-			var elm_target = elm.closest('li');
+			let elm_target = elm_label.closest('li');
 			elm_target = (e.which == 38 ? elm_target.prev() : elm_target.next());
 			elm_target = elm_target.children('a');
 			
@@ -6524,7 +6734,7 @@ function AutoCompleter(elm, arr_options) {
 			}
 		} else if (e.which == 13) { // Key enter
 			
-			SCRIPTER.triggerEvent(elm, 'enter');
+			SCRIPTER.triggerEvent(elm_label, 'enter');
 		} 
 	});
 	
@@ -6535,91 +6745,125 @@ function AutoCompleter(elm, arr_options) {
 			$(this).parent().remove();
 		});
 		
-		TOOLTIP.checkElement(arr_elm.values[0], 'li > span:first-child', function(elm) {
+		TOOLTIP.checkElement(arr_elm.values[0], 'li > span:first-child', function(elm_target) {
 
-			var arr_style = window.getComputedStyle(elm);
+			const arr_style = window.getComputedStyle(elm_target);
 			
-			var width_max = parseInt(arr_style['max-width']);
+			const num_width_max = parseInt(arr_style['max-width']);
 			
-			if (width_max && parseInt(arr_style['width']) == width_max) {
-				return elm.innerHTML;
+			if (num_width_max && parseInt(arr_style['width']) == num_width_max) {
+				return elm_target.innerHTML;
 			}
 			
 			return false;
 		});
 	} else {
 		
-		TOOLTIP.checkElement(cur[0], false, function(elm) {
+		TOOLTIP.checkElement(elm[0], false, function(elm_target) {
 			
-			var width = getInputTextSize(elm);
-			var arr_style = window.getComputedStyle(elm);
+			const num_width = getInputTextSize(elm_target);
+			const arr_style = window.getComputedStyle(elm_target);
 			
-			if (width > parseInt(arr_style['width'])) {
-				return elm.value;
+			if (num_width > parseInt(arr_style['width'])) {
+				return elm_target.value;
 			}
 			
 			return '';
 		});
 	}
 	
-	var func_position = function() {};
+	let func_remove_position = function() {};
 	
-	this.position = function(empty) {
+	this.position = function(do_new) {
 			
-		var elm_toolbox_check = getContainerToolbox(cur);
+		const elm_toolbox_check = getContainerToolbox(elm);
 		
 		if (elm_toolbox_check[0] != elm_toolbox[0]) {
-			elm_toolbox = elm_toolbox_check.append(elm_dropdown);
+			elm_toolbox = elm_toolbox_check.append(elm_popout);
 		}
 
-		if (empty) {
-			elm_dropdown.empty().removeClass('hide');
+		if (do_new) {
+			elm_dropdown.empty();
 		}
+		elm_popout[0].open = true; // Native dialog setting
 		
-		var pos_mod = elm_toolbox[0].getBoundingClientRect();
-		var pos = cur[0].getBoundingClientRect();
-		elm_dropdown.css({'min-width': pos.width, left: (pos.left - pos_mod.left), top: (pos.top - pos_mod.top) + pos.height});
+		const arr_pos_mod = elm_toolbox[0].getBoundingClientRect();
+		const arr_pos = elm[0].getBoundingClientRect();
+		elm_popout[0].style.minWidth = arr_pos.width+'px';
+		elm_popout[0].style.left = (arr_pos.left - arr_pos_mod.left)+'px';
+		elm_popout[0].style.top = ((arr_pos.top - arr_pos_mod.top) + arr_pos.height)+'px';
 		
-		if (!dropdown_is_open) {
+		if (!popout_is_open) {
 			
-			func_position = function(e) {
+			const func_check_position = function(e) {
 				
-				if ((cur[0] != e.target && !cur.is(':focus') && !hasElement(elm_dropdown[0], e.target) && !(e.type == 'focusin' && $(e.target).is('.dialog'))) || (e.type == 'ajaxloaded' && hasElement(elm_dropdown[0], e.target)) || !dropdown_is_open) {
-					if (onStage(cur[0])) {
-						SELF.close()
+				if (
+					(
+						// Source input is not our element, source input is not in focus
+						elm[0] != e.target && !elm[0].matches(':focus') &&
+						// Target element is not part of our popout
+						!hasElement(elm_popout[0], e.target) &&
+						// Target element is not part of directly related element, i.e. not a new related dialog that is overlaying
+						!(e.type == 'focusin' && e.target.matches('.dialog') && !hasElement(e.target, elm[0]))
+					) ||
+					// Target element loads new data and is ours (close to renew)
+					(e.type == 'ajaxloaded' && hasElement(elm_popout[0], e.target)) ||
+					// There is no popout
+					!popout_is_open
+				) {
+					
+					if (onStage(elm[0])) {
+						SELF.close();
 					} else {
-						$(document).off('.autocomplete', func_position);
+						func_remove_position();
 					}
 				}
 			};
-						
-			$(document).on('mouseup.autocomplete keyup.autocomplete focusin.autocomplete ajaxloaded.autocomplete', func_position);
+			
+			document.addEventListener('mouseup', func_check_position);
+			document.addEventListener('keyup', func_check_position);
+			document.addEventListener('focusin', func_check_position);
+			document.addEventListener('ajaxloaded', func_check_position);
+			
+			func_remove_position = function() {
+				
+				document.removeEventListener('mouseup', func_check_position);
+				document.removeEventListener('keyup', func_check_position);
+				document.removeEventListener('focusin', func_check_position);
+				document.removeEventListener('ajaxloaded', func_check_position);
+				
+				func_remove_position = function() {};
+			};
 		}
 		
-		dropdown_is_open = true;
+		popout_is_open = true;
 	};
 	
 	this.close = function() {
-				
-		FEEDBACK.stop(cur);
-		dropdown_is_opening = false;
 		
-		elm_dropdown.addClass('hide').empty();
+		if (arr_options.call_inactive) {
+			arr_options.call_inactive();
+		}
+				
+		FEEDBACK.stop(elm);
+		popout_is_opening = false;
+		
+		elm_popout[0].open = null;
+		elm_dropdown.empty();
+		
+		if (arr_options.input_clear) {
+			
+			elm[0].value = value_stored;
+			value_input = value_stored;
+		}
 
-		cur.val(value_stored);
-		value_input = value_stored;
-
-		$(document).off('.autocomplete', func_position);
-		dropdown_is_open = false;
+		func_remove_position();
+		popout_is_open = false;
 	};
 	
 	this.add = function(value, id, do_trigger) {
-		
-		if (!arr_elm.input_id.length) {
-			return;
-		}
-		
-		let input = '';
+
+		let value_input_new = '';
 		
 		if (arr_options.multi) {
 			
@@ -6630,28 +6874,31 @@ function AutoCompleter(elm, arr_options) {
 			
 			arr_elm.values.append(elm_tag);
 			
-			ASSETS.getIcons(cur, ['min'], function(data) {
+			ASSETS.getIcons(elm, ['min'], function(data) {
 				
 				elm_tag[0].getElementsByClassName('handler')[0].innerHTML = '<span class="icon">'+data.min+'</span>';
 			});
 
-			cur.val(input);
+			elm[0].value = value_input_new;
 		} else {
 			
-			input = decodeHTMLSpecialChars(value);
-			cur.val(input);
+			value_input_new = decodeHTMLSpecialChars(value);
+			elm[0].value = value_input_new;
 			
-			TOOLTIP.recheckElement(cur[0]);
+			TOOLTIP.recheckElement(elm[0]);
 		}
 
-		value_input = input;
-		value_stored = input;
-		cur[0].placeholder = input;
+		value_input = value_input_new;
+		value_stored = value_input_new;
+		elm[0].placeholder = value_input_new;
 		
-		arr_elm.input_id.val(id);
+		if (arr_elm.input_id) {
 		
-		if (do_trigger !== false) { 
-			SCRIPTER.triggerEvent(arr_elm.input_id, 'change');
+			arr_elm.input_id.value = id;
+			
+			if (do_trigger !== false) { 
+				SCRIPTER.triggerEvent(arr_elm.input_id, 'change');
+			}
 		}
 	};
 	
@@ -6662,7 +6909,7 @@ function AutoCompleter(elm, arr_options) {
 		if (value_default) {
 			
 			if (arr_options.multi) {
-				for (var i = 0, len = value_default.length; i < len; i++) {
+				for (let i = 0, len = value_default.length; i < len; i++) {
 					SELF.add(value_default[i][0], value_default[i][1], false);
 				}
 			} else {
@@ -6674,16 +6921,26 @@ function AutoCompleter(elm, arr_options) {
 	this.clear = function() {
 		
 		if (arr_options.multi) {
-			arr_elm.values.empty();
+			
+			while (arr_elm.values[0].firstChild) {
+				arr_elm.values[0].removeChild(arr_elm.values[0].firstChild);
+			}
 		}
 		
-		cur.val('');
+		elm[0].value = '';
 		
 		value_input = '';
 		value_stored = '';
-		cur[0].placeholder = str_placeholder_default;
+		elm[0].placeholder = str_placeholder_default;
 		
-		arr_elm.input_id.val('');
+		if (arr_elm.input_id) {
+			arr_elm.input_id.value = '';
+		}
+	};
+	
+	this.getPopout = function() {
+		
+		return elm_popout[0];
 	};
 }
 
@@ -6693,6 +6950,203 @@ $.fn.autocomplete = function() {
 	
 	return this.each(obj.run);
 };
+
+function PickColor(elm, arr_options) {
+	
+	const SELF = this;
+	
+	var arr_options = $.extend({
+		alpha: false
+	}, arr_options);
+
+	var elm = $(elm);
+	
+	if (elm[0].pickcolor) {
+		return;
+	}
+	elm[0].pickcolor = this;
+	
+	const elm_input = elm.children('input');
+	const value_initialise = elm_input[0].value;
+	let value_input = value_initialise;
+	
+	const elm_color = $('<button type="button"></button>').appendTo(elm);
+	
+	const func_use_color = function() {
+		elm_color[0].style.setProperty('--color', (value_input ? value_input : null));
+	};
+	func_use_color();
+	
+	let elm_toolbox = getContainerToolbox(elm);
+	let elm_popout = null;
+	let popout_is_opening = false;
+	let popout_is_open = false;
+	
+	let colorpicker = null;
+	
+	const func_update_instance = function() {
+		
+		value_input = elm_input[0].value;
+		func_use_color();
+		
+		if (colorpicker) {
+			
+			try {
+				if (arr_options.alpha) {
+					colorpicker.color.hex8String = value_input;
+				} else {
+					colorpicker.color.hexString = value_input;
+				}
+			} catch (e) { }
+			
+			return;
+		}
+		
+		const arr_style = window.getComputedStyle(elm_popout[0]);
+		
+		const arr_colorpicker = {
+			width: 200,
+			margin: arr_style.paddingLeft,
+			borderWidth: 0,
+			layoutDirection: 'horizontal',
+			layout: [
+				{component: iro.ui.Box},
+				{component: iro.ui.Slider, options: {sliderType: 'hue'}}
+			],
+			color: (value_input ? value_input : '#00ffff')
+		};
+		
+		if (arr_options.alpha) {
+			arr_colorpicker.layout.push({component: iro.ui.Slider, options: {sliderType: 'alpha'}});
+		}
+		
+		colorpicker = new iro.ColorPicker(elm_popout[0], arr_colorpicker);
+		
+		colorpicker.on('color:change', function(color) {
+			
+			if (arr_options.alpha && color.alpha != 1) {
+				value_input = color.hex8String;
+			} else {
+				value_input = color.hexString;
+			}
+			
+			elm_input[0].value = value_input;
+			func_use_color();
+		});	
+	};
+	
+	const func_update = function() {
+		
+		popout_is_opening = true;
+		
+		if (elm_popout === null) {
+			elm_popout = $('<dialog class="popout pickcolor"></dialog>').appendTo(elm_toolbox);
+		}
+
+		ASSETS.fetch(false, {script: ['/CMS/js/support/iro.min.js']}, function() {
+			
+			func_update_instance();
+
+			SELF.position();
+		});
+	};
+	
+	// Input interaction
+	
+	const func_input_change = function() {
+		
+		if (value_input != elm_input[0].value) {
+			func_update();
+		}
+	};
+	const func_input_focus = function() {
+		
+		if (!popout_is_open && !popout_is_opening) {
+			func_update();
+		}
+	};
+	
+	elm_input[0].addEventListener('input', func_input_change);
+	elm_input[0].addEventListener('focus', func_input_focus);
+	
+	elm_color[0].addEventListener('focus', function() {
+		SCRIPTER.triggerEvent(elm_input[0], 'focus');
+	});
+	
+	let func_remove_position = function() {};
+	
+	this.position = function() {
+			
+		const elm_toolbox_check = getContainerToolbox(elm);
+		
+		if (elm_toolbox_check[0] != elm_toolbox[0]) {
+			elm_toolbox = elm_toolbox_check.append(elm_popout);
+		}
+
+		elm_popout[0].open = true; // Native dialog setting
+		
+		const arr_pos_mod = elm_toolbox[0].getBoundingClientRect();
+		const arr_pos = elm_input[0].getBoundingClientRect();
+		elm_popout[0].style.minWidth = arr_pos.width+'px';
+		elm_popout[0].style.left = (arr_pos.left - arr_pos_mod.left)+'px';
+		elm_popout[0].style.top = ((arr_pos.top - arr_pos_mod.top) + arr_pos.height)+'px';
+		
+		if (!popout_is_open) {
+			
+			const func_check_position = function(e) {
+				
+				if (
+					// Source input is not our element, source input is not in focus, target element is not part of our popout, target element is not part of directly related element (i.e. not a new related dialog)
+					(elm_input[0] != e.target && !elm_input[0].matches(':focus') && !hasElement(elm_popout[0], e.target) && !(e.type == 'focusin' && e.target.matches('.dialog'))) ||
+					// Target element loads new data and is ours (close to renew)
+					(e.type == 'ajaxloaded' && hasElement(elm_popout[0], e.target)) ||
+					// There is no popout
+					!popout_is_open
+				) {
+					
+					if (onStage(elm[0])) {
+						SELF.close();
+					} else {
+						func_remove_position();
+					}
+				}
+			};
+			
+			document.addEventListener('mouseup', func_check_position);
+			document.addEventListener('keyup', func_check_position);
+			document.addEventListener('focusin', func_check_position);
+			document.addEventListener('ajaxloaded', func_check_position);
+			
+			func_remove_position = function() {
+				
+				document.removeEventListener('mouseup', func_check_position);
+				document.removeEventListener('keyup', func_check_position);
+				document.removeEventListener('focusin', func_check_position);
+				document.removeEventListener('ajaxloaded', func_check_position);
+				
+				func_remove_position = function() {};
+			};
+		}
+		
+		popout_is_open = true;
+	};
+	
+	this.close = function() {
+		
+		popout_is_opening = false;
+		
+		elm_popout[0].open = null;
+		
+		func_remove_position();
+		popout_is_open = false;
+	};
+	
+	this.clear = function() {
+		
+		elm_input[0].value = '';
+		value_input = '';
+	};
+}
 
 // Sorter
 
@@ -6963,17 +7417,7 @@ function Sorter(elm, arr_options) {
 	
 	this.resetRow = function(elm_row) {
 
-		const elm_inputs = elm_row.find('input, select, textarea');
-
-		elm_inputs.prop('disabled', false);
-		elm_inputs.not('[type=checkbox], [type=radio], select, [type=button], [type=submit]').val('');
-		elm_inputs.filter('[type=checkbox], [type=radio]').prop('checked', function () {
-			return this.getAttribute('checked') == 'checked';
-		});
-		const elms_select = elm_inputs.filter('select');
-		elms_select.children('option[value=""][hidden=""]:last-child').remove(); // Remove dynamic DropDown placeholder
-		elms_select.prop('selectedIndex', 0);
-		elm_row.find('.autocomplete.tags > ul').empty();
+		unloadClonedElements(elm_row);
 	};
 	
 	var func_is_empty_row = function(elm_check) {
@@ -6989,6 +7433,7 @@ function Sorter(elm, arr_options) {
 	this.clean = function() {
 	
 		const elms_row = $(SELF.getRows());
+		
 		let elms_remove = elms_row.filter(function() {
 			return func_is_empty_row(this); // Empty means the first meaningful element (i.e. any input element or a select with the possibility for '') is empty
 		});
@@ -7052,7 +7497,6 @@ function SortSorter(elm, arr_options) {
 		items: '> li',
 		handle: '> li > span:first-child',
 		nested: false,
-		func_obj: false,
 		placeholder_class: false,
 		call_start: false,
 		call_stop: false,
@@ -7068,20 +7512,23 @@ function SortSorter(elm, arr_options) {
 	
 	var func_init = function(e) {
 		
-		var connect = false;
+		let do_connect = false;
+		let elm_target = null;
+		let elm_container = null;
 		
 		if (arr_options.nested) {
 			
-			var elm_target = e.target.closest(arr_options.container);
-			var elm_container = elm_target;
+			elm_target = e.target.closest(arr_options.container);
+			elm_container = elm_target;
 		} else {
 			
-			var elm_target = elm;
+			elm_target = elm;
 			elm_container = elm;
 			
 			if (!elm_target.matches(arr_options.container)) {
-				connect = true;
-				var elm_container = elm_target.querySelectorAll(arr_options.container);
+				
+				do_connect = true;
+				elm_container = elm_target.querySelectorAll(arr_options.container);
 			}
 			
 			elm.removeEventListener('mousedown', func_init, true);
@@ -7093,30 +7540,28 @@ function SortSorter(elm, arr_options) {
 				return;
 			}
 			
-			for (var i = 0; i < elm_target.arr_sortsortables.length; i++) { // Prepare to re-init the sortable
+			for (let i = 0; i < elm_target.arr_sortsortables.length; i++) { // Prepare to re-init the sortable
 				elm_target.arr_sortsortables[i].destroy();
 			}
 		}
 		elm_target.arr_sortsortables = [];
 		
-		var identifier = counter_sortsorter + 1;
+		const num_identifier = counter_sortsorter + 1;
 		counter_sortsorter++;
-	
-		var obj_state = (arr_options.func_obj ? arr_options.func_obj() : false);
 		
-		if (!connect) {
+		if (!do_connect) {
 			elm_container = [elm_container];
 		}
 		
-		for (var i = 0; i < elm_container.length; i++) {
+		for (let i = 0; i < elm_container.length; i++) {
 			
-			elm_container[i].setAttribute('data-sortable_identifier', identifier);
+			elm_container[i].setAttribute('data-sortable_identifier', num_identifier);
 			
-			var arr_settings = {
+			const arr_settings = {
 				animation: 150,
-				draggable: arr_options.container+'[data-sortable_identifier="'+identifier+'"] '+arr_options.items,
-				handle: arr_options.container+'[data-sortable_identifier="'+identifier+'"] '+arr_options.handle,
-				group: 'connect_'+identifier,
+				draggable: arr_options.container+'[data-sortable_identifier="'+num_identifier+'"] '+arr_options.items,
+				handle: arr_options.container+'[data-sortable_identifier="'+num_identifier+'"] '+arr_options.handle,
+				group: 'connect_'+num_identifier,
 				ghostClass: 'sortsorter-placeholder',
 				chosenClass: 'sortsorter-dragging'
 			}
@@ -7124,19 +7569,19 @@ function SortSorter(elm, arr_options) {
 			if (arr_options.call_start) {
 				
 				arr_settings.onStart = function(e2) {
-					arr_options.call_start($(e2.item), obj_state);
+					arr_options.call_start($(e2.item));
 				};
 			}											
 			if (arr_options.call_stop) {
 				
 				arr_settings.onEnd = function(e2) {
-					arr_options.call_stop($(e2.item), obj_state);
+					arr_options.call_stop($(e2.item));
 				};
 			}
 			if (arr_options.call_update) {
 				
 				arr_settings.onSort = function(e2) {
-					arr_options.call_update($(e2.item), obj_state);
+					arr_options.call_update($(e2.item));
 				};
 			}
 			
@@ -7247,40 +7692,40 @@ function NavigationTabs(elm, arr_options) {
 		if (sorting) {
 			
 			elm_nav.addClass('sorting');
-				
+			
+			const arr_state = {
+				index: false,
+				elm_content: false
+			};
+			
 			new SortSorter(elm_nav, {
 				container: 'ul',
 				handle: '> li > a',
 				items: '> li:not([data-sortable="0"])',
 				nested: true,
-				func_obj: function() {
-					return {
-						index: false,
-						elm_content: false
-					};
-				},
-				call_start: function(elm, obj) {
+				call_start: function(elm) {
 					
 					elm.addClass('sorting');
-					obj.elm_content = [];
+					arr_state.elm_content = [];
 					
-					var hash = elm.children('a')[0].hash;
-					if (hash) { // Try tab id
-			
-						obj.elm_content = cur.children(hash);
+					const str_hash = elm.children('a')[0].hash;
+					
+					if (str_hash) { // Try tab id
+						arr_state.elm_content = cur.children(str_hash);
 					}
-					if (!obj.elm_content.length) { // Use tab index
 					
-						obj.index = elm.index() - (elm.prevAll('.no-tab, :hidden').length);
-						obj.elm_content = cur.children('div').eq(obj.index);
+					if (!arr_state.elm_content.length) { // Use tab index
+					
+						arr_state.index = elm.index() - (elm.prevAll('.no-tab, :hidden').length);
+						arr_state.elm_content = cur.children('div').eq(arr_state.index);
 					}
 				},
-				call_stop: function(elm, obj) {
+				call_stop: function(elm) {
 					
 					elm.removeClass('sorting');
 				},
-				call_update: function(elm, obj) {
-														
+				call_update: function(elm) {
+					
 					var elm_sibling = elm.next('li');
 					var sibling = 'next';
 					if (!elm_sibling.length) {
@@ -7290,26 +7735,27 @@ function NavigationTabs(elm, arr_options) {
 					
 					var elm_content_sibling = [];
 					
-					var hash = elm_sibling.children('a')[0].hash;
-					if (hash) {
-			
-						elm_content_sibling = cur.children(hash);
+					const str_hash = elm_sibling.children('a')[0].hash;
+					
+					if (str_hash) {
+						elm_content_sibling = cur.children(str_hash);
 					}
+					
 					if (!elm_content_sibling.length) {
 					
 						var index_sibling = elm_sibling.index() - (elm_sibling.prevAll('.no-tab').length);
 						var elm_content_sibling = cur.children('div');
 						if (sibling == 'next') {
-							elm_content_sibling = elm_content_sibling.eq(index_sibling-(obj.index >= index_sibling ? 1 : 0));
+							elm_content_sibling = elm_content_sibling.eq(index_sibling-(arr_state.index >= index_sibling ? 1 : 0));
 						} else {
 							elm_content_sibling = elm_content_sibling.eq(index_sibling+1);
 						}
 					}
 					
 					if (sibling == 'next') {
-						obj.elm_content.insertBefore(elm_content_sibling);
+						arr_state.elm_content.insertBefore(elm_content_sibling);
 					} else {
-						obj.elm_content.insertAfter(elm_content_sibling);
+						arr_state.elm_content.insertAfter(elm_content_sibling);
 					}
 				}
 			});
@@ -7412,12 +7858,13 @@ function NavigationTabs(elm, arr_options) {
 		
 		SELF.check();
 		
-		var arr_options_tab = elm_nav.find('.active')[0].tabs_options_tab;
+		const elm_tab_active = elm_nav.find('.active')[0];
 		
 		SCRIPTER.triggerEvent(elm_content, 'open');
 		arr_options.call_open.apply(elm_content);
-		if (arr_options_tab) {
-			arr_options_tab.call_open.apply(elm_content);
+		
+		if (elm_tab_active && elm_tab_active.tabs_options_tab) { // Could be missing an actual tab
+			elm_tab_active.tabs_options_tab.call_open.apply(elm_content);
 		}
 	};
 	
@@ -7438,7 +7885,6 @@ function NavigationTabs(elm, arr_options) {
 		}
 		
 		if (elm_tab.length) {
-			
 			SCRIPTER.triggerEvent(elm_tab.children('a'), 'click');
 		}
 	};

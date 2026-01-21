@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -12,10 +12,12 @@ class EnucleateMedia {
 	const VIEW_HTML = 1;
 	const VIEW_URL = 2;
 	const VIEW_TYPE = 3;
+	const VIEW_DATA_URL = 4;
+	const VIEW_DATA_BASE64 = 5;
 	
-	protected $path_file = false;
-	protected $path_enucleate = false;
-	protected $path_system = false;
+	protected $str_path_file = null;
+	protected $str_path_enucleate = '';
+	protected $str_path_system = '';
 	
 	protected $width = false; // Can also be set to HTML values like 'cm'
 	protected $height = false;
@@ -24,23 +26,29 @@ class EnucleateMedia {
 	protected $use_cache = true;
 	protected $num_cache_width = 800;
 	
-	public function __construct($path_file, $path_system = '', $path_enucleate = '') {
+	public function __construct($str_path_file, $str_path_system = '', $str_path_enucleate = null) {
 	
-		$this->path_file = $path_file;
-		$this->is_external = FileGet::getProtocolExternal($this->path_file);
+		$this->str_path_file = $str_path_file;
+		$this->is_external = (bool)FileGet::getProtocolExternal($this->str_path_file);
 		
-		$this->path_system = $path_system;
+		if (!$this->is_external) {
+			$this->str_path_file = FileStore::cleanPath($this->str_path_file);
+		}
 		
-		$this->setPath($path_enucleate);
+		$this->str_path_system = $str_path_system;
+		
+		if ($str_path_enucleate !== null) {
+			$this->setPath($str_path_enucleate);
+		}
 	}
 
-	public function setPath($path_enucleate, $do_prefix = false) {
+	public function setPath($str_path_enucleate, $do_prefix = false) {
 		
 		if ($this->is_external) {
 			return false;
 		}
 		
-		$this->path_enucleate = $path_enucleate.($do_prefix ? $this->path_enucleate : '');
+		$this->str_path_enucleate = $str_path_enucleate.($do_prefix ? $this->str_path_enucleate : '');
 	}
 	
 	public function isExternal() {
@@ -73,7 +81,7 @@ class EnucleateMedia {
 			];
 		}
 		
-		$arr_info = getimagesize($this->path_system.$this->path_file);
+		$arr_info = getimagesize($this->str_path_system.$this->str_path_file);
 		
 		if (!$arr_info) {
 			return false;
@@ -87,19 +95,37 @@ class EnucleateMedia {
 	
 	public function enucleate($mode = self::VIEW_HTML, $arr_options = []) {
 
-		$str_return = false;
+		$str_return = null;
 		
 		if ($mode == EnucleateMedia::VIEW_URL) {
 			
-			$str_return = $this->path_enucleate.$this->path_file;
+			$str_return = $this->str_path_enucleate.$this->str_path_file;
+		} else if ($mode == EnucleateMedia::VIEW_DATA_URL) {
+			
+			if (!$this->is_external) {
+				$str_return = $this->str_path_system.$this->str_path_file;
+			} else {
+				$str_return = read($this->str_path_file);
+			}
+			
+			$str_return = FileStore::getDataURL($str_return);
+		} else if ($mode == EnucleateMedia::VIEW_DATA_BASE64) {
+			
+			if (!$this->is_external) {
+				$str_return = read($this->str_path_system.$this->str_path_file);
+			} else {
+				$str_return = read($this->str_path_file);
+			}
+			
+			$str_return = base64_encode($str_return);
 		} else {
 			
 			$str_extension = '';
 			
 			if (!$this->is_external) {
-				$str_extension = FileStore::getExtension($this->path_system.$this->path_file);
+				$str_extension = FileStore::getExtension($this->str_path_system.$this->str_path_file);
 			} else {
-				$str_extension = FileStore::getFilenameExtension($this->path_file);
+				$str_extension = FileStore::getFilenameExtension($this->str_path_file);
 			}
 
 			switch ($str_extension) {
@@ -125,9 +151,9 @@ class EnucleateMedia {
 						}
 						
 						if ($this->use_cache && $str_extension != 'svg') {
-							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.SiteStartEnvironment::getCacheURL('img', [($this->width ?: $this->num_cache_width), ($this->height ?: false)], $this->path_enucleate.$this->path_file).'" />';
+							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.SiteStartEnvironment::getCacheURL('img', [($this->width ?: $this->num_cache_width), ($this->height ?: false)], $this->str_path_enucleate.$this->str_path_file).'" />';
 						} else {
-							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.$this->path_enucleate.$this->path_file.'" />';
+							$str_return = '<img'.$str_html_class.$str_html_width.$str_html_height.' src="'.$this->str_path_enucleate.$this->str_path_file.'" />';
 						}
 					}
 					break;
@@ -141,7 +167,7 @@ class EnucleateMedia {
 						
 						$str_type = (FileStore::getExtensionMIMEType($str_extension) ?: 'audio/mpeg');
 						
-						$str_return = '<audio controls="1" height="100" width="200"><source src="'.$this->path_enucleate.$this->path_file.'" type="'.$str_type.'" /></audio>';
+						$str_return = '<audio controls="1" height="100" width="200"><source src="'.$this->str_path_enucleate.$this->str_path_file.'" type="'.$str_type.'" /></audio>';
 					}
 					break;
 				case 'mp4':
@@ -167,7 +193,7 @@ class EnucleateMedia {
 						
 						$str_type = (FileStore::getExtensionMIMEType($str_extension) ?: 'video/mp4');
 						
-						$str_return = '<video controls="1"'.$str_html_options.$str_html_sizing.'><source src="'.$this->path_enucleate.$this->path_file.'" type="'.$str_type.'" /></video>';
+						$str_return = '<video controls="1"'.$str_html_options.$str_html_sizing.'><source src="'.$this->str_path_enucleate.$this->str_path_file.'" type="'.$str_type.'" /></video>';
 					}
 					break;
 				case 'pdf':
@@ -175,14 +201,14 @@ class EnucleateMedia {
 					if ($mode == EnucleateMedia::VIEW_TYPE) {
 						$str_return = 'text';
 					} else {
-						$str_return = '<object type="application/pdf" width="'.($this->width ?: ($this->height ? ($this->height * 0.66) : '100%')).'" height="'.($this->height ?: ($this->width ? ($this->width * 1.33) : '100%')).'" data="'.$this->path_enucleate.$this->path_file.'"></object>';
+						$str_return = '<object type="application/pdf" width="'.($this->width ?: ($this->height ? ($this->height * 0.66) : '100%')).'" height="'.($this->height ?: ($this->width ? ($this->width * 1.33) : '100%')).'" data="'.$this->str_path_enucleate.$this->str_path_file.'"></object>';
 					}
 					break;
 			}
 			
 			if (!$str_return) {
 				
-				$arr_info = pathinfo($this->path_file);
+				$arr_info = pathinfo($this->str_path_file);
 				$str_directory = $arr_info['dirname'];
 				$str_file = $arr_info['file'];
 				
@@ -205,7 +231,7 @@ class EnucleateMedia {
 			}
 			
 			if (!$str_return) {
-				$str_return = $this->path_file;
+				$str_return = $this->str_path_file;
 			}
 		}
 		

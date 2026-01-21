@@ -2,146 +2,136 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
 
 class HomeLogin {
 	
+	// Index
+	
+	private static $username = null;
+	private static $password = null;
+	
+	private static $user_group = null;
+	private static $arr_directory = null;
+	
 	public static function index() {
 		
-		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER']);
+		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER'], $_SESSION['IDENTIFIER']);
+		
+		static::$user_group = SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP);
+		static::$arr_directory = SiteStartEnvironment::getDirectory(false, SiteStartEnvironment::DIRECTORY_LOGIN);
 		
 		if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_KIND) == '.l' && SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_PAGE_NAME) == 'logout') {
-
-			unset($_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID']);
 			
-			Response::location(SiteStartEnvironment::getBasePath(1, false));
-		} else if (!empty($_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID']) && !isset($_POST['login_user']) && !isset($_POST['login_ww'])) {
-					
+			self::doLogout();
+			return;
+		} else if (!empty($_SESSION['STORE_'.static::$user_group]['USER_ID']) && static::$username === null && static::$password === null) {
+			
 			self::updateLogin();
-		} else if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP) && isset($_POST['login_user']) && isset($_POST['login_ww'])) {
-		
-			self::checkLogin($_POST['login_user'], $_POST['login_ww']);
-		} else if (SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP) && SiteStartEnvironment::getDirectory('require_login', SiteStartEnvironment::DIRECTORY_LOGIN)) {
+			return;
+		} else if (static::$user_group && static::$username !== null && static::$password !== null) {
 			
+			self::checkLogin();
+			return;
+		}
+		
+		if (static::$user_group && static::$arr_directory['require_login']) {
 			self::toLogin();
 		}
 	}
 	
-	public static function API($token) {
+	public static function indexProposeUser(string $username, ?string $password, ?array $arr_directory = null, $no_password = false) {
 		
-		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER']);
+		static::$username = Log::parseRequestIdentifier($username);
+		static::$password = ($no_password && $password === null ? false : $password);
 		
-		$check = Log::checkRequest('login_api_home', $token, 10, ['identifier' => 4, 'ip' => 20, 'ip_block' => 40, 'global' => 300]);
-		
-		if ($check !== true) {
-			error(getLabel('msg_access_limit'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
-		}
-		
-		$arr_api_client_user = apis::getClientUserByToken($token);
-				
-		if ($arr_api_client_user && $arr_api_client_user['api_id'] == SiteStartEnvironment::getAPI('id')) {
+		if ($arr_directory) {
 			
-			// Regenerate token when provided unsecure
-			if (SERVER_SCHEME != URI_SCHEME_HTTPS) {
-				
-				apis::handleClientUser($arr_api_client_user['client_id'], $arr_api_client_user['user_id'], $arr_api_client_user['enabled'], false, true);
-				
-				error(getLabel('msg_access_denied').' The token was sent over an unencrypted connection. The token has been reset.', TROUBLE_INVALID_REQUEST, LOG_CLIENT);
-			}
+			SiteStartEnvironment::setContext(SiteStartEnvironment::CONTEXT_USER_GROUP, $arr_directory['user_group_id']);
+			SiteStartEnvironment::setDirectory($arr_directory, SiteStartEnvironment::DIRECTORY_LOGIN);
+		}
 
-			if ($arr_api_client_user['client_enabled'] && $arr_api_client_user['enabled']) {
-			
-				if (!$arr_api_client_user['date_valid'] || strtotime($arr_api_client_user['date_valid']) > time()) {
-				
-					$user = self::checkUser($arr_api_client_user['user_id']);
-					
-					return $arr_api_client_user;
-				} else {
-				
-					error(getLabel('msg_access_denied').' The token is expired.', TROUBLE_ACCESS_DENIED, LOG_CLIENT);
-				}
-			} else {
-				
-				error(getLabel('msg_access_denied'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
-			}
-		} else {
-			
-			Log::logRequest('login_api_home', $token);
-			
-			error(getLabel('msg_access_denied'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
-		}
-		
-		return false;
+		static::index();
 	}
-			
-	private static function toLogin($error = false) {
+	
+	public static function indexSetDestination($str_url, $do_force = true) {
 		
-		$arr_page = pages::getPages(SiteStartEnvironment::getDirectory('page_fallback_id', SiteStartEnvironment::DIRECTORY_LOGIN));
+		if (!$do_force && isset($_SESSION['RETURN_TO'])) {
+			return;
+		}
+		
+		$_SESSION['RETURN_TO'] = $str_url;
+	}
 
-		if (SiteStartEnvironment::getDirectory('path') != SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN) || SiteStartEnvironment::getPage('name') != $arr_page['name']) {
+	private static function toLogin($is_error = false) {
 		
-			if (!$error) {
-				$_SESSION['RETURN_TO'] = (!empty($_SERVER['PATH_VIRTUAL']) ? $_SERVER['PATH_VIRTUAL'] : $_SERVER['PATH_INFO']);
+		$arr_page = pages::getPages(static::$arr_directory['page_fallback_id']);
+
+		if (!$is_error) {
+		
+			if (static::$arr_directory['page_fallback_id'] == SiteStartEnvironment::getPage('id')) {
+				return;
 			}
 			
-			Response::location(URL_BASE.ltrim(SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN), '/').(SiteStartEnvironment::getDirectory('path', SiteStartEnvironment::DIRECTORY_LOGIN) ? '/' : '').$arr_page['name'].'.p'.($error ? '/LOGIN_INCORRECT' : ''));
+			if (static::$arr_directory['page_index_id'] != SiteStartEnvironment::getPage('id')) {
+				self::indexSetDestination(SiteStartEnvironment::getRequestURL(), false);
+			}
 		}
+		
+		$str_path_directory = str_replace(' ', '', static::$arr_directory['path']);
+		
+		Response::location($str_path_directory.'/'.$arr_page['name'].'.p'.($is_error ? '/LOGIN_INCORRECT' : ''));
 	}
 		
 	private static function updateLogin() {
 		
-		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'], true);
+		$_SESSION['CUR_USER'] = user_groups::getUserData($_SESSION['STORE_'.static::$user_group]['USER_ID'], true);
 		
 		if (!$_SESSION['CUR_USER']) {
 			
 			self::toLogin();
-			
 			return;
 		}
 		
 		$arr_user = $_SESSION['CUR_USER'][DB::getTableName('TABLE_USERS')];
 		
-		if ($arr_user['enabled']) {
+		if (!$arr_user['enabled'] || $arr_user['login_identifier'] !== $_SESSION['STORE_'.static::$user_group]['IDENTIFIER']) {
 			
-			$_SESSION['USER_ID'] = $_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'];
-			$_SESSION['USER_GROUP'] = SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP);
-			
-			if (strtotime($arr_user['last_login']) < strtotime('-1 day')) {
-				
-				$arr_ip = Log::getIP();
-				
-				DB::setConnection(DB::CONNECT_CMS);
-				
-				$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')."
-				SET 
-					last_login = NOW(),
-						ip = ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").",
-						ip_proxy = ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''")."
-					WHERE id = ".(int)$_SESSION['USER_ID']
-				);
-				
-				DB::setConnection();
-				
-				msg(user_management::getUserTag($_SESSION['USER_ID']), 'LOGIN+', LOG_SYSTEM);
-			}
-			
+			self::toLogin();
 			return;
 		}
 			
-		self::toLogin();
+		$_SESSION['USER_ID'] = $_SESSION['STORE_'.static::$user_group]['USER_ID'];
+		$_SESSION['USER_GROUP'] = static::$user_group;
+		$_SESSION['IDENTIFIER'] = $_SESSION['STORE_'.static::$user_group]['IDENTIFIER'];
+		
+		if (strtotime($arr_user['login_date']) < strtotime('-1 day')) {
+			
+			$arr_ip = Log::getIP();
+			
+			DB::setConnection(DB::CONNECT_CMS);
+			
+			$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')." SET 
+					login_date = ".DBFunctions::dateTimeNow().",
+					login_ip = ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").",
+					login_ip_proxy = ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''")."
+				WHERE id = ".(int)$_SESSION['USER_ID']
+			);
+			
+			DB::setConnection();
+			
+			message(user_management::getUserTag($_SESSION['USER_ID']), 'LOGIN+', LOG_SYSTEM);
+		}
 	}
 		
-	private static function checkLogin($username, $password) {
+	private static function checkLogin() {
 	
 		SiteStartEnvironment::checkCookieSupport();
 		
-		$username = (is_string($username) ? $username : '');
-		$password = (is_string($password) ? $password : '');
-		
-		$check = Log::checkRequest('login_home', $username, 10, ['identifier' => 5, 'ip' => 25, 'ip_block' => 100, 'global' => 300]);
+		$check = Log::checkRequest('login_home', static::$username, 10, ['identifier' => 4, 'ip' => 5, 'ip_block' => 10, 'global' => 300]);
 		
 		if ($check !== true) {
 			error(getLabel('msg_access_limit'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
@@ -149,8 +139,8 @@ class HomeLogin {
 						
 		$res = DB::query("SELECT * FROM ".DB::getTable('TABLE_USERS')."
 			WHERE enabled = TRUE
-				AND uname = '".DBFunctions::strEscape($username)."'
-				AND group_id = ".SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)."
+				AND uname = '".DBFunctions::strEscape(static::$username)."'
+				AND group_id = ".(int)static::$user_group."
 		");
 		
 		$passhash = false;
@@ -159,46 +149,137 @@ class HomeLogin {
 			
 			$arr_user = $res->fetchAssoc();
 			
-			$passhash = checkHash($password, $arr_user['passhash']);
+			if (static::$password === false) {
+				$passhash = $arr_user['passhash'];
+			} else {
+				$passhash = checkHash(static::$password, $arr_user['passhash']);
+			}
 		}
 		
 		if ($passhash !== false) {
 			
 			$_SESSION['CUR_USER'] = user_groups::getUserData($arr_user['id'], true);
-			$_SESSION['USER_GROUP'] = SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP);
-			$_SESSION['USER_ID'] = $arr_user['id'];
-			$_SESSION['STORE_'.SiteStartEnvironment::getContext(SiteStartEnvironment::CONTEXT_USER_GROUP)]['USER_ID'] = $_SESSION['USER_ID'];
+			$_SESSION['USER_GROUP'] = static::$user_group;
+			$_SESSION['USER_ID'] = (int)$arr_user['id'];
+			$_SESSION['STORE_'.static::$user_group]['USER_ID'] = $_SESSION['USER_ID'];
+			
+			$_SESSION['IDENTIFIER'] = ($arr_user['login_identifier'] ?? generateRandomString(10));
+			$_SESSION['STORE_'.static::$user_group]['IDENTIFIER'] = $_SESSION['IDENTIFIER'];
 			$arr_ip = Log::getIP();
 			
 			DB::setConnection(DB::CONNECT_CMS);
 			
-			$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')."
-				SET 
-					last_login = NOW(),
-					ip = ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").",
-					ip_proxy = ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''")."
+			$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')." SET 
+					login_date = ".DBFunctions::dateTimeNow().",
+					login_identifier = '".DBFunctions::strEscape($_SESSION['IDENTIFIER'])."',
+					login_ip = ".($arr_ip ? DBFunctions::escapeAs(inet_pton($arr_ip[0]), DBFunctions::TYPE_BINARY) : "''").",
+					login_ip_proxy = ".($arr_ip && $arr_ip[1] ? DBFunctions::escapeAs(inet_pton($arr_ip[1]), DBFunctions::TYPE_BINARY) : "''")."
 					".($passhash !== $arr_user['passhash'] ? ", passhash = '".DBFunctions::strEscape($passhash)."'" : "")."
 				WHERE id = ".(int)$_SESSION['USER_ID']
 			);
 			
 			DB::setConnection();
 			
-			msg(user_management::getUserTag($_SESSION['USER_ID']), 'LOGIN', LOG_SYSTEM);
+			message(user_management::getUserTag($_SESSION['USER_ID']), 'LOGIN', LOG_SYSTEM);
 			
 			if ($_SESSION['RETURN_TO']) {
 				
-				$url = $_SESSION['RETURN_TO'];
+				$str_url = $_SESSION['RETURN_TO'];
 				unset($_SESSION['RETURN_TO']);
 				
-				Response::location($url);
+				Response::location($str_url);
 			}
 			
 			return;
 		}
 		
-		Log::logRequest('login_home', $username);
+		Log::logRequest('login_home', static::$username);
 			
 		self::toLogin(true);
+	}
+	
+	private static function doLogout() {
+		
+		if (isset($_SESSION['STORE_'.static::$user_group]['USER_ID'])) {
+			
+			DB::setConnection(DB::CONNECT_CMS);
+			
+			$res = DB::query("UPDATE ".DB::getTable('TABLE_USERS')." SET 
+					login_identifier = NULL
+				WHERE id = ".(int)$_SESSION['STORE_'.static::$user_group]['USER_ID']
+			);
+			
+			DB::setConnection();
+		}
+		
+		//SiteStartEnvironment::terminateSession();
+		unset($_SESSION['STORE_'.static::$user_group]);
+		
+		if ($_SESSION['RETURN_TO']) {
+			
+			$str_url = $_SESSION['RETURN_TO'];
+			unset($_SESSION['RETURN_TO']);
+		} else {
+			
+			$str_url = SiteStartEnvironment::getBasePath(1, false);
+		}
+		
+		Response::location($str_url);
+	}
+	
+	// API
+	
+	public static function API($str_token) {
+		
+		unset($_SESSION['USER_GROUP'], $_SESSION['USER_ID'], $_SESSION['CUR_USER'], $_SESSION['IDENTIFIER']);
+		
+		$str_token = Log::parseRequestIdentifier($str_token);
+		
+		$check = Log::checkRequest('login_api_home', $str_token, 10, ['identifier' => 4, 'ip' => 10, 'ip_block' => 20, 'global' => 300]);
+		
+		if ($check !== true) {
+			error(getLabel('msg_access_limit'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
+		}
+		
+		$arr_api_client_user = apis::getClientUserByToken($str_token);
+				
+		if ($arr_api_client_user && $arr_api_client_user['api_id'] == SiteStartEnvironment::getAPI('id')) {
+			
+			// Regenerate token when provided unsecure
+			if (SERVER_SCHEME != URI_SCHEME_HTTPS) {
+				
+				apis::handleClientUser($arr_api_client_user['client_id'], $arr_api_client_user['user_id'], $arr_api_client_user['enabled'], false, true);
+				
+				error(getLabel('msg_access_denied').' '.getLabel('msg_request_invalid_authentication_unsecure'), TROUBLE_INVALID_REQUEST, LOG_CLIENT);
+			}
+
+			if ($arr_api_client_user['client_enabled'] && $arr_api_client_user['enabled']) {
+			
+				if (!$arr_api_client_user['date_valid'] || strtotime($arr_api_client_user['date_valid']) > time()) {
+				
+					$is_enabled = self::checkUser($arr_api_client_user['user_id']);
+					
+					if (!$is_enabled) {
+						error(getLabel('msg_access_denied'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
+					}
+					
+					return $arr_api_client_user;
+				} else {
+				
+					error(getLabel('msg_access_denied').' '.getLabel('msg_request_invalid_authentication_expired'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
+				}
+			} else {
+				
+				error(getLabel('msg_access_denied'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
+			}
+		} else {
+			
+			Log::logRequest('login_api_home', $str_token);
+			
+			error(getLabel('msg_access_denied'), TROUBLE_ACCESS_DENIED, LOG_CLIENT);
+		}
+		
+		return false;
 	}
 	
 	private static function checkUser($user_id) {
@@ -213,8 +294,9 @@ class HomeLogin {
 			$arr_user = $res->fetchAssoc();
 			
 			$_SESSION['CUR_USER'] = user_groups::getUserData($arr_user['id'], true);
-			$_SESSION['USER_GROUP'] = $arr_user['group_id'];
-			$_SESSION['USER_ID'] = $arr_user['id'];
+			$_SESSION['USER_GROUP'] = (int)$arr_user['group_id'];
+			$_SESSION['USER_ID'] = (int)$arr_user['id'];
+			$_SESSION['IDENTIFIER'] = $arr_user['login_identifier'];
 			
 			return true;
 		}

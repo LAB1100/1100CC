@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -13,7 +13,7 @@ class FileGet {
 	const PROTOCOL_EXTERNAL = 1;
 	const PROTOCOL_DATA_URL = 2;
 	
-	protected $async = false;
+	protected $do_async = false;
 	
 	protected $url = '';
 	protected $url_redirect = '';
@@ -39,14 +39,14 @@ class FileGet {
 	
 	protected static $arr_external_protocols = ['http', 'https', 'ftp'];
 
-	public function __construct($str_url, $arr_settings = [], $async = false) {
+	public function __construct($str_url, $arr_settings = [], $do_async = false) {
 	
 		$this->url = $str_url;
 		$this->mode_protocol = static::getProtocol($this->url);
 		
 		$this->setConfiguration($arr_settings);
 		
-		$this->async = $async;
+		$this->do_async = $do_async;
 	}
 	
 	public function load() {
@@ -180,6 +180,19 @@ class FileGet {
 					continue;
 				}
 				
+				if (isset($this->arr_settings['secrets'])) {
+					
+					$num_pos_start = strpos($value, '[[secret=');
+					
+					if ($num_pos_start !== false) {
+						
+						$num_pos_end = strpos($value, ']]', $num_pos_start);
+						$str_secret = substr($value, ($num_pos_start + 9), ($num_pos_end - ($num_pos_start + 9)));
+						
+						$value = substr_replace($value, ($this->arr_settings['secrets'][$str_secret] ?? ''), $num_pos_start, (($num_pos_end + 2) - $num_pos_start));
+					}
+				}
+				
 				$arr_headers[] = $key.': '.$value;
 			}
 			
@@ -231,7 +244,6 @@ class FileGet {
 			}
 			
 			if (!empty($this->arr_settings['header_callback'])) {
-				
 				$this->arr_settings['header_callback']($str_header);
 			}
 			
@@ -252,7 +264,7 @@ class FileGet {
 		
 		curl_setopt($curl, CURLINFO_HEADER_OUT, true); // Include request header in $arr_request
 		
-		if ($this->async) {
+		if ($this->do_async) {
 			
 			$mh = curl_multi_init();
 			curl_multi_add_handle($mh, $curl);
@@ -319,7 +331,7 @@ class FileGet {
 			
 			curl_close($curl);
 		}
-				
+		
 		if ($has_redirect && $this->num_redirect > 0) {
 			
 			$this->num_redirect--;

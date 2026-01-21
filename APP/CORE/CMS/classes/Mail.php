@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -211,7 +211,7 @@ class Mail {
 				mail($email, $str_subject, $str_body, $str_headers, "-f".$from_1100cc.""); //  Last parameter, set the Return-Path
 			} catch (Exception $e) {
 				
-				error('Mail ERROR: '.$e->getMessage(), TROUBLE_NOTICE, LOG_BOTH, false, $e); // Make notice
+				error('Mail ERROR: '.$e->getTroubleMessage(), TROUBLE_NOTICE, LOG_BOTH, null, $e); // Make notice
 			}
 		}
 	}

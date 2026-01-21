@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -147,13 +147,13 @@ class cms_users extends base_module {
 			
 			$res = DB::query("DELETE FROM ".DB::getTable('TABLE_CMS_USERS')." WHERE id = ".(int)$id." LIMIT 1");
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if (($method == "user_update" && $id > 0) || $method == "my_update") {
 		
 			if (!$_POST['name'] || !$_POST['uname'] || $_POST['password'] != $_POST['password_confirm']) {
-				error('Missing information');
+				error(getLabel('msg_missing_information'));
 			}
 			
 			$id = ($id ?: $_SESSION['USER_ID']);
@@ -173,13 +173,13 @@ class cms_users extends base_module {
 				$this->refresh = true;
 			}
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "user_insert") {
 		
 			if (!$_POST['password'] || $_POST['password'] != $_POST['password_confirm'] || !$_POST['name'] || !$_POST['uname']) {
-				error('Missing information');
+				error(getLabel('msg_missing_information'));
 			}
 		
 			$res = DB::query("INSERT INTO ".DB::getTable('TABLE_CMS_USERS')."
@@ -189,16 +189,16 @@ class cms_users extends base_module {
 			");
 		
 			$this->refresh = true;
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	
-	public static function getCMSUsers($cms_user_id = 0, $core = false) {
+	public static function getCMSUsers($cms_user_id = 0, $is_core = false) {
 
 		$arr = [];
 
 		$res = DB::query("SELECT *
-				FROM ".DB::getTable(($core ? 'TABLE_CORE_USERS' : 'TABLE_CMS_USERS'))."
+				FROM ".DB::getTable(($is_core ? 'TABLE_CORE_USERS' : 'TABLE_CMS_USERS'))."
 			".($cms_user_id ? "WHERE id = ".(int)$cms_user_id."" : "ORDER BY id")
 		);
 		
@@ -212,10 +212,10 @@ class cms_users extends base_module {
 		return ($cms_user_id ? current($arr) : $arr);
 	}
 	
-	public static function getCMSUserByUsername($username, $core = false) {
+	public static function getCMSUserByUsername($username, $is_core = false) {
 		
 		$res = DB::query("SELECT *
-				FROM ".DB::getTable(($core ? 'TABLE_CORE_USERS' : 'TABLE_CMS_USERS'))."
+				FROM ".DB::getTable(($is_core ? 'TABLE_CORE_USERS' : 'TABLE_CMS_USERS'))."
 			WHERE uname = '".DBFunctions::strEscape($username)."'
 		");
 		
@@ -224,7 +224,7 @@ class cms_users extends base_module {
 		if ($arr) {
 			
 			$arr['labeler'] = DBFunctions::unescapeAs($arr['labeler'], DBFunctions::TYPE_BOOLEAN);
-			$arr['core'] = $core;
+			$arr['core'] = $is_core;
 		}
 		
 		return $arr;

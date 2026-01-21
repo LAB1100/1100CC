@@ -18,9 +18,10 @@ CREATE TABLE `core_users` (
   `biography` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `passhash` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `lang_code` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `last_login` datetime DEFAULT NULL,
-  `ip` varbinary(16) DEFAULT NULL,
-  `ip_proxy` varbinary(16) DEFAULT NULL,
+  `login_identifier` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `login_date` datetime DEFAULT NULL,
+  `login_ip` varbinary(16) DEFAULT NULL,
+  `login_ip_proxy` varbinary(16) DEFAULT NULL,
   `labeler` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

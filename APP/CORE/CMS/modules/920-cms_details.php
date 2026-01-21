@@ -2,7 +2,7 @@
 
 /**
  * 1100CC - web application framework.
- * Copyright (C) 2025 LAB1100.
+ * Copyright (C) 2026 LAB1100.
  *
  * See http://lab1100.com/1100cc/release for the latest version of 1100CC and its license.
  */
@@ -648,7 +648,7 @@ class cms_details extends base_module {
 				");
 			}
 
-			$this->msg = true;				
+			$this->message = true;				
 		}
 		
 		if ($method == "update_appearance") {
@@ -669,7 +669,7 @@ class cms_details extends base_module {
 			fclose($handle);
 			
 			$this->html = $this->contentTabAppearance();
-			$this->msg = true;
+			$this->message = true;
 		}
 		
 		if ($method == "update_script") {
@@ -678,7 +678,7 @@ class cms_details extends base_module {
 			fwrite($handle, $_POST['script']);
 			fclose($handle);
 			
-			$this->msg = true;
+			$this->message = true;
 		}
 	}
 	
