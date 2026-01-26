@@ -699,7 +699,7 @@ function MapScroller(element, options) {
 		return {x: (pos_mouse.x - ((pos_mouse.x + pos_elm.x)/2)) / SELF.levelVars().width, y: (pos_mouse.y - ((pos_mouse.y + pos_elm.y)/2)) / SELF.levelVars().height};
 	};
 	
-	this.move = function(call, key) {
+	this.move = function(call, key, do_call) {
 		
 		if (key === 0 || key > 0) {
 			
@@ -718,8 +718,8 @@ function MapScroller(element, options) {
 			}
 		}
 		
-		if (call) {
-			call(false, SELF.getPosition(), cur_zoom, cur_zoom);
+		if (call && do_call !== false) {
+			call(false, SELF.getPosition(), cur_zoom, cur_zoom); // Initialise move/position/zoom positions
 		}
 		
 		return key;
@@ -1448,7 +1448,7 @@ function MapScroller(element, options) {
 		const num_index = (num_zoom != null ? num_zoom : cur_zoom)-1;
 		const arr_level = arr_levels[num_index];
 		
-		if (arr_level && arr_level.auto) {
+		if (arr_level !== undefined && arr_level.auto) {
 			
 			arr_level.width = pos_elm.width;
 			arr_level.height = pos_elm.height;

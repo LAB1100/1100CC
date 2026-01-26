@@ -921,41 +921,20 @@
 			return 0;
 		}
 		
-		preg_match('/^(\d*\.?\d+)([a-z]*)$/i', trim($str), $arr_str);
+		preg_match('/^(\d*\.?\d+) ?([a-z]*)$/i', trim($str), $arr_str);
 		$num = (float)$arr_str[1];
-		$ext = strtolower($arr_str[2]);
+		$ext = strtolower(($arr_str[2] ?? ''));
 		
 		$arr_ext = ['' => 1, 'b' => 1, 'kb' => BYTE_MULTIPLIER, 'k' => BYTE_MULTIPLIER, 'mb' => BYTE_MULTIPLIER**2, 'm' => BYTE_MULTIPLIER**2, 'gb' => BYTE_MULTIPLIER**3, 'g' => BYTE_MULTIPLIER**3, 'tb' => BYTE_MULTIPLIER**4];
 		
-		return ($num * (int)$arr_ext[$ext]);
+		return ($num * ($arr_ext[$ext] ?? 0));
 	}
 	
 	function num2String($nr, $decimals = 0) {
 		
 		return number_format($nr, $decimals, '.', SYMBOL_SPACE_MATHEMATICAL);
 	}
-	
-	function numRoundBetter($number, $precision = 0, $mode = PHP_ROUND_HALF_UP, $direction = null) {
-		
-		if (!isset($direction)) {
 			
-			return round($number, $precision, $mode);
-		} else {
-			
-			$factor = pow(10, -1 * $precision);
-
-			return ($direction === true
-				? floor($number / $factor) * $factor
-				: ceil($number / $factor) * $factor);
-		}
-	}
-	function numRoundBetterUp($number, $precision = 0, $mode = PHP_ROUND_HALF_UP) {
-		return numRoundBetter($number, $precision, $mode, true);
-	}
-	function numRoundBetterDown($number, $precision = 0, $mode = PHP_ROUND_HALF_UP) {
-		return numRoundBetter($number, $precision, $mode, false);
-	}
-		
 	function ip2Hex($ip) {
 	
 		$ip = explode('.', $ip);
